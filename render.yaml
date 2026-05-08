@@ -12,6 +12,6 @@ services:
       - key: PORT
         value: 5000
       - key: DATABASE_URL
-        fromConfig: DATABASE_URL
+        sync: false
       - key: JWT_SECRET
         generateValue: true
