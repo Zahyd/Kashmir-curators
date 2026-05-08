@@ -1,0 +1,271 @@
+import React, { useState } from 'react';
+import { 
+  CreditCard, 
+  QrCode, 
+  Send, 
+  CheckCircle2, 
+  ArrowLeft, 
+  Copy, 
+  Download,
+  IndianRupee,
+  ShieldCheck,
+  Smartphone,
+  ExternalLink,
+  Info
+} from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+interface PaymentPortalProps {
+  inquiry: any;
+  onBack: () => void;
+}
+
+export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
+  const [amount, setAmount] = useState<string>('0');
+  const [paymentType, setPaymentType] = useState<'deposit' | 'full'>('deposit');
+  const [transactionId, setTransactionId] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Business Configuration
+  const businessVPA = "thekashmircurators@okaxis"; // Replace with real VPA
+  const merchantName = "The Kashmir Curators";
+
+  const generateUPILink = () => {
+    const encodedName = encodeURIComponent(merchantName);
+    const encodedNote = encodeURIComponent(`Booking for ${inquiry.id}`);
+    return `upi://pay?pa=${businessVPA}&pn=${encodedName}&am=${amount}&cu=INR&tn=${encodedNote}`;
+  };
+
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(generateUPILink())}&bgcolor=faf9f6&color=0a0f12&margin=20`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(generateUPILink());
+    toast.success("UPI Link copied to clipboard");
+  };
+
+  const handleVerifyPayment = () => {
+    if (!transactionId) {
+      toast.error("Please enter Transaction ID / UTR No.");
+      return;
+    }
+    setIsVerifying(true);
+    // Mock verification
+    setTimeout(() => {
+      setIsVerifying(false);
+      toast.success("Payment request submitted for verification");
+      onBack();
+    }, 1500);
+  };
+
+  return (
+    <div className="animate-in fade-in duration-700 max-w-5xl mx-auto pb-20">
+      <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center gap-6">
+          <Button 
+            onClick={onBack}
+            variant="ghost" 
+            className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2 text-kashmir-gold text-[10px] font-black uppercase tracking-[0.3em] mb-1">
+              <CreditCard className="w-3 h-3" /> Payment Portal
+            </div>
+            <h2 className="text-3xl font-display font-bold text-white tracking-tight">Collect Payment</h2>
+          </div>
+        </div>
+        <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold flex gap-2">
+          <ShieldCheck className="w-4 h-4" /> Secure Gateway Active
+        </Badge>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
+        {/* Left Column: Configuration */}
+        <div className="lg:col-span-3 space-y-8">
+          <Card className="bg-white/[0.03] border-white/5 p-10 rounded-[2.5rem] backdrop-blur-2xl">
+            <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-kashmir-gold/10 text-kashmir-gold flex items-center justify-center text-sm">1</span>
+              Configure Request
+            </h3>
+
+            <div className="space-y-8">
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setPaymentType('deposit')}
+                  className={cn(
+                    "p-6 rounded-3xl border transition-all text-left group",
+                    paymentType === 'deposit' 
+                      ? "bg-kashmir-gold/10 border-kashmir-gold/40 text-kashmir-gold" 
+                      : "bg-white/5 border-white/5 text-white/40 hover:border-white/10"
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <CreditCard className={cn("w-6 h-6", paymentType === 'deposit' ? "text-kashmir-gold" : "text-white/20")} />
+                    {paymentType === 'deposit' && <CheckCircle2 className="w-5 h-5" />}
+                  </div>
+                  <p className="font-bold text-base mb-1">Booking Deposit</p>
+                  <p className="text-[10px] uppercase tracking-wider opacity-60">25% Security Amount</p>
+                </button>
+
+                <button
+                  onClick={() => setPaymentType('full')}
+                  className={cn(
+                    "p-6 rounded-3xl border transition-all text-left group",
+                    paymentType === 'full' 
+                      ? "bg-purple-500/10 border-purple-500/40 text-purple-400" 
+                      : "bg-white/5 border-white/5 text-white/40 hover:border-white/10"
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <IndianRupee className={cn("w-6 h-6", paymentType === 'full' ? "text-purple-400" : "text-white/20")} />
+                    {paymentType === 'full' && <CheckCircle2 className="w-5 h-5" />}
+                  </div>
+                  <p className="font-bold text-base mb-1">Full Payment</p>
+                  <p className="text-[10px] uppercase tracking-wider opacity-60">100% Package Total</p>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Payment Amount (INR)</label>
+                <div className="relative group">
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-kashmir-gold font-bold text-xl">₹</span>
+                  <Input 
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="pl-12 bg-white/5 border-white/5 h-16 rounded-2xl text-2xl font-display font-bold text-white focus:bg-white/10 focus:border-kashmir-gold/30 transition-all"
+                    placeholder="Enter amount..."
+                  />
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-white/20 px-2 mt-2">
+                  <Info className="w-3 h-3" /> Recommended deposit for {inquiry.budget}: ₹25,000
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/5">
+                <Button 
+                  onClick={() => setShowScanner(true)}
+                  disabled={!amount || parseInt(amount) <= 0}
+                  className="w-full bg-kashmir-gold text-black hover:bg-amber-500 h-16 rounded-2xl font-black uppercase tracking-widest text-xs gap-3 shadow-xl shadow-kashmir-gold/10"
+                >
+                  <QrCode className="w-5 h-5" />
+                  Generate Payment Scanner
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="bg-white/[0.03] border-white/5 p-10 rounded-[2.5rem] backdrop-blur-2xl">
+            <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-sm">2</span>
+              Manual Verification
+            </h3>
+            
+            <div className="space-y-6">
+              <p className="text-sm text-white/40 leading-relaxed">
+                If the client has already paid via bank transfer or direct VPA, enter the transaction details below to reconcile.
+              </p>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Transaction ID / UTR No.</label>
+                <Input 
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  className="bg-white/5 border-white/5 h-12 rounded-xl text-white font-mono focus:border-blue-400/30"
+                  placeholder="TXN-1234567890"
+                />
+              </div>
+              <Button 
+                onClick={handleVerifyPayment}
+                disabled={isVerifying}
+                variant="outline"
+                className="w-full border-white/10 text-white hover:bg-white/10 h-12 rounded-xl font-bold gap-2"
+              >
+                {isVerifying ? <span className="animate-pulse">Processing...</span> : "Verify & Mark as Paid"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Right Column: Preview / Scanner */}
+        <div className="lg:col-span-2 space-y-8">
+          <Card className="bg-[#0a0f12] border-white/5 overflow-hidden rounded-[2.5rem] sticky top-32">
+            <div className="bg-gradient-to-br from-kashmir-gold/20 via-transparent to-transparent p-10 text-center relative overflow-hidden">
+              <div className="absolute top-[-10%] right-[-10%] w-32 h-32 bg-kashmir-gold/20 blur-[60px] rounded-full" />
+              
+              <div className="relative z-10 space-y-6">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6">
+                  <Smartphone className="w-8 h-8 text-kashmir-gold" />
+                </div>
+                <h4 className="text-white font-bold text-lg">Instant Payment Scanner</h4>
+                <p className="text-white/40 text-xs tracking-wider uppercase font-medium">Scan with any UPI App</p>
+              </div>
+            </div>
+
+            <div className="p-10 flex flex-col items-center">
+              {showScanner && amount && parseInt(amount) > 0 ? (
+                <div className="space-y-8 w-full">
+                  <div className="p-6 bg-white rounded-3xl shadow-2xl relative group">
+                    <img 
+                      src={qrCodeUrl} 
+                      alt="Payment QR Code" 
+                      className="w-full aspect-square object-contain"
+                    />
+                    <div className="absolute inset-0 bg-white/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all backdrop-blur-[2px] rounded-3xl">
+                      <Button variant="outline" className="bg-white border-black/10 text-black rounded-full gap-2 font-bold shadow-xl">
+                        <Download className="w-4 h-4" /> Download QR
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="p-5 rounded-2xl bg-white/5 border border-white/5">
+                      <p className="text-[10px] uppercase font-bold text-white/20 mb-1">Payable Amount</p>
+                      <p className="text-2xl font-display font-bold text-white">₹{parseInt(amount).toLocaleString()}</p>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={handleCopyLink}
+                        variant="ghost" 
+                        className="flex-1 bg-white/5 border border-white/5 text-white/60 hover:text-white rounded-xl h-12 gap-2 text-xs font-bold"
+                      >
+                        <Copy className="w-4 h-4" /> Copy UPI
+                      </Button>
+                      <Button 
+                        variant="ghost"
+                        className="flex-1 bg-white/5 border border-white/5 text-white/60 hover:text-white rounded-xl h-12 gap-2 text-xs font-bold"
+                      >
+                        <Send className="w-4 h-4" /> Share Link
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-20 text-center opacity-20 flex flex-col items-center">
+                  <QrCode className="w-20 h-20 mb-6" />
+                  <p className="text-sm font-bold uppercase tracking-widest">Scanner Locked</p>
+                  <p className="text-[10px] mt-2 italic max-w-[150px]">Enter amount and click generate to unlock</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-10 pb-10">
+              <div className="flex items-center justify-center gap-6 grayscale opacity-30 pt-6 border-t border-white/5">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo.png" alt="UPI" className="h-4" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/Google_Pay_Logo.svg" alt="GPay" className="h-4" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-4" />
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

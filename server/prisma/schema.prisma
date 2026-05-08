@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      String    @default("user") // user, admin, sales, marketing
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Package {
+  id            String   @id @default(uuid())
+  name          String
+  destination   String
+  duration      String
+  price         Float
+  originalPrice Float
+  rating        Float    @default(0)
+  reviewCount   Int      @default(0)
+  image         String
+  highlights    String   // JSON string or comma-separated
+  inclusions    String   // JSON string or comma-separated
+  exclusions    String   // JSON string or comma-separated
+  itinerary     String   // JSON string
+  bestSeason    String
+  difficulty    String
+  isActive      Boolean  @default(true)
+  isFeatured    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Hotel {
+  id            String   @id @default(uuid())
+  name          String
+  location      String
+  starRating    Int
+  rating        Float    @default(0)
+  reviewCount   Int      @default(0)
+  pricePerNight Float
+  image         String
+  description   String
+  amenities     String   // JSON string
+  roomTypes     String   // JSON string
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Cab {
+  id         String   @id @default(uuid())
+  type       String
+  name       String
+  capacity   Int
+  pricePerKm Float
+  basePrice  Float
+  image      String
+  features   String   // JSON string
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Testimonial {
+  id          String   @id @default(uuid())
+  name        String
+  avatar      String
+  location    String
+  rating      Int
+  content     String
+  packageName String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model FAQ {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  category  String   @default("general")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Booking {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  type         String   // hotel, package, cab
+  itemName     String
+  bookingDate  DateTime
+  status       String   @default("pending") // pending, confirmed, cancelled
+  totalAmount  Float
+  details      String   // JSON string
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
