@@ -5,7 +5,7 @@ import { useTestimonials } from '@/hooks/useCMSData';
 import { cn } from '@/lib/utils';
 
 export default function Testimonials() {
-  const { data: testimonials, isLoading } = useTestimonials();
+  const { data: testimonials = [], isLoading } = useTestimonials();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 

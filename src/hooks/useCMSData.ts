@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
-const API_URL = 'https://kashmir-curators-api.onrender.com/api';
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000/api' 
+  : 'https://kashmir-curators-api.onrender.com/api';
 
 // Types for CMS data
 export interface CMSPackage {
@@ -131,6 +133,7 @@ export function useDestinations() {
       const response = await fetch(`${API_URL}/packages`);
       if (!response.ok) throw new Error('Failed to fetch destinations');
       const data = await response.json() as CMSPackage[];
+      if (!Array.isArray(data)) return [];
       const uniqueDestinations = [...new Set(data.map(p => p.destination))];
       return uniqueDestinations;
     },
@@ -144,6 +147,7 @@ export function useLocations() {
       const response = await fetch(`${API_URL}/hotels`);
       if (!response.ok) throw new Error('Failed to fetch locations');
       const data = await response.json() as CMSHotel[];
+      if (!Array.isArray(data)) return [];
       const uniqueLocations = [...new Set(data.map(h => h.location))];
       return uniqueLocations;
     },

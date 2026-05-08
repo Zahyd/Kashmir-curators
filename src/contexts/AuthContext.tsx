@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
 
-const API_URL = 'https://kashmir-curators-api.onrender.com/api';
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000/api' 
+  : 'https://kashmir-curators-api.onrender.com/api';
 
 interface Profile {
   id: string;

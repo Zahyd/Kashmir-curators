@@ -6,7 +6,7 @@ import { useFeaturedPackages } from '@/hooks/useCMSData';
 import { Badge } from '@/components/ui/badge';
 
 export default function FeaturedPackages() {
-  const { data: featuredPackages, isLoading } = useFeaturedPackages();
+  const { data: featuredPackages = [], isLoading } = useFeaturedPackages();
 
   return (
     <section className="py-32 bg-[#05080a] relative overflow-hidden">

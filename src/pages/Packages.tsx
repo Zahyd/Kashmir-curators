@@ -11,13 +11,14 @@ import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { usePackages, useDestinations } from '@/hooks/useCMSData';
+import { usePackages, useDestinations, useCabs } from '@/hooks/useCMSData';
 import { cn } from '@/lib/utils';
 
 export default function Packages() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: packages, isLoading } = usePackages();
-  const { data: destinations } = useDestinations();
+  const { data: packages = [], isLoading } = usePackages();
+  const { data: cabOptions = [], isLoading: isLoadingCabs } = useCabs();
+  const { data: destinations = [] } = useDestinations();
   
   const [filters, setFilters] = useState({
     destination: searchParams.get('destination') || '',

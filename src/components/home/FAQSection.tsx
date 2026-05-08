@@ -4,7 +4,7 @@ import { useFAQs } from '@/hooks/useCMSData';
 import { HelpCircle, ShieldCheck } from 'lucide-react';
 
 export default function FAQSection() {
-  const { data: faqs, isLoading } = useFAQs();
+  const { data: faqs = [], isLoading } = useFAQs();
 
   return (
     <section className="py-32 bg-[#05080a] relative overflow-hidden">

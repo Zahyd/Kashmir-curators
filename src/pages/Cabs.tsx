@@ -19,8 +19,8 @@ import PaymentSimulator from '@/components/payment/PaymentSimulator';
 export default function Cabs() {
   const navigate = useNavigate();
   const { isAuthenticated, addBooking } = useAuth();
-  const { data: cabOptions, isLoading: isLoadingCabs } = useCabs();
-  const { data: destinations } = useDestinations();
+  const { data: cabOptions = [], isLoading: isLoadingCabs } = useCabs();
+  const { data: destinations = [] } = useDestinations();
   const [selectedCab, setSelectedCab] = useState<any | null>(null);
   const [isBooking, setIsBooking] = useState(false);
   const [showPayment, setShowPayment] = useState(false);

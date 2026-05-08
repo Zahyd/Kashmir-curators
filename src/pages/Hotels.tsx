@@ -26,8 +26,8 @@ const amenityIcons: Record<string, any> = {
 export default function Hotels() {
   const navigate = useNavigate();
   const { isAuthenticated, addBooking } = useAuth();
-  const { data: hotels, isLoading } = useHotels();
-  const { data: locations } = useLocations();
+  const { data: hotels = [], isLoading } = useHotels();
+  const { data: locations = [] } = useLocations();
   
   const [selectedHotel, setSelectedHotel] = useState<CMSHotel | null>(null);
   const [dialogHotel, setDialogHotel] = useState<CMSHotel | null>(null);
