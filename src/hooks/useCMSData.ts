@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://kashmir-curators-api.onrender.com/api';
 
 // Types for CMS data
 export interface CMSPackage {
