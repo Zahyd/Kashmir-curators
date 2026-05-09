@@ -9,6 +9,16 @@ import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
@@ -61,6 +71,8 @@ export default function CMSPackages() {
   const [highlightsInput, setHighlightsInput] = useState('');
   const [inclusionsInput, setInclusionsInput] = useState('');
   const [exclusionsInput, setExclusionsInput] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const fetchPackages = async () => {
     console.log('[CMSPackages] Initiating fetch for experience catalog...');
@@ -174,7 +186,6 @@ export default function CMSPackages() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this package?')) return;
     const token = localStorage.getItem('teamToken');
     console.log(`[CMSPackages] Attempting to delete package: ${id}`);
     
@@ -397,7 +408,13 @@ export default function CMSPackages() {
                 <Pencil className="w-4 h-4 mr-2" />
                 <span className="text-[9px] uppercase tracking-widest">Edit Node</span>
               </Button>
-              <Button onClick={() => handleDelete(pkg.id)} className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all">
+              <Button 
+                onClick={() => {
+                  setItemToDelete(pkg.id);
+                  setDeleteConfirmOpen(true);
+                }} 
+                className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all"
+              >
                 <Trash2 className="w-5 h-5" />
               </Button>
             </div>
@@ -552,6 +569,26 @@ export default function CMSPackages() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black">Decommission Package?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Are you sure you want to decommission this travel package? This action will remove the experience from active catalog.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white/60 hover:bg-white/10 rounded-xl h-12">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => itemToDelete && handleDelete(itemToDelete)}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
+            >
+              Confirm Decommission
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

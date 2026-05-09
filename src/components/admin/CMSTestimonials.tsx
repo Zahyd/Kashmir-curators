@@ -9,6 +9,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
@@ -45,6 +55,8 @@ export default function CMSTestimonials() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Testimonial | null>(null);
   const [formData, setFormData] = useState(defaultTestimonial);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const fetchTestimonials = async () => {
     console.log('[CMSTestimonials] Initiating fetch for traveler voices...');
@@ -144,7 +156,6 @@ export default function CMSTestimonials() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Discard this testimonial?')) return;
     const token = localStorage.getItem('teamToken');
     console.log(`[CMSTestimonials] Attempting to discard voice node: ${id}`);
     
@@ -340,7 +351,13 @@ export default function CMSTestimonials() {
                 <Pencil className="w-4 h-4 mr-2" />
                 <span className="text-[9px] uppercase tracking-widest">Re-edit Voice</span>
               </Button>
-              <Button onClick={() => handleDelete(item.id)} className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all">
+              <Button 
+                onClick={() => {
+                  setItemToDelete(item.id);
+                  setDeleteConfirmOpen(true);
+                }} 
+                className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all"
+              >
                 <Trash2 className="w-5 h-5" />
               </Button>
             </div>
@@ -439,6 +456,26 @@ export default function CMSTestimonials() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black">Discard Traveler Voice?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Are you sure you want to discard this testimonial? This action will remove the traveler's feedback from the public site.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white/60 hover:bg-white/10 rounded-xl h-12">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => itemToDelete && handleDelete(itemToDelete)}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
+            >
+              Confirm Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

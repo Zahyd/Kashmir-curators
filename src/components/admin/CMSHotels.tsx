@@ -9,6 +9,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
@@ -61,6 +71,8 @@ export default function CMSHotels() {
   const [formData, setFormData] = useState(defaultHotel);
   const [amenitiesInput, setAmenitiesInput] = useState('');
   const [roomTypesInput, setRoomTypesInput] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const fetchHotels = async () => {
     console.log('[CMSHotels] Initiating fetch for hospitality nodes...');
@@ -185,7 +197,6 @@ export default function CMSHotels() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Decommission this property?')) return;
     const token = localStorage.getItem('teamToken');
     console.log(`[CMSHotels] Attempting to decommission node: ${id}`);
     
@@ -384,7 +395,13 @@ export default function CMSHotels() {
                 <Pencil className="w-4 h-4 mr-2" />
                 <span className="text-[9px] uppercase tracking-widest">Reconfigure</span>
               </Button>
-              <Button onClick={() => handleDelete(hotel.id)} className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all">
+              <Button 
+                onClick={() => {
+                  setItemToDelete(hotel.id);
+                  setDeleteConfirmOpen(true);
+                }} 
+                className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all"
+              >
                 <Trash2 className="w-5 h-5" />
               </Button>
             </div>
@@ -514,6 +531,26 @@ export default function CMSHotels() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black">Decommission Asset?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Are you sure you want to decommission this hospitality node? This action will remove the property from active listings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white/60 hover:bg-white/10 rounded-xl h-12">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => itemToDelete && handleDelete(itemToDelete)}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
+            >
+              Confirm Decommission
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -8,6 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
@@ -39,6 +49,8 @@ export default function CMSFaqs() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FAQ | null>(null);
   const [formData, setFormData] = useState(defaultFaq);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const fetchFaqs = async () => {
     console.log('[CMSFaqs] Initiating fetch for knowledge base...');
@@ -138,7 +150,6 @@ export default function CMSFaqs() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Erase this intelligence?')) return;
     const token = localStorage.getItem('teamToken');
     console.log(`[CMSFaqs] Attempting to erase node: ${id}`);
     
@@ -310,7 +321,13 @@ export default function CMSFaqs() {
                 <Pencil className="w-4 h-4 mr-2" />
                 <span className="text-[9px] uppercase tracking-widest">Update Node</span>
               </Button>
-              <Button onClick={() => handleDelete(item.id)} className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all">
+              <Button 
+                onClick={() => {
+                  setItemToDelete(item.id);
+                  setDeleteConfirmOpen(true);
+                }} 
+                className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all"
+              >
                 <Trash2 className="w-5 h-5" />
               </Button>
             </div>
@@ -389,6 +406,26 @@ export default function CMSFaqs() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black">Erase Intelligence?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Are you sure you want to erase this FAQ from the knowledge base? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white/60 hover:bg-white/10 rounded-xl h-12">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => itemToDelete && handleDelete(itemToDelete)}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
+            >
+              Confirm Erase
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
