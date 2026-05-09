@@ -27,29 +27,44 @@ export const upload = multer({ storage: storage });
 
 export const uploadMedia = async (req: Request, res: Response) => {
   try {
+    // Check for Cloudinary config
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error('[MediaController] Missing Cloudinary environment variables');
+      return res.status(500).json({ error: 'Cloudinary is not configured on the server' });
+    }
+
     if (!req.file) {
+      console.warn('[MediaController] Upload attempt with no file');
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     const file = req.file as any;
+    console.log('[MediaController] Received file:', file.originalname, 'Size:', file.size);
     
     // Save to database
     const media = await prisma.media.create({
       data: {
-        filename: file.filename,
+        filename: file.filename || `file-${Date.now()}`,
         originalName: file.originalname,
         url: file.path,
         size: file.size,
         mimeType: file.mimetype,
-        publicId: file.filename, // Multer-storage-cloudinary uses filename as public_id by default
+        publicId: file.filename,
       },
     });
 
-    console.log('[MediaController] Uploaded and saved:', media.id);
+    console.log('[MediaController] Successfully saved to DB:', media.id);
     res.status(201).json(media);
-  } catch (error) {
-    console.error('[MediaController] Upload error:', error);
-    res.status(500).json({ error: 'Failed to upload media' });
+  } catch (error: any) {
+    console.error('[MediaController] Upload or DB Save error:', {
+      message: error.message,
+      stack: error.stack,
+      error
+    });
+    res.status(500).json({ 
+      error: 'Internal server error during upload',
+      details: error.message 
+    });
   }
 };
 
