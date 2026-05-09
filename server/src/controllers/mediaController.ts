@@ -68,7 +68,7 @@ export const getMedia = async (req: Request, res: Response) => {
 
 export const deleteMedia = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     
     const media = await prisma.media.findUnique({ where: { id } });
     if (!media) {
