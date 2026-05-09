@@ -35,7 +35,7 @@ export default function Hotels() {
   const [filters, setFilters] = useState({
     location: '',
     search: '',
-    priceRange: [0, 30000],
+    priceRange: [0, 100000],
     starRating: '',
   });
   const [bookingData, setBookingData] = useState({
@@ -186,7 +186,7 @@ export default function Hotels() {
                 value={filters.priceRange}
                 onValueChange={(value) => setFilters(prev => ({ ...prev, priceRange: value as [number, number] }))}
                 min={0}
-                max={50000}
+                max={100000}
                 step={1000}
                 className="py-2"
               />
