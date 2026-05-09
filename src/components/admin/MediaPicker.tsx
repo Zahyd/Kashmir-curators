@@ -47,15 +47,26 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
     const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     const filePath = `uploads/${filename}`;
 
-    const { error: uploadError } = await supabase.storage.from('media').upload(filePath, file);
+    console.log(`[MediaPicker] Attempting upload to bucket 'media' at path: ${filePath}`);
+    const { data: uploadData, error: uploadError } = await supabase.storage.from('media').upload(filePath, file, {
+      upsert: true,
+      contentType: file.type
+    });
 
     if (uploadError) {
-      toast.error('Failed to upload');
+      console.error('[MediaPicker] Upload error details:', {
+        message: uploadError.message,
+        name: uploadError.name,
+        error: uploadError
+      });
+      toast.error(`Upload failed: ${uploadError.message}`);
       setUploading(false);
       return;
     }
 
+    console.log('[MediaPicker] Upload successful:', uploadData);
     const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
+    console.log('[MediaPicker] Public URL generated:', urlData.publicUrl);
 
     await supabase.from('media_library').insert({
       filename,

@@ -54,15 +54,21 @@ export default function MediaLibrary() {
       const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const filePath = `uploads/${filename}`;
 
-      const { error: uploadError } = await supabase.storage
+      console.log(`[MediaLibrary] Uploading ${file.name} to 'media/${filePath}'`);
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('media')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          upsert: true,
+          contentType: file.type
+        });
 
       if (uploadError) {
-        toast.error(`Failed to upload ${file.name}`);
+        console.error(`[MediaLibrary] Upload error for ${file.name}:`, uploadError);
+        toast.error(`Failed to upload ${file.name}: ${uploadError.message}`);
         continue;
       }
 
+      console.log(`[MediaLibrary] Upload successful for ${file.name}:`, uploadData);
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
 
       const { error: dbError } = await supabase.from('media_library').insert({
