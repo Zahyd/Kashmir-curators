@@ -1,10 +1,19 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
+const safeParse = (str: any) => {
+  if (!str || typeof str !== 'string') return str || [];
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return [];
+  }
+};
+
 const parseHotel = (hotel: any) => ({
   ...hotel,
-  amenities: typeof hotel.amenities === 'string' ? JSON.parse(hotel.amenities) : hotel.amenities,
-  roomTypes: typeof hotel.roomTypes === 'string' ? JSON.parse(hotel.roomTypes) : hotel.roomTypes
+  amenities: safeParse(hotel.amenities),
+  roomTypes: safeParse(hotel.roomTypes)
 });
 
 const stringifyHotel = (data: any) => {
@@ -23,6 +32,7 @@ export const getHotels = async (req: Request, res: Response) => {
     });
     res.json(hotels.map(parseHotel));
   } catch (error) {
+    console.error('Hotels fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch hotels' });
   }
 };

@@ -1,6 +1,15 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
+const safeParse = (str: any) => {
+  if (!str || typeof str !== 'string') return str || [];
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return [];
+  }
+};
+
 export const getCabs = async (req: Request, res: Response) => {
   try {
     const { all } = req.query;
@@ -11,11 +20,12 @@ export const getCabs = async (req: Request, res: Response) => {
     
     const parsedCabs = cabs.map(cab => ({
       ...cab,
-      features: typeof cab.features === 'string' ? JSON.parse(cab.features) : cab.features
+      features: safeParse(cab.features)
     }));
 
     res.json(parsedCabs);
   } catch (error) {
+    console.error('Cabs fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch cabs' });
   }
 };

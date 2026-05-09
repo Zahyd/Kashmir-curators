@@ -1,12 +1,21 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
+const safeParse = (str: any) => {
+  if (!str || typeof str !== 'string') return str || [];
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return [];
+  }
+};
+
 const parsePkg = (pkg: any) => ({
   ...pkg,
-  highlights: typeof pkg.highlights === 'string' ? JSON.parse(pkg.highlights) : pkg.highlights,
-  inclusions: typeof pkg.inclusions === 'string' ? JSON.parse(pkg.inclusions) : pkg.inclusions,
-  exclusions: typeof pkg.exclusions === 'string' ? JSON.parse(pkg.exclusions) : pkg.exclusions,
-  itinerary: typeof pkg.itinerary === 'string' ? JSON.parse(pkg.itinerary) : pkg.itinerary
+  highlights: safeParse(pkg.highlights),
+  inclusions: safeParse(pkg.inclusions),
+  exclusions: safeParse(pkg.exclusions),
+  itinerary: safeParse(pkg.itinerary)
 });
 
 const stringifyPkg = (data: any) => {
@@ -27,6 +36,7 @@ export const getPackages = async (req: Request, res: Response) => {
     });
     res.json(packages.map(parsePkg));
   } catch (error) {
+    console.error('Packages fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch packages' });
   }
 };
