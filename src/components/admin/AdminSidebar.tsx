@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -13,7 +14,8 @@ import {
   HelpCircle,
   PlusCircle,
   TrendingUp,
-  Search
+  Search,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ADMIN_SIDEBAR_ITEMS, ROLE_LABELS, ROLE_COLORS } from '@/contexts/TeamAuthContext';
@@ -31,6 +33,8 @@ import {
 interface AdminSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 const allMenuItems = [
@@ -45,15 +49,55 @@ const allMenuItems = [
   { id: 'content', label: 'Site Content', icon: Settings },
 ];
 
-export default function AdminSidebar({ activeSection, onSectionChange }: AdminSidebarProps) {
-  const { teamUser, teamLogout } = useTeamAuth();
+export default function AdminSidebar({ activeSection, onSectionChange, isOpen, onClose }: AdminSidebarProps) {
+  const { teamUser, teamLogout, systemEvents } = useTeamAuth();
+  const [newInquiries, setNewInquiries] = useState(0);
+  const [newReviews, setNewReviews] = useState(0);
+
+  useEffect(() => {
+    // Basic logic: count events in the last session or just keep track of new ones
+    const inquiryEvents = systemEvents.filter(e => 
+      e.type === 'CREATE' && e.booking && e.booking.type === 'inquiry'
+    ).length;
+    
+    const reviewEvents = systemEvents.filter(e => 
+      e.type === 'CREATE' && e.booking && e.booking.type === 'testimonial'
+    ).length;
+
+    setNewInquiries(inquiryEvents);
+    setNewReviews(reviewEvents);
+  }, [systemEvents]);
 
   const role = teamUser?.role || 'admin';
   const allowedItems = ADMIN_SIDEBAR_ITEMS[role] || ADMIN_SIDEBAR_ITEMS.admin;
-  const menuItems = allMenuItems.filter(item => allowedItems.includes(item.id));
+
+  const dynamicMenuItems = allMenuItems.map(item => {
+    if (item.id === 'inquiries' && newInquiries > 0) {
+      return { ...item, badge: `${newInquiries} New` };
+    }
+    if (item.id === 'reviews' && newReviews > 0) {
+      return { ...item, badge: `${newReviews} New` };
+    }
+    return item;
+  });
+
+  const menuItems = dynamicMenuItems.filter(item => allowedItems.includes(item.id));
 
   return (
-    <aside className="w-72 h-screen fixed left-0 top-0 bg-[#0a0f12]/60 backdrop-blur-3xl border-r border-white/5 flex flex-col z-50 transition-all duration-500">
+    <aside className={cn(
+      "w-72 h-screen fixed left-0 top-0 bg-[#0a0f12]/95 lg:bg-[#0a0f12]/60 backdrop-blur-3xl border-r border-white/5 flex flex-col z-[70] lg:z-50 transition-all duration-500",
+      isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+    )}>
+      {/* Mobile Close Button */}
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={onClose}
+        className="lg:hidden absolute top-4 right-4 text-white/40 hover:text-white"
+      >
+        <X className="w-6 h-6" />
+      </Button>
+
       {/* Sidebar Header */}
       <div className="p-8 border-b border-white/5">
         <div className="flex items-center gap-4 mb-8">

@@ -8,26 +8,27 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
 interface FAQ {
   id: string;
   question: string;
   answer: string;
   category: string;
-  sort_order: number;
-  is_active: boolean;
+  sortOrder: number;
+  isActive: boolean;
 }
 
 const defaultFaq: Omit<FAQ, 'id'> = {
   question: '',
   answer: '',
   category: 'general',
-  sort_order: 0,
-  is_active: true,
+  sortOrder: 0,
+  isActive: true,
 };
 
 export default function CMSFaqs() {
+  const { systemEvents } = useTeamAuth();
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,23 +40,34 @@ export default function CMSFaqs() {
     fetchFaqs();
   }, []);
 
-  const fetchFaqs = async () => {
-    const { data, error } = await supabase
-      .from('cms_faqs')
-      .select('*')
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      toast.error('Failed to load FAQs');
-    } else {
-      setFaqs(data || []);
+  // Real-time refresh
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'faq') {
+      fetchFaqs();
     }
-    setLoading(false);
+  }, [systemEvents]);
+
+  const fetchFaqs = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/faqs?all=true');
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setFaqs(data);
+      } else {
+        console.error('Expected array of FAQs, but received:', data);
+        setFaqs([]);
+      }
+    } catch (error) {
+      toast.error('Failed to load FAQs');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openCreateDialog = () => {
     setEditingItem(null);
-    setFormData({ ...defaultFaq, sort_order: faqs.length });
+    setFormData({ ...defaultFaq, sortOrder: faqs.length });
     setDialogOpen(true);
   };
 
@@ -72,41 +84,69 @@ export default function CMSFaqs() {
     }
 
     setSaving(true);
-    if (editingItem) {
-      const { error } = await supabase.from('cms_faqs').update(formData).eq('id', editingItem.id);
-      if (error) {
-        toast.error('Failed to update FAQ');
-      } else {
-        toast.success('FAQ updated');
+    const token = localStorage.getItem('teamToken');
+    const method = editingItem ? 'PATCH' : 'POST';
+    const url = editingItem 
+      ? `http://localhost:5000/api/faqs/${editingItem.id}` 
+      : 'http://localhost:5000/api/faqs';
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        toast.success(editingItem ? 'FAQ updated' : 'FAQ created');
         setDialogOpen(false);
         fetchFaqs();
-      }
-    } else {
-      const { error } = await supabase.from('cms_faqs').insert(formData);
-      if (error) {
-        toast.error('Failed to create FAQ');
       } else {
-        toast.success('FAQ created');
-        setDialogOpen(false);
-        fetchFaqs();
+        toast.error('Failed to save FAQ');
       }
+    } catch (error) {
+      toast.error('Error saving FAQ');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this FAQ?')) return;
-    const { error } = await supabase.from('cms_faqs').delete().eq('id', id);
-    if (error) {
-      toast.error('Failed to delete');
-    } else {
-      toast.success('FAQ deleted');
-      fetchFaqs();
+    const token = localStorage.getItem('teamToken');
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/faqs/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        toast.success('FAQ deleted');
+        fetchFaqs();
+      } else {
+        toast.error('Failed to delete');
+      }
+    } catch (error) {
+      toast.error('Error deleting FAQ');
     }
   };
 
   const toggleActive = async (item: FAQ) => {
-    await supabase.from('cms_faqs').update({ is_active: !item.is_active }).eq('id', item.id);
+    const token = localStorage.getItem('teamToken');
+    await fetch(`http://localhost:5000/api/faqs/${item.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ isActive: !item.isActive })
+    });
     fetchFaqs();
   };
 
@@ -144,7 +184,7 @@ export default function CMSFaqs() {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    {item.sort_order}
+                    {item.sortOrder}
                   </div>
                 </TableCell>
                 <TableCell className="font-medium max-w-md truncate">{item.question}</TableCell>
@@ -152,14 +192,14 @@ export default function CMSFaqs() {
                   <Badge variant="outline">{item.category}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                    {item.is_active ? 'Active' : 'Inactive'}
+                  <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                    {item.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="ghost" size="icon" onClick={() => toggleActive(item)}>
-                      {item.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {item.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
                       <Pencil className="h-4 w-4" />
@@ -220,16 +260,16 @@ export default function CMSFaqs() {
                 <label className="text-sm font-medium mb-1 block">Sort Order</label>
                 <Input
                   type="number"
-                  value={formData.sort_order}
-                  onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
+                  value={formData.sortOrder}
+                  onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })}
                 />
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <Switch
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
               />
               <label className="text-sm">Active</label>
             </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, SALES_AGENTS } from '@/contexts/TeamAuthContext';
@@ -38,60 +38,53 @@ import {
   DropdownMenuCheckboxItem
 } from '@/components/ui/dropdown-menu';
 
-const initialInquiries = [
-  { 
-    id: 'REQ-9921', 
-    customerName: 'Aarav Sharma', 
-    email: 'aarav@example.com', 
-    phone: '+91 9876543210', 
-    destination: 'Srinagar, Gulmarg', 
-    duration: '5 Days', 
-    accommodation: '5-star Luxury', 
-    budget: 'Luxury', 
-    travelers: 'Couple', 
-    status: 'Pending Curation', 
-    date: '2026-05-08',
-    assignedTo: 'SALES001'
-  },
-  { 
-    id: 'REQ-8842', 
-    customerName: 'Priya Patel', 
-    email: 'priya.p@example.com', 
-    phone: '+91 9988776655', 
-    destination: 'Full Kashmir Tour', 
-    duration: '7 Days', 
-    accommodation: 'Houseboat', 
-    budget: 'Standard', 
-    travelers: 'Family', 
-    status: 'New', 
-    date: '2026-05-07',
-    assignedTo: ''
-  },
-  { 
-    id: 'REQ-7719', 
-    customerName: 'Rohan Gupta', 
-    email: 'rohan.g@example.com', 
-    phone: '+91 9123456789', 
-    destination: 'Pahalgam', 
-    duration: '3 Days', 
-    accommodation: '4-star Premium', 
-    budget: 'Adventure', 
-    travelers: 'Group', 
-    status: 'Ready for Review', 
-    date: '2026-05-06',
-    assignedTo: 'SALES002'
-  },
-];
+
 
 export default function CMSInquiries() {
-  const { teamUser, hasPermission } = useTeamAuth();
+  const { teamUser, hasPermission, systemEvents } = useTeamAuth();
   const canAssign = hasPermission('assign_leads');
   const [searchTerm, setSearchTerm] = useState('');
-  const [inquiries, setInquiries] = useState(initialInquiries);
+  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, []);
+
+  // Real-time synchronization
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'inquiry') {
+      fetchInquiries();
+    }
+  }, [systemEvents]);
+
+  const fetchInquiries = async () => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch('http://localhost:5000/api/inquiries', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      // Robustically handle cases where backend returns an error object instead of an array
+      if (Array.isArray(data)) {
+        setInquiries(data);
+      } else {
+        console.error('Expected array of inquiries, but received:', data);
+        setInquiries([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch inquiries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredInquiries = inquiries.filter(inq => {
     const matchesSearch = inq.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -202,7 +195,8 @@ export default function CMSInquiries() {
       </div>
 
       {/* Intelligence Grid */}
-      <Card className="bg-[#0a0f12]/40 bg-white/[0.01] border-white/5 backdrop-blur-3xl overflow-hidden rounded-[2.5rem] shadow-inner relative group">
+      {/* Desktop Table View */}
+      <Card className="hidden lg:block bg-[#0a0f12]/40 bg-white/[0.01] border-white/5 backdrop-blur-3xl overflow-hidden rounded-[2.5rem] shadow-inner relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         
         <div className="overflow-x-auto relative z-10 custom-scrollbar">

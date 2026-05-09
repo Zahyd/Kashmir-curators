@@ -1,73 +1,51 @@
-# Welcome to your Lovable project
+# The Kashmir Curators
 
-## Project info
+Professional travel management platform for Kashmir tour packages, hotels, and cabs.
 
-**URL**: https://lovable.dev/projects/9aa1d49e-0044-4039-bd45-a52bc59527e8
+## Project Overview
 
-## How can I edit this code?
+The Kashmir Curators is a comprehensive travel platform designed to provide curated travel experiences in the beautiful valleys of Kashmir. It features an administrative portal, sales portal, and customer-facing dashboard.
 
-There are several ways of editing your application.
+## Technologies Used
 
-**Use Lovable**
+- **Frontend**: Vite, React, TypeScript, Tailwind CSS, shadcn/ui
+- **Backend**: Node.js, Express, Prisma, PostgreSQL
+- **Real-time**: Socket.io
+- **State Management**: React Query
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/9aa1d49e-0044-4039-bd45-a52bc59527e8) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js & npm installed
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Clone the repository:
+   ```sh
+   git clone <YOUR_GIT_URL>
+   ```
 
-Follow these steps:
+2. Navigate to the project directory:
+   ```sh
+   cd kashmir-connect
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. Install dependencies:
+   ```sh
+   npm install
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+4. Start the development server:
+   ```sh
+   npm run dev
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Development
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+- Frontend runs on: `http://localhost:8080`
+- Backend runs on: `http://localhost:5000`
 
-**Edit a file directly in GitHub**
+## License
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/9aa1d49e-0044-4039-bd45-a52bc59527e8) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Private and Confidential. All rights reserved.

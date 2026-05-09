@@ -20,6 +20,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     req.user = decoded;
     next();
   } catch (error) {
+    console.error('JWT Verification Failed:', (error as any).message);
     res.status(403).json({ error: 'Invalid token.' });
   }
 };

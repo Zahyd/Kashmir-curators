@@ -15,7 +15,9 @@ import {
   Search,
   Bell,
   Calendar,
-  ChevronRight
+  ChevronRight,
+  Zap,
+  Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ROLE_LABELS } from '@/contexts/TeamAuthContext';
@@ -26,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 
 // Admin Components
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import MobilePortalNav from '@/components/layout/MobilePortalNav';
 import CMSInquiries from '@/components/admin/CMSInquiries';
 import CMSPackages from '@/components/admin/CMSPackages';
 import CMSHotels from '@/components/admin/CMSHotels';
@@ -35,17 +38,39 @@ import CMSFaqs from '@/components/admin/CMSFaqs';
 import MediaLibrary from '@/components/admin/MediaLibrary';
 import CMSSiteContent from '@/components/admin/CMSSiteContent';
 
-const stats = [
-  { label: 'Total Bookings', value: '1,234', icon: Package, change: '+12%', color: 'text-blue-400' },
-  { label: 'Total Revenue', value: '₹45.2L', icon: DollarSign, change: '+8%', color: 'text-green-400' },
-  { label: 'Active Users', value: '892', icon: Users, change: '+23%', color: 'text-purple-400' },
-  { label: 'Packages Sold', value: '456', icon: TrendingUp, change: '+15%', color: 'text-kashmir-gold' },
-];
+const ROLE_STATS: Record<string, any[]> = {
+  admin: [
+    { label: 'Total Bookings', value: '0', icon: Package, change: '0%', color: 'text-blue-400' },
+    { label: 'Total Revenue', value: '₹0L', icon: DollarSign, change: '0%', color: 'text-green-400' },
+    { label: 'Active Users', value: '0', icon: Users, change: '0%', color: 'text-purple-400' },
+    { label: 'Packages Sold', value: '0', icon: TrendingUp, change: '0%', color: 'text-kashmir-gold' },
+  ],
+  operations: [
+    { label: 'Active Inquiries', value: '0', icon: MessageSquare, change: 'Live', color: 'text-blue-400' },
+    { label: 'Pending Bookings', value: '0', icon: Package, change: '0', color: 'text-amber-400' },
+    { label: 'Cab Availability', value: '100%', icon: Car, change: 'High', color: 'text-emerald-400' },
+    { label: 'Hotel Nodes', value: '0', icon: Building, change: '0', color: 'text-purple-400' },
+  ],
+  marketing: [
+    { label: 'New Reviews', value: '0', icon: Users, change: '0', color: 'text-kashmir-gold' },
+    { label: 'Active FAQs', value: '0', icon: HelpCircle, change: 'Stable', color: 'text-blue-400' },
+    { label: 'Featured Pkgs', value: '0', icon: Star, change: 'Max', color: 'text-amber-400' },
+    { label: 'Site Traffic', value: '0', icon: TrendingUp, change: '0%', color: 'text-emerald-400' },
+  ],
+  sales: [
+    { label: 'Leads Received', value: '0', icon: Zap, change: '0', color: 'text-kashmir-gold' },
+    { label: 'Conversion Rate', value: '0%', icon: TrendingUp, change: '0%', color: 'text-emerald-400' },
+    { label: 'Active Quotes', value: '0', icon: MessageSquare, change: '0', color: 'text-blue-400' },
+    { label: 'Target Progress', value: '0%', icon: DollarSign, change: '0%', color: 'text-purple-400' },
+  ]
+};
 
 export default function Admin() {
   const navigate = useNavigate();
-  const { teamUser, isTeamAuthenticated, isTeamLoading, canAccessAdmin } = useTeamAuth();
+  const { teamUser, isTeamAuthenticated, isTeamLoading, canAccessAdmin, systemEvents } = useTeamAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [dynamicStats, setDynamicStats] = useState<any>(null);
 
   useEffect(() => {
     if (!isTeamLoading) {
@@ -54,15 +79,76 @@ export default function Admin() {
       } else if (!canAccessAdmin) {
         // Sales users go to sales portal
         navigate('/sales/portal');
+      } else {
+        fetchStats();
       }
     }
   }, [isTeamAuthenticated, canAccessAdmin, isTeamLoading, navigate]);
+
+  // Refresh stats when system events occur
+  useEffect(() => {
+    if (isTeamAuthenticated && canAccessAdmin) {
+      fetchStats();
+    }
+  }, [systemEvents]);
+
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch('http://localhost:5000/api/dashboard/admin', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch');
+      
+      const data = await response.json();
+      // Only set if we actually got stats, not an error object
+      if (data && !data.error) {
+        setDynamicStats(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  };
 
   if (isTeamLoading || !isTeamAuthenticated || !canAccessAdmin) {
     return null;
   }
 
   const teamRole = teamUser?.role || 'admin';
+
+  const getDisplayStats = () => {
+    const baseStats = ROLE_STATS[teamRole] || ROLE_STATS.admin;
+    if (!dynamicStats) return baseStats;
+
+    return baseStats.map(stat => {
+      let value = stat.value;
+      // Admin/Ops
+      if (stat.label === 'Total Bookings') value = (dynamicStats.totalBookings ?? 0).toLocaleString();
+      if (stat.label === 'Total Revenue') value = `₹${((dynamicStats.totalRevenue || 0) / 100000).toFixed(1)}L`;
+      if (stat.label === 'Active Users') value = (dynamicStats.totalUsers ?? 0).toLocaleString();
+      if (stat.label === 'Packages Sold') value = (dynamicStats.totalPackages ?? 0).toLocaleString();
+      
+      if (stat.label === 'Active Inquiries') value = dynamicStats.activeInquiries ?? 0;
+      if (stat.label === 'Pending Bookings') value = dynamicStats.pendingBookings ?? 0;
+      if (stat.label === 'Hotel Nodes') value = dynamicStats.hotelNodes ?? 0;
+      
+      // Marketing
+      if (stat.label === 'New Reviews') value = dynamicStats.newReviews ?? 0;
+      if (stat.label === 'Active FAQs') value = dynamicStats.activeFaqs ?? 0;
+      if (stat.label === 'Featured Pkgs') value = dynamicStats.totalPackages ?? 0;
+
+      // Sales
+      if (stat.label === 'Leads Received') value = dynamicStats.leadsReceived ?? dynamicStats.activeInquiries ?? 0;
+      if (stat.label === 'Conversion Rate') value = dynamicStats.conversionRate ?? '0%';
+      if (stat.label === 'Active Quotes') value = dynamicStats.activeQuotes ?? 0;
+      if (stat.label === 'Target Progress') value = dynamicStats.targetProgress ?? '0%';
+
+      return { ...stat, value };
+    });
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -95,10 +181,7 @@ export default function Admin() {
 
             {/* Stats Grid - High Fidelity */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {stats.filter(stat => {
-                if (stat.label === 'Total Revenue' && teamRole !== 'admin') return false;
-                return true;
-              }).map((stat, idx) => (
+              {getDisplayStats().map((stat, idx) => (
                 <Card key={stat.label} className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-8 rounded-[2.5rem] backdrop-blur-xl relative overflow-hidden transition-all duration-500 hover:border-kashmir-gold/30 hover:shadow-2xl hover:shadow-kashmir-gold/5 group">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-kashmir-gold/5 blur-[40px] -mr-12 -mt-12 transition-all group-hover:bg-kashmir-gold/20" />
                   
@@ -183,29 +266,36 @@ export default function Admin() {
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                 </div>
                 
-                <div className="space-y-8 flex-1">
-                  {[
-                    { label: 'New Inquiry', sub: 'High Priority Trip • 2m ago', icon: MessageSquare, color: 'text-kashmir-gold' },
-                    { label: 'Booking Secured', sub: 'Luxury Stay Confirmed • 14m ago', icon: Package, color: 'text-emerald-400' },
-                    { label: 'System Update', sub: 'V3.2 Deployment Ready • 42m ago', icon: Sparkles, color: 'text-blue-400' },
-                    { label: 'Payment Received', sub: 'Invoice #8829-X • 1h ago', icon: DollarSign, color: 'text-green-400' },
-                    { label: 'User Feedback', sub: '5-Star Review Added • 2h ago', icon: Users, color: 'text-purple-400' },
-                  ].map((event, i) => (
-                    <div key={i} className="flex gap-5 group/event">
-                      <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover/event:bg-white/10 transition-all duration-300">
-                        <event.icon className={cn("w-5 h-5", event.color)} />
+                <div className="space-y-8 flex-1 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
+                  {systemEvents.length > 0 ? (
+                    systemEvents.map((event, i) => (
+                      <div key={i} className="flex gap-5 group/event animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover/event:bg-white/10 transition-all duration-300">
+                          {event.type === 'CREATE' ? (
+                            <Package className="w-5 h-5 text-emerald-400" />
+                          ) : (
+                            <TrendingUp className="w-5 h-5 text-blue-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 pt-1">
+                          <p className="text-sm font-bold text-white group-hover/event:text-kashmir-gold transition-colors">{event.message}</p>
+                          <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mt-1">
+                            {new Date(event.timestamp).toLocaleTimeString()} • {event.type}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-white/10 mt-2" />
                       </div>
-                      <div className="flex-1 min-w-0 pt-1">
-                        <p className="text-sm font-bold text-white group-hover/event:text-kashmir-gold transition-colors">{event.label}</p>
-                        <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mt-1">{event.sub}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-white/10 mt-2" />
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-30">
+                      <Sparkles className="w-12 h-12 text-kashmir-gold/50" />
+                      <p className="text-xs uppercase tracking-[0.2em] font-black">Awaiting System Events...</p>
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 <Button variant="ghost" className="mt-10 w-full rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white hover:bg-white/10">
-                  Audit Entire Feed
+                  Full Audit Log
                 </Button>
               </Card>
             </div>
@@ -224,75 +314,29 @@ export default function Admin() {
   };
 
   return (
-    <div className="dark min-h-screen bg-[#060a0d] text-white flex overflow-hidden">
-      {/* Background Glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-kashmir-gold/5 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[10%] w-[40%] h-[40%] rounded-full bg-kashmir-gold/5 blur-[120px]" />
+    <div className="min-h-screen bg-[#0a0f12] text-white flex flex-col lg:flex-row font-sans">
+      <AdminSidebar 
+        activeSection={activeSection} 
+        onSectionChange={(section) => {
+          setActiveSection(section);
+          setIsSidebarOpen(false);
+        }} 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+
+      <div className="flex-1 lg:ml-72 flex flex-col">
+        <MobilePortalNav 
+          title="Kashmir Director"
+          roleLabel={ROLE_LABELS[teamRole]}
+          isOpen={isSidebarOpen}
+          onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        />
+
+        <main className="p-6 lg:p-12 pt-28 lg:pt-12 max-w-7xl mx-auto w-full">
+          {renderContent()}
+        </main>
       </div>
-
-      <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-
-      <main className="flex-1 ml-72 min-w-0 flex flex-col h-screen relative z-10">
-        {/* Top Header Bar */}
-        <header className="h-20 border-b border-white/5 bg-[#0a0f12]/50 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-4 flex-1 max-w-3xl">
-            <div className="relative w-full group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 group-focus-within:text-kashmir-gold transition-colors" />
-              <Input 
-                placeholder="Search inquiries, packages, or settings..." 
-                className="w-full pl-10 bg-white/5 border-white/5 focus-visible:ring-kashmir-gold/50 focus-visible:border-kashmir-gold/50 text-white placeholder:text-white/20 h-10 rounded-xl"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <button className="relative w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-              <Bell className="w-5 h-5 text-white/50" />
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-kashmir-gold" />
-            </button>
-            <div className="h-8 w-px bg-white/10" />
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-xs font-bold text-white uppercase tracking-tighter">System Online</p>
-                <p className="text-[10px] text-green-400 font-medium">May 08, 2026</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-kashmir-gold" />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Dynamic Content Area */}
-        <div className="flex-1 overflow-auto p-8 custom-scrollbar">
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-10">
-              <div>
-                <div className="flex items-center gap-2 text-kashmir-gold/60 text-xs font-bold uppercase tracking-widest mb-1">
-                  <span>Sales Portal</span>
-                  <ChevronRight className="w-3 h-3" />
-                  <span className="text-white/60">{activeSection}</span>
-                </div>
-                <h2 className="text-4xl font-display font-bold text-white capitalize">{activeSection.replace('-', ' ')}</h2>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 gap-2 h-11 rounded-xl">
-                  <Calendar className="w-4 h-4 text-kashmir-gold" />
-                  <span>Schedule View</span>
-                </Button>
-                <Button className="bg-kashmir-gold text-black hover:bg-amber-500 font-bold gap-2 px-6 h-11 rounded-xl shadow-lg shadow-kashmir-gold/20">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Download Report</span>
-                </Button>
-              </div>
-            </div>
-
-            {renderContent()}
-          </div>
-        </div>
-      </main>
     </div>
   );
 }

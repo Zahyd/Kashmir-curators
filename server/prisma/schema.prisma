@@ -106,3 +106,21 @@ model Booking {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model Inquiry {
+  id            String   @id @default(uuid())
+  customerName  String
+  email         String
+  phone         String
+  destination   String
+  duration      String
+  travelers     String
+  budget        String
+  accommodation String
+  status        String   @default("New") // New, Pending Curation, Ready for Review, Booked, Lost
+  assignedTo    String?  // Sales team user code
+  priority      String?  // Low, Medium, High
+  sentiment     String?  // Cold, Warm, Hot, Ready to Book
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

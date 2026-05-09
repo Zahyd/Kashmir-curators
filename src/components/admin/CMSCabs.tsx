@@ -8,35 +8,34 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
 
 interface Cab {
   id: string;
   name: string;
-  vehicle_type: string;
+  type: string;
   capacity: number;
-  price_per_km: number;
-  base_fare: number;
-  description: string | null;
-  image_url: string | null;
-  features: string[];
-  is_active: boolean;
+  pricePerKm: number;
+  basePrice: number;
+  image: string | null;
+  features: string[]; // This will be parsed from JSON string if needed, but let's assume API returns array
+  isActive: boolean;
 }
 
 const defaultCab: Omit<Cab, 'id'> = {
   name: '',
-  vehicle_type: '',
+  type: '',
   capacity: 4,
-  price_per_km: 0,
-  base_fare: 0,
-  description: '',
-  image_url: '',
+  pricePerKm: 0,
+  basePrice: 0,
+  image: '',
   features: [],
-  is_active: true,
+  isActive: true,
 };
 
 export default function CMSCabs() {
+  const { systemEvents } = useTeamAuth();
   const [cabs, setCabs] = useState<Cab[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,18 +48,36 @@ export default function CMSCabs() {
     fetchCabs();
   }, []);
 
-  const fetchCabs = async () => {
-    const { data, error } = await supabase
-      .from('cms_cabs')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      toast.error('Failed to load cabs');
-    } else {
-      setCabs(data || []);
+  // Real-time refresh
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'cab') {
+      fetchCabs();
     }
-    setLoading(false);
+  }, [systemEvents]);
+
+  const fetchCabs = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/cabs?all=true');
+      const data = await response.json();
+      
+      if (!Array.isArray(data)) {
+        console.error('Expected array of cabs, but received:', data);
+        setCabs([]);
+        return;
+      }
+
+      // Handle the case where features might be a string from backend
+      const sanitized = data.map((cab: any) => ({
+        ...cab,
+        features: typeof cab.features === 'string' ? JSON.parse(cab.features) : cab.features
+      }));
+      setCabs(sanitized);
+    } catch (error) {
+      toast.error('Failed to load cabs');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openCreateDialog = () => {
@@ -78,52 +95,80 @@ export default function CMSCabs() {
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.vehicle_type) {
+    if (!formData.name || !formData.type) {
       toast.error('Please fill required fields');
       return;
     }
 
     setSaving(true);
+    const token = localStorage.getItem('teamToken');
+    const method = editingCab ? 'PATCH' : 'POST';
+    const url = editingCab 
+      ? `http://localhost:5000/api/cabs/${editingCab.id}` 
+      : 'http://localhost:5000/api/cabs';
+
     const dataToSave = {
       ...formData,
       features: featuresInput.split('\n').filter(Boolean),
     };
 
-    if (editingCab) {
-      const { error } = await supabase.from('cms_cabs').update(dataToSave).eq('id', editingCab.id);
-      if (error) {
-        toast.error('Failed to update cab');
-      } else {
-        toast.success('Cab updated');
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(dataToSave)
+      });
+
+      if (response.ok) {
+        toast.success(editingCab ? 'Cab updated' : 'Cab created');
         setDialogOpen(false);
         fetchCabs();
-      }
-    } else {
-      const { error } = await supabase.from('cms_cabs').insert(dataToSave);
-      if (error) {
-        toast.error('Failed to create cab');
       } else {
-        toast.success('Cab created');
-        setDialogOpen(false);
-        fetchCabs();
+        toast.error('Failed to save cab');
       }
+    } catch (error) {
+      toast.error('Error saving cab');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this cab?')) return;
-    const { error } = await supabase.from('cms_cabs').delete().eq('id', id);
-    if (error) {
-      toast.error('Failed to delete cab');
-    } else {
-      toast.success('Cab deleted');
-      fetchCabs();
+    const token = localStorage.getItem('teamToken');
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/cabs/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        toast.success('Cab deleted');
+        fetchCabs();
+      } else {
+        toast.error('Failed to delete');
+      }
+    } catch (error) {
+      toast.error('Error deleting cab');
     }
   };
 
   const toggleActive = async (cab: Cab) => {
-    await supabase.from('cms_cabs').update({ is_active: !cab.is_active }).eq('id', cab.id);
+    const token = localStorage.getItem('teamToken');
+    await fetch(`http://localhost:5000/api/cabs/${cab.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ isActive: !cab.isActive })
+    });
     fetchCabs();
   };
 
@@ -150,7 +195,7 @@ export default function CMSCabs() {
             <TableRow>
               <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Vehicle Type</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Capacity</TableHead>
               <TableHead>Price/KM</TableHead>
               <TableHead>Status</TableHead>
@@ -161,25 +206,25 @@ export default function CMSCabs() {
             {cabs.map((cab) => (
               <TableRow key={cab.id}>
                 <TableCell>
-                  {cab.image_url ? (
-                    <img src={cab.image_url} alt={cab.name} className="w-16 h-12 object-cover rounded" />
+                  {cab.image ? (
+                    <img src={cab.image} alt={cab.name} className="w-16 h-12 object-cover rounded" />
                   ) : (
                     <div className="w-16 h-12 bg-muted rounded flex items-center justify-center text-xs">No image</div>
                   )}
                 </TableCell>
                 <TableCell className="font-medium">{cab.name}</TableCell>
-                <TableCell>{cab.vehicle_type}</TableCell>
+                <TableCell>{cab.type}</TableCell>
                 <TableCell>{cab.capacity} seats</TableCell>
-                <TableCell>₹{cab.price_per_km}/km</TableCell>
+                <TableCell>₹{cab.pricePerKm}/km</TableCell>
                 <TableCell>
-                  <Badge variant={cab.is_active ? 'default' : 'secondary'}>
-                    {cab.is_active ? 'Active' : 'Inactive'}
+                  <Badge variant={cab.isActive ? 'default' : 'secondary'}>
+                    {cab.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="ghost" size="icon" onClick={() => toggleActive(cab)}>
-                      {cab.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {cab.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(cab)}>
                       <Pencil className="h-4 w-4" />
@@ -218,10 +263,10 @@ export default function CMSCabs() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Vehicle Type *</label>
+                <label className="text-sm font-medium mb-1 block">Type *</label>
                 <Input
-                  value={formData.vehicle_type}
-                  onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   placeholder="e.g., Sedan"
                 />
               </div>
@@ -241,34 +286,25 @@ export default function CMSCabs() {
                 <Input
                   type="number"
                   step="0.5"
-                  value={formData.price_per_km}
-                  onChange={(e) => setFormData({ ...formData, price_per_km: Number(e.target.value) })}
+                  value={formData.pricePerKm}
+                  onChange={(e) => setFormData({ ...formData, pricePerKm: Number(e.target.value) })}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Base Fare (₹)</label>
+                <label className="text-sm font-medium mb-1 block">Base Price (₹)</label>
                 <Input
                   type="number"
-                  value={formData.base_fare}
-                  onChange={(e) => setFormData({ ...formData, base_fare: Number(e.target.value) })}
+                  value={formData.basePrice}
+                  onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1 block">Description</label>
-              <Textarea
-                value={formData.description || ''}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={2}
-              />
             </div>
 
             <div>
               <label className="text-sm font-medium mb-1 block">Image</label>
               <MediaPicker
-                value={formData.image_url || ''}
-                onChange={(url) => setFormData({ ...formData, image_url: url })}
+                value={formData.image || ''}
+                onChange={(url) => setFormData({ ...formData, image: url })}
               />
             </div>
 
@@ -284,8 +320,8 @@ export default function CMSCabs() {
 
             <div className="flex items-center gap-2">
               <Switch
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
               />
               <label className="text-sm">Active</label>
             </div>

@@ -17,6 +17,16 @@ export const createBooking = async (req: any, res: Response) => {
       }
     });
 
+    // Emit real-time update
+    if (req.io) {
+      const payload = { type: 'CREATE', booking };
+      req.io.to(`user-${req.user.id}`).emit('booking-updated', payload);
+      req.io.to('admin-room').emit('new-system-event', {
+        ...payload,
+        message: `New booking: ${booking.itemName} by ${req.user.name || 'User'}`
+      });
+    }
+
     res.status(201).json(booking);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create booking' });
@@ -50,6 +60,17 @@ export const updateBookingStatus = async (req: any, res: Response) => {
       where: { id },
       data: { status }
     });
+
+    // Emit real-time update to the user
+    if (req.io) {
+      const payload = { type: 'UPDATE', booking };
+      req.io.to(`user-${booking.userId}`).emit('booking-updated', payload);
+      req.io.to('admin-room').emit('new-system-event', {
+        ...payload,
+        message: `Booking ${booking.id.slice(0,8)} status changed to ${booking.status}`
+      });
+    }
+
     res.json(booking);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update booking' });

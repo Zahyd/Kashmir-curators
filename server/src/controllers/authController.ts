@@ -75,3 +75,38 @@ export const getMe = async (req: any, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch user profile' });
   }
 };
+
+export const teamLogin = async (req: Request, res: Response) => {
+  const { code } = req.body;
+  
+  // Detect role from code (matching frontend logic for consistency)
+  const detectRole = (c: string) => {
+    const upper = c.toUpperCase();
+    if (upper.startsWith('ADMIN')) return 'admin';
+    if (upper.startsWith('OPS')) return 'operations';
+    if (upper.startsWith('SALES') || upper.startsWith('KC')) return 'sales';
+    if (upper.startsWith('MKT')) return 'marketing';
+    return null;
+  };
+
+  const role = detectRole(code);
+  if (!role) {
+    return res.status(400).json({ error: 'Invalid employee code' });
+  }
+
+  // Generate a system-level token for the team member
+  const token = jwt.sign(
+    { id: `system-${code}`, email: `${code.toLowerCase()}@kashmirconnect.com`, role },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  res.json({
+    user: {
+      code: code.toUpperCase(),
+      name: `${role.charAt(0).toUpperCase() + role.slice(1)} ${code.slice(-3)}`,
+      role
+    },
+    token
+  });
+};

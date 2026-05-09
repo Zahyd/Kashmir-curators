@@ -1,9 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { io, Socket } from 'socket.io-client';
 
 const API_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:5000/api' 
   : 'https://kashmir-curators-api.onrender.com/api';
+
+const SOCKET_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://kashmir-curators-api.onrender.com';
 
 interface Profile {
   id: string;
@@ -48,6 +53,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  // Initialize socket when user changes
+  useEffect(() => {
+    if (user && !socket) {
+      const newSocket = io(SOCKET_URL);
+      setSocket(newSocket);
+
+      newSocket.on('connect', () => {
+        console.log('Connected to WebSocket');
+        newSocket.emit('join-user', user.id);
+      });
+
+      newSocket.on('booking-updated', (data) => {
+        console.log('Real-time booking update received:', data);
+        refreshBookings();
+        toast.info(`Booking status updated: ${data.booking.itemName} is now ${data.booking.status}`, {
+          description: "Your dashboard has been updated in real-time.",
+          icon: '🚀'
+        });
+      });
+
+      return () => {
+        newSocket.disconnect();
+        setSocket(null);
+      };
+    } else if (!user && socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
+  }, [user]);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('auth_token');
@@ -217,7 +253,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshBookings = async () => {
-    if (token) fetchBookings(token);
+    const currentToken = token || localStorage.getItem('auth_token');
+    if (currentToken) fetchBookings(currentToken);
   };
 
   return (

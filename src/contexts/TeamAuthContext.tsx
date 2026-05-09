@@ -1,4 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { toast } from 'sonner';
+
+const SOCKET_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://kashmir-curators-api.onrender.com';
 
 export type TeamRole = 'admin' | 'operations' | 'sales' | 'marketing';
 
@@ -7,6 +13,13 @@ export interface TeamUser {
   name: string;
   role: TeamRole;
   loginTime: string;
+}
+
+export interface SystemEvent {
+  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  message: string;
+  booking?: any;
+  timestamp: string;
 }
 
 // Permission map: what each role can access
@@ -62,6 +75,7 @@ interface TeamAuthContextType {
   teamUser: TeamUser | null;
   isTeamAuthenticated: boolean;
   isTeamLoading: boolean;
+  systemEvents: SystemEvent[];
   teamLogin: (code: string) => Promise<{ success: boolean; error?: string }>;
   teamLogout: () => void;
   hasPermission: (permission: string) => boolean;
@@ -93,6 +107,39 @@ function generateName(code: string, role: TeamRole): string {
 export function TeamAuthProvider({ children }: { children: ReactNode }) {
   const [teamUser, setTeamUser] = useState<TeamUser | null>(null);
   const [isTeamLoading, setIsTeamLoading] = useState(true);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [systemEvents, setSystemEvents] = useState<SystemEvent[]>([]);
+
+  // Initialize socket when team user changes
+  useEffect(() => {
+    if (teamUser && !socket) {
+      const newSocket = io(SOCKET_URL);
+      setSocket(newSocket);
+
+      newSocket.on('connect', () => {
+        console.log('Team connected to Admin WebSocket');
+        newSocket.emit('join-admin');
+      });
+
+      newSocket.on('new-system-event', (data) => {
+        const event: SystemEvent = {
+          ...data,
+          timestamp: new Date().toISOString()
+        };
+        setSystemEvents(prev => [event, ...prev].slice(0, 50));
+        
+        toast.info(event.message, {
+          description: "System intelligence update received.",
+          icon: '📊'
+        });
+      });
+
+      return () => {
+        newSocket.disconnect();
+        setSocket(null);
+      };
+    }
+  }, [teamUser]);
 
   // Restore session on mount
   useEffect(() => {
@@ -104,53 +151,40 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('team_user');
       }
     }
-    // Also migrate old sales_user sessions
-    const oldSales = localStorage.getItem('sales_user');
-    if (oldSales && !stored) {
-      try {
-        const parsed = JSON.parse(oldSales);
-        const migrated: TeamUser = {
-          code: parsed.code,
-          name: parsed.name,
-          role: 'sales',
-          loginTime: parsed.loginTime || new Date().toISOString(),
-        };
-        setTeamUser(migrated);
-        localStorage.setItem('team_user', JSON.stringify(migrated));
-      } catch {
-        // ignore
-      }
-    }
     setIsTeamLoading(false);
   }, []);
 
   const teamLogin = async (code: string): Promise<{ success: boolean; error?: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    try {
+      const response = await fetch(`${SOCKET_URL}/api/auth/team-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
 
-    const role = detectRole(code);
-    if (!role) {
-      return { success: false, error: 'Invalid employee code. Try ADMIN001, OPS001, SALES001, or MKT001.' };
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Login failed' };
+      }
+
+      const { user, token } = await response.json();
+      
+      setTeamUser(user);
+      localStorage.setItem('team_user', JSON.stringify(user));
+      localStorage.setItem('teamToken', token);
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'Network error. Is the server running?' };
     }
-
-    const user: TeamUser = {
-      code: code.toUpperCase(),
-      name: generateName(code, role),
-      role,
-      loginTime: new Date().toISOString(),
-    };
-
-    setTeamUser(user);
-    localStorage.setItem('team_user', JSON.stringify(user));
-    // Also set legacy key for backward compat
-    localStorage.setItem('sales_user', JSON.stringify(user));
-
-    return { success: true };
   };
 
   const teamLogout = () => {
     setTeamUser(null);
+    if (socket) socket.disconnect();
     localStorage.removeItem('team_user');
     localStorage.removeItem('sales_user');
+    localStorage.removeItem('teamToken');
   };
 
   const hasPermission = (permission: string): boolean => {
@@ -171,6 +205,7 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       teamUser,
       isTeamAuthenticated: !!teamUser,
       isTeamLoading,
+      systemEvents,
       teamLogin,
       teamLogout,
       hasPermission,

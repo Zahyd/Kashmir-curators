@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
 
 interface Package {
@@ -17,16 +19,16 @@ interface Package {
   destination: string;
   duration: string;
   price: number;
-  original_price: number;
+  originalPrice: number;
   description: string | null;
-  image_url: string | null;
+  imageUrl: string | null;
   highlights: string[];
   inclusions: string[];
   exclusions: string[];
   rating: number;
-  review_count: number;
-  is_featured: boolean;
-  is_active: boolean;
+  reviewCount: number;
+  isFeatured: boolean;
+  isActive: boolean;
 }
 
 const defaultPackage: Omit<Package, 'id'> = {
@@ -34,19 +36,20 @@ const defaultPackage: Omit<Package, 'id'> = {
   destination: '',
   duration: '',
   price: 0,
-  original_price: 0,
+  originalPrice: 0,
   description: '',
-  image_url: '',
+  imageUrl: '',
   highlights: [],
   inclusions: [],
   exclusions: [],
   rating: 4.5,
-  review_count: 0,
-  is_featured: false,
-  is_active: true,
+  reviewCount: 0,
+  isFeatured: false,
+  isActive: true,
 };
 
 export default function CMSPackages() {
+  const { systemEvents } = useTeamAuth();
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,18 +64,29 @@ export default function CMSPackages() {
     fetchPackages();
   }, []);
 
-  const fetchPackages = async () => {
-    const { data, error } = await supabase
-      .from('cms_packages')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      toast.error('Failed to load packages');
-    } else {
-      setPackages(data || []);
+  // Real-time refresh
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'package') {
+      fetchPackages();
     }
-    setLoading(false);
+  }, [systemEvents]);
+
+  const fetchPackages = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/packages?all=true');
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setPackages(data);
+      } else {
+        console.error('Expected array of packages, but received:', data);
+        setPackages([]);
+      }
+    } catch (error) {
+      toast.error('Failed to load packages');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openCreateDialog = () => {
@@ -100,6 +114,12 @@ export default function CMSPackages() {
     }
 
     setSaving(true);
+    const token = localStorage.getItem('teamToken');
+    const method = editingPackage ? 'PATCH' : 'POST';
+    const url = editingPackage 
+      ? `http://localhost:5000/api/packages/${editingPackage.id}` 
+      : 'http://localhost:5000/api/packages';
+
     const dataToSave = {
       ...formData,
       highlights: highlightsInput.split('\n').filter(Boolean),
@@ -107,62 +127,77 @@ export default function CMSPackages() {
       exclusions: exclusionsInput.split('\n').filter(Boolean),
     };
 
-    if (editingPackage) {
-      const { error } = await supabase
-        .from('cms_packages')
-        .update(dataToSave)
-        .eq('id', editingPackage.id);
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(dataToSave)
+      });
 
-      if (error) {
-        toast.error('Failed to update package');
-      } else {
-        toast.success('Package updated');
+      if (response.ok) {
+        toast.success(editingPackage ? 'Package updated' : 'Package created');
         setDialogOpen(false);
         fetchPackages();
-      }
-    } else {
-      const { error } = await supabase.from('cms_packages').insert(dataToSave);
-
-      if (error) {
-        toast.error('Failed to create package');
       } else {
-        toast.success('Package created');
-        setDialogOpen(false);
-        fetchPackages();
+        toast.error('Failed to save package');
       }
+    } catch (error) {
+      toast.error('Error saving package');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this package?')) return;
+    const token = localStorage.getItem('teamToken');
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/packages/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-    const { error } = await supabase.from('cms_packages').delete().eq('id', id);
-
-    if (error) {
-      toast.error('Failed to delete package');
-    } else {
-      toast.success('Package deleted');
-      fetchPackages();
+      if (response.ok) {
+        toast.success('Package deleted');
+        fetchPackages();
+      } else {
+        toast.error('Failed to delete package');
+      }
+    } catch (error) {
+      toast.error('Error deleting package');
     }
   };
 
   const toggleActive = async (pkg: Package) => {
-    const { error } = await supabase
-      .from('cms_packages')
-      .update({ is_active: !pkg.is_active })
-      .eq('id', pkg.id);
-
-    if (!error) fetchPackages();
+    const token = localStorage.getItem('teamToken');
+    await fetch(`http://localhost:5000/api/packages/${pkg.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ isActive: !pkg.isActive })
+    });
+    fetchPackages();
   };
 
   const toggleFeatured = async (pkg: Package) => {
-    const { error } = await supabase
-      .from('cms_packages')
-      .update({ is_featured: !pkg.is_featured })
-      .eq('id', pkg.id);
-
-    if (!error) fetchPackages();
+    const token = localStorage.getItem('teamToken');
+    await fetch(`http://localhost:5000/api/packages/${pkg.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ isFeatured: !pkg.isFeatured })
+    });
+    fetchPackages();
   };
 
   if (loading) {
@@ -174,78 +209,146 @@ export default function CMSPackages() {
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Packages ({packages.length})</h2>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" /> Add Package
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h2 className="text-3xl font-display font-bold text-white tracking-tight">Experience Catalog</h2>
+          <p className="text-white/40 text-sm mt-1 uppercase tracking-widest font-black">Managing {packages.length} Active Nodes</p>
+        </div>
+        <Button onClick={openCreateDialog} className="w-full md:w-auto bg-kashmir-gold text-black hover:bg-amber-500 font-black px-8 h-14 rounded-2xl shadow-xl shadow-kashmir-gold/10">
+          <Plus className="h-5 w-5 mr-2" /> 
+          <span className="text-[10px] uppercase tracking-[0.2em]">Deploy Package</span>
         </Button>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
+        <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Image</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Destination</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+          <TableHeader className="bg-white/[0.02] border-b border-white/5">
+            <TableRow className="hover:bg-transparent border-none">
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] py-8 pl-10">Intelligence Node</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Operational Parameters</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Asset Value</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Status</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] text-right pr-10">Controls</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-white/5">
             {packages.map((pkg) => (
-              <TableRow key={pkg.id}>
-                <TableCell>
-                  {pkg.image_url ? (
-                    <img src={pkg.image_url} alt={pkg.name} className="w-16 h-12 object-cover rounded" />
-                  ) : (
-                    <div className="w-16 h-12 bg-muted rounded flex items-center justify-center text-xs">No image</div>
-                  )}
-                </TableCell>
-                <TableCell className="font-medium">{pkg.name}</TableCell>
-                <TableCell>{pkg.destination}</TableCell>
-                <TableCell>₹{pkg.price.toLocaleString()}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-kashmir-gold text-kashmir-gold" />
-                    {pkg.rating}
+              <TableRow key={pkg.id} className="hover:bg-white/[0.02] transition-all duration-500 border-none group/row">
+                <TableCell className="py-8 pl-10">
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 rounded-[1.25rem] bg-white/5 overflow-hidden border border-white/10 flex items-center justify-center shadow-2xl relative group/img">
+                      <div className="absolute inset-0 bg-kashmir-gold/20 opacity-0 group-hover/img:opacity-100 transition-opacity" />
+                      {pkg.imageUrl ? (
+                        <img src={pkg.imageUrl} alt={pkg.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Star className="w-6 h-6 text-kashmir-gold/40" />
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-white font-bold tracking-tight text-base group-hover/row:text-kashmir-gold transition-colors">{pkg.name}</span>
+                      {pkg.isFeatured && (
+                        <Badge className="w-fit bg-kashmir-gold text-black border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">High Priority</Badge>
+                      )}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
-                    <Badge variant={pkg.is_active ? 'default' : 'secondary'}>
-                      {pkg.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                    {pkg.is_featured && <Badge variant="outline">Featured</Badge>}
+                    <span className="text-white/80 text-sm font-bold">{pkg.destination}</span>
+                    <span className="text-[10px] text-white/30 font-black uppercase tracking-widest">{pkg.duration}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => toggleActive(pkg)}>
-                      {pkg.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="text-kashmir-gold font-black text-base">₹{pkg.price.toLocaleString()}</span>
+                    <span className="text-[10px] text-white/20 line-through font-bold">₹{pkg.originalPrice.toLocaleString()}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <button onClick={() => toggleActive(pkg)} className="group/toggle">
+                    <Badge className={cn(
+                      "rounded-xl border-none px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-300",
+                      pkg.isActive ? "bg-emerald-500/10 text-emerald-400 group-hover/toggle:bg-emerald-500/20" : "bg-red-500/10 text-red-400 group-hover/toggle:bg-red-500/20"
+                    )}>
+                      {pkg.isActive ? 'Active' : 'Offline'}
+                    </Badge>
+                  </button>
+                </TableCell>
+                <TableCell className="text-right pr-10">
+                  <div className="flex justify-end gap-3 opacity-20 group-hover/row:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(pkg)} className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all">
+                      <Pencil className="w-5 h-5" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(pkg)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(pkg.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(pkg.id)} className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl text-white/20 hover:text-red-400 hover:border-red-400/20 transition-all">
+                      <Trash2 className="w-5 h-5" />
                     </Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
-            {packages.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  No packages yet. Click "Add Package" to create one.
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-6">
+        {packages.map((pkg) => (
+          <Card key={pkg.id} className="bg-white/[0.02] border-white/5 p-8 rounded-[2.5rem] space-y-8 relative overflow-hidden group">
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 rounded-[1.5rem] bg-white/5 overflow-hidden border border-white/10 shrink-0 shadow-2xl relative">
+                {pkg.imageUrl ? (
+                  <img src={pkg.imageUrl} alt={pkg.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Star className="w-8 h-8 text-kashmir-gold/40 m-6" />
+                )}
+                {pkg.isFeatured && (
+                  <div className="absolute top-0 right-0 p-1 bg-kashmir-gold rounded-bl-xl">
+                    <Star className="w-3 h-3 text-black fill-black" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xl font-bold text-white tracking-tight truncate leading-tight">{pkg.name}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                   <Badge variant="outline" className="border-white/10 text-white/30 text-[8px] font-black uppercase tracking-widest px-2 py-0.5">{pkg.duration}</Badge>
+                   <div className="w-1 h-1 rounded-full bg-white/20" />
+                   <span className="text-[10px] text-white/40 font-bold uppercase truncate">{pkg.destination}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 py-6 border-t border-b border-white/5">
+              <div className="space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Operational Value</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-black text-kashmir-gold tracking-tighter">₹{pkg.price.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/20">System Status</p>
+                <Badge className={cn(
+                  "border-none rounded-lg px-3 py-1 text-[9px] font-black uppercase tracking-widest w-fit",
+                  pkg.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                )}>
+                  {pkg.isActive ? 'Online' : 'Offline'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <Button onClick={() => openEditDialog(pkg)} className="flex-1 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 h-14 rounded-2xl font-black transition-all">
+                <Pencil className="w-4 h-4 mr-2" />
+                <span className="text-[9px] uppercase tracking-widest">Edit Node</span>
+              </Button>
+              <Button onClick={() => handleDelete(pkg.id)} className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all">
+                <Trash2 className="w-5 h-5" />
+              </Button>
+            </div>
+          </Card>
+        ))}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -294,8 +397,8 @@ export default function CMSPackages() {
                 <label className="text-sm font-medium mb-1 block">Original Price (₹)</label>
                 <Input
                   type="number"
-                  value={formData.original_price}
-                  onChange={(e) => setFormData({ ...formData, original_price: Number(e.target.value) })}
+                  value={formData.originalPrice}
+                  onChange={(e) => setFormData({ ...formData, originalPrice: Number(e.target.value) })}
                 />
               </div>
             </div>
@@ -313,8 +416,8 @@ export default function CMSPackages() {
             <div>
               <label className="text-sm font-medium mb-1 block">Image</label>
               <MediaPicker
-                value={formData.image_url || ''}
-                onChange={(url) => setFormData({ ...formData, image_url: url })}
+                value={formData.imageUrl || ''}
+                onChange={(url) => setFormData({ ...formData, imageUrl: url })}
               />
             </div>
 
@@ -365,8 +468,8 @@ export default function CMSPackages() {
                 <label className="text-sm font-medium mb-1 block">Review Count</label>
                 <Input
                   type="number"
-                  value={formData.review_count}
-                  onChange={(e) => setFormData({ ...formData, review_count: Number(e.target.value) })}
+                  value={formData.reviewCount}
+                  onChange={(e) => setFormData({ ...formData, reviewCount: Number(e.target.value) })}
                 />
               </div>
             </div>
@@ -374,15 +477,15 @@ export default function CMSPackages() {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Switch
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
                 />
                 <label className="text-sm">Active</label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
-                  checked={formData.is_featured}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
+                  checked={formData.isFeatured}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isFeatured: checked })}
                 />
                 <label className="text-sm">Featured</label>
               </div>

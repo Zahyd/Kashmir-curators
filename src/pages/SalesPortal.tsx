@@ -28,8 +28,9 @@ import {
   AlertCircle,
   CalendarCheck,
   MapPin,
-  DollarSign,
-  Timer
+  DollarSign, 
+  Timer,
+  X
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,86 +39,26 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
+import MobilePortalNav from '@/components/layout/MobilePortalNav';
 import ItineraryBuilder from '@/components/sales/ItineraryBuilder';
 import SalesPerformance from '@/components/sales/SalesPerformance';
 import PaymentPortal from '@/components/sales/PaymentPortal';
 import InquiryVault from '@/components/sales/InquiryVault';
 import WorkLog from '@/components/sales/WorkLog';
 
-// Mock inquiries with assignment data
-const mockInquiries = [
-  { 
-    id: 'REQ-9921', 
-    customerName: 'Aarav Sharma', 
-    email: 'aarav@example.com', 
-    phone: '+91 9876543210', 
-    destination: 'Srinagar, Gulmarg', 
-    duration: '5 Days', 
-    accommodation: '5-star Luxury', 
-    budget: 'Luxury', 
-    travelers: 'Couple', 
-    status: 'Pending Curation', 
-    date: '2026-05-08',
-    assignedTo: 'SALES001'
-  },
-  { 
-    id: 'REQ-8842', 
-    customerName: 'Priya Patel', 
-    email: 'priya.p@example.com', 
-    phone: '+91 9988776655', 
-    destination: 'Full Kashmir Tour', 
-    duration: '7 Days', 
-    accommodation: 'Houseboat', 
-    budget: 'Standard', 
-    travelers: 'Family', 
-    status: 'New', 
-    date: '2026-05-07',
-    assignedTo: 'SALES001'
-  },
-  { 
-    id: 'REQ-7719', 
-    customerName: 'Rohan Gupta', 
-    email: 'rohan.g@example.com', 
-    phone: '+91 9123456789', 
-    destination: 'Pahalgam', 
-    duration: '3 Days', 
-    accommodation: '4-star Premium', 
-    budget: 'Adventure', 
-    travelers: 'Group', 
-    status: 'Ready for Review', 
-    date: '2026-05-06',
-    assignedTo: 'SALES002'
-  },
-  { 
-    id: 'REQ-6655', 
-    customerName: 'Sneha Reddy', 
-    email: 'sneha@example.com', 
-    phone: '+91 8877665544', 
-    destination: 'Sonamarg', 
-    duration: '4 Days', 
-    accommodation: '3-star Comfort', 
-    budget: 'Balanced', 
-    travelers: 'Family', 
-    status: 'New', 
-    date: '2026-05-08',
-    assignedTo: 'SALES001',
-    priority: 'High',
-    sentiment: 'Ready to Book'
-  },
-];
-
-const mockReminders = [
-  { id: 1, title: 'Follow-up: Priya Patel', description: 'Proposal sent 48h ago, no response.', type: 'urgency', time: '2h overdue' },
-  { id: 2, title: 'Verify Payment: KC-9283', description: 'Bank transfer reported by client.', type: 'payment', time: 'Just now' },
-  { id: 3, title: 'Arrival Prep: Dr. Sharma', description: 'Family arrival at Srinagar Airport tomorrow.', type: 'arrival', time: 'Tomorrow' },
-];
+// Reminders will be dynamic in future iterations
+const mockReminders: any[] = [];
 
 export default function SalesPortal() {
   const navigate = useNavigate();
-  const { teamUser, isTeamAuthenticated, isTeamLoading, teamLogout } = useTeamAuth();
+  const { teamUser, isTeamAuthenticated, isTeamLoading, teamLogout, systemEvents } = useTeamAuth();
   const [activeTab, setActiveTab] = useState<'live-leads' | 'my-inquiries' | 'performance' | 'work-log' | 'builder' | 'payments' | 'vault'>('live-leads');
   const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(true);
+  const [salesStats, setSalesStats] = useState<any>(null);
 
   useEffect(() => {
     if (!isTeamLoading && (!isTeamAuthenticated || (teamUser?.role !== 'sales' && teamUser?.role !== 'admin'))) {
@@ -126,10 +67,58 @@ export default function SalesPortal() {
     }
   }, [isTeamLoading, isTeamAuthenticated, teamUser, navigate]);
 
+  useEffect(() => {
+    if (isTeamAuthenticated) {
+      fetchInquiries();
+      fetchSalesStats();
+    }
+  }, [isTeamAuthenticated]);
+
+  // Real-time refresh
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && (latestEvent.booking.entityType === 'inquiry' || latestEvent.booking.entityType === 'booking')) {
+      fetchInquiries();
+      fetchSalesStats();
+    }
+  }, [systemEvents]);
+
+  const fetchInquiries = async () => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch('http://localhost:5000/api/inquiries', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setInquiries(data || []);
+    } catch (error) {
+      console.error('Failed to fetch inquiries:', error);
+    } finally {
+      setLoadingLeads(false);
+    }
+  };
+
+  const fetchSalesStats = async () => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch('http://localhost:5000/api/dashboard/sales', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setSalesStats(data);
+    } catch (error) {
+      console.error('Failed to fetch sales stats');
+    }
+  };
+
   if (isTeamLoading || !isTeamAuthenticated || !teamUser) return null;
 
-  const myInquiries = mockInquiries.filter(inq => 
-    inq.assignedTo === teamUser.code && 
+  const myInquiries = inquiries.filter(inq => 
+    (inq.assignedTo === teamUser.code || !inq.assignedTo) && 
     (inq.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
      inq.id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -156,130 +145,85 @@ export default function SalesPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060a0d] text-white flex overflow-hidden dark">
-      {/* Dynamic Animated Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-kashmir-gold/5 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/5 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
-        <div className="absolute inset-0 bg-[url('/images/grid.png')] opacity-[0.02] bg-repeat" />
-      </div>
+    <div className="min-h-screen bg-[#0a0f12] text-white flex flex-col lg:flex-row font-sans">
+      {/* Mobile Nav */}
+      <MobilePortalNav 
+        title="Sales Command"
+        roleLabel="Lead Specialist"
+        isOpen={isSidebarOpen}
+        onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+      />
 
-      {/* Sales Sidebar */}
-      <aside className="w-20 lg:w-72 h-screen sticky top-0 bg-[#0a0f12]/80 backdrop-blur-2xl border-r border-white/5 flex flex-col z-50 transition-all duration-500 shadow-2xl">
-        <div className="p-8 border-b border-white/5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-kashmir-gold to-amber-600 flex items-center justify-center shrink-0 shadow-xl shadow-kashmir-gold/20 rotate-3 group-hover:rotate-0 transition-transform">
-            <ShieldCheck className="w-7 h-7 text-black" />
+      {/* Sales Sidebar - Responsive */}
+      <aside className={cn(
+        "w-72 h-screen fixed left-0 top-0 bg-[#0a0f12]/95 lg:bg-[#0a0f12]/60 backdrop-blur-3xl border-r border-white/5 flex flex-col z-[70] lg:z-50 transition-all duration-500 shadow-2xl",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-kashmir-gold to-amber-600 flex items-center justify-center shrink-0 shadow-xl shadow-kashmir-gold/20">
+              <ShieldCheck className="w-6 h-6 text-black" />
+            </div>
+            <div className="overflow-hidden">
+              <h2 className="font-display text-xl font-bold text-white tracking-tight leading-none">Sales<span className="text-kashmir-gold">Pro</span></h2>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-bold mt-1.5">Kashmir Curators</p>
+            </div>
           </div>
-          <div className="hidden lg:block overflow-hidden">
-            <h2 className="font-display text-2xl font-bold text-white tracking-tight leading-none">Sales<span className="text-kashmir-gold">Pro</span></h2>
-            <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-bold mt-1.5">Kashmir Curators</p>
-          </div>
+          <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-white/40">
+            <X className="w-6 h-6" />
+          </Button>
         </div>
 
-        <nav className="flex-1 p-6 space-y-3 mt-8">
-          <button 
-            onClick={() => setActiveTab('live-leads')}
-            className={cn(
-              "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-500 group relative",
-              activeTab === 'live-leads' ? "bg-white/5 text-kashmir-gold shadow-inner border border-white/5" : "text-white/40 hover:text-white hover:bg-white/5"
-            )}
-          >
-            <div className="relative">
-              <Zap className={cn("w-5 h-5", activeTab === 'live-leads' ? "text-kashmir-gold fill-kashmir-gold/20" : "group-hover:scale-110 transition-transform")} />
-              <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            </div>
-            <span className="hidden lg:block font-bold text-sm tracking-wide">Live Leads</span>
-            {activeTab === 'live-leads' && <div className="absolute left-0 w-1 h-6 bg-kashmir-gold rounded-r-full" />}
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('my-inquiries')}
-            className={cn(
-              "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-500 group relative",
-              activeTab === 'my-inquiries' ? "bg-white/5 text-blue-400 shadow-inner border border-white/5" : "text-white/40 hover:text-white hover:bg-white/5"
-            )}
-          >
-            <MessageSquare className={cn("w-5 h-5", activeTab === 'my-inquiries' ? "text-blue-400" : "group-hover:scale-110 transition-transform")} />
-            <span className="hidden lg:block font-bold text-sm tracking-wide">Active Pipeline</span>
-            {activeTab === 'my-inquiries' && <div className="absolute left-0 w-1 h-6 bg-blue-400 rounded-r-full" />}
-          </button>
-          
-          <button 
-            onClick={() => setActiveTab('performance')}
-            className={cn(
-              "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-500 group relative",
-              activeTab === 'performance' ? "bg-white/5 text-purple-400 shadow-inner border border-white/5" : "text-white/40 hover:text-white hover:bg-white/5"
-            )}
-          >
-            <TrendingUp className={cn("w-5 h-5", activeTab === 'performance' ? "text-purple-400" : "group-hover:scale-110 transition-transform")} />
-            <span className="hidden lg:block font-bold text-sm tracking-wide">Performance</span>
-            {activeTab === 'performance' && <div className="absolute left-0 w-1 h-6 bg-purple-400 rounded-r-full" />}
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('work-log')}
-            className={cn(
-              "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-500 group relative",
-              activeTab === 'work-log' ? "bg-white/5 text-emerald-400 shadow-inner border border-white/5" : "text-white/40 hover:text-white hover:bg-white/5"
-            )}
-          >
-            <Timer className={cn("w-5 h-5", activeTab === 'work-log' ? "text-emerald-400" : "group-hover:scale-110 transition-transform")} />
-            <span className="hidden lg:block font-bold text-sm tracking-wide">Work Log</span>
-            {activeTab === 'work-log' && <div className="absolute left-0 w-1 h-6 bg-emerald-400 rounded-r-full" />}
-          </button>
+        <nav className="flex-1 p-6 space-y-3 mt-8 overflow-y-auto custom-scrollbar">
+          {[
+            { id: 'live-leads', label: 'Live Leads', icon: Zap, color: 'text-kashmir-gold' },
+            { id: 'my-inquiries', label: 'Active Pipeline', icon: MessageSquare, color: 'text-blue-400' },
+            { id: 'vault', label: 'Inquiry Vault', icon: ShieldCheck, color: 'text-emerald-400' },
+            { id: 'builder', label: 'Itinerary Builder', icon: FilePlus, color: 'text-purple-400' },
+            { id: 'payments', label: 'Payment Links', icon: CreditCard, color: 'text-amber-400' },
+            { id: 'performance', label: 'Performance', icon: TrendingUp, color: 'text-pink-400' },
+            { id: 'work-log', label: 'Work Log', icon: Clock, color: 'text-white' },
+          ].map((tab) => (
+            <button 
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setIsSidebarOpen(false);
+              }}
+              className={cn(
+                "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-500 group relative",
+                activeTab === tab.id ? "bg-white/5 text-white shadow-inner border border-white/5" : "text-white/40 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <tab.icon className={cn("w-5 h-5", activeTab === tab.id ? tab.color : "group-hover:scale-110 transition-transform")} />
+              <span className="font-bold text-xs tracking-wide uppercase">{tab.label}</span>
+              {activeTab === tab.id && <div className={cn("absolute left-0 w-1 h-6 rounded-r-full", tab.color.replace('text-', 'bg-'))} />}
+            </button>
+          ))}
         </nav>
 
-        <div className="p-6 border-t border-white/5 mt-auto">
-          <div className="flex items-center gap-4 mb-8 bg-white/5 p-4 rounded-3xl border border-white/5 group hover:border-kashmir-gold/30 transition-all duration-500">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-white/10 to-white/5 border border-white/10 flex items-center justify-center shrink-0">
-              <User className="w-6 h-6 text-kashmir-gold" />
+        <div className="p-6 border-t border-white/5 bg-white/[0.01]">
+          <div className="flex items-center gap-4 mb-6 bg-white/5 p-4 rounded-3xl border border-white/5">
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+              <User className="w-5 h-5 text-kashmir-gold" />
             </div>
-            <div className="hidden lg:block overflow-hidden">
-              <p className="text-sm font-bold text-white truncate">{teamUser.name}</p>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-[9px] text-white/30 truncate uppercase tracking-widest font-bold">{teamUser.code}</p>
-              </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-white truncate">{teamUser?.name}</p>
+              <p className="text-[9px] text-white/30 truncate uppercase tracking-widest font-bold mt-0.5">{teamUser?.code}</p>
             </div>
           </div>
           <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300 group"
+            onClick={teamLogout}
+            className="w-full flex items-center gap-4 px-5 py-3 rounded-2xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300"
           >
-            <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="hidden lg:block font-bold text-sm tracking-wide uppercase">Exit Portal</span>
+            <LogOut className="w-5 h-5" />
+            <span className="font-bold text-xs uppercase tracking-widest">Exit Portal</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-h-screen relative overflow-y-auto overflow-x-hidden z-10">
-        {/* Top Header */}
-        <header className="h-24 bg-[#0a0f12]/40 backdrop-blur-3xl border-b border-white/5 px-10 flex items-center justify-between sticky top-0 z-40">
-          <div className="flex items-center gap-3 text-white/20 text-[10px] font-bold uppercase tracking-[0.2em]">
-            <Zap className="w-4 h-4 text-kashmir-gold fill-kashmir-gold/20" />
-            <span>Sales Workspace</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-white/80">{activeTab.replace('-', ' ')}</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="relative hidden md:block w-80 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-kashmir-gold transition-colors" />
-              <Input 
-                placeholder="Search clients or inquiry IDs..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 bg-white/5 border-white/5 focus-visible:ring-kashmir-gold/30 h-12 rounded-2xl text-sm transition-all focus:bg-white/10"
-              />
-            </div>
-            <button className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-kashmir-gold/50 transition-all relative group">
-              <Bell className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
-              <span className="absolute top-3.5 right-3.5 w-2 h-2 rounded-full bg-kashmir-gold shadow-[0_0_8px_rgba(212,175,55,0.8)]" />
-            </button>
-          </div>
-        </header>
-
+      <main className="flex-1 lg:ml-72 flex flex-col min-h-screen relative pt-20 lg:pt-0">
         {/* Dynamic Section Rendering */}
         <div className="p-10 max-w-[1600px] mx-auto w-full">
           {activeTab === 'live-leads' ? (
@@ -588,11 +532,11 @@ export default function SalesPortal() {
                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl">
                       <div>
                         <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Total Leads</p>
-                        <p className="text-lg font-black text-white">18</p>
+                        <p className="text-lg font-black text-white">{salesStats?.leadsReceived || 0}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Conversion</p>
-                        <p className="text-lg font-black text-blue-400">24%</p>
+                        <p className="text-lg font-black text-blue-400">{salesStats?.conversionRate || '0%'}</p>
                       </div>
                     </div>
                   </div>

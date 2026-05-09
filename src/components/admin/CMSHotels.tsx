@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
 
 interface RoomType {
@@ -22,32 +22,33 @@ interface Hotel {
   id: string;
   name: string;
   location: string;
-  star_rating: number;
-  price_per_night: number;
+  starRating: number;
+  pricePerNight: number;
   description: string | null;
-  image_url: string | null;
+  imageUrl: string | null;
   amenities: string[];
-  room_types: RoomType[];
+  roomTypes: RoomType[];
   rating: number;
-  review_count: number;
-  is_active: boolean;
+  reviewCount: number;
+  isActive: boolean;
 }
 
 const defaultHotel: Omit<Hotel, 'id'> = {
   name: '',
   location: '',
-  star_rating: 4,
-  price_per_night: 0,
+  starRating: 4,
+  pricePerNight: 0,
   description: '',
-  image_url: '',
+  imageUrl: '',
   amenities: [],
-  room_types: [],
+  roomTypes: [],
   rating: 4.5,
-  review_count: 0,
-  is_active: true,
+  reviewCount: 0,
+  isActive: true,
 };
 
 export default function CMSHotels() {
+  const { systemEvents } = useTeamAuth();
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,22 +62,29 @@ export default function CMSHotels() {
     fetchHotels();
   }, []);
 
-  const fetchHotels = async () => {
-    const { data, error } = await supabase
-      .from('cms_hotels')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      toast.error('Failed to load hotels');
-    } else {
-      const mapped = (data || []).map((h) => ({
-        ...h,
-        room_types: (h.room_types as unknown as RoomType[]) || [],
-      }));
-      setHotels(mapped);
+  // Real-time refresh
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'hotel') {
+      fetchHotels();
     }
-    setLoading(false);
+  }, [systemEvents]);
+
+  const fetchHotels = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/hotels?all=true');
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setHotels(data);
+      } else {
+        console.error('Expected array of hotels, but received:', data);
+        setHotels([]);
+      }
+    } catch (error) {
+      toast.error('Failed to load hotels');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openCreateDialog = () => {
@@ -92,7 +100,7 @@ export default function CMSHotels() {
     setFormData(hotel);
     setAmenitiesInput(hotel.amenities?.join('\n') || '');
     setRoomTypesInput(
-      hotel.room_types?.map((r) => `${r.name}:${r.price}`).join('\n') || ''
+      hotel.roomTypes?.map((r) => `${r.name}:${r.price}`).join('\n') || ''
     );
     setDialogOpen(true);
   };
@@ -104,6 +112,12 @@ export default function CMSHotels() {
     }
 
     setSaving(true);
+    const token = localStorage.getItem('teamToken');
+    const method = editingHotel ? 'PATCH' : 'POST';
+    const url = editingHotel 
+      ? `http://localhost:5000/api/hotels/${editingHotel.id}` 
+      : 'http://localhost:5000/api/hotels';
+
     const roomTypes = roomTypesInput
       .split('\n')
       .filter(Boolean)
@@ -115,44 +129,66 @@ export default function CMSHotels() {
     const dataToSave = {
       ...formData,
       amenities: amenitiesInput.split('\n').filter(Boolean),
-      room_types: roomTypes,
+      roomTypes: roomTypes,
     };
 
-    if (editingHotel) {
-      const { error } = await supabase.from('cms_hotels').update(dataToSave).eq('id', editingHotel.id);
-      if (error) {
-        toast.error('Failed to update hotel');
-      } else {
-        toast.success('Hotel updated');
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(dataToSave)
+      });
+
+      if (response.ok) {
+        toast.success(editingHotel ? 'Hotel updated' : 'Hotel created');
         setDialogOpen(false);
         fetchHotels();
-      }
-    } else {
-      const { error } = await supabase.from('cms_hotels').insert(dataToSave);
-      if (error) {
-        toast.error('Failed to create hotel');
       } else {
-        toast.success('Hotel created');
-        setDialogOpen(false);
-        fetchHotels();
+        toast.error('Failed to save hotel');
       }
+    } catch (error) {
+      toast.error('Error saving hotel');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this hotel?')) return;
-    const { error } = await supabase.from('cms_hotels').delete().eq('id', id);
-    if (error) {
-      toast.error('Failed to delete hotel');
-    } else {
-      toast.success('Hotel deleted');
-      fetchHotels();
+    const token = localStorage.getItem('teamToken');
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/hotels/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        toast.success('Hotel deleted');
+        fetchHotels();
+      } else {
+        toast.error('Failed to delete hotel');
+      }
+    } catch (error) {
+      toast.error('Error deleting hotel');
     }
   };
 
   const toggleActive = async (hotel: Hotel) => {
-    await supabase.from('cms_hotels').update({ is_active: !hotel.is_active }).eq('id', hotel.id);
+    const token = localStorage.getItem('teamToken');
+    await fetch(`http://localhost:5000/api/hotels/${hotel.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ isActive: !hotel.isActive })
+    });
     fetchHotels();
   };
 
@@ -190,8 +226,8 @@ export default function CMSHotels() {
             {hotels.map((hotel) => (
               <TableRow key={hotel.id}>
                 <TableCell>
-                  {hotel.image_url ? (
-                    <img src={hotel.image_url} alt={hotel.name} className="w-16 h-12 object-cover rounded" />
+                  {hotel.imageUrl ? (
+                    <img src={hotel.imageUrl} alt={hotel.name} className="w-16 h-12 object-cover rounded" />
                   ) : (
                     <div className="w-16 h-12 bg-muted rounded flex items-center justify-center text-xs">No image</div>
                   )}
@@ -200,21 +236,21 @@ export default function CMSHotels() {
                 <TableCell>{hotel.location}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-0.5">
-                    {[...Array(hotel.star_rating)].map((_, i) => (
+                    {[...Array(hotel.starRating)].map((_, i) => (
                       <Star key={i} className="h-3 w-3 fill-kashmir-gold text-kashmir-gold" />
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>₹{hotel.price_per_night.toLocaleString()}</TableCell>
+                <TableCell>₹{hotel.pricePerNight.toLocaleString()}</TableCell>
                 <TableCell>
-                  <Badge variant={hotel.is_active ? 'default' : 'secondary'}>
-                    {hotel.is_active ? 'Active' : 'Inactive'}
+                  <Badge variant={hotel.isActive ? 'default' : 'secondary'}>
+                    {hotel.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="ghost" size="icon" onClick={() => toggleActive(hotel)}>
-                      {hotel.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {hotel.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(hotel)}>
                       <Pencil className="h-4 w-4" />
@@ -264,8 +300,8 @@ export default function CMSHotels() {
               <div>
                 <label className="text-sm font-medium mb-1 block">Star Rating</label>
                 <Select
-                  value={formData.star_rating.toString()}
-                  onValueChange={(v) => setFormData({ ...formData, star_rating: Number(v) })}
+                  value={formData.starRating.toString()}
+                  onValueChange={(v) => setFormData({ ...formData, starRating: Number(v) })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -283,8 +319,8 @@ export default function CMSHotels() {
                 <label className="text-sm font-medium mb-1 block">Price/Night (₹)</label>
                 <Input
                   type="number"
-                  value={formData.price_per_night}
-                  onChange={(e) => setFormData({ ...formData, price_per_night: Number(e.target.value) })}
+                  value={formData.pricePerNight}
+                  onChange={(e) => setFormData({ ...formData, pricePerNight: Number(e.target.value) })}
                 />
               </div>
               <div>
@@ -312,8 +348,8 @@ export default function CMSHotels() {
             <div>
               <label className="text-sm font-medium mb-1 block">Image</label>
               <MediaPicker
-                value={formData.image_url || ''}
-                onChange={(url) => setFormData({ ...formData, image_url: url })}
+                value={formData.imageUrl || ''}
+                onChange={(url) => setFormData({ ...formData, imageUrl: url })}
               />
             </div>
 
@@ -339,8 +375,8 @@ export default function CMSHotels() {
 
             <div className="flex items-center gap-2">
               <Switch
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
               />
               <label className="text-sm">Active</label>
             </div>
