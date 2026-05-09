@@ -376,7 +376,7 @@ export default function CMSCabs() {
           <DialogHeader className="p-8 pb-0">
             <DialogTitle className="text-2xl font-display font-black tracking-tight">{editingCab ? 'Reconfigure Logistics Node' : 'Deploy New Transport Node'}</DialogTitle>
           </DialogHeader>
-          <div className="p-8 space-y-6">
+          <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Vehicle Name</label>

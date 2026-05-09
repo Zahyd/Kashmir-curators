@@ -371,7 +371,7 @@ export default function CMSTestimonials() {
           <DialogHeader className="p-10 pb-0">
             <DialogTitle className="text-3xl font-display font-black tracking-tight">{editingItem ? 'Re-edit Traveler Voice' : 'Register New Voice'}</DialogTitle>
           </DialogHeader>
-          <div className="p-10 space-y-6">
+          <div className="p-10 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Identity</label>
