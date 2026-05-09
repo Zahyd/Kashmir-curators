@@ -11,6 +11,8 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
+import { API_BASE_URL } from '@/lib/api';
+
 
 interface FAQ {
   id: string;
@@ -38,6 +40,35 @@ export default function CMSFaqs() {
   const [editingItem, setEditingItem] = useState<FAQ | null>(null);
   const [formData, setFormData] = useState(defaultFaq);
 
+  const fetchFaqs = async () => {
+    console.log('[CMSFaqs] Initiating fetch for knowledge base...');
+    try {
+      const response = await fetch(`${API_BASE_URL}/faqs?all=true`);
+      console.log(`[CMSFaqs] Fetch response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[CMSFaqs] Fetch failed:', errorText);
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('[CMSFaqs] Intelligence nodes received:', data);
+      
+      if (Array.isArray(data)) {
+        setFaqs(data);
+      } else {
+        console.warn('[CMSFaqs] Received data is not an array, defaulting to empty list');
+        setFaqs([]);
+      }
+    } catch (error: any) {
+      console.error('[CMSFaqs] Fatal error during fetch:', error);
+      toast.error(`Failed to load knowledge base: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchFaqs();
   }, []);
@@ -45,25 +76,10 @@ export default function CMSFaqs() {
   useEffect(() => {
     const latestEvent = systemEvents[0];
     if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'faq') {
+      console.log('[CMSFaqs] System event detected for faq, refreshing...');
       fetchFaqs();
     }
   }, [systemEvents]);
-
-  const fetchFaqs = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/faqs?all=true');
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setFaqs(data);
-      } else {
-        setFaqs([]);
-      }
-    } catch (error) {
-      toast.error('Failed to load knowledge base');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openCreateDialog = () => {
     setEditingItem(null);
@@ -87,8 +103,10 @@ export default function CMSFaqs() {
     const token = localStorage.getItem('teamToken');
     const method = editingItem ? 'PATCH' : 'POST';
     const url = editingItem 
-      ? `http://localhost:5000/api/faqs/${editingItem.id}` 
-      : 'http://localhost:5000/api/faqs';
+      ? `${API_BASE_URL}/faqs/${editingItem.id}` 
+      : `${API_BASE_URL}/faqs`;
+
+    console.log(`[CMSFaqs] Saving item via ${method} to ${url}`, formData);
 
     try {
       const response = await fetch(url, {
@@ -100,16 +118,20 @@ export default function CMSFaqs() {
         body: JSON.stringify(formData)
       });
 
+      console.log(`[CMSFaqs] Save response status: ${response.status}`);
+
       if (response.ok) {
         toast.success(editingItem ? 'Intelligence updated' : 'New intelligence indexed');
         setDialogOpen(false);
         fetchFaqs();
       } else {
         const errData = await response.json().catch(() => ({}));
-        toast.error(errData.error || 'Indexing failed');
+        console.error('[CMSFaqs] Indexing failed:', errData);
+        toast.error(errData.error || `Indexing failed (Status: ${response.status})`);
       }
-    } catch (error) {
-      toast.error('System connection error');
+    } catch (error: any) {
+      console.error('[CMSFaqs] System connection error during save:', error);
+      toast.error(`System connection error: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -118,30 +140,37 @@ export default function CMSFaqs() {
   const handleDelete = async (id: string) => {
     if (!confirm('Erase this intelligence?')) return;
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSFaqs] Attempting to erase node: ${id}`);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/faqs/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/faqs/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log(`[CMSFaqs] Delete response status: ${response.status}`);
+
       if (response.ok) {
         toast.success('Intelligence erased');
         fetchFaqs();
       } else {
-        toast.error('Erasure failed');
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSFaqs] Erasure failed:', errData);
+        toast.error(errData.error || 'Erasure failed');
       }
-    } catch (error) {
-      toast.error('System connection error');
+    } catch (error: any) {
+      console.error('[CMSFaqs] System connection error during delete:', error);
+      toast.error(`System connection error: ${error.message}`);
     }
   };
 
   const toggleActive = async (item: FAQ) => {
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSFaqs] Toggling active status for node: ${item.id}, current: ${item.isActive}`);
     try {
-      await fetch(`http://localhost:5000/api/faqs/${item.id}`, {
+      const response = await fetch(`${API_BASE_URL}/faqs/${item.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -149,8 +178,16 @@ export default function CMSFaqs() {
         },
         body: JSON.stringify({ isActive: !item.isActive })
       });
-      fetchFaqs();
-    } catch (error) {
+
+      if (response.ok) {
+        fetchFaqs();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSFaqs] Toggle failed:', errData);
+        toast.error('Status toggle failed');
+      }
+    } catch (error: any) {
+      console.error('[CMSFaqs] Toggle connection error:', error);
       toast.error('Status toggle failed');
     }
   };

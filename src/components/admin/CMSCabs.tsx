@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
+import { API_BASE_URL } from '@/lib/api';
+
 
 interface Cab {
   id: string;
@@ -46,23 +48,23 @@ export default function CMSCabs() {
   const [formData, setFormData] = useState(defaultCab);
   const [featuresInput, setFeaturesInput] = useState('');
 
-  useEffect(() => {
-    fetchCabs();
-  }, []);
-
-  useEffect(() => {
-    const latestEvent = systemEvents[0];
-    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'cab') {
-      fetchCabs();
-    }
-  }, [systemEvents]);
-
   const fetchCabs = async () => {
+    console.log('[CMSCabs] Initiating fetch for transport nodes...');
     try {
-      const response = await fetch('http://localhost:5000/api/cabs?all=true');
+      const response = await fetch(`${API_BASE_URL}/cabs?all=true`);
+      console.log(`[CMSCabs] Fetch response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[CMSCabs] Fetch failed:', errorText);
+        throw new Error(`Server returned ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('[CMSCabs] Nodes received:', data);
       
       if (!Array.isArray(data)) {
+        console.warn('[CMSCabs] Received data is not an array, defaulting to empty list');
         setCabs([]);
         return;
       }
@@ -72,12 +74,25 @@ export default function CMSCabs() {
         features: typeof cab.features === 'string' ? JSON.parse(cab.features) : (Array.isArray(cab.features) ? cab.features : [])
       }));
       setCabs(sanitized);
-    } catch (error) {
-      toast.error('Failed to load transport nodes');
+    } catch (error: any) {
+      console.error('[CMSCabs] Fatal error during fetch:', error);
+      toast.error(`Failed to load transport nodes: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCabs();
+  }, []);
+
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'cab') {
+      console.log('[CMSCabs] System event detected for cab, refreshing...');
+      fetchCabs();
+    }
+  }, [systemEvents]);
 
   const openCreateDialog = () => {
     setEditingCab(null);
@@ -103,13 +118,15 @@ export default function CMSCabs() {
     const token = localStorage.getItem('teamToken');
     const method = editingCab ? 'PATCH' : 'POST';
     const url = editingCab 
-      ? `http://localhost:5000/api/cabs/${editingCab.id}` 
-      : 'http://localhost:5000/api/cabs';
+      ? `${API_BASE_URL}/cabs/${editingCab.id}` 
+      : `${API_BASE_URL}/cabs`;
 
     const dataToSave = {
       ...formData,
       features: featuresInput.split('\n').filter(Boolean),
     };
+
+    console.log(`[CMSCabs] Saving node via ${method} to ${url}`, dataToSave);
 
     try {
       const response = await fetch(url, {
@@ -121,16 +138,20 @@ export default function CMSCabs() {
         body: JSON.stringify(dataToSave)
       });
 
+      console.log(`[CMSCabs] Save response status: ${response.status}`);
+
       if (response.ok) {
         toast.success(editingCab ? 'Node updated' : 'New node deployed');
         setDialogOpen(false);
         fetchCabs();
       } else {
         const errData = await response.json().catch(() => ({}));
-        toast.error(errData.error || 'Deployment failed');
+        console.error('[CMSCabs] Save failed:', errData);
+        toast.error(errData.error || `Deployment failed (Status: ${response.status})`);
       }
-    } catch (error) {
-      toast.error('System connection error');
+    } catch (error: any) {
+      console.error('[CMSCabs] System connection error during save:', error);
+      toast.error(`System connection error: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -139,30 +160,37 @@ export default function CMSCabs() {
   const handleDelete = async (id: string) => {
     if (!confirm('Decommission this transport node?')) return;
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSCabs] Attempting to decommission node: ${id}`);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/cabs/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/cabs/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log(`[CMSCabs] Delete response status: ${response.status}`);
+
       if (response.ok) {
         toast.success('Node decommissioned');
         fetchCabs();
       } else {
-        toast.error('Decommissioning failed');
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSCabs] Decommission failed:', errData);
+        toast.error(errData.error || 'Decommissioning failed');
       }
-    } catch (error) {
-      toast.error('System connection error');
+    } catch (error: any) {
+      console.error('[CMSCabs] System connection error during delete:', error);
+      toast.error(`System connection error: ${error.message}`);
     }
   };
 
   const toggleActive = async (cab: Cab) => {
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSCabs] Toggling active status for node: ${cab.id}, current: ${cab.isActive}`);
     try {
-      await fetch(`http://localhost:5000/api/cabs/${cab.id}`, {
+      const response = await fetch(`${API_BASE_URL}/cabs/${cab.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -170,8 +198,16 @@ export default function CMSCabs() {
         },
         body: JSON.stringify({ isActive: !cab.isActive })
       });
-      fetchCabs();
-    } catch (error) {
+
+      if (response.ok) {
+        fetchCabs();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSCabs] Toggle failed:', errData);
+        toast.error('Failed to toggle status');
+      }
+    } catch (error: any) {
+      console.error('[CMSCabs] Toggle connection error:', error);
       toast.error('Failed to toggle status');
     }
   };

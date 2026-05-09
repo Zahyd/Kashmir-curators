@@ -2,13 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { toast } from 'sonner';
 import { io, Socket } from 'socket.io-client';
 
-const API_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000/api' 
-  : 'https://kashmir-curators-api.onrender.com/api';
+import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
 
-const SOCKET_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000'
-  : 'https://kashmir-curators-api.onrender.com';
+const API_URL = API_BASE_URL;
 
 interface Profile {
   id: string;

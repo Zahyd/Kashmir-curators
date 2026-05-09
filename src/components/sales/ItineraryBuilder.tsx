@@ -52,6 +52,8 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useHotels } from '@/hooks/useCMSData';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
+
 
 interface ItineraryDay {
   day: number;
@@ -270,7 +272,8 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     
     try {
       const token = localStorage.getItem('teamToken');
-      const response = await fetch(`http://localhost:5000/api/inquiries/${inquiry.id}`, {
+      const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
+
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -296,7 +299,8 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
   const handleUpdateProposal = async (url: string) => {
     try {
       const token = localStorage.getItem('teamToken');
-      const response = await fetch(`http://localhost:5000/api/inquiries/${inquiry.id}`, {
+      const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
+
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
+import { API_BASE_URL } from '@/lib/api';
+
 
 interface Package {
   id: string;
@@ -60,6 +62,35 @@ export default function CMSPackages() {
   const [inclusionsInput, setInclusionsInput] = useState('');
   const [exclusionsInput, setExclusionsInput] = useState('');
 
+  const fetchPackages = async () => {
+    console.log('[CMSPackages] Initiating fetch for experience catalog...');
+    try {
+      const response = await fetch(`${API_BASE_URL}/packages?all=true`);
+      console.log(`[CMSPackages] Fetch response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[CMSPackages] Fetch failed:', errorText);
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('[CMSPackages] Experience nodes received:', data);
+      
+      if (Array.isArray(data)) {
+        setPackages(data);
+      } else {
+        console.warn('[CMSPackages] Received data is not an array, defaulting to empty list');
+        setPackages([]);
+      }
+    } catch (error: any) {
+      console.error('[CMSPackages] Fatal error during fetch:', error);
+      toast.error(`Failed to load packages: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPackages();
   }, []);
@@ -68,26 +99,10 @@ export default function CMSPackages() {
   useEffect(() => {
     const latestEvent = systemEvents[0];
     if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'package') {
+      console.log('[CMSPackages] System event detected for package, refreshing...');
       fetchPackages();
     }
   }, [systemEvents]);
-
-  const fetchPackages = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/packages?all=true');
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setPackages(data);
-      } else {
-        console.error('Expected array of packages, but received:', data);
-        setPackages([]);
-      }
-    } catch (error) {
-      toast.error('Failed to load packages');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openCreateDialog = () => {
     setEditingPackage(null);
@@ -117,8 +132,8 @@ export default function CMSPackages() {
     const token = localStorage.getItem('teamToken');
     const method = editingPackage ? 'PATCH' : 'POST';
     const url = editingPackage 
-      ? `http://localhost:5000/api/packages/${editingPackage.id}` 
-      : 'http://localhost:5000/api/packages';
+      ? `${API_BASE_URL}/packages/${editingPackage.id}` 
+      : `${API_BASE_URL}/packages`;
 
     const dataToSave = {
       ...formData,
@@ -126,6 +141,8 @@ export default function CMSPackages() {
       inclusions: inclusionsInput.split('\n').filter(Boolean),
       exclusions: exclusionsInput.split('\n').filter(Boolean),
     };
+
+    console.log(`[CMSPackages] Saving package via ${method} to ${url}`, dataToSave);
 
     try {
       const response = await fetch(url, {
@@ -137,15 +154,20 @@ export default function CMSPackages() {
         body: JSON.stringify(dataToSave)
       });
 
+      console.log(`[CMSPackages] Save response status: ${response.status}`);
+
       if (response.ok) {
         toast.success(editingPackage ? 'Package updated' : 'Package created');
         setDialogOpen(false);
         fetchPackages();
       } else {
-        toast.error('Failed to save package');
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSPackages] Save failed:', errData);
+        toast.error(errData.error || `Failed to save package (Status: ${response.status})`);
       }
-    } catch (error) {
-      toast.error('Error saving package');
+    } catch (error: any) {
+      console.error('[CMSPackages] Error saving package:', error);
+      toast.error(`Error saving package: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -154,50 +176,82 @@ export default function CMSPackages() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this package?')) return;
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSPackages] Attempting to delete package: ${id}`);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/packages/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/packages/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log(`[CMSPackages] Delete response status: ${response.status}`);
+
       if (response.ok) {
         toast.success('Package deleted');
         fetchPackages();
       } else {
-        toast.error('Failed to delete package');
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSPackages] Delete failed:', errData);
+        toast.error(errData.error || 'Failed to delete package');
       }
-    } catch (error) {
-      toast.error('Error deleting package');
+    } catch (error: any) {
+      console.error('[CMSPackages] Error deleting package:', error);
+      toast.error(`Error deleting package: ${error.message}`);
     }
   };
 
   const toggleActive = async (pkg: Package) => {
     const token = localStorage.getItem('teamToken');
-    await fetch(`http://localhost:5000/api/packages/${pkg.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ isActive: !pkg.isActive })
-    });
-    fetchPackages();
+    console.log(`[CMSPackages] Toggling active status for node: ${pkg.id}, current: ${pkg.isActive}`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/packages/${pkg.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: !pkg.isActive })
+      });
+
+      if (response.ok) {
+        fetchPackages();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSPackages] Toggle active failed:', errData);
+        toast.error('Failed to toggle status');
+      }
+    } catch (error: any) {
+      console.error('[CMSPackages] Toggle active error:', error);
+      toast.error('Failed to toggle status');
+    }
   };
 
   const toggleFeatured = async (pkg: Package) => {
     const token = localStorage.getItem('teamToken');
-    await fetch(`http://localhost:5000/api/packages/${pkg.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ isFeatured: !pkg.isFeatured })
-    });
-    fetchPackages();
+    console.log(`[CMSPackages] Toggling featured status for node: ${pkg.id}, current: ${pkg.isFeatured}`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/packages/${pkg.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isFeatured: !pkg.isFeatured })
+      });
+
+      if (response.ok) {
+        fetchPackages();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSPackages] Toggle featured failed:', errData);
+        toast.error('Failed to toggle featured status');
+      }
+    } catch (error: any) {
+      console.error('[CMSPackages] Toggle featured error:', error);
+      toast.error('Failed to toggle featured status');
+    }
   };
 
   if (loading) {

@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
+import { API_BASE_URL } from '@/lib/api';
+
 
 interface RoomType {
   id: string;
@@ -60,21 +62,21 @@ export default function CMSHotels() {
   const [amenitiesInput, setAmenitiesInput] = useState('');
   const [roomTypesInput, setRoomTypesInput] = useState('');
 
-  useEffect(() => {
-    fetchHotels();
-  }, []);
-
-  useEffect(() => {
-    const latestEvent = systemEvents[0];
-    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'hotel') {
-      fetchHotels();
-    }
-  }, [systemEvents]);
-
   const fetchHotels = async () => {
+    console.log('[CMSHotels] Initiating fetch for hospitality nodes...');
     try {
-      const response = await fetch('http://localhost:5000/api/hotels?all=true');
+      const response = await fetch(`${API_BASE_URL}/hotels?all=true`);
+      console.log(`[CMSHotels] Fetch response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[CMSHotels] Fetch failed:', errorText);
+        throw new Error(`Server returned ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('[CMSHotels] Hospitality nodes received:', data);
+      
       if (Array.isArray(data)) {
         const sanitized = data.map((hotel: any) => ({
           ...hotel,
@@ -83,14 +85,28 @@ export default function CMSHotels() {
         }));
         setHotels(sanitized);
       } else {
+        console.warn('[CMSHotels] Received data is not an array, defaulting to empty list');
         setHotels([]);
       }
-    } catch (error) {
-      toast.error('Failed to load hospitality nodes');
+    } catch (error: any) {
+      console.error('[CMSHotels] Fatal error during fetch:', error);
+      toast.error(`Failed to load hospitality nodes: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchHotels();
+  }, []);
+
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'hotel') {
+      console.log('[CMSHotels] System event detected for hotel, refreshing...');
+      fetchHotels();
+    }
+  }, [systemEvents]);
 
   const openCreateDialog = () => {
     setEditingHotel(null);
@@ -120,8 +136,8 @@ export default function CMSHotels() {
     const token = localStorage.getItem('teamToken');
     const method = editingHotel ? 'PATCH' : 'POST';
     const url = editingHotel 
-      ? `http://localhost:5000/api/hotels/${editingHotel.id}` 
-      : 'http://localhost:5000/api/hotels';
+      ? `${API_BASE_URL}/hotels/${editingHotel.id}` 
+      : `${API_BASE_URL}/hotels`;
 
     const roomTypes = roomTypesInput
       .split('\n')
@@ -137,6 +153,8 @@ export default function CMSHotels() {
       roomTypes: roomTypes,
     };
 
+    console.log(`[CMSHotels] Saving property via ${method} to ${url}`, dataToSave);
+
     try {
       const response = await fetch(url, {
         method,
@@ -147,16 +165,20 @@ export default function CMSHotels() {
         body: JSON.stringify(dataToSave)
       });
 
+      console.log(`[CMSHotels] Save response status: ${response.status}`);
+
       if (response.ok) {
         toast.success(editingHotel ? 'Property updated' : 'New property commissioned');
         setDialogOpen(false);
         fetchHotels();
       } else {
         const errData = await response.json().catch(() => ({}));
-        toast.error(errData.error || 'Commissioning failed');
+        console.error('[CMSHotels] Save failed:', errData);
+        toast.error(errData.error || `Commissioning failed (Status: ${response.status})`);
       }
-    } catch (error) {
-      toast.error('System connection error');
+    } catch (error: any) {
+      console.error('[CMSHotels] System connection error during save:', error);
+      toast.error(`System connection error: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -165,30 +187,37 @@ export default function CMSHotels() {
   const handleDelete = async (id: string) => {
     if (!confirm('Decommission this property?')) return;
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSHotels] Attempting to decommission node: ${id}`);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/hotels/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/hotels/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log(`[CMSHotels] Delete response status: ${response.status}`);
+
       if (response.ok) {
         toast.success('Property decommissioned');
         fetchHotels();
       } else {
-        toast.error('Decommissioning failed');
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSHotels] Decommission failed:', errData);
+        toast.error(errData.error || 'Decommissioning failed');
       }
-    } catch (error) {
-      toast.error('System connection error');
+    } catch (error: any) {
+      console.error('[CMSHotels] System connection error during delete:', error);
+      toast.error(`System connection error: ${error.message}`);
     }
   };
 
   const toggleActive = async (hotel: Hotel) => {
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSHotels] Toggling active status for node: ${hotel.id}, current: ${hotel.isActive}`);
     try {
-      await fetch(`http://localhost:5000/api/hotels/${hotel.id}`, {
+      const response = await fetch(`${API_BASE_URL}/hotels/${hotel.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -196,8 +225,16 @@ export default function CMSHotels() {
         },
         body: JSON.stringify({ isActive: !hotel.isActive })
       });
-      fetchHotels();
-    } catch (error) {
+
+      if (response.ok) {
+        fetchHotels();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSHotels] Toggle failed:', errData);
+        toast.error('Failed to toggle status');
+      }
+    } catch (error: any) {
+      console.error('[CMSHotels] Toggle connection error:', error);
       toast.error('Failed to toggle status');
     }
   };

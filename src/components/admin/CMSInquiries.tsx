@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, SALES_AGENTS } from '@/contexts/TeamAuthContext';
+import { API_BASE_URL } from '@/lib/api';
+
 import { 
   Eye, 
   FileUp, 
@@ -66,7 +68,8 @@ export default function CMSInquiries() {
   const fetchInquiries = async () => {
     try {
       const token = localStorage.getItem('teamToken');
-      const response = await fetch('http://localhost:5000/api/inquiries', {
+      const response = await fetch(`${API_BASE_URL}/inquiries`, {
+
         headers: {
           'Authorization': `Bearer ${token}`
         }

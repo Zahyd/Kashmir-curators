@@ -2,9 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 
-const SOCKET_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000'
-  : 'https://kashmir-curators-api.onrender.com';
+import { SOCKET_URL } from '@/lib/api';
 
 export type TeamRole = 'admin' | 'operations' | 'sales' | 'marketing';
 

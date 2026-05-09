@@ -25,6 +25,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { API_BASE_URL } from '@/lib/api';
+
 
 // Admin Components
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -95,7 +97,7 @@ export default function Admin() {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('teamToken');
-      const response = await fetch('http://localhost:5000/api/dashboard/admin', {
+      const response = await fetch(`${API_BASE_URL}/dashboard/admin`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

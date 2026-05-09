@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
+import { API_BASE_URL } from '@/lib/api';
+
 
 interface Testimonial {
   id: string;
@@ -44,6 +46,35 @@ export default function CMSTestimonials() {
   const [editingItem, setEditingItem] = useState<Testimonial | null>(null);
   const [formData, setFormData] = useState(defaultTestimonial);
 
+  const fetchTestimonials = async () => {
+    console.log('[CMSTestimonials] Initiating fetch for traveler voices...');
+    try {
+      const response = await fetch(`${API_BASE_URL}/testimonials?all=true`);
+      console.log(`[CMSTestimonials] Fetch response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[CMSTestimonials] Fetch failed:', errorText);
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('[CMSTestimonials] Voice nodes received:', data);
+      
+      if (Array.isArray(data)) {
+        setTestimonials(data);
+      } else {
+        console.warn('[CMSTestimonials] Received data is not an array, defaulting to empty list');
+        setTestimonials([]);
+      }
+    } catch (error: any) {
+      console.error('[CMSTestimonials] Fatal error during fetch:', error);
+      toast.error(`Failed to load testimonials: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchTestimonials();
   }, []);
@@ -51,25 +82,10 @@ export default function CMSTestimonials() {
   useEffect(() => {
     const latestEvent = systemEvents[0];
     if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'testimonial') {
+      console.log('[CMSTestimonials] System event detected for testimonial, refreshing...');
       fetchTestimonials();
     }
   }, [systemEvents]);
-
-  const fetchTestimonials = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/testimonials?all=true');
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setTestimonials(data);
-      } else {
-        setTestimonials([]);
-      }
-    } catch (error) {
-      toast.error('Failed to load testimonials');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openCreateDialog = () => {
     setEditingItem(null);
@@ -93,8 +109,10 @@ export default function CMSTestimonials() {
     const token = localStorage.getItem('teamToken');
     const method = editingItem ? 'PATCH' : 'POST';
     const url = editingItem 
-      ? `http://localhost:5000/api/testimonials/${editingItem.id}` 
-      : 'http://localhost:5000/api/testimonials';
+      ? `${API_BASE_URL}/testimonials/${editingItem.id}` 
+      : `${API_BASE_URL}/testimonials`;
+
+    console.log(`[CMSTestimonials] Saving voice via ${method} to ${url}`, formData);
 
     try {
       const response = await fetch(url, {
@@ -106,16 +124,20 @@ export default function CMSTestimonials() {
         body: JSON.stringify(formData)
       });
 
+      console.log(`[CMSTestimonials] Save response status: ${response.status}`);
+
       if (response.ok) {
         toast.success(editingItem ? 'Voice updated' : 'New voice registered');
         setDialogOpen(false);
         fetchTestimonials();
       } else {
         const errData = await response.json().catch(() => ({}));
-        toast.error(errData.error || 'Registration failed');
+        console.error('[CMSTestimonials] Registration failed:', errData);
+        toast.error(errData.error || `Registration failed (Status: ${response.status})`);
       }
-    } catch (error) {
-      toast.error('System connection error');
+    } catch (error: any) {
+      console.error('[CMSTestimonials] System connection error during save:', error);
+      toast.error(`System connection error: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -124,30 +146,37 @@ export default function CMSTestimonials() {
   const handleDelete = async (id: string) => {
     if (!confirm('Discard this testimonial?')) return;
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSTestimonials] Attempting to discard voice node: ${id}`);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/testimonials/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/testimonials/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log(`[CMSTestimonials] Delete response status: ${response.status}`);
+
       if (response.ok) {
         toast.success('Voice discarded');
         fetchTestimonials();
       } else {
-        toast.error('Discarding failed');
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSTestimonials] Discard failed:', errData);
+        toast.error(errData.error || 'Discarding failed');
       }
-    } catch (error) {
-      toast.error('System connection error');
+    } catch (error: any) {
+      console.error('[CMSTestimonials] System connection error during delete:', error);
+      toast.error(`System connection error: ${error.message}`);
     }
   };
 
   const toggleActive = async (item: Testimonial) => {
     const token = localStorage.getItem('teamToken');
+    console.log(`[CMSTestimonials] Toggling visibility for node: ${item.id}, current: ${item.isActive}`);
     try {
-      await fetch(`http://localhost:5000/api/testimonials/${item.id}`, {
+      const response = await fetch(`${API_BASE_URL}/testimonials/${item.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -155,8 +184,16 @@ export default function CMSTestimonials() {
         },
         body: JSON.stringify({ isActive: !item.isActive })
       });
-      fetchTestimonials();
-    } catch (error) {
+
+      if (response.ok) {
+        fetchTestimonials();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CMSTestimonials] Toggle failed:', errData);
+        toast.error('Status toggle failed');
+      }
+    } catch (error: any) {
+      console.error('[CMSTestimonials] Toggle connection error:', error);
       toast.error('Status toggle failed');
     }
   };

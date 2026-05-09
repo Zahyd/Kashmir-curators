@@ -46,6 +46,8 @@ import SalesPerformance from '@/components/sales/SalesPerformance';
 import PaymentPortal from '@/components/sales/PaymentPortal';
 import InquiryVault from '@/components/sales/InquiryVault';
 import WorkLog from '@/components/sales/WorkLog';
+import { API_BASE_URL } from '@/lib/api';
+
 
 // Reminders will be dynamic in future iterations
 const mockReminders: any[] = [];
@@ -87,7 +89,8 @@ export default function SalesPortal() {
   const fetchInquiries = async () => {
     try {
       const token = localStorage.getItem('teamToken');
-      const response = await fetch('http://localhost:5000/api/inquiries', {
+      const response = await fetch(`${API_BASE_URL}/inquiries`, {
+
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -104,7 +107,8 @@ export default function SalesPortal() {
   const fetchSalesStats = async () => {
     try {
       const token = localStorage.getItem('teamToken');
-      const response = await fetch('http://localhost:5000/api/dashboard/sales', {
+      const response = await fetch(`${API_BASE_URL}/dashboard/sales`, {
+
         headers: {
           'Authorization': `Bearer ${token}`
         }
