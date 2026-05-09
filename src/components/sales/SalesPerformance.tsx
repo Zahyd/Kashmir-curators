@@ -19,24 +19,48 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 
-export default function SalesPerformance() {
+export default function SalesPerformance({ stats: liveStats }: { stats?: any }) {
   const stats = [
-    { label: 'Monthly Sales', value: '₹14.2L', change: '+12%', icon: DollarSign, color: 'text-emerald-400' },
-    { label: 'Conversion Rate', value: '24%', change: '+3%', icon: TrendingUp, color: 'text-blue-400' },
-    { label: 'Active Inquiries', value: '18', change: '5 New', icon: Users, color: 'text-amber-400' },
-    { label: 'Commission', value: '₹42,500', change: 'Pending', icon: Zap, color: 'text-purple-400' },
+    { 
+      label: 'Monthly Sales', 
+      value: liveStats?.totalRevenue || '₹0', 
+      change: '+12%', // Trend would need historical data
+      icon: DollarSign, 
+      color: 'text-emerald-400' 
+    },
+    { 
+      label: 'Conversion Rate', 
+      value: liveStats?.conversionRate || '0%', 
+      change: '+3%', 
+      icon: TrendingUp, 
+      color: 'text-blue-400' 
+    },
+    { 
+      label: 'Active Pipeline', 
+      value: liveStats?.activeQuotes || '0', 
+      change: 'Real-time', 
+      icon: Users, 
+      color: 'text-amber-400' 
+    },
+    { 
+      label: 'Leads Converted', 
+      value: liveStats?.leadsConverted || '0', 
+      change: 'Total', 
+      icon: Zap, 
+      color: 'text-purple-400' 
+    },
   ];
 
   const perks = [
-    { title: 'Luxury Stay Voucher', requirement: '10 High-value bookings', progress: 80, unlocked: false, icon: Gift },
-    { title: 'Platinum Club Access', requirement: '₹50L Quarterly Sales', progress: 65, unlocked: false, icon: Star },
-    { title: 'Dinner at The Oberoi', requirement: 'Top performer of month', progress: 100, unlocked: true, icon: Award },
+    { title: 'Luxury Stay Voucher', requirement: '10 High-value bookings', progress: Math.min(((liveStats?.leadsConverted || 0) / 10) * 100, 100), unlocked: (liveStats?.leadsConverted || 0) >= 10, icon: Gift },
+    { title: 'Platinum Club Access', requirement: '₹10L Monthly Sales', progress: parseInt(liveStats?.targetProgress || '0'), unlocked: parseInt(liveStats?.targetProgress || '0') >= 100, icon: Star },
+    { title: 'Performance Bonus', requirement: 'Top performer of month', progress: 100, unlocked: true, icon: Award },
   ];
 
   const leaderboard = [
     { name: 'Sameer Sheikh', revenue: '₹42.5L', conversion: '32%', rank: 1, avatar: 'S' },
     { name: 'Irfan Ahmad', revenue: '₹38.2L', conversion: '28%', rank: 2, avatar: 'I' },
-    { name: 'Zahid Khan', revenue: '₹31.0L', conversion: '25%', rank: 3, avatar: 'Z' },
+    { name: 'Zahid Khan', revenue: liveStats?.totalRevenue || '₹0', conversion: liveStats?.conversionRate || '0%', rank: 3, avatar: 'Z' },
     { name: 'Asma Jan', revenue: '₹24.8L', conversion: '22%', rank: 4, avatar: 'A' },
   ];
 

@@ -26,6 +26,7 @@ interface PaymentPortalProps {
 }
 
 export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
+  if (!inquiry) return null;
   const [amount, setAmount] = useState<string>('0');
   const [paymentType, setPaymentType] = useState<'deposit' | 'full'>('deposit');
   const [transactionId, setTransactionId] = useState('');

@@ -42,35 +42,60 @@ export const getAdminStats = async (req: Request, res: Response) => {
 export const getSalesStats = async (req: any, res: Response) => {
   try {
     const p = prisma as any;
-    const agentCode = req.user.role === 'sales' ? req.user.email : null; // Simple mapping
+    const agentCode = req.user.role === 'sales' ? req.user.email : null; // Mapping sales role to email for assignment
     
+    // 1. Leads Received
     const leadsReceived = await p.inquiry.count({
       where: agentCode ? { assignedTo: agentCode } : {}
     });
     
-    const converted = await p.inquiry.count({
+    // 2. Converted (Booked)
+    const convertedInquiries = await p.inquiry.findMany({
       where: {
         status: 'Booked',
         ...(agentCode ? { assignedTo: agentCode } : {})
-      }
+      },
+      select: { quoteData: true }
     });
- 
+
+    // 3. Active Pipeline (In progress)
     const activeQuotes = await p.inquiry.count({
       where: {
-        status: 'Pending Curation',
+        status: { in: ['Pending Curation', 'Ready for Review'] },
         ...(agentCode ? { assignedTo: agentCode } : {})
       }
     });
 
-    const conversionRate = leadsReceived > 0 ? `${Math.round((converted / leadsReceived) * 100)}%` : '0%';
+    // Calculate Revenue
+    let totalRevenue = 0;
+    convertedInquiries.forEach((inq: any) => {
+      if (inq.quoteData) {
+        try {
+          const days = JSON.parse(inq.quoteData);
+          if (Array.isArray(days)) {
+            days.forEach((day: any) => {
+              totalRevenue += (day.hotelPrice || 0) + (day.transportPrice || 0) + (day.extraBedPrice || 0);
+            });
+          }
+        } catch (e) {
+          console.error("Error parsing quoteData for revenue:", e);
+        }
+      }
+    });
+
+    const conversionRate = leadsReceived > 0 ? `${Math.round((convertedInquiries.length / leadsReceived) * 100)}%` : '0%';
 
     res.json({
       leadsReceived,
       conversionRate,
       activeQuotes,
-      targetProgress: '74%' // Target still mock for now
+      totalRevenue: totalRevenue > 100000 ? `₹${(totalRevenue / 100000).toFixed(1)}L` : `₹${totalRevenue.toLocaleString()}`,
+      revenueRaw: totalRevenue,
+      targetProgress: Math.min(Math.round((totalRevenue / 1000000) * 100), 100).toString(), // Target of 10L for progress
+      leadsConverted: convertedInquiries.length
     });
   } catch (error) {
+    console.error('Sales stats error:', error);
     res.status(500).json({ error: 'Failed to fetch sales stats' });
   }
 };

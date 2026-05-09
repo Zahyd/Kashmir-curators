@@ -28,6 +28,7 @@ interface InquiryVaultProps {
 }
 
 export default function InquiryVault({ inquiry, onBack }: InquiryVaultProps) {
+  if (!inquiry) return null;
   const [documents, setDocuments] = useState([
     { id: 1, name: 'Guest_Aadhar_Cards.pdf', size: '2.4 MB', type: 'ID Proof', status: 'Verified', date: '2026-05-07' },
     { id: 2, name: 'Flight_Tickets_SXR.pdf', size: '1.1 MB', type: 'Travel', status: 'Pending', date: '2026-05-08' },

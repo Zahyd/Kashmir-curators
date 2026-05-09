@@ -91,6 +91,7 @@ const activityTemplates = [
 ];
 
 export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderProps) {
+  if (!inquiry) return null;
   const { data: hotels } = useHotels();
   const [days, setDays] = useState<ItineraryDay[]>([]);
   const [exclusions, setExclusions] = useState<string>('- Airfare or Train fare\n- Lunch (Unless specified)\n- Personal expenses (Laundry, Tips, etc.)\n- Any entry fees for monuments or activities not mentioned');

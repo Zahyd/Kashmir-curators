@@ -46,6 +46,7 @@ import SalesPerformance from '@/components/sales/SalesPerformance';
 import PaymentPortal from '@/components/sales/PaymentPortal';
 import InquiryVault from '@/components/sales/InquiryVault';
 import WorkLog from '@/components/sales/WorkLog';
+import SelectionRequired from '@/components/sales/SelectionRequired';
 import { API_BASE_URL } from '@/lib/api';
 
 
@@ -561,22 +562,61 @@ export default function SalesPortal() {
             </div>
           </div>
           ) : activeTab === 'performance' ? (
-            <SalesPerformance />
+            <SalesPerformance stats={salesStats} />
           ) : activeTab === 'builder' ? (
-            <ItineraryBuilder 
-              inquiry={selectedInquiry} 
-              onBack={() => setActiveTab('my-inquiries')} 
-            />
+            selectedInquiry ? (
+              <ItineraryBuilder 
+                inquiry={selectedInquiry} 
+                onBack={() => setActiveTab('my-inquiries')} 
+              />
+            ) : (
+              <SelectionRequired 
+                title="Itinerary Builder"
+                description="Select an active inquiry from your pipeline to begin crafting a bespoke luxury itinerary."
+                icon={FilePlus}
+                inquiries={inquiries}
+                onSelect={(inq) => {
+                  setSelectedInquiry(inq);
+                  setActiveTab('builder');
+                }}
+              />
+            )
           ) : activeTab === 'payments' ? (
-            <PaymentPortal 
-              inquiry={selectedInquiry}
-              onBack={() => setActiveTab('my-inquiries')}
-            />
+            selectedInquiry ? (
+              <PaymentPortal 
+                inquiry={selectedInquiry}
+                onBack={() => setActiveTab('my-inquiries')}
+              />
+            ) : (
+              <SelectionRequired 
+                title="Payment Portal"
+                description="Generate secure UPI payment links and verify transactions for your booked clients."
+                icon={CreditCard}
+                inquiries={inquiries}
+                onSelect={(inq) => {
+                  setSelectedInquiry(inq);
+                  setActiveTab('payments');
+                }}
+              />
+            )
           ) : activeTab === 'vault' ? (
-            <InquiryVault 
-              inquiry={selectedInquiry}
-              onBack={() => setActiveTab('my-inquiries')}
-            />
+            selectedInquiry ? (
+              <InquiryVault 
+                inquiry={selectedInquiry}
+                onBack={() => setActiveTab('my-inquiries')}
+              />
+            ) : (
+              <SelectionRequired 
+                title="Inquiry Vault"
+                description="Access and manage secure guest documentation, ID proofs, and travel vouchers."
+                icon={ShieldCheck}
+                inquiries={inquiries}
+                onSelect={(inq) => {
+                  setSelectedInquiry(inq);
+                  setActiveTab('vault');
+                }}
+              />
+            )
           ) : activeTab === 'work-log' ? (
             <WorkLog />
           ) : null}

@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  Clock, 
-  Calendar, 
-  Timer, 
-  CheckCircle2, 
-  AlertCircle, 
+import {
+  Clock,
+  Calendar,
+  Timer,
+  CheckCircle2,
+  AlertCircle,
   ArrowUpRight,
   Monitor,
   Smartphone,
@@ -17,12 +17,16 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
+
 export default function WorkLog() {
+  const { systemEvents, teamUser } = useTeamAuth();
+  
   const currentSession = {
-    start: '09:00 AM',
-    duration: '4h 32m',
+    start: '09:00 AM', // In a real app, this would come from a session start timestamp
+    duration: 'Active',
     status: 'Active',
-    device: 'Desktop (Srinagar Office)'
+    device: 'Web Portal'
   };
 
   const weeklyStats = [
@@ -33,11 +37,24 @@ export default function WorkLog() {
     { day: 'Fri', hours: 4.5, status: 'In Progress' },
   ];
 
-  const recentLogs = [
-    { date: 'May 08, 2026', login: '09:00 AM', logout: 'Still Active', total: '4h 32m', status: 'Active' },
-    { date: 'May 07, 2026', login: '08:55 AM', logout: '06:15 PM', total: '9h 20m', status: 'Complete' },
-    { date: 'May 06, 2026', login: '09:12 AM', logout: '05:45 PM', total: '8h 33m', status: 'Complete' },
-  ];
+  // Map system events to recent logs
+  const recentLogs = systemEvents.slice(0, 10).map((event: any) => ({
+    date: new Date(event.timestamp).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+    login: new Date(event.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    logout: event.type === 'Booking' ? 'Booking Recorded' : 'Action Logged',
+    total: event.message,
+    status: event.type
+  }));
+
+  if (recentLogs.length === 0) {
+    recentLogs.push({ 
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }), 
+      login: 'Now', 
+      logout: 'Active', 
+      total: 'System Ready', 
+      status: 'Session' 
+    });
+  }
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 max-w-6xl mx-auto pb-20">
@@ -114,12 +131,12 @@ export default function WorkLog() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-end justify-between gap-4 h-64 px-4">
             {weeklyStats.map((day, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
                 <div className="relative w-full">
-                  <div 
+                  <div
                     className={cn(
                       "w-full rounded-t-xl transition-all duration-700 group-hover:opacity-80",
                       day.status === 'In Progress' ? "bg-emerald-500/40" : "bg-gradient-to-t from-kashmir-gold to-amber-400"
