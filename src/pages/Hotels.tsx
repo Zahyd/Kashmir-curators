@@ -127,7 +127,7 @@ export default function Hotels() {
 
       <div className="container mx-auto px-4 py-8">
         {/* Search Bar - Elite Hub */}
-        <div className="bg-white/[0.02] border border-white/5 rounded-[3rem] p-10 backdrop-blur-xl mb-16 animate-fade-up">
+        <div className="bg-white/[0.02] border border-white/5 rounded-[3rem] p-6 md:p-10 backdrop-blur-xl mb-16 animate-fade-up">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4 flex items-center gap-2">
@@ -285,7 +285,7 @@ export default function Hotels() {
                         Initiate Reservation
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-xl bg-[#05080a] border-white/10 text-white rounded-[3rem] p-10">
+                    <DialogContent className="max-w-xl bg-[#05080a] border-white/10 text-white rounded-[3rem] p-6 md:p-10">
                       <DialogHeader className="mb-10">
                         <DialogTitle className="font-display text-4xl font-black text-white uppercase leading-tight">
                           RESERVE <span className="text-kashmir-gold italic">{dialogHotel?.name || hotel.name}</span>

@@ -16,7 +16,7 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
   const activeLeads = inquiries.filter(inq => inq.status !== 'Lost' && inq.status !== 'Booked');
 
   return (
-    <div className="max-w-4xl mx-auto py-20 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <div className="max-w-4xl mx-auto py-10 md:py-20 animate-in fade-in slide-in-from-bottom-8 duration-700 px-4 md:px-0">
       <div className="text-center mb-16">
         <div className="w-20 h-20 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-8 shadow-2xl">
           <Icon className="w-10 h-10 text-kashmir-gold" />
@@ -42,15 +42,15 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
               <Card 
                 key={inq.id}
                 onClick={() => onSelect(inq)}
-                className="group bg-white/[0.03] border-white/5 p-6 rounded-[2rem] hover:bg-white/[0.06] hover:border-kashmir-gold/30 transition-all cursor-pointer flex items-center justify-between"
+                className="group bg-white/[0.03] border-white/5 p-4 md:p-6 rounded-[2rem] hover:bg-white/[0.06] hover:border-kashmir-gold/30 transition-all cursor-pointer flex items-center justify-between gap-3"
               >
-                <div className="flex items-center gap-6">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white font-bold group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-3 md:gap-6 min-w-0">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white font-bold group-hover:scale-110 transition-transform shrink-0">
                     {inq.customerName.charAt(0)}
                   </div>
-                  <div>
-                    <h4 className="font-bold text-white group-hover:text-kashmir-gold transition-colors">{inq.customerName}</h4>
-                    <p className="text-[10px] text-white/20 uppercase tracking-widest mt-0.5">{inq.id} • {inq.destination}</p>
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-white group-hover:text-kashmir-gold transition-colors truncate">{inq.customerName}</h4>
+                    <p className="text-[9px] md:text-[10px] text-white/20 uppercase tracking-widest mt-0.5 truncate">{inq.id} • {inq.destination}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6">

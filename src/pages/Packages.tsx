@@ -183,7 +183,7 @@ export default function Packages() {
         <div className="flex flex-col lg:flex-row gap-16">
           {/* Desktop Filters - Glassmorphic Sidebar */}
           <aside className="hidden lg:block w-80 shrink-0">
-            <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-10 sticky top-32 backdrop-blur-xl">
+            <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-6 md:p-10 sticky top-32 backdrop-blur-xl">
               <div className="flex items-center justify-between mb-10">
                 <h3 className="font-black text-white text-xs uppercase tracking-[0.2em]">Curation</h3>
                 <div className="w-8 h-8 rounded-lg bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20">

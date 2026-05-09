@@ -18,6 +18,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { useTeamAuth, ROLE_LABELS } from '@/contexts/TeamAuthContext';
 
 export default function SalesPerformance({ stats: liveStats }: { stats?: any }) {
   const stats = [
@@ -57,11 +58,16 @@ export default function SalesPerformance({ stats: liveStats }: { stats?: any }) 
     { title: 'Performance Bonus', requirement: 'Top performer of month', progress: 100, unlocked: true, icon: Award },
   ];
 
+  const { teamUser } = useTeamAuth();
+
   const leaderboard = [
-    { name: 'Sameer Sheikh', revenue: '₹42.5L', conversion: '32%', rank: 1, avatar: 'S' },
-    { name: 'Irfan Ahmad', revenue: '₹38.2L', conversion: '28%', rank: 2, avatar: 'I' },
-    { name: 'Zahid Khan', revenue: liveStats?.totalRevenue || '₹0', conversion: liveStats?.conversionRate || '0%', rank: 3, avatar: 'Z' },
-    { name: 'Asma Jan', revenue: '₹24.8L', conversion: '22%', rank: 4, avatar: 'A' },
+    { 
+      name: teamUser?.name || 'Sales Executive', 
+      revenue: liveStats?.totalRevenue || '₹0', 
+      conversion: liveStats?.conversionRate || '0%', 
+      rank: 1, 
+      avatar: (teamUser?.name || 'E').charAt(0) 
+    }
   ];
 
   return (
@@ -220,15 +226,17 @@ export default function SalesPerformance({ stats: liveStats }: { stats?: any }) 
 
                 <div className="flex-1">
                   <h4 className="text-lg font-bold text-white group-hover:text-kashmir-gold transition-colors">{agent.name}</h4>
-                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-black">Senior Consultant</p>
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-black">
+                    {teamUser ? ROLE_LABELS[teamUser.role] : 'Team Member'}
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-10">
                   <div className="text-right">
                     <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Total Revenue</p>
-                    <p className={cn("text-xl font-black", agent.rank === 1 ? "text-kashmir-gold" : "text-white")}>{agent.revenue}</p>
+                    <p className={cn("text-xl font-black whitespace-nowrap", agent.rank === 1 ? "text-kashmir-gold" : "text-white")}>{agent.revenue}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right hidden sm:block">
                     <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Conversion</p>
                     <p className="text-xl font-black text-white">{agent.conversion}</p>
                   </div>

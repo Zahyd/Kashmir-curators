@@ -40,31 +40,31 @@ export default function InquiryVault({ inquiry, onBack }: InquiryVaultProps) {
 
   return (
     <div className="animate-in fade-in duration-700 max-w-6xl mx-auto pb-20">
-      <div className="flex items-center justify-between mb-12">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12 px-4 md:px-0">
+        <div className="flex items-center gap-4 md:gap-6">
           <Button 
             onClick={onBack}
             variant="ghost" 
-            className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+            className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <div className="flex items-center gap-2 text-kashmir-gold text-[10px] font-black uppercase tracking-[0.3em] mb-1">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-kashmir-gold text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] mb-1">
               <ShieldCheck className="w-3 h-3" /> Secure Inquiry Vault
             </div>
-            <h2 className="text-3xl font-display font-bold text-white tracking-tight">Documents for {inquiry.customerName}</h2>
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight truncate">Documents for {inquiry.customerName}</h2>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold flex gap-2">
-            <FileCheck className="w-4 h-4" /> 80% Documents Verified
+        <div className="flex items-center gap-3 md:gap-4 overflow-x-auto pb-2 md:pb-0">
+          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-bold flex gap-2 shrink-0">
+            <FileCheck className="w-3.5 h-3.5 md:w-4 md:h-4" /> 80% Verified
           </Badge>
           <Button 
             onClick={handleUpload}
-            className="bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-12 px-6 rounded-xl gap-2 shadow-lg shadow-kashmir-gold/20"
+            className="bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-[10px] md:text-xs h-10 md:h-12 px-4 md:px-6 rounded-xl gap-2 shadow-lg shadow-kashmir-gold/20 shrink-0"
           >
-            <Upload className="w-4 h-4" /> Upload New
+            <Upload className="w-4 h-4" /> Upload
           </Button>
         </div>
       </div>
@@ -111,20 +111,20 @@ export default function InquiryVault({ inquiry, onBack }: InquiryVaultProps) {
         {/* Files Column */}
         <div className="lg:col-span-3 space-y-6">
           <Card className="bg-[#0a0f12] border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-              <div className="flex items-center gap-6">
-                <div className="relative group w-80">
+            <div className="p-6 md:p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/[0.02]">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <div className="relative group w-full sm:w-80">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
                   <Input 
                     placeholder="Search documents..." 
-                    className="pl-12 bg-white/5 border-white/5 h-12 rounded-xl text-sm"
+                    className="pl-12 bg-white/5 border-white/5 h-12 rounded-xl text-sm w-full"
                   />
                 </div>
-                <Button variant="ghost" className="text-white/40 hover:text-white gap-2 text-xs font-bold">
+                <Button variant="ghost" className="text-white/40 hover:text-white gap-2 text-xs font-bold h-12">
                   <Filter className="w-4 h-4" /> Filter
                 </Button>
               </div>
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">A-Z Sorting Active</p>
+              <p className="hidden md:block text-[10px] font-bold text-white/20 uppercase tracking-widest text-right">A-Z Sorting Active</p>
             </div>
 
             <div className="overflow-x-auto">

@@ -60,7 +60,7 @@ export default function HeroSection() {
           {/* Headline - Editorial Style */}
           <div className="max-w-5xl mb-10 space-y-4">
             <h1 className="font-display text-6xl md:text-8xl lg:text-9xl font-black text-white leading-[0.9] tracking-tighter animate-fade-up" style={{ animationDelay: '100ms' }}>
-              BEYOND the <br />
+              BEYOND the <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/20">ORDINARY</span>
             </h1>
             <p className="text-lg md:text-xl text-white/50 font-medium max-w-2xl mx-auto tracking-wide animate-fade-up" style={{ animationDelay: '200ms' }}>

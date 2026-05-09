@@ -121,7 +121,7 @@ export default function WorkLog() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Weekly Chart Area */}
-        <Card className="lg:col-span-2 bg-[#0a0f12] border-white/5 p-10 rounded-[3rem] shadow-2xl">
+        <Card className="lg:col-span-2 bg-[#0a0f12] border-white/5 p-6 md:p-10 rounded-[3rem] shadow-2xl">
           <div className="flex justify-between items-center mb-10">
             <h4 className="text-lg font-bold text-white">Daily Activity (Weekly)</h4>
             <div className="flex items-center gap-4">

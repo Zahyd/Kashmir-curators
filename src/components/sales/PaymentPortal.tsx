@@ -66,23 +66,23 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
 
   return (
     <div className="animate-in fade-in duration-700 max-w-5xl mx-auto pb-20">
-      <div className="flex items-center justify-between mb-10">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 px-4 md:px-0">
+        <div className="flex items-center gap-4 md:gap-6">
           <Button 
             onClick={onBack}
             variant="ghost" 
-            className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+            className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <div className="flex items-center gap-2 text-kashmir-gold text-[10px] font-black uppercase tracking-[0.3em] mb-1">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-kashmir-gold text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] mb-1">
               <CreditCard className="w-3 h-3" /> Payment Portal
             </div>
-            <h2 className="text-3xl font-display font-bold text-white tracking-tight">Collect Payment</h2>
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight truncate">Collect Payment</h2>
           </div>
         </div>
-        <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold flex gap-2">
+        <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold flex gap-2 w-fit">
           <ShieldCheck className="w-4 h-4" /> Secure Gateway Active
         </Badge>
       </div>
@@ -90,18 +90,18 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
         {/* Left Column: Configuration */}
         <div className="lg:col-span-3 space-y-8">
-          <Card className="bg-white/[0.03] border-white/5 p-10 rounded-[2.5rem] backdrop-blur-2xl">
+          <Card className="bg-white/[0.03] border-white/5 p-6 md:p-10 rounded-[2.5rem] backdrop-blur-2xl">
             <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-kashmir-gold/10 text-kashmir-gold flex items-center justify-center text-sm">1</span>
               Configure Request
             </h3>
 
             <div className="space-y-8">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   onClick={() => setPaymentType('deposit')}
                   className={cn(
-                    "p-6 rounded-3xl border transition-all text-left group",
+                    "p-5 md:p-6 rounded-3xl border transition-all text-left group",
                     paymentType === 'deposit' 
                       ? "bg-kashmir-gold/10 border-kashmir-gold/40 text-kashmir-gold" 
                       : "bg-white/5 border-white/5 text-white/40 hover:border-white/10"
@@ -118,7 +118,7 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
                 <button
                   onClick={() => setPaymentType('full')}
                   className={cn(
-                    "p-6 rounded-3xl border transition-all text-left group",
+                    "p-5 md:p-6 rounded-3xl border transition-all text-left group",
                     paymentType === 'full' 
                       ? "bg-purple-500/10 border-purple-500/40 text-purple-400" 
                       : "bg-white/5 border-white/5 text-white/40 hover:border-white/10"
@@ -163,7 +163,7 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
             </div>
           </Card>
 
-          <Card className="bg-white/[0.03] border-white/5 p-10 rounded-[2.5rem] backdrop-blur-2xl">
+          <Card className="bg-white/[0.03] border-white/5 p-6 md:p-10 rounded-[2.5rem] backdrop-blur-2xl">
             <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-sm">2</span>
               Manual Verification
