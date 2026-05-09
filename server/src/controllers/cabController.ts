@@ -22,49 +22,71 @@ export const getCabs = async (req: Request, res: Response) => {
 
 export const createCab = async (req: any, res: Response) => {
   try {
-    const data = { ...req.body };
-    if (data.features) data.features = JSON.stringify(data.features);
+    const { name, type, capacity, pricePerKm, basePrice, image, features, isActive } = req.body;
+    
+    // Ensure data types match schema
+    const data = {
+      name: String(name),
+      type: String(type),
+      capacity: Number(capacity),
+      pricePerKm: Number(pricePerKm),
+      basePrice: Number(basePrice),
+      image: image || '', // Ensure string, not null
+      features: JSON.stringify(Array.isArray(features) ? features : []),
+      isActive: isActive !== undefined ? Boolean(isActive) : true
+    };
     
     const cab = await prisma.cab.create({ data });
     
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
         type: 'CREATE',
-        message: `New cab added: ${cab.name}`,
+        message: `New vehicle node deployed: ${cab.name}`,
         booking: { ...cab, entityType: 'cab' }
       });
     }
     
     res.status(201).json(cab);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create cab' });
+    console.error('Cab creation error:', error);
+    res.status(500).json({ error: (error as any).message || 'Fleet deployment failed' });
   }
 };
 
 export const updateCab = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
-    const data = { ...req.body };
-    if (data.features && typeof data.features !== 'string') {
-      data.features = JSON.stringify(data.features);
+    const updateData: any = {};
+    
+    // Selectively map fields if they exist in request
+    if (req.body.name !== undefined) updateData.name = String(req.body.name);
+    if (req.body.type !== undefined) updateData.type = String(req.body.type);
+    if (req.body.capacity !== undefined) updateData.capacity = Number(req.body.capacity);
+    if (req.body.pricePerKm !== undefined) updateData.pricePerKm = Number(req.body.pricePerKm);
+    if (req.body.basePrice !== undefined) updateData.basePrice = Number(req.body.basePrice);
+    if (req.body.image !== undefined) updateData.image = req.body.image || '';
+    if (req.body.features !== undefined) {
+      updateData.features = JSON.stringify(Array.isArray(req.body.features) ? req.body.features : []);
     }
+    if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive);
     
     const cab = await prisma.cab.update({
       where: { id },
-      data
+      data: updateData
     });
     
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
         type: 'UPDATE',
-        message: `Cab ${cab.name} updated`,
+        message: `Logistics node ${cab.name} reconfigured`,
         booking: { ...cab, entityType: 'cab' }
       });
     }
     
     res.json(cab);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update cab' });
+    console.error('Cab update error:', error);
+    res.status(500).json({ error: (error as any).message || 'Node reconfiguration failed' });
   }
 };
 

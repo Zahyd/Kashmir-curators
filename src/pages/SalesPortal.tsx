@@ -30,7 +30,8 @@ import {
   MapPin,
   DollarSign, 
   Timer,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -367,6 +368,7 @@ export default function SalesPortal() {
                               "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border-none shadow-lg",
                               inq.status === 'New' ? 'bg-blue-500/20 text-blue-400 shadow-blue-500/10' :
                               inq.status === 'Pending Curation' ? 'bg-amber-500/20 text-amber-500 shadow-amber-500/10' :
+                              inq.status === 'Ready for Review' ? 'bg-purple-500/20 text-purple-400 shadow-purple-500/10' :
                               'bg-emerald-500/20 text-emerald-400 shadow-emerald-500/10'
                             )}>
                               {inq.status}
@@ -437,16 +439,26 @@ export default function SalesPortal() {
                             className="flex-1 w-full bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-14 rounded-2xl transition-all duration-500 shadow-xl shadow-kashmir-gold/10 group-hover:shadow-kashmir-gold/20 gap-2"
                           >
                             <FilePlus className="w-4 h-4" />
-                            <span className="truncate">Build Itinerary</span>
+                            <span className="truncate">{inq.quoteData ? 'Edit Itinerary' : 'Build Itinerary'}</span>
                           </Button>
-                          <Button 
-                            onClick={() => openPayment(inq)}
-                            variant="outline"
-                            className="flex-1 w-full border-white/10 text-white hover:bg-white/10 h-14 rounded-2xl font-black uppercase tracking-widest text-xs gap-2"
-                          >
-                            <CreditCard className="w-4 h-4 text-kashmir-gold" />
-                            <span className="truncate">Collect Payment</span>
-                          </Button>
+                          {inq.proposalUrl ? (
+                            <Button 
+                              onClick={() => window.open(inq.proposalUrl, '_blank')}
+                              className="flex-1 w-full bg-emerald-500 text-white hover:bg-emerald-600 font-black uppercase tracking-widest text-xs h-14 rounded-2xl transition-all duration-500 shadow-xl shadow-emerald-500/10 gap-2"
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span className="truncate">View Proposal</span>
+                            </Button>
+                          ) : (
+                            <Button 
+                              onClick={() => openPayment(inq)}
+                              variant="outline"
+                              className="flex-1 w-full border-white/10 text-white hover:bg-white/10 h-14 rounded-2xl font-black uppercase tracking-widest text-xs gap-2"
+                            >
+                              <CreditCard className="w-4 h-4 text-kashmir-gold" />
+                              <span className="truncate">Collect Payment</span>
+                            </Button>
+                          )}
                           <div className="flex gap-4 w-full lg:w-auto">
                             <Button 
                               onClick={() => openVault(inq)}

@@ -31,7 +31,8 @@ import {
   TrendingDown,
   TrendingUp,
   AlertCircle,
-  Activity
+  Activity,
+  Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -96,9 +97,24 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
   const [showImageActions, setShowImageActions] = useState<number | null>(null);
   const [tempImageUrl, setTempImageUrl] = useState('');
   const [pax, setPax] = useState({ adults: 2, children: 0 });
+  const [proposalUrl, setProposalUrl] = useState(inquiry.proposalUrl || '');
   const pdfContentRef = useRef<HTMLDivElement>(null);
 
   const totalCost = days.reduce((sum, day) => sum + (day.hotelPrice || 0) + (day.transportPrice || 0) + (day.extraBedPrice || 0), 0);
+
+  // Load existing quote data if available
+  useEffect(() => {
+    if (inquiry.quoteData) {
+      try {
+        const parsed = JSON.parse(inquiry.quoteData);
+        if (Array.isArray(parsed)) {
+          setDays(parsed);
+        }
+      } catch (error) {
+        console.error("Failed to parse existing quote data:", error);
+      }
+    }
+  }, [inquiry.quoteData]);
 
   // Initialize days based on inquiry duration
   useEffect(() => {
@@ -248,6 +264,54 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     }
   };
 
+  const handleSaveQuote = async () => {
+    setIsGenerating(true);
+    const toastId = toast.loading('Saving quote to pipeline...');
+    
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`http://localhost:5000/api/inquiries/${inquiry.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          quoteData: JSON.stringify(days),
+          status: 'Ready for Review'
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to save quote');
+      
+      toast.success('Quote saved and synced to pipeline!', { id: toastId });
+    } catch (error) {
+      console.error('Save Quote Error:', error);
+      toast.error('Failed to save quote. Please try again.', { id: toastId });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleUpdateProposal = async (url: string) => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`http://localhost:5000/api/inquiries/${inquiry.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ proposalUrl: url })
+      });
+
+      if (!response.ok) throw new Error('Failed to update proposal link');
+      toast.success('Proposal document linked successfully!');
+    } catch (error) {
+      toast.error('Failed to link proposal document');
+    }
+  };
+
   const generatePDF = async () => {
     if (!pdfContentRef.current) return;
     
@@ -337,9 +401,14 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
         </div>
         
         <div className="flex items-center gap-4 w-full xl:w-auto relative z-10">
-          <Button variant="outline" className="flex-1 xl:flex-none bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all">
-            <Save className="w-4 h-4 mr-2" />
-            <span>Save Draft</span>
+          <Button 
+            onClick={handleSaveQuote}
+            disabled={isGenerating}
+            variant="outline" 
+            className="flex-1 xl:flex-none bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
+          >
+            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            <span>Save to Pipeline</span>
           </Button>
           <Button 
             onClick={generatePDF} 
@@ -874,6 +943,61 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                     placeholder="What's not included?"
                     className="bg-white/5 border-white/5 rounded-3xl min-h-[120px] focus:border-red-400/30 text-white/60 text-xs leading-relaxed"
                   />
+                </div>
+              </div>
+
+              {/* Proposal Document Link */}
+              <div className="mt-8 pt-8 border-t border-white/5 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-emerald-400" /> Professional Proposal
+                  </h4>
+                  {proposalUrl && (
+                    <Badge className="bg-emerald-500/10 text-emerald-400 border-none px-2 py-0.5 text-[8px] font-black uppercase tracking-widest">
+                      Linked
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="relative group/prop">
+                    <Input 
+                      value={proposalUrl}
+                      onChange={(e) => setProposalUrl(e.target.value)}
+                      placeholder="Paste PDF Link (Google Drive/S3)..."
+                      className="bg-white/5 border-white/5 h-12 rounded-xl text-[11px] pl-10 focus:border-emerald-500/30 font-medium"
+                    />
+                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button 
+                      onClick={() => handleUpdateProposal(proposalUrl)}
+                      className="bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold h-12 rounded-xl text-[10px] uppercase tracking-widest"
+                    >
+                      Update Link
+                    </Button>
+                    <div className="relative">
+                      <Button 
+                        variant="ghost"
+                        className="w-full bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 text-emerald-400 font-bold h-12 rounded-xl text-[10px] uppercase tracking-widest"
+                      >
+                        <Upload className="w-3.5 h-3.5 mr-2" /> Mock Upload
+                      </Button>
+                      <input 
+                        type="file" 
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const mockUrl = `https://storage.kashmircurators.com/proposals/${file.name.replace(/\s+/g, '_')}`;
+                            setProposalUrl(mockUrl);
+                            handleUpdateProposal(mockUrl);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>

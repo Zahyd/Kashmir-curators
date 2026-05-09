@@ -39,7 +39,23 @@ export const getHotelById = async (req: Request, res: Response) => {
 
 export const createHotel = async (req: any, res: Response) => {
   try {
-    const hotel = await prisma.hotel.create({ data: stringifyHotel(req.body) });
+    const { name, location, starRating, pricePerNight, description, imageUrl, amenities, roomTypes, rating, reviewCount, isActive } = req.body;
+    
+    const data = {
+      name: String(name),
+      location: String(location),
+      starRating: Number(starRating),
+      pricePerNight: Number(pricePerNight),
+      description: description || '',
+      image: imageUrl || '',
+      amenities: JSON.stringify(Array.isArray(amenities) ? amenities : []),
+      roomTypes: JSON.stringify(Array.isArray(roomTypes) ? roomTypes : []),
+      rating: Number(rating || 4.5),
+      reviewCount: Number(reviewCount || 0),
+      isActive: isActive !== undefined ? Boolean(isActive) : true
+    };
+
+    const hotel = await prisma.hotel.create({ data });
     
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
@@ -51,15 +67,35 @@ export const createHotel = async (req: any, res: Response) => {
     
     res.status(201).json(hotel);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create hotel' });
+    console.error('Hotel creation error:', error);
+    res.status(500).json({ error: (error as any).message || 'Failed to create hotel' });
   }
 };
 
 export const updateHotel = async (req: any, res: Response) => {
   try {
+    const { id } = req.params;
+    const updateData: any = {};
+    
+    if (req.body.name !== undefined) updateData.name = String(req.body.name);
+    if (req.body.location !== undefined) updateData.location = String(req.body.location);
+    if (req.body.starRating !== undefined) updateData.starRating = Number(req.body.starRating);
+    if (req.body.pricePerNight !== undefined) updateData.pricePerNight = Number(req.body.pricePerNight);
+    if (req.body.description !== undefined) updateData.description = req.body.description || '';
+    if (req.body.imageUrl !== undefined) updateData.image = req.body.imageUrl || '';
+    if (req.body.amenities !== undefined) {
+      updateData.amenities = JSON.stringify(Array.isArray(req.body.amenities) ? req.body.amenities : []);
+    }
+    if (req.body.roomTypes !== undefined) {
+      updateData.roomTypes = JSON.stringify(Array.isArray(req.body.roomTypes) ? req.body.roomTypes : []);
+    }
+    if (req.body.rating !== undefined) updateData.rating = Number(req.body.rating);
+    if (req.body.reviewCount !== undefined) updateData.reviewCount = Number(req.body.reviewCount);
+    if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive);
+    
     const hotel = await prisma.hotel.update({
-      where: { id: req.params.id },
-      data: stringifyHotel(req.body)
+      where: { id },
+      data: updateData
     });
     
     if (req.io) {
@@ -72,7 +108,8 @@ export const updateHotel = async (req: any, res: Response) => {
     
     res.json(hotel);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update hotel' });
+    console.error('Hotel update error:', error);
+    res.status(500).json({ error: (error as any).message || 'Failed to update hotel' });
   }
 };
 

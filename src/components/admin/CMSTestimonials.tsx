@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, Loader2, Quote, User, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MediaPicker from './MediaPicker';
 
@@ -47,7 +48,6 @@ export default function CMSTestimonials() {
     fetchTestimonials();
   }, []);
 
-  // Real-time refresh
   useEffect(() => {
     const latestEvent = systemEvents[0];
     if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'testimonial') {
@@ -62,7 +62,6 @@ export default function CMSTestimonials() {
       if (Array.isArray(data)) {
         setTestimonials(data);
       } else {
-        console.error('Expected array of testimonials, but received:', data);
         setTestimonials([]);
       }
     } catch (error) {
@@ -86,7 +85,7 @@ export default function CMSTestimonials() {
 
   const handleSave = async () => {
     if (!formData.name || !formData.content) {
-      toast.error('Please fill required fields');
+      toast.error('Identity and Content are mandatory');
       return;
     }
 
@@ -108,21 +107,22 @@ export default function CMSTestimonials() {
       });
 
       if (response.ok) {
-        toast.success(editingItem ? 'Testimonial updated' : 'Testimonial created');
+        toast.success(editingItem ? 'Voice updated' : 'New voice registered');
         setDialogOpen(false);
         fetchTestimonials();
       } else {
-        toast.error('Failed to save testimonial');
+        const errData = await response.json().catch(() => ({}));
+        toast.error(errData.error || 'Registration failed');
       }
     } catch (error) {
-      toast.error('Error saving testimonial');
+      toast.error('System connection error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this testimonial?')) return;
+    if (!confirm('Discard this testimonial?')) return;
     const token = localStorage.getItem('teamToken');
     
     try {
@@ -134,201 +134,270 @@ export default function CMSTestimonials() {
       });
 
       if (response.ok) {
-        toast.success('Testimonial deleted');
+        toast.success('Voice discarded');
         fetchTestimonials();
       } else {
-        toast.error('Failed to delete');
+        toast.error('Discarding failed');
       }
     } catch (error) {
-      toast.error('Error deleting testimonial');
+      toast.error('System connection error');
     }
   };
 
   const toggleActive = async (item: Testimonial) => {
     const token = localStorage.getItem('teamToken');
-    await fetch(`http://localhost:5000/api/testimonials/${item.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ isActive: !item.isActive })
-    });
-    fetchTestimonials();
+    try {
+      await fetch(`http://localhost:5000/api/testimonials/${item.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: !item.isActive })
+      });
+      fetchTestimonials();
+    } catch (error) {
+      toast.error('Status toggle failed');
+    }
   };
 
-  const toggleFeatured = async (item: Testimonial) => {
-    const token = localStorage.getItem('teamToken');
-    await fetch(`http://localhost:5000/api/testimonials/${item.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ isActive: !item.isActive })
-    });
-    fetchTestimonials();
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-12 w-12 animate-spin text-kashmir-gold" />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Testimonials ({testimonials.length})</h2>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" /> Add Testimonial
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h2 className="text-3xl font-display font-bold text-white tracking-tight">Traveler Voices</h2>
+          <p className="text-white/40 text-sm mt-1 uppercase tracking-widest font-black">Curating {testimonials.length} Experiences</p>
+        </div>
+        <Button onClick={openCreateDialog} className="w-full md:w-auto bg-kashmir-gold text-black hover:bg-amber-500 font-black px-8 h-14 rounded-2xl shadow-xl shadow-kashmir-gold/10 transition-all">
+          <Plus className="h-5 w-5 mr-2" /> 
+          <span className="text-[10px] uppercase tracking-[0.2em]">Register Voice</span>
         </Button>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      {/* Desktop View */}
+      <div className="hidden lg:block bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
+        <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Avatar</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+          <TableHeader className="bg-white/[0.02] border-b border-white/5">
+            <TableRow className="hover:bg-transparent border-none">
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] py-8 pl-10">Traveler Identity</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Experience Snippet</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Sentiment</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Status</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] text-right pr-10">Controls</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-white/5">
             {testimonials.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>
-                  {item.avatar ? (
-                    <img src={item.avatar} alt={item.name} className="w-10 h-10 object-cover rounded-full" />
-                  ) : (
-                    <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-xs">
-                      {item.name.charAt(0)}
+              <TableRow key={item.id} className="hover:bg-white/[0.02] transition-all duration-500 border-none group/row">
+                <TableCell className="py-8 pl-10">
+                  <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 rounded-2xl bg-white/5 overflow-hidden border border-white/10 flex items-center justify-center shadow-2xl relative group/img">
+                      {item.avatar ? (
+                        <img src={item.avatar} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-6 h-6 text-kashmir-gold/40" />
+                      )}
                     </div>
-                  )}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-white font-bold tracking-tight text-base group-hover/row:text-kashmir-gold transition-colors">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3 h-3 text-white/20" />
+                        <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">{item.location || 'Verified Traveler'}</span>
+                      </div>
+                    </div>
+                  </div>
                 </TableCell>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>{item.location || '-'}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-0.5">
+                  <p className="text-white/60 text-sm max-w-xs truncate leading-relaxed">"{item.content}"</p>
+                </TableCell>
+                <TableCell>
+                   <div className="flex items-center gap-1">
                     {[...Array(item.rating)].map((_, i) => (
-                      <Star key={i} className="h-3 w-3 fill-kashmir-gold text-kashmir-gold" />
+                      <Star key={i} className="h-2.5 w-2.5 fill-kashmir-gold text-kashmir-gold" />
                     ))}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
-                    <Badge variant={item.isActive ? 'default' : 'secondary'}>
-                      {item.isActive ? 'Active' : 'Inactive'}
+                  <button onClick={() => toggleActive(item)} className="group/toggle">
+                    <Badge className={cn(
+                      "rounded-xl border-none px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-300",
+                      item.isActive ? "bg-emerald-500/10 text-emerald-400 group-hover/toggle:bg-emerald-500/20" : "bg-red-500/10 text-red-400 group-hover/toggle:bg-red-500/20"
+                    )}>
+                      {item.isActive ? 'Displayed' : 'Hidden'}
                     </Badge>
-                  </div>
+                  </button>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => toggleActive(item)}>
-                      {item.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <TableCell className="text-right pr-10">
+                  <div className="flex justify-end gap-3 opacity-20 group-hover/row:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all">
+                      <Pencil className="w-5 h-5" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl text-white/20 hover:text-red-400 hover:border-red-400/20 transition-all">
+                      <Trash2 className="w-5 h-5" />
                     </Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
-            {testimonials.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No testimonials yet. Click "Add Testimonial" to create one.
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
       </div>
 
+      {/* Mobile View */}
+      <div className="lg:hidden space-y-6">
+        {testimonials.map((item) => (
+          <Card key={item.id} className="bg-white/[0.02] border-white/5 p-8 rounded-[2.5rem] space-y-8 relative overflow-hidden group">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 overflow-hidden border border-white/10 shrink-0 shadow-2xl relative">
+                {item.avatar ? (
+                  <img src={item.avatar} alt={item.name} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-8 h-8 text-kashmir-gold/40 m-4" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xl font-bold text-white tracking-tight truncate leading-tight">{item.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <MapPin className="w-3 h-3 text-white/20" />
+                  <span className="text-[10px] text-white/40 font-bold uppercase truncate">{item.location || 'Verified Traveler'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+               <Quote className="w-8 h-8 text-kashmir-gold/20" />
+               <p className="text-white/60 text-base italic leading-relaxed">"{item.content}"</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 py-6 border-t border-b border-white/5">
+              <div className="space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Sentiment Score</p>
+                <div className="flex items-center gap-1 mt-1">
+                  {[...Array(item.rating)].map((_, i) => (
+                    <Star key={i} className="h-3 w-3 fill-kashmir-gold text-kashmir-gold" />
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Visibility</p>
+                <Badge className={cn(
+                  "border-none rounded-lg px-3 py-1 text-[9px] font-black uppercase tracking-widest w-fit",
+                  item.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                )}>
+                  {item.isActive ? 'Displayed' : 'Hidden'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <Button onClick={() => openEditDialog(item)} className="flex-1 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 h-14 rounded-2xl font-black transition-all">
+                <Pencil className="w-4 h-4 mr-2" />
+                <span className="text-[9px] uppercase tracking-widest">Re-edit Voice</span>
+              </Button>
+              <Button onClick={() => handleDelete(item.id)} className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all">
+                <Trash2 className="w-5 h-5" />
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit Testimonial' : 'Create Testimonial'}</DialogTitle>
+        <DialogContent className="max-w-xl bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem] overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 via-transparent to-transparent pointer-events-none" />
+          <DialogHeader className="p-10 pb-0">
+            <DialogTitle className="text-3xl font-display font-black tracking-tight">{editingItem ? 'Re-edit Traveler Voice' : 'Register New Voice'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Name *</label>
+          <div className="p-10 space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Identity</label>
                 <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Aryan Sharma"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Location</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Origin</label>
                 <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
                   value={formData.location || ''}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g., Mumbai, India"
+                  placeholder="e.g., New Delhi"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1 block">Content *</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">The Experience</label>
               <Textarea
+                className="bg-white/5 border-white/10 rounded-2xl min-h-[140px] py-4 text-base resize-none"
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                rows={4}
-                placeholder="Customer review..."
+                placeholder="What did they say about the journey?"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Rating</label>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Sentiment Rating</label>
                 <Select
                   value={formData.rating.toString()}
                   onValueChange={(v) => setFormData({ ...formData, rating: Number(v) })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white/5 border-white/10 h-14 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-[#0f1416] border-white/10 text-white">
                     {[1, 2, 3, 4, 5].map((n) => (
-                      <SelectItem key={n} value={n.toString()}>
-                        {n} Star{n > 1 ? 's' : ''}
-                      </SelectItem>
+                      <SelectItem key={n} value={n.toString()}>{n} Star{n > 1 ? 's' : ''}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Package Name</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Reference Node</label>
                 <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-14"
                   value={formData.packageName || ''}
                   onChange={(e) => setFormData({ ...formData, packageName: e.target.value })}
-                  placeholder="Optional"
+                  placeholder="e.g., Gulmarg Luxury"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1 block">Avatar</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Traveler Portrait</label>
               <MediaPicker
                 value={formData.avatar || ''}
                 onChange={(url) => setFormData({ ...formData, avatar: url })}
               />
             </div>
 
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                />
-                <label className="text-sm">Active</label>
+            <div className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-bold text-white">Public Visibility</span>
+                <span className="text-[9px] text-white/30 uppercase tracking-widest font-black">Display on Marketing Site</span>
               </div>
+              <Switch
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              />
             </div>
 
-            <Button onClick={handleSave} className="w-full" disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingItem ? 'Update Testimonial' : 'Create Testimonial'}
+            <Button onClick={handleSave} className="w-full h-16 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-2xl transition-all shadow-xl shadow-kashmir-gold/20" disabled={saving}>
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingItem ? 'Confirm Edits' : 'Authorize Publication')}
             </Button>
           </div>
         </DialogContent>

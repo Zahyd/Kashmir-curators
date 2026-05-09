@@ -3,20 +3,21 @@ import prisma from '../lib/prisma';
 
 export const getAdminStats = async (req: Request, res: Response) => {
   try {
+    const p = prisma as any;
     // Run each query independently so one failure doesn't crash all stats
     const [totalBookings, totalRevenue, totalUsers, totalPackages, activeInquiries, pendingBookings, hotelNodes, newReviews, activeFaqs] = await Promise.all([
-      prisma.booking.count().catch(() => 0),
-      prisma.booking.aggregate({
+      p.booking.count().catch(() => 0),
+      p.booking.aggregate({
         _sum: { totalAmount: true },
         where: { status: 'confirmed' }
       }).catch(() => ({ _sum: { totalAmount: 0 } })),
-      prisma.user.count({ where: { role: 'user' } }).catch(() => 0),
-      prisma.package.count({ where: { isActive: true } }).catch(() => 0),
-      prisma.inquiry.count({ where: { status: { not: 'Lost' } } }).catch(() => 0),
-      prisma.booking.count({ where: { status: 'pending' } }).catch(() => 0),
-      prisma.hotel.count().catch(() => 0),
-      prisma.testimonial.count().catch(() => 0),
-      prisma.fAQ.count().catch(() => 0),
+      p.user.count({ where: { role: 'user' } }).catch(() => 0),
+      p.package.count({ where: { isActive: true } }).catch(() => 0),
+      p.inquiry.count({ where: { status: { not: 'Lost' } } }).catch(() => 0),
+      p.booking.count({ where: { status: 'pending' } }).catch(() => 0),
+      p.hotel.count().catch(() => 0),
+      p.testimonial.count().catch(() => 0),
+      p.fAQ.count().catch(() => 0),
     ]);
 
     res.json({
@@ -40,20 +41,21 @@ export const getAdminStats = async (req: Request, res: Response) => {
 
 export const getSalesStats = async (req: any, res: Response) => {
   try {
+    const p = prisma as any;
     const agentCode = req.user.role === 'sales' ? req.user.email : null; // Simple mapping
     
-    const leadsReceived = await prisma.inquiry.count({
+    const leadsReceived = await p.inquiry.count({
       where: agentCode ? { assignedTo: agentCode } : {}
     });
     
-    const converted = await prisma.inquiry.count({
+    const converted = await p.inquiry.count({
       where: {
         status: 'Booked',
         ...(agentCode ? { assignedTo: agentCode } : {})
       }
     });
-
-    const activeQuotes = await prisma.inquiry.count({
+ 
+    const activeQuotes = await p.inquiry.count({
       where: {
         status: 'Pending Curation',
         ...(agentCode ? { assignedTo: agentCode } : {})

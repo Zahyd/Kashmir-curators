@@ -121,6 +121,8 @@ model Inquiry {
   assignedTo    String?  // Sales team user code
   priority      String?  // Low, Medium, High
   sentiment     String?  // Cold, Warm, Hot, Ready to Book
+  quoteData     String?  // JSON string of days/pricing
+  proposalUrl   String?  // URL to uploaded PDF
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

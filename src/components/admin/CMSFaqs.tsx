@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Eye, EyeOff, GripVertical, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, GripVertical, Loader2, HelpCircle, LayoutGrid, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
@@ -22,7 +24,7 @@ interface FAQ {
 const defaultFaq: Omit<FAQ, 'id'> = {
   question: '',
   answer: '',
-  category: 'general',
+  category: 'General',
   sortOrder: 0,
   isActive: true,
 };
@@ -40,7 +42,6 @@ export default function CMSFaqs() {
     fetchFaqs();
   }, []);
 
-  // Real-time refresh
   useEffect(() => {
     const latestEvent = systemEvents[0];
     if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'faq') {
@@ -55,11 +56,10 @@ export default function CMSFaqs() {
       if (Array.isArray(data)) {
         setFaqs(data);
       } else {
-        console.error('Expected array of FAQs, but received:', data);
         setFaqs([]);
       }
     } catch (error) {
-      toast.error('Failed to load FAQs');
+      toast.error('Failed to load knowledge base');
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ export default function CMSFaqs() {
 
   const handleSave = async () => {
     if (!formData.question || !formData.answer) {
-      toast.error('Please fill required fields');
+      toast.error('Question and Answer are mandatory');
       return;
     }
 
@@ -101,21 +101,22 @@ export default function CMSFaqs() {
       });
 
       if (response.ok) {
-        toast.success(editingItem ? 'FAQ updated' : 'FAQ created');
+        toast.success(editingItem ? 'Intelligence updated' : 'New intelligence indexed');
         setDialogOpen(false);
         fetchFaqs();
       } else {
-        toast.error('Failed to save FAQ');
+        const errData = await response.json().catch(() => ({}));
+        toast.error(errData.error || 'Indexing failed');
       }
     } catch (error) {
-      toast.error('Error saving FAQ');
+      toast.error('System connection error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this FAQ?')) return;
+    if (!confirm('Erase this intelligence?')) return;
     const token = localStorage.getItem('teamToken');
     
     try {
@@ -127,156 +128,226 @@ export default function CMSFaqs() {
       });
 
       if (response.ok) {
-        toast.success('FAQ deleted');
+        toast.success('Intelligence erased');
         fetchFaqs();
       } else {
-        toast.error('Failed to delete');
+        toast.error('Erasure failed');
       }
     } catch (error) {
-      toast.error('Error deleting FAQ');
+      toast.error('System connection error');
     }
   };
 
   const toggleActive = async (item: FAQ) => {
     const token = localStorage.getItem('teamToken');
-    await fetch(`http://localhost:5000/api/faqs/${item.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ isActive: !item.isActive })
-    });
-    fetchFaqs();
+    try {
+      await fetch(`http://localhost:5000/api/faqs/${item.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: !item.isActive })
+      });
+      fetchFaqs();
+    } catch (error) {
+      toast.error('Status toggle failed');
+    }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-12 w-12 animate-spin text-kashmir-gold" />
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">FAQs ({faqs.length})</h2>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" /> Add FAQ
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h2 className="text-3xl font-display font-bold text-white tracking-tight">Intelligence Base</h2>
+          <p className="text-white/40 text-sm mt-1 uppercase tracking-widest font-black">Managing {faqs.length} FAQ Nodes</p>
+        </div>
+        <Button onClick={openCreateDialog} className="w-full md:w-auto bg-kashmir-gold text-black hover:bg-amber-500 font-black px-8 h-14 rounded-2xl shadow-xl shadow-kashmir-gold/10 transition-all">
+          <Plus className="h-5 w-5 mr-2" /> 
+          <span className="text-[10px] uppercase tracking-[0.2em]">Index Intelligence</span>
         </Button>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      {/* Desktop View */}
+      <div className="hidden lg:block bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
+        <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">Order</TableHead>
-              <TableHead>Question</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+          <TableHeader className="bg-white/[0.02] border-b border-white/5">
+            <TableRow className="hover:bg-transparent border-none">
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] py-8 pl-10">Sequence</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Inquiry Node</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Classification</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Status</TableHead>
+              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] text-right pr-10">Controls</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-white/5">
             {faqs.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    {item.sortOrder}
+              <TableRow key={item.id} className="hover:bg-white/[0.02] transition-all duration-500 border-none group/row">
+                <TableCell className="py-8 pl-10">
+                  <div className="flex items-center gap-4">
+                    <GripVertical className="h-4 w-4 text-white/10 group-hover/row:text-kashmir-gold/40 transition-colors" />
+                    <span className="text-white/40 font-black text-sm">{item.sortOrder.toString().padStart(2, '0')}</span>
                   </div>
                 </TableCell>
-                <TableCell className="font-medium max-w-md truncate">{item.question}</TableCell>
                 <TableCell>
-                  <Badge variant="outline">{item.category}</Badge>
+                  <div className="flex flex-col gap-1 max-w-md">
+                    <span className="text-white font-bold tracking-tight text-base group-hover/row:text-kashmir-gold transition-colors truncate">{item.question}</span>
+                    <span className="text-white/30 text-[10px] uppercase tracking-widest font-bold">Inquiry Node #{item.id.slice(-4)}</span>
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={item.isActive ? 'default' : 'secondary'}>
-                    {item.isActive ? 'Active' : 'Inactive'}
+                  <Badge variant="outline" className="border-white/10 text-white/40 uppercase text-[9px] font-black tracking-widest px-3 py-1 rounded-lg">
+                    {item.category}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => toggleActive(item)}>
-                      {item.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <TableCell>
+                  <button onClick={() => toggleActive(item)} className="group/toggle">
+                    <Badge className={cn(
+                      "rounded-xl border-none px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-300",
+                      item.isActive ? "bg-emerald-500/10 text-emerald-400 group-hover/toggle:bg-emerald-500/20" : "bg-red-500/10 text-red-400 group-hover/toggle:bg-red-500/20"
+                    )}>
+                      {item.isActive ? 'Active' : 'Archived'}
+                    </Badge>
+                  </button>
+                </TableCell>
+                <TableCell className="text-right pr-10">
+                  <div className="flex justify-end gap-3 opacity-20 group-hover/row:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all">
+                      <Pencil className="w-5 h-5" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl text-white/20 hover:text-red-400 hover:border-red-400/20 transition-all">
+                      <Trash2 className="w-5 h-5" />
                     </Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
-            {faqs.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No FAQs yet. Click "Add FAQ" to create one.
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
       </div>
 
+      {/* Mobile View */}
+      <div className="lg:hidden space-y-6">
+        {faqs.map((item) => (
+          <Card key={item.id} className="bg-white/[0.02] border-white/5 p-8 rounded-[2.5rem] space-y-8 relative overflow-hidden group">
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <HelpCircle className="w-5 h-5 text-kashmir-gold/60" />
+                  </div>
+                  <Badge variant="outline" className="border-white/10 text-white/40 uppercase text-[8px] font-black tracking-widest px-2 py-0.5 rounded-lg">
+                    {item.category}
+                  </Badge>
+               </div>
+               <span className="text-white/20 font-black text-sm">#{item.sortOrder.toString().padStart(2, '0')}</span>
+            </div>
+
+            <div className="space-y-4">
+               <h3 className="text-xl font-bold text-white tracking-tight leading-tight">{item.question}</h3>
+               <p className="text-white/40 text-sm italic line-clamp-3 leading-relaxed">{item.answer}</p>
+            </div>
+
+            <div className="flex items-center justify-between py-6 border-t border-b border-white/5">
+              <div className="space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/20">System Status</p>
+                <Badge className={cn(
+                  "border-none rounded-lg px-3 py-1 text-[9px] font-black uppercase tracking-widest w-fit",
+                  item.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                )}>
+                  {item.isActive ? 'Active' : 'Archived'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <Button onClick={() => openEditDialog(item)} className="flex-1 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 h-14 rounded-2xl font-black transition-all">
+                <Pencil className="w-4 h-4 mr-2" />
+                <span className="text-[9px] uppercase tracking-widest">Update Node</span>
+              </Button>
+              <Button onClick={() => handleDelete(item.id)} className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all">
+                <Trash2 className="w-5 h-5" />
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit FAQ' : 'Create FAQ'}</DialogTitle>
+        <DialogContent className="max-w-xl bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem] overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 via-transparent to-transparent pointer-events-none" />
+          <DialogHeader className="p-10 pb-0">
+            <DialogTitle className="text-3xl font-display font-black tracking-tight">{editingItem ? 'Update Intelligence Node' : 'Index New Inquiry'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Question *</label>
+          <div className="p-10 space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">The Inquiry</label>
               <Input
+                className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
                 value={formData.question}
                 onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                placeholder="Enter the question..."
+                placeholder="What is the common traveler question?"
               />
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1 block">Answer *</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">System Response</label>
               <Textarea
+                className="bg-white/5 border-white/10 rounded-2xl min-h-[160px] py-4 text-base resize-none"
                 value={formData.answer}
                 onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-                rows={5}
-                placeholder="Enter the answer..."
+                placeholder="Provide a detailed, helpful response..."
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Category</label>
-                <Input
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="e.g., general, booking, payment"
-                />
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Classification</label>
+                <div className="relative group">
+                  <LayoutGrid className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-kashmir-gold/50 transition-colors" />
+                  <Input
+                    className="bg-white/5 border-white/10 rounded-xl h-14 pl-12 focus:border-kashmir-gold/50 transition-all text-sm"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="e.g., Booking"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Sort Order</label>
-                <Input
-                  type="number"
-                  value={formData.sortOrder}
-                  onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })}
-                />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Sort Sequence</label>
+                <div className="relative group">
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-kashmir-gold/50 transition-colors" />
+                  <Input
+                    type="number"
+                    className="bg-white/5 border-white/10 rounded-xl h-14 pl-12 focus:border-kashmir-gold/50 transition-all text-sm"
+                    value={formData.sortOrder}
+                    onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-bold text-white">Production Visibility</span>
+                <span className="text-[9px] text-white/30 uppercase tracking-widest font-black">Visible in Help Center</span>
+              </div>
               <Switch
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
               />
-              <label className="text-sm">Active</label>
             </div>
 
-            <Button onClick={handleSave} className="w-full" disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingItem ? 'Update FAQ' : 'Create FAQ'}
+            <Button onClick={handleSave} className="w-full h-16 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-2xl transition-all shadow-xl shadow-kashmir-gold/20" disabled={saving}>
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingItem ? 'Confirm Update' : 'Authorize Indexing')}
             </Button>
           </div>
         </DialogContent>

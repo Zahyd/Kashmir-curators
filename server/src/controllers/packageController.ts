@@ -43,7 +43,28 @@ export const getPackageById = async (req: Request, res: Response) => {
 
 export const createPackage = async (req: any, res: Response) => {
   try {
-    const pkg = await prisma.package.create({ data: stringifyPkg(req.body) });
+    const { name, destination, duration, price, originalPrice, rating, reviewCount, imageUrl, highlights, inclusions, exclusions, itinerary, bestSeason, difficulty, isActive, isFeatured } = req.body;
+    
+    const data = {
+      name: String(name),
+      destination: String(destination || 'Kashmir'),
+      duration: String(duration),
+      price: Number(price),
+      originalPrice: Number(originalPrice || price),
+      rating: Number(rating || 4.8),
+      reviewCount: Number(reviewCount || 0),
+      image: imageUrl || '',
+      highlights: JSON.stringify(Array.isArray(highlights) ? highlights : []),
+      inclusions: JSON.stringify(Array.isArray(inclusions) ? inclusions : []),
+      exclusions: JSON.stringify(Array.isArray(exclusions) ? exclusions : []),
+      itinerary: JSON.stringify(Array.isArray(itinerary) ? itinerary : []),
+      bestSeason: String(bestSeason || 'All Season'),
+      difficulty: String(difficulty || 'Easy'),
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
+      isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : false
+    };
+
+    const pkg = await prisma.package.create({ data });
     
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
@@ -55,15 +76,36 @@ export const createPackage = async (req: any, res: Response) => {
     
     res.status(201).json(pkg);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create package' });
+    console.error('Package creation error:', error);
+    res.status(500).json({ error: (error as any).message || 'Failed to create package' });
   }
 };
 
 export const updatePackage = async (req: any, res: Response) => {
   try {
+    const { id } = req.params;
+    const updateData: any = {};
+    
+    if (req.body.name !== undefined) updateData.name = String(req.body.name);
+    if (req.body.destination !== undefined) updateData.destination = String(req.body.destination);
+    if (req.body.duration !== undefined) updateData.duration = String(req.body.duration);
+    if (req.body.price !== undefined) updateData.price = Number(req.body.price);
+    if (req.body.originalPrice !== undefined) updateData.originalPrice = Number(req.body.originalPrice);
+    if (req.body.rating !== undefined) updateData.rating = Number(req.body.rating);
+    if (req.body.reviewCount !== undefined) updateData.reviewCount = Number(req.body.reviewCount);
+    if (req.body.imageUrl !== undefined) updateData.image = req.body.imageUrl || '';
+    if (req.body.highlights !== undefined) updateData.highlights = JSON.stringify(Array.isArray(req.body.highlights) ? req.body.highlights : []);
+    if (req.body.inclusions !== undefined) updateData.inclusions = JSON.stringify(Array.isArray(req.body.inclusions) ? req.body.inclusions : []);
+    if (req.body.exclusions !== undefined) updateData.exclusions = JSON.stringify(Array.isArray(req.body.exclusions) ? req.body.exclusions : []);
+    if (req.body.itinerary !== undefined) updateData.itinerary = JSON.stringify(Array.isArray(req.body.itinerary) ? req.body.itinerary : []);
+    if (req.body.bestSeason !== undefined) updateData.bestSeason = String(req.body.bestSeason);
+    if (req.body.difficulty !== undefined) updateData.difficulty = String(req.body.difficulty);
+    if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive);
+    if (req.body.isFeatured !== undefined) updateData.isFeatured = Boolean(req.body.isFeatured);
+    
     const pkg = await prisma.package.update({
-      where: { id: req.params.id },
-      data: stringifyPkg(req.body)
+      where: { id },
+      data: updateData
     });
     
     if (req.io) {
@@ -76,7 +118,8 @@ export const updatePackage = async (req: any, res: Response) => {
     
     res.json(pkg);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update package' });
+    console.error('Package update error:', error);
+    res.status(500).json({ error: (error as any).message || 'Failed to update package' });
   }
 };
 

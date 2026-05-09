@@ -16,7 +16,17 @@ export const getFAQs = async (req: Request, res: Response) => {
 
 export const createFAQ = async (req: any, res: Response) => {
   try {
-    const faq = await prisma.fAQ.create({ data: req.body });
+    const { question, answer, category, sortOrder, isActive } = req.body;
+    
+    const data = {
+      question: String(question),
+      answer: String(answer),
+      category: String(category || 'General'),
+      sortOrder: Number(sortOrder || 0),
+      isActive: isActive !== undefined ? Boolean(isActive) : true
+    };
+
+    const faq = await prisma.fAQ.create({ data });
     
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
@@ -28,16 +38,25 @@ export const createFAQ = async (req: any, res: Response) => {
     
     res.status(201).json(faq);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create FAQ' });
+    console.error('FAQ creation error:', error);
+    res.status(500).json({ error: (error as any).message || 'Failed to create FAQ' });
   }
 };
 
 export const updateFAQ = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const updateData: any = {};
+    
+    if (req.body.question !== undefined) updateData.question = String(req.body.question);
+    if (req.body.answer !== undefined) updateData.answer = String(req.body.answer);
+    if (req.body.category !== undefined) updateData.category = String(req.body.category);
+    if (req.body.sortOrder !== undefined) updateData.sortOrder = Number(req.body.sortOrder);
+    if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive);
+    
     const faq = await prisma.fAQ.update({
       where: { id },
-      data: req.body
+      data: updateData
     });
     
     if (req.io) {
@@ -50,7 +69,8 @@ export const updateFAQ = async (req: any, res: Response) => {
     
     res.json(faq);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update FAQ' });
+    console.error('FAQ update error:', error);
+    res.status(500).json({ error: (error as any).message || 'Failed to update FAQ' });
   }
 };
 
