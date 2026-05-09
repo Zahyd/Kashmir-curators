@@ -16,13 +16,13 @@ export const getTestimonials = async (req: Request, res: Response) => {
 
 export const createTestimonial = async (req: any, res: Response) => {
   try {
-    const { name, location, content, image, rating, isActive, packageName } = req.body;
+    const { name, location, content, avatar, image, rating, isActive, packageName } = req.body;
     
     const data = {
       name: String(name),
       location: String(location || 'Traveler'),
       content: String(content),
-      avatar: image || '',
+      avatar: avatar || image || '',
       rating: Number(rating || 5),
       isActive: isActive !== undefined ? Boolean(isActive) : true,
       packageName: packageName || null
@@ -53,7 +53,8 @@ export const updateTestimonial = async (req: any, res: Response) => {
     if (req.body.name !== undefined) updateData.name = String(req.body.name);
     if (req.body.location !== undefined) updateData.location = String(req.body.location);
     if (req.body.content !== undefined) updateData.content = String(req.body.content);
-    if (req.body.image !== undefined) updateData.avatar = req.body.image || '';
+    if (req.body.avatar !== undefined) updateData.avatar = req.body.avatar || '';
+    if (req.body.image !== undefined && req.body.avatar === undefined) updateData.avatar = req.body.image || '';
     if (req.body.rating !== undefined) updateData.rating = Number(req.body.rating);
     if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive);
     if (req.body.packageName !== undefined) updateData.packageName = req.body.packageName;
