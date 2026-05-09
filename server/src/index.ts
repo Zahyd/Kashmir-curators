@@ -15,6 +15,7 @@ import authRoutes from './routes/authRoutes';
 import bookingRoutes from './routes/bookingRoutes';
 import faqRoutes from './routes/faqRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
+import mediaRoutes from './routes/mediaRoutes';
 
 const app = express();
 const httpServer = createServer(app);
@@ -96,6 +97,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/media', mediaRoutes);
 
 app.get('/', (req, res) => {
   res.send('Kashmir Curators Real-Time API is running. Documentation at /api-docs');

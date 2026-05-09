@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { API_BASE_URL } from '@/lib/api';
 
 interface MediaItem {
   id: string;
   filename: string;
-  original_name: string;
-  file_path: string;
-  file_size: number | null;
-  mime_type: string | null;
-  alt_text: string | null;
-  created_at: string;
+  originalName: string;
+  url: string;
+  size: number | null;
+  mimeType: string | null;
+  altText: string | null;
+  createdAt: string;
 }
 
 export default function MediaLibrary() {
@@ -30,17 +30,25 @@ export default function MediaLibrary() {
   }, []);
 
   const fetchMedia = async () => {
-    const { data, error } = await supabase
-      .from('media_library')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/media`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMedia(data || []);
+      } else {
+        toast.error('Failed to load media');
+      }
+    } catch (error) {
+      console.error('[MediaLibrary] Fetch error:', error);
       toast.error('Failed to load media');
-    } else {
-      setMedia(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,38 +57,30 @@ export default function MediaLibrary() {
 
     setUploading(true);
     let uploadedCount = 0;
+    const token = localStorage.getItem('teamToken');
 
     for (const file of Array.from(files)) {
-      const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const filePath = `uploads/${filename}`;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
 
-      console.log(`[MediaLibrary] Uploading ${file.name} to 'media/${filePath}'`);
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(filePath, file, {
-          upsert: true,
-          contentType: file.type
+        console.log(`[MediaLibrary] Uploading ${file.name} to backend...`);
+        const response = await fetch(`${API_BASE_URL}/media/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
         });
 
-      if (uploadError) {
-        console.error(`[MediaLibrary] Upload error for ${file.name}:`, uploadError);
-        toast.error(`Failed to upload ${file.name}: ${uploadError.message}`);
-        continue;
-      }
-
-      console.log(`[MediaLibrary] Upload successful for ${file.name}:`, uploadData);
-      const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
-
-      const { error: dbError } = await supabase.from('media_library').insert({
-        filename,
-        original_name: file.name,
-        file_path: urlData.publicUrl,
-        file_size: file.size,
-        mime_type: file.type,
-      });
-
-      if (!dbError) {
-        uploadedCount++;
+        if (response.ok) {
+          uploadedCount++;
+        } else {
+          toast.error(`Failed to upload ${file.name}`);
+        }
+      } catch (error) {
+        console.error(`[MediaLibrary] Upload error for ${file.name}:`, error);
+        toast.error(`Failed to upload ${file.name}`);
       }
     }
 
@@ -98,19 +98,24 @@ export default function MediaLibrary() {
   const handleDelete = async (item: MediaItem) => {
     if (!confirm('Are you sure you want to delete this file?')) return;
 
-    // Extract path from URL for storage deletion
-    const pathMatch = item.file_path.match(/\/media\/(.+)$/);
-    if (pathMatch) {
-      await supabase.storage.from('media').remove([pathMatch[1]]);
-    }
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/media/${item.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-    const { error } = await supabase.from('media_library').delete().eq('id', item.id);
-
-    if (error) {
+      if (response.ok) {
+        toast.success('File deleted');
+        fetchMedia();
+      } else {
+        toast.error('Failed to delete');
+      }
+    } catch (error) {
+      console.error('[MediaLibrary] Delete error:', error);
       toast.error('Failed to delete');
-    } else {
-      toast.success('File deleted');
-      fetchMedia();
     }
   };
 
@@ -127,7 +132,7 @@ export default function MediaLibrary() {
   };
 
   const filteredMedia = media.filter((item) =>
-    item.original_name.toLowerCase().includes(searchQuery.toLowerCase())
+    item.originalName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
@@ -189,10 +194,10 @@ export default function MediaLibrary() {
               onClick={() => setSelectedItem(item)}
             >
               <div className="aspect-square">
-                {item.mime_type?.startsWith('image/') ? (
+                {item.mimeType?.startsWith('image/') ? (
                   <img
-                    src={item.file_path}
-                    alt={item.alt_text || item.original_name}
+                    src={item.url}
+                    alt={item.altText || item.originalName}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -202,8 +207,8 @@ export default function MediaLibrary() {
                 )}
               </div>
               <div className="p-2">
-                <p className="text-xs truncate">{item.original_name}</p>
-                <p className="text-xs text-muted-foreground">{formatFileSize(item.file_size)}</p>
+                <p className="text-xs truncate">{item.originalName}</p>
+                <p className="text-xs text-muted-foreground">{formatFileSize(item.size)}</p>
               </div>
               <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <Button
@@ -212,7 +217,7 @@ export default function MediaLibrary() {
                   className="h-8 w-8"
                   onClick={(e) => {
                     e.stopPropagation();
-                    copyUrl(item.file_path);
+                    copyUrl(item.url);
                   }}
                 >
                   <Copy className="h-4 w-4" />
@@ -243,34 +248,34 @@ export default function MediaLibrary() {
             <div className="space-y-4">
               <div className="aspect-video bg-muted rounded-lg overflow-hidden">
                 <img
-                  src={selectedItem.file_path}
-                  alt={selectedItem.alt_text || selectedItem.original_name}
+                  src={selectedItem.url}
+                  alt={selectedItem.altText || selectedItem.originalName}
                   className="w-full h-full object-contain"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <label className="text-muted-foreground">Filename</label>
-                  <p className="font-medium">{selectedItem.original_name}</p>
+                  <p className="font-medium">{selectedItem.originalName}</p>
                 </div>
                 <div>
                   <label className="text-muted-foreground">Size</label>
-                  <p className="font-medium">{formatFileSize(selectedItem.file_size)}</p>
+                  <p className="font-medium">{formatFileSize(selectedItem.size)}</p>
                 </div>
                 <div>
                   <label className="text-muted-foreground">Type</label>
-                  <p className="font-medium">{selectedItem.mime_type || 'Unknown'}</p>
+                  <p className="font-medium">{selectedItem.mimeType || 'Unknown'}</p>
                 </div>
                 <div>
                   <label className="text-muted-foreground">Uploaded</label>
-                  <p className="font-medium">{new Date(selectedItem.created_at).toLocaleDateString()}</p>
+                  <p className="font-medium">{new Date(selectedItem.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
               <div>
                 <label className="text-sm text-muted-foreground mb-1 block">URL</label>
                 <div className="flex gap-2">
-                  <Input value={selectedItem.file_path} readOnly className="text-xs" />
-                  <Button variant="outline" onClick={() => copyUrl(selectedItem.file_path)}>
+                  <Input value={selectedItem.url} readOnly className="text-xs" />
+                  <Button variant="outline" onClick={() => copyUrl(selectedItem.url)}>
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>

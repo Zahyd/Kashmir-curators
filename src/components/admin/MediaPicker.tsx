@@ -5,13 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { API_BASE_URL } from '@/lib/api';
 
 interface MediaItem {
   id: string;
   filename: string;
-  original_name: string;
-  file_path: string;
+  originalName: string;
+  url: string;
 }
 
 interface MediaPickerProps {
@@ -29,14 +29,22 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
 
   const fetchMedia = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('media_library')
-      .select('id, filename, original_name, file_path')
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    setMedia(data || []);
-    setLoading(false);
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/media`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMedia(data || []);
+      }
+    } catch (error) {
+      console.error('[MediaPicker] Fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,45 +52,39 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
     if (!file) return;
 
     setUploading(true);
-    const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const filePath = `uploads/${filename}`;
+    try {
+      const token = localStorage.getItem('teamToken');
+      const formData = new FormData();
+      formData.append('file', file);
 
-    console.log(`[MediaPicker] Attempting upload to bucket 'media' at path: ${filePath}`);
-    const { data: uploadData, error: uploadError } = await supabase.storage.from('media').upload(filePath, file, {
-      upsert: true,
-      contentType: file.type
-    });
-
-    if (uploadError) {
-      console.error('[MediaPicker] Upload error details:', {
-        message: uploadError.message,
-        name: uploadError.name,
-        error: uploadError
+      console.log(`[MediaPicker] Uploading ${file.name} to backend...`);
+      const response = await fetch(`${API_BASE_URL}/media/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
       });
-      toast.error(`Upload failed: ${uploadError.message}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const uploadedMedia = await response.json();
+      console.log('[MediaPicker] Upload successful:', uploadedMedia);
+      
+      onChange(uploadedMedia.url);
+      setDialogOpen(false);
+      toast.success('Image uploaded');
+    } catch (error: any) {
+      console.error('[MediaPicker] Upload error:', error);
+      toast.error(`Upload failed: ${error.message}`);
+    } finally {
       setUploading(false);
-      return;
-    }
-
-    console.log('[MediaPicker] Upload successful:', uploadData);
-    const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
-    console.log('[MediaPicker] Public URL generated:', urlData.publicUrl);
-
-    await supabase.from('media_library').insert({
-      filename,
-      original_name: file.name,
-      file_path: urlData.publicUrl,
-      file_size: file.size,
-      mime_type: file.type,
-    });
-
-    onChange(urlData.publicUrl);
-    setDialogOpen(false);
-    toast.success('Image uploaded');
-    setUploading(false);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -155,11 +157,11 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
                     <button
                       key={item.id}
                       className="aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors"
-                      onClick={() => selectFromLibrary(item.file_path)}
+                      onClick={() => selectFromLibrary(item.url)}
                     >
                       <img
-                        src={item.file_path}
-                        alt={item.original_name}
+                        src={item.url}
+                        alt={item.originalName}
                         className="w-full h-full object-cover"
                       />
                     </button>
