@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ROLE_LABELS, ROLE_COLORS } from '@/contexts/TeamAuthContext';
+import { SOCKET_URL } from '@/lib/api';
 
 export default function SalesAuth() {
   const navigate = useNavigate();
@@ -79,6 +80,19 @@ export default function SalesAuth() {
           <p className="text-white/40 font-medium tracking-wide uppercase text-[10px]">
             Authorized Personnel Only • Kashmir Curators
           </p>
+          <div className="mt-6 flex justify-center gap-4">
+            <a 
+              href="/" 
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 hover:text-kashmir-gold transition-colors flex items-center gap-2"
+            >
+              <ArrowRight className="w-3 h-3 rotate-180" /> Return to Main Site
+            </a>
+            <span className="text-[10px] text-white/10">|</span>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">System Live</span>
+            </div>
+          </div>
         </div>
 
         {/* Login Card */}
@@ -134,6 +148,32 @@ export default function SalesAuth() {
                 </div>
               )}
             </Button>
+            
+            <div className="pt-4 flex flex-col items-center gap-2">
+              <button 
+                type="button"
+                onClick={async () => {
+                  const start = Date.now();
+                  try {
+                    const res = await fetch(`${SOCKET_URL}/health-check`);
+                    const dbRes = await fetch(`${SOCKET_URL}/db-check`);
+                    
+                    if (res.ok && dbRes.ok) {
+                      toast.success(`Full System Operational (${Date.now() - start}ms)`);
+                    } else if (res.ok) {
+                      toast.warning('Server up, but Database unreachable.');
+                    } else {
+                      throw new Error();
+                    }
+                  } catch (e) {
+                    toast.error('System Unreachable. Check Render deployment status.');
+                  }
+                }}
+                className="text-[9px] font-black uppercase tracking-[0.2em] text-white/10 hover:text-white/40 transition-colors flex items-center gap-2"
+              >
+                <TrendingUp className="w-3 h-3" /> Run System Diagnostics
+              </button>
+            </div>
           </form>
 
           {/* Role Quick-Access Cards */}

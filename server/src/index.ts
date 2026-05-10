@@ -17,6 +17,7 @@ import faqRoutes from './routes/faqRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import mediaRoutes from './routes/mediaRoutes';
 import userRoutes from './routes/userRoutes';
+import prisma from './lib/prisma';
 
 const app = express();
 const httpServer = createServer(app);
@@ -101,8 +102,17 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/users', userRoutes);
 
-app.get('/', (req, res) => {
-  res.send('Kashmir Curators Real-Time API is running. Documentation at /api-docs');
+app.get('/health-check', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
+
+app.get('/db-check', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', message: 'Database connected' });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Database connection failed' });
+  }
 });
 
 httpServer.listen(PORT, () => {
