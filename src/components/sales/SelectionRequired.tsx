@@ -67,7 +67,14 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
           ) : (
             <div className="py-20 flex flex-col items-center justify-center bg-white/[0.02] border-2 border-dashed border-white/5 rounded-[3rem]">
               <MessageSquare className="w-10 h-10 text-white/10 mb-4" />
-              <p className="text-white/20 font-bold uppercase tracking-widest text-xs">No Active Leads Found</p>
+              <p className="text-white/20 font-bold uppercase tracking-widest text-xs mb-6">No Active Leads Found</p>
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()} 
+                className="bg-white/5 border-white/10 text-kashmir-gold hover:bg-kashmir-gold hover:text-black rounded-xl font-bold text-[10px] uppercase tracking-widest px-8"
+              >
+                Refresh Cloud Queue
+              </Button>
             </div>
           )}
         </div>

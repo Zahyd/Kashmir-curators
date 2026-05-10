@@ -28,10 +28,11 @@ type TabId = 'overview' | 'trips' | 'itineraries' | 'payments' | 'support' | 're
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isAdmin, isLoading, bookings, cancelBooking, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoading, bookings, inquiries, cancelBooking, logout, sendSupportRequest } = useAuth();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [conciergeMsg, setConciergeMsg] = useState('');
+  const [weather, setWeather] = useState({ temp: 18, condition: 'Partly Cloudy' });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -61,14 +62,10 @@ export default function Profile() {
   const handleConciergeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!conciergeMsg.trim()) return;
+    sendSupportRequest(conciergeMsg);
     toast.success('Your request has been sent to our luxury concierge. We will contact you shortly.');
     setConciergeMsg('');
   };
-
-  const mockProposals = [
-    { id: 'REQ-9921', title: '5 Days Luxury Getaway', dest: 'Srinagar, Gulmarg', status: 'Pending Curation', date: 'Just now', hasPdf: false },
-    { id: 'ITN-1029', title: '7 Days Paradise Explorer', dest: 'Srinagar, Gulmarg, Pahalgam', status: 'Ready for Review', date: 'Oct 15, 2026', hasPdf: true },
-  ];
 
   return (
     <div className="min-h-screen bg-[#0a0f12] text-white flex flex-col font-sans">
@@ -142,7 +139,7 @@ export default function Profile() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-white/60 tracking-wider uppercase mb-1">Live from Srinagar</p>
-                        <h3 className="text-3xl font-display font-bold text-white">18°C <span className="text-xl font-normal text-white/60">Partly Cloudy</span></h3>
+                        <h3 className="text-3xl font-display font-bold text-white">{weather.temp.toFixed(1)}°C <span className="text-xl font-normal text-white/60">{weather.condition}</span></h3>
                       </div>
                     </div>
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-sm md:max-w-xs backdrop-blur-md">
@@ -299,34 +296,54 @@ export default function Profile() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                    {mockProposals.map((prop) => (
-                      <div key={prop.id} className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl hover:bg-white/10 transition-all duration-300 relative overflow-hidden">
-                        
-                        <div className="flex justify-between items-start mb-4 relative z-10">
-                          <Badge variant="outline" className="bg-white/5 text-white/80 border-white/20">{prop.id}</Badge>
-                          <Badge className={cn("font-bold uppercase tracking-wider text-[10px]", prop.hasPdf ? "bg-green-500/20 text-green-400 border-green-500/20" : "bg-kashmir-gold/20 text-kashmir-gold border-kashmir-gold/20")}>
-                            {prop.status}
-                          </Badge>
-                        </div>
-                        
-                        <h3 className="text-xl font-display font-bold mb-2 relative z-10">{prop.title}</h3>
-                        <p className="text-white/60 text-sm mb-6 flex items-center gap-2 relative z-10"><MapPin className="w-4 h-4 text-kashmir-gold" /> {prop.dest}</p>
-                        
-                        <div className="flex items-center justify-between pt-4 border-t border-white/10 relative z-10">
-                          <span className="text-xs text-white/40 font-medium uppercase tracking-wider">Date: {prop.date}</span>
-                          
-                          {prop.hasPdf ? (
-                            <Button variant="gold" size="sm" className="rounded-lg shadow-[0_0_15px_rgba(212,175,55,0.2)] text-black font-bold">
-                              <Download className="w-4 h-4 mr-2" /> Download PDF
-                            </Button>
-                          ) : (
-                            <Button variant="outline" size="sm" disabled className="bg-white/5 border-white/5 text-white/30 rounded-lg">
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Curating...
-                            </Button>
-                          )}
-                        </div>
+                    {inquiries.length === 0 ? (
+                      <div className="col-span-full bg-white/5 border border-dashed border-white/20 p-12 rounded-3xl text-center">
+                        <Compass className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                        <p className="text-white/40">No custom proposals requested yet.</p>
+                        <Button variant="link" onClick={() => navigate('/planner')} className="text-kashmir-gold mt-2">Start Planning Now</Button>
                       </div>
-                    ))}
+                    ) : (
+                      inquiries.map((prop) => (
+                        <div key={prop.id} className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl hover:bg-white/10 transition-all duration-300 relative overflow-hidden group">
+                          
+                          <div className="flex justify-between items-start mb-4 relative z-10">
+                            <Badge variant="outline" className="bg-white/5 text-white/80 border-white/20 font-mono">#{prop.id.slice(-4).toUpperCase()}</Badge>
+                            <Badge className={cn("font-bold uppercase tracking-wider text-[10px]", 
+                              prop.status === 'Ready for Review' ? "bg-green-500/20 text-green-400 border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : 
+                              prop.status === 'New' ? "bg-blue-500/20 text-blue-400 border-blue-500/20" :
+                              "bg-kashmir-gold/20 text-kashmir-gold border-kashmir-gold/20"
+                            )}>
+                              {prop.status}
+                            </Badge>
+                          </div>
+                          
+                          <h3 className="text-xl font-display font-bold mb-2 relative z-10 group-hover:text-kashmir-gold transition-colors">{prop.duration} Days in {prop.destination}</h3>
+                          <p className="text-white/60 text-sm mb-6 flex items-center gap-2 relative z-10">
+                            <MapPin className="w-4 h-4 text-kashmir-gold" /> 
+                            {prop.destination.charAt(0).toUpperCase() + prop.destination.slice(1)}
+                          </p>
+                          
+                          <div className="flex items-center justify-between pt-4 border-t border-white/10 relative z-10">
+                            <span className="text-xs text-white/40 font-medium uppercase tracking-wider">Requested {new Date(prop.createdAt).toLocaleDateString()}</span>
+                            
+                            {prop.proposalUrl ? (
+                              <Button 
+                                variant="gold" 
+                                size="sm" 
+                                onClick={() => window.open(prop.proposalUrl, '_blank')}
+                                className="rounded-lg shadow-[0_0_15px_rgba(212,175,55,0.2)] text-black font-bold h-9"
+                              >
+                                <Download className="w-4 h-4 mr-2" /> View Proposal
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="sm" disabled className="bg-white/5 border-white/5 text-white/30 rounded-lg h-9">
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> {prop.status === 'New' ? 'Waitlist' : 'Architecting...'}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}

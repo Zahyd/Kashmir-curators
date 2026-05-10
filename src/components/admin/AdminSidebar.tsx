@@ -15,6 +15,7 @@ import {
   PlusCircle,
   TrendingUp,
   Search,
+  Sparkles,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -100,16 +101,16 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
 
       {/* Sidebar Header */}
       <div className="p-8 border-b border-white/5">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-kashmir-gold to-amber-600 flex items-center justify-center shadow-2xl shadow-kashmir-gold/40 relative group cursor-pointer">
+        <Link to="/" className="flex items-center gap-4 mb-8 group/logo hover:bg-white/[0.02] p-2 rounded-2xl transition-colors">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-kashmir-gold to-amber-600 flex items-center justify-center shadow-2xl shadow-kashmir-gold/40 relative group cursor-pointer group-hover/logo:scale-105 transition-transform">
             <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
             <LayoutDashboard className="w-7 h-7 text-black relative z-10" />
           </div>
           <div>
-            <h2 className="text-lg font-display font-black text-white tracking-tighter leading-none">Kashmir<span className="text-kashmir-gold ml-0.5 text-xl">Director</span></h2>
+            <h2 className="text-lg font-display font-black text-white tracking-tighter leading-none group-hover/logo:text-kashmir-gold transition-colors">Kashmir<span className="text-kashmir-gold ml-0.5 text-xl group-hover/logo:text-white transition-colors">Director</span></h2>
             <p className="text-[9px] uppercase tracking-[0.4em] text-kashmir-gold font-black opacity-60 mt-1">Global Command</p>
           </div>
-        </div>
+        </Link>
 
         {/* Quick Action Dropdown — only for admin */}
         {role === 'admin' && (
@@ -199,13 +200,21 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
           </Badge>
         </div>
         
+        <Link 
+          to="/"
+          className="w-full flex items-center gap-4 px-5 py-3 mb-2 rounded-2xl text-white/40 hover:text-white hover:bg-white/5 transition-all duration-300 group"
+        >
+          <Sparkles className="w-5 h-5 text-kashmir-gold group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Visit Website</span>
+        </Link>
+        
         <Button 
           variant="ghost" 
           onClick={teamLogout}
           className="w-full justify-start gap-4 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-500 rounded-2xl h-12 px-5 group/logout"
         >
           <LogOut className="w-5 h-5 group-hover/logout:-translate-x-1 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Secure Exit</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Terminate Session</span>
         </Button>
       </div>
     </aside>

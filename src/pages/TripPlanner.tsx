@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function TripPlanner() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated, token } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   
@@ -36,12 +36,39 @@ export default function TripPlanner() {
 
     setIsSubmitting(true);
     
-    // Simulate API request to backend support team
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSuccess(true);
-      toast.success('Your request has been successfully sent to our luxury curators!');
-    }, 2000);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/inquiries`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          customerName: user?.name,
+          email: user?.email,
+          phone: user?.phone || 'Not provided',
+          destination: formData.destination,
+          duration: formData.duration,
+          travelers: formData.travelers,
+          budget: formData.budget,
+          accommodation: formData.accommodation
+        })
+      });
+
+      if (response.ok) {
+        setIsSuccess(true);
+        toast.success('Your request has been successfully sent to our luxury curators!');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to submit inquiry. Please try again.');
+      }
+    } catch (error) {
+      console.error('Inquiry submission error:', error);
+      toast.error('Network error. Please check your connection.');
+    } finally {
+      setIsSubmitting(true); // Keep it true for 2 seconds to show "Verifying Protocol"
+      setTimeout(() => setIsSubmitting(false), 2000);
+    }
   };
 
   return (

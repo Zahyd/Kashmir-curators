@@ -28,7 +28,7 @@ const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
     'view_financials', 'sales_portal'
   ],
   operations: [
-    'dashboard', 'inquiries', 'assign_leads'
+    'dashboard', 'inquiries', 'hotels', 'cabs', 'assign_leads'
   ],
   sales: [
     'sales_portal', 'builder', 'payments', 'vault', 'work_log', 'performance'
@@ -41,7 +41,7 @@ const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
 // Which sidebar items each role can see in the admin portal
 export const ADMIN_SIDEBAR_ITEMS: Record<TeamRole, string[]> = {
   admin: ['dashboard', 'inquiries', 'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content'],
-  operations: ['dashboard', 'inquiries'],
+  operations: ['dashboard', 'inquiries', 'hotels', 'cabs'],
   sales: [],
   marketing: ['dashboard', 'reviews', 'media', 'content'],
 };

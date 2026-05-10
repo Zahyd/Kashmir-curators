@@ -22,8 +22,12 @@ import { useTeamAuth } from '@/contexts/TeamAuthContext';
 export default function WorkLog() {
   const { systemEvents, teamUser } = useTeamAuth();
   
+  // Derive session from first login event of the day if possible
+  const today = new Date().toLocaleDateString();
+  const sessionEvent = systemEvents.find(e => e.message.includes('Logged in') && new Date(e.timestamp).toLocaleDateString() === today);
+  
   const currentSession = {
-    start: '09:00 AM', // In a real app, this would come from a session start timestamp
+    start: sessionEvent ? new Date(sessionEvent.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (teamUser?.loginTime || '09:00 AM'),
     duration: 'Active',
     status: 'Active',
     device: 'Web Portal'

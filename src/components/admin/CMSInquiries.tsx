@@ -60,8 +60,15 @@ export default function CMSInquiries() {
   // Real-time synchronization
   useEffect(() => {
     const latestEvent = systemEvents[0];
-    if (latestEvent && latestEvent.booking && latestEvent.booking.entityType === 'inquiry') {
-      fetchInquiries();
+    if (latestEvent && latestEvent.booking) {
+      if (latestEvent.booking.entityType === 'inquiry') {
+        fetchInquiries();
+      } else if (latestEvent.booking.entityType === 'support') {
+        toast.info('New Concierge Request', {
+          description: latestEvent.message,
+          icon: '🛎️'
+        });
+      }
     }
   }, [systemEvents]);
 
@@ -97,30 +104,101 @@ export default function CMSInquiries() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    setInquiries(inquiries.map(inq => inq.id === id ? { ...inq, status: newStatus } : inq));
-    toast.success(`Inquiry ${id} synchronized to ${newStatus}`);
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/inquiries/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        setInquiries(inquiries.map(inq => inq.id === id ? { ...inq, status: newStatus } : inq));
+        toast.success(`Inquiry synchronized to ${newStatus}`);
+      }
+    } catch (error) {
+      toast.error('Failed to update inquiry status');
+    }
   };
 
-  const handleAssign = (inquiryId: string, agentCode: string) => {
-    const agent = SALES_AGENTS.find(a => a.code === agentCode);
-    setInquiries(inquiries.map(inq => 
-      inq.id === inquiryId 
-        ? { ...inq, assignedTo: agentCode, status: inq.status === 'New' ? 'Pending Curation' : inq.status } 
-        : inq
-    ));
-    toast.success(`${inquiryId} assigned to ${agent?.name || agentCode}`);
+  const handleAssign = async (inquiryId: string, agentCode: string) => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/inquiries/${inquiryId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          assignedTo: agentCode,
+          status: 'Pending Curation'
+        })
+      });
+
+      if (response.ok) {
+        const agent = SALES_AGENTS.find(a => a.code === agentCode);
+        setInquiries(inquiries.map(inq => 
+          inq.id === inquiryId 
+            ? { ...inq, assignedTo: agentCode, status: 'Pending Curation' } 
+            : inq
+        ));
+        toast.success(`Assigned to ${agent?.name || agentCode}`);
+      }
+    } catch (error) {
+      toast.error('Failed to assign inquiry');
+    }
   };
 
-  const handleUploadPDF = () => {
+  const handleUploadPDF = async (file: File) => {
+    if (!selectedInquiry) return;
     setIsUploading(true);
-    setTimeout(() => {
-      setInquiries(inquiries.map(inq => inq.id === selectedInquiry.id ? { ...inq, status: 'Ready for Review' } : inq));
+    
+    try {
+      const token = localStorage.getItem('teamToken');
+      
+      // 1. Upload file to Media API
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const uploadRes = await fetch(`${API_BASE_URL}/media/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      
+      if (!uploadRes.ok) throw new Error('Upload failed');
+      const mediaData = await uploadRes.json();
+      
+      // 2. Update Inquiry with PDF URL and Status
+      const updateRes = await fetch(`${API_BASE_URL}/inquiries/${selectedInquiry.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          proposalUrl: mediaData.url,
+          status: 'Ready for Review'
+        })
+      });
+
+      if (updateRes.ok) {
+        setInquiries(inquiries.map(inq => inq.id === selectedInquiry.id ? { ...inq, status: 'Ready for Review', proposalUrl: mediaData.url } : inq));
+        toast.success('Enterprise Proposal deployed successfully!');
+        setIsUploadModalOpen(false);
+        setSelectedInquiry(null);
+      }
+    } catch (error) {
+      console.error('Proposal deployment error:', error);
+      toast.error('Failed to deploy proposal');
+    } finally {
       setIsUploading(false);
-      setIsUploadModalOpen(false);
-      setSelectedInquiry(null);
-      toast.success('Enterprise Proposal deployed successfully!');
-    }, 1500);
+    }
   };
 
   const toggleStatusFilter = (status: string) => {
@@ -500,16 +578,31 @@ export default function CMSInquiries() {
             <div className="space-y-10 relative z-10">
               <div 
                 className="group relative p-16 border-2 border-dashed border-white/5 rounded-[2.5rem] bg-white/[0.01] hover:bg-white/[0.03] hover:border-kashmir-gold/30 transition-all duration-700 cursor-pointer overflow-hidden"
+                onClick={() => document.getElementById('proposal-upload')?.click()}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); handleUploadPDF(); }}
+                onDrop={(e) => { 
+                  e.preventDefault(); 
+                  const file = e.dataTransfer.files[0];
+                  if (file) handleUploadPDF(file);
+                }}
               >
+                <input 
+                  type="file" 
+                  id="proposal-upload" 
+                  className="hidden" 
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadPDF(file);
+                  }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 <div className="relative z-10 text-center flex flex-col items-center">
                   <div className="w-24 h-24 rounded-[2rem] bg-kashmir-gold/10 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 shadow-2xl shadow-kashmir-gold/5">
                     <FileUp className="w-10 h-10 text-kashmir-gold" />
                   </div>
                   <h3 className="text-2xl font-display font-bold text-white mb-3">Sync Bespoke Itinerary</h3>
-                  <p className="text-white/20 text-xs font-black uppercase tracking-[0.2em] max-w-[240px]">Drag & Drop Encrypted PDF or Select from Cloud</p>
+                  <p className="text-white/20 text-xs font-black uppercase tracking-[0.2em] max-w-[240px]">Drag & Drop Encrypted PDF or Click to Select</p>
                 </div>
               </div>
 
@@ -528,7 +621,10 @@ export default function CMSInquiries() {
                 <Button variant="ghost" onClick={() => setIsUploadModalOpen(false)} className="flex-1 h-16 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white">
                   Abort Deployment
                 </Button>
-                <Button onClick={handleUploadPDF} className="flex-[2] h-16 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-kashmir-gold/20">
+                <Button 
+                  onClick={() => document.getElementById('proposal-upload')?.click()} 
+                  className="flex-[2] h-16 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-kashmir-gold/20"
+                >
                   {isUploading ? (
                     <div className="flex items-center gap-3">
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -537,7 +633,7 @@ export default function CMSInquiries() {
                   ) : (
                     <div className="flex items-center gap-3">
                       <Sparkles className="w-5 h-5" />
-                      <span>Authorize & Publish</span>
+                      <span>Select File to Publish</span>
                     </div>
                   )}
                 </Button>

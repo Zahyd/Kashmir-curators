@@ -99,12 +99,24 @@ export default function Navbar() {
                     </DropdownMenuItem>
                   )}
                   {teamUser && (
-                    <DropdownMenuItem asChild className="rounded-xl py-3 focus:bg-white/5 cursor-pointer">
-                      <Link to="/admin" className="flex items-center gap-3">
-                        <LayoutDashboard className="w-4 h-4 text-blue-400" />
-                        <span className="text-xs font-bold text-white/80">Director Access</span>
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      {['admin', 'operations', 'marketing'].includes(teamUser.role) && (
+                        <DropdownMenuItem asChild className="rounded-xl py-3 focus:bg-white/5 cursor-pointer">
+                          <Link to="/admin" className="flex items-center gap-3">
+                            <LayoutDashboard className="w-4 h-4 text-blue-400" />
+                            <span className="text-xs font-bold text-white/80">Director Access</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {(teamUser.role === 'sales' || teamUser.role === 'admin') && (
+                        <DropdownMenuItem asChild className="rounded-xl py-3 focus:bg-white/5 cursor-pointer">
+                          <Link to="/sales/portal" className="flex items-center gap-3">
+                            <Sparkles className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs font-bold text-white/80">Sales Portal</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </>
                   )}
                   <DropdownMenuSeparator className="bg-white/5 mx-2 my-2" />
                   <DropdownMenuItem onClick={logout} className="rounded-xl py-3 focus:bg-destructive/10 text-destructive cursor-pointer flex items-center gap-3">

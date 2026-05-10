@@ -17,7 +17,8 @@ import {
   Calendar,
   ChevronRight,
   Zap,
-  Star
+  Star,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ROLE_LABELS } from '@/contexts/TeamAuthContext';
@@ -215,6 +216,46 @@ export default function Admin() {
             </div>
 
             {/* Analytics & Performance Hub */}
+            {/* Role-Specific Operation Center */}
+            {teamRole === 'operations' && (
+              <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden group">
+                <div className="flex justify-between items-center mb-10">
+                  <div>
+                    <h3 className="text-2xl font-display font-bold text-white mb-1">Operational Dispatch</h3>
+                    <p className="text-xs text-blue-400 uppercase tracking-[0.2em] font-black">Lead Assignment Queue</p>
+                  </div>
+                  <Button variant="outline" onClick={() => setActiveSection('inquiries')} className="rounded-xl bg-white/5 border-white/5 text-[10px] font-black uppercase tracking-widest px-6 h-12">
+                    View Full Queue <ChevronRight className="w-3 h-3 ml-2" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(dynamicStats?.recentInquiries || []).filter((inq: any) => !inq.assignedTo).slice(0, 3).map((inq: any) => (
+                    <div key={inq.id} className="p-6 rounded-[2rem] bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all group/inq">
+                      <div className="flex justify-between items-start mb-4">
+                        <Badge className="bg-blue-500/10 text-blue-400 border-none px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">Unassigned</Badge>
+                        <span className="text-[9px] font-bold text-white/20">{new Date(inq.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <h4 className="text-lg font-bold text-white mb-1 group-hover/inq:text-kashmir-gold transition-colors">{inq.customerName}</h4>
+                      <p className="text-xs text-white/40 mb-6 flex items-center gap-2"><MapPin className="w-3 h-3 text-kashmir-gold" /> {inq.destination} • {inq.duration} Days</p>
+                      <Button 
+                        onClick={() => setActiveSection('inquiries')}
+                        className="w-full rounded-xl bg-white/5 border border-white/10 text-white hover:bg-kashmir-gold hover:text-black transition-all font-black text-[10px] uppercase tracking-widest h-12"
+                      >
+                        Assign Agent
+                      </Button>
+                    </div>
+                  ))}
+                  {(dynamicStats?.recentInquiries || []).filter((inq: any) => !inq.assignedTo).length === 0 && (
+                    <div className="col-span-full py-12 text-center bg-white/[0.01] border border-dashed border-white/5 rounded-[2rem]">
+                      <Sparkles className="w-8 h-8 text-white/10 mx-auto mb-4" />
+                      <p className="text-white/20 text-xs font-black uppercase tracking-widest">No unassigned leads in queue</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Revenue Intelligence Chart Placeholder */}
               <Card className="lg:col-span-8 bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden group">

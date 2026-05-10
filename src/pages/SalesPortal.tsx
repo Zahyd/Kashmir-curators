@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, 
   Users, 
@@ -165,20 +165,20 @@ export default function SalesPortal() {
         "w-72 h-screen fixed left-0 top-0 bg-[#0a0f12]/95 lg:bg-[#0a0f12]/60 backdrop-blur-3xl border-r border-white/5 flex flex-col z-[70] lg:z-50 transition-all duration-500 shadow-2xl",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+        <Link to="/" className="p-8 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.02] transition-colors group/logo">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-kashmir-gold to-amber-600 flex items-center justify-center shrink-0 shadow-xl shadow-kashmir-gold/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-kashmir-gold to-amber-600 flex items-center justify-center shrink-0 shadow-xl shadow-kashmir-gold/20 group-hover/logo:scale-105 transition-transform">
               <ShieldCheck className="w-6 h-6 text-black" />
             </div>
             <div className="overflow-hidden">
-              <h2 className="font-display text-xl font-bold text-white tracking-tight leading-none">Sales<span className="text-kashmir-gold">Pro</span></h2>
+              <h2 className="font-display text-xl font-bold text-white tracking-tight leading-none group-hover/logo:text-kashmir-gold transition-colors">Sales<span className="text-kashmir-gold group-hover/logo:text-white transition-colors">Pro</span></h2>
               <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-bold mt-1.5">Kashmir Curators</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-white/40">
+          <Button variant="ghost" size="icon" onClick={(e) => { e.preventDefault(); setIsSidebarOpen(false); }} className="lg:hidden text-white/40">
             <X className="w-6 h-6" />
           </Button>
-        </div>
+        </Link>
 
         <nav className="flex-1 p-6 space-y-3 mt-8 overflow-y-auto custom-scrollbar">
           {[
@@ -218,12 +218,19 @@ export default function SalesPortal() {
               <p className="text-[9px] text-white/30 truncate uppercase tracking-widest font-bold mt-0.5">{teamUser?.code}</p>
             </div>
           </div>
+          <Link 
+            to="/"
+            className="w-full flex items-center gap-4 px-5 py-3 mb-2 rounded-2xl text-white/40 hover:text-white hover:bg-white/5 transition-all duration-300 group"
+          >
+            <Sparkles className="w-5 h-5 text-kashmir-gold group-hover:scale-110 transition-transform" />
+            <span className="font-bold text-xs uppercase tracking-widest">Visit Website</span>
+          </Link>
           <button 
             onClick={teamLogout}
             className="w-full flex items-center gap-4 px-5 py-3 rounded-2xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300"
           >
             <LogOut className="w-5 h-5" />
-            <span className="font-bold text-xs uppercase tracking-widest">Exit Portal</span>
+            <span className="font-bold text-xs uppercase tracking-widest">Terminate Session</span>
           </button>
         </div>
       </aside>
