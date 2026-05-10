@@ -46,6 +46,8 @@ import SalesPerformance from '@/components/sales/SalesPerformance';
 import PaymentPortal from '@/components/sales/PaymentPortal';
 import InquiryVault from '@/components/sales/InquiryVault';
 import WorkLog from '@/components/sales/WorkLog';
+import CMSUsers from '@/components/admin/CMSUsers';
+import CMSRevenue from '@/components/admin/CMSRevenue';
 import SelectionRequired from '@/components/sales/SelectionRequired';
 import { API_BASE_URL } from '@/lib/api';
 
@@ -56,7 +58,7 @@ const mockReminders: any[] = [];
 export default function SalesPortal() {
   const navigate = useNavigate();
   const { teamUser, isTeamAuthenticated, isTeamLoading, teamLogout, systemEvents } = useTeamAuth();
-  const [activeTab, setActiveTab] = useState<'live-leads' | 'my-inquiries' | 'performance' | 'work-log' | 'builder' | 'payments' | 'vault'>('live-leads');
+  const [activeTab, setActiveTab] = useState<'live-leads' | 'my-inquiries' | 'performance' | 'work-log' | 'builder' | 'payments' | 'vault' | 'clients'>('live-leads');
   const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -186,8 +188,9 @@ export default function SalesPortal() {
             { id: 'my-inquiries', label: 'Active Pipeline', icon: MessageSquare, color: 'text-blue-400' },
             { id: 'vault', label: 'Inquiry Vault', icon: ShieldCheck, color: 'text-emerald-400' },
             { id: 'builder', label: 'Itinerary Builder', icon: FilePlus, color: 'text-purple-400' },
+            { id: 'clients', label: 'Client Directory', icon: Users, color: 'text-orange-400' },
             { id: 'payments', label: 'Payment Links', icon: CreditCard, color: 'text-amber-400' },
-            { id: 'performance', label: 'Performance', icon: TrendingUp, color: 'text-pink-400' },
+            { id: 'performance', label: 'Revenue Intel', icon: TrendingUp, color: 'text-pink-400' },
             { id: 'work-log', label: 'Work Log', icon: Clock, color: 'text-white' },
           ].map((tab) => (
             <button 
@@ -568,8 +571,10 @@ export default function SalesPortal() {
               </div>
             </div>
           </div>
+          ) : activeTab === 'clients' ? (
+            <CMSUsers />
           ) : activeTab === 'performance' ? (
-            <SalesPerformance stats={salesStats} />
+            <CMSRevenue />
           ) : activeTab === 'builder' ? (
             selectedInquiry ? (
               <ItineraryBuilder 

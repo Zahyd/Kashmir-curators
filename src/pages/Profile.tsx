@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Package, Building, Car, Calendar, Clock, MapPin, AlertCircle, Loader2, Compass, LayoutDashboard, CreditCard, Settings, LogOut, Ticket, Sparkles, Map, CloudSun, Phone, MessageSquare, Download, FileText, Crown, Gift, ExternalLink, ShieldCheck } from 'lucide-react';
+import { User, Package, Building, Car, Calendar, Clock, MapPin, AlertCircle, Loader2, Compass, LayoutDashboard, CreditCard, Settings, LogOut, Ticket, Sparkles, Map, CloudSun, Phone, MessageSquare, Download, FileText, Crown, Gift, ExternalLink, ShieldCheck, Star } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -40,12 +40,17 @@ export default function Profile() {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
+  const activeBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
+  const pastBookings = bookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
+  
+  const totalSpend = bookings.reduce((sum, b) => b.status !== 'cancelled' ? sum + b.totalAmount : sum, 0);
+  const totalTrips = bookings.filter(b => b.status !== 'cancelled').length;
+  const loyaltyPoints = totalTrips * 150 + Math.floor(totalSpend / 1000);
+  const membershipLevel = totalSpend > 500000 ? 'Platinum' : totalSpend > 100000 ? 'Elite' : 'Explorer';
+
   if (isLoading || !isAuthenticated) {
     return null;
   }
-
-  const activeBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
-  const pastBookings = bookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
 
   const handleCancel = async (bookingId: string) => {
     setCancellingId(bookingId);
@@ -89,7 +94,7 @@ export default function Profile() {
             </div>
             <div className="text-center md:text-left">
               <div className="inline-flex items-center gap-2 bg-kashmir-gold/20 text-kashmir-gold px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-3 backdrop-blur-md border border-kashmir-gold/30">
-                <Crown className="w-4 h-4" /> Elite Member
+                <Crown className="w-4 h-4" /> {membershipLevel} Member
               </div>
               <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
                 Welcome back, {user?.name?.split(' ')[0]}
@@ -450,27 +455,66 @@ export default function Profile() {
               {/* REWARDS TAB */}
               {activeTab === 'rewards' && (
                 <div className="space-y-8">
-                  <div>
-                    <h2 className="font-display text-3xl font-bold mb-2 text-kashmir-gold flex items-center gap-3">
-                      <Crown className="w-8 h-8" /> Elite Rewards
-                    </h2>
-                    <p className="text-white/60">Exclusive privileges unlocked for being a premium Kashmir Curators member.</p>
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                    <div>
+                      <h2 className="font-display text-3xl font-bold mb-2 text-kashmir-gold flex items-center gap-3">
+                        <Crown className="w-8 h-8" /> {membershipLevel} Privileges
+                      </h2>
+                      <p className="text-white/60">Your current standing: <span className="text-white font-bold">{loyaltyPoints.toLocaleString()} Points</span> accumulated.</p>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Lifetime Spend</p>
+                      <p className="text-xl font-bold text-white">₹{totalSpend.toLocaleString()}</p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gradient-to-br from-kashmir-gold/20 to-black/40 backdrop-blur-xl border border-kashmir-gold/30 p-8 rounded-3xl relative overflow-hidden">
+                    <div className={cn(
+                      "backdrop-blur-xl border p-8 rounded-3xl relative overflow-hidden transition-all duration-500",
+                      totalTrips >= 1 
+                        ? "bg-gradient-to-br from-kashmir-gold/20 to-black/40 border-kashmir-gold/30" 
+                        : "bg-white/5 border-white/10 grayscale opacity-60"
+                    )}>
                       <div className="absolute top-0 right-0 p-6 opacity-20"><Gift className="w-24 h-24 text-kashmir-gold" /></div>
-                      <Badge className="bg-kashmir-gold text-black font-bold mb-4">Active Offer</Badge>
+                      <Badge className="bg-kashmir-gold text-black font-bold mb-4">
+                        {totalTrips >= 1 ? 'Unlocked' : '1 Trip Required'}
+                      </Badge>
                       <h3 className="text-2xl font-bold mb-2">Complimentary Shikara Ride</h3>
                       <p className="text-white/70 mb-6 max-w-[80%] relative z-10">Enjoy a 1-hour complimentary premium shikara ride during sunset on your next Srinagar stay.</p>
-                      <Button variant="outline" className="bg-black/40 border-kashmir-gold/50 text-kashmir-gold hover:bg-kashmir-gold hover:text-black">Claim Voucher</Button>
+                      <Button 
+                        disabled={totalTrips < 1}
+                        variant="outline" 
+                        className={cn(
+                          "rounded-xl font-bold",
+                          totalTrips >= 1 ? "bg-black/40 border-kashmir-gold/50 text-kashmir-gold hover:bg-kashmir-gold hover:text-black" : ""
+                        )}
+                      >
+                        {totalTrips >= 1 ? 'Claim Voucher' : 'Complete 1 Trip to Unlock'}
+                      </Button>
                     </div>
 
-                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl relative overflow-hidden">
-                      <Badge className="bg-white/10 text-white/60 font-bold mb-4 border-white/10">Coming Soon</Badge>
-                      <h3 className="text-2xl font-bold mb-2 text-white/50">Free Room Upgrade</h3>
-                      <p className="text-white/40 mb-6 max-w-[80%] relative z-10">Automatically applied to your next 5-star hotel booking based on availability.</p>
-                      <Button variant="outline" disabled className="bg-white/5 border-white/5 text-white/30">Locked</Button>
+                    <div className={cn(
+                      "backdrop-blur-xl border p-8 rounded-3xl relative overflow-hidden transition-all duration-500",
+                      totalSpend >= 200000 
+                        ? "bg-gradient-to-br from-purple-500/20 to-black/40 border-purple-500/30" 
+                        : "bg-white/5 border-white/10 grayscale opacity-60"
+                    )}>
+                      <div className="absolute top-0 right-0 p-6 opacity-20"><Star className="w-24 h-24 text-purple-400" /></div>
+                      <Badge className={cn("font-bold mb-4", totalSpend >= 200000 ? "bg-purple-500 text-white" : "bg-white/10 text-white/40")}>
+                        {totalSpend >= 200000 ? 'Unlocked' : '₹2L Spend Required'}
+                      </Badge>
+                      <h3 className="text-2xl font-bold mb-2 text-white">Free Room Upgrade</h3>
+                      <p className="text-white/70 mb-6 max-w-[80%] relative z-10">Automatically applied to your next 5-star hotel booking based on availability.</p>
+                      <Button 
+                        disabled={totalSpend < 200000}
+                        variant="outline" 
+                        className={cn(
+                          "rounded-xl font-bold",
+                          totalSpend >= 200000 ? "bg-black/40 border-purple-500/50 text-purple-400 hover:bg-purple-500 hover:text-white" : ""
+                        )}
+                      >
+                        {totalSpend >= 200000 ? 'Apply Upgrade' : 'Locked'}
+                      </Button>
                     </div>
                   </div>
                 </div>

@@ -40,13 +40,17 @@ import CMSTestimonials from '@/components/admin/CMSTestimonials';
 import CMSFaqs from '@/components/admin/CMSFaqs';
 import MediaLibrary from '@/components/admin/MediaLibrary';
 import CMSSiteContent from '@/components/admin/CMSSiteContent';
+import CMSBookings from '@/components/admin/CMSBookings';
+import CMSRevenue from '@/components/admin/CMSRevenue';
+import CMSUsers from '@/components/admin/CMSUsers';
+import CMSPayments from '@/components/admin/CMSPayments';
 
 const ROLE_STATS: Record<string, any[]> = {
   admin: [
-    { label: 'Total Bookings', value: '0', icon: Package, change: '0%', color: 'text-blue-400' },
-    { label: 'Total Revenue', value: '₹0L', icon: DollarSign, change: '0%', color: 'text-green-400' },
-    { label: 'Active Users', value: '0', icon: Users, change: '0%', color: 'text-purple-400' },
-    { label: 'Packages Sold', value: '0', icon: TrendingUp, change: '0%', color: 'text-kashmir-gold' },
+    { label: 'Total Bookings', value: '0', icon: Package, change: '0%', color: 'text-blue-400', section: 'bookings' },
+    { label: 'Total Revenue', value: '₹0L', icon: DollarSign, change: '0%', color: 'text-green-400', section: 'revenue' },
+    { label: 'Total Users', value: '0', icon: Users, change: '0%', color: 'text-purple-400', section: 'users' },
+    { label: 'Packages Sold', value: '0', icon: TrendingUp, change: '0%', color: 'text-kashmir-gold', section: 'packages' },
   ],
   operations: [
     { label: 'Active Inquiries', value: '0', icon: MessageSquare, change: 'Live', color: 'text-blue-400' },
@@ -131,7 +135,7 @@ export default function Admin() {
       // Admin/Ops
       if (stat.label === 'Total Bookings') value = (dynamicStats.totalBookings ?? 0).toLocaleString();
       if (stat.label === 'Total Revenue') value = `₹${((dynamicStats.totalRevenue || 0) / 100000).toFixed(1)}L`;
-      if (stat.label === 'Active Users') value = (dynamicStats.totalUsers ?? 0).toLocaleString();
+      if (stat.label === 'Total Users') value = (dynamicStats.totalUsers ?? 0).toLocaleString();
       if (stat.label === 'Packages Sold') value = (dynamicStats.totalPackages ?? 0).toLocaleString();
       
       if (stat.label === 'Active Inquiries') value = dynamicStats.activeInquiries ?? 0;
@@ -200,24 +204,26 @@ export default function Admin() {
                     </div>
                   </div>
                   
-                  <div className="space-y-1">
+                   <div className="space-y-1">
                     <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30">{stat.label}</p>
                     <div className="text-4xl font-display font-black text-white">{stat.value}</div>
                   </div>
 
-                  <div className="mt-6 pt-6 border-t border-white/5">
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-white/20">
-                      <span>Live Index</span>
-                      <TrendingUp className="w-3 h-3 text-emerald-500" />
-                    </div>
-                  </div>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => stat.section && setActiveSection(stat.section)}
+                    className="mt-6 w-full pt-6 border-t border-white/5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-white/20 hover:text-kashmir-gold transition-colors"
+                  >
+                    <span>View Analytics</span>
+                    <TrendingUp className="w-3 h-3 text-emerald-500" />
+                  </Button>
                 </Card>
               ))}
             </div>
 
             {/* Analytics & Performance Hub */}
             {/* Role-Specific Operation Center */}
-            {teamRole === 'operations' && (
+            {(teamRole === 'operations' || teamRole === 'admin') && (
               <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden group">
                 <div className="flex justify-between items-center mb-10">
                   <div>
@@ -345,6 +351,10 @@ export default function Admin() {
           </div>
         );
       case 'inquiries': return <div className="animate-in fade-in duration-500"><CMSInquiries /></div>;
+      case 'bookings': return <div className="animate-in fade-in duration-500"><CMSBookings /></div>;
+      case 'revenue': return <div className="animate-in fade-in duration-500"><CMSRevenue /></div>;
+      case 'users': return <div className="animate-in fade-in duration-500"><CMSUsers /></div>;
+      case 'payments': return <div className="animate-in fade-in duration-500"><CMSPayments /></div>;
       case 'packages': return <div className="animate-in fade-in duration-500"><CMSPackages /></div>;
       case 'hotels': return <div className="animate-in fade-in duration-500"><CMSHotels /></div>;
       case 'cabs': return <div className="animate-in fade-in duration-500"><CMSCabs /></div>;

@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Search,
   Sparkles,
+  CreditCard,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,10 @@ interface AdminSidebarProps {
 const allMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'inquiries', label: 'Trip Inquiries', icon: MessageSquare, badge: 'New' },
+  { id: 'bookings', label: 'Bookings Engine', icon: Package },
+  { id: 'revenue', label: 'Revenue Intel', icon: TrendingUp },
+  { id: 'users', label: 'Client Directory', icon: Users },
+  { id: 'payments', label: 'Payment Methods', icon: CreditCard },
   { id: 'packages', label: 'Packages CMS', icon: Package },
   { id: 'hotels', label: 'Hotels CMS', icon: Building },
   { id: 'cabs', label: 'Cabs CMS', icon: Car },

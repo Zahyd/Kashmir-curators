@@ -23,27 +23,30 @@ export interface SystemEvent {
 // Permission map: what each role can access
 const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
   admin: [
-    'dashboard', 'inquiries', 'packages', 'hotels', 'cabs',
-    'reviews', 'faqs', 'media', 'content', 'assign_leads',
-    'view_financials', 'sales_portal'
+    'dashboard', 'inquiries', 'bookings', 'revenue', 'users', 'payments', 
+    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 
+    'assign_leads', 'view_financials', 'sales_portal'
   ],
   operations: [
-    'dashboard', 'inquiries', 'hotels', 'cabs', 'assign_leads'
+    'dashboard', 'inquiries', 'bookings', 'hotels', 'cabs', 'assign_leads'
   ],
   sales: [
     'sales_portal', 'builder', 'payments', 'vault', 'work_log', 'performance'
   ],
   marketing: [
-    'dashboard', 'reviews', 'media', 'content'
+    'dashboard', 'packages', 'reviews', 'media', 'content'
   ],
 };
 
 // Which sidebar items each role can see in the admin portal
 export const ADMIN_SIDEBAR_ITEMS: Record<TeamRole, string[]> = {
-  admin: ['dashboard', 'inquiries', 'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content'],
-  operations: ['dashboard', 'inquiries', 'hotels', 'cabs'],
+  admin: [
+    'dashboard', 'inquiries', 'bookings', 'revenue', 'users', 'payments', 
+    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content'
+  ],
+  operations: ['dashboard', 'inquiries', 'bookings', 'hotels', 'cabs'],
   sales: [],
-  marketing: ['dashboard', 'reviews', 'media', 'content'],
+  marketing: ['dashboard', 'packages', 'reviews', 'media', 'content'],
 };
 
 // Available sales agents for assignment
