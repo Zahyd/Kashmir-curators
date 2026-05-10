@@ -22,12 +22,13 @@ export const getInquiries = async (req: Request, res: Response) => {
 };
 
 export const createInquiry = async (req: Request, res: Response) => {
-  const { customerName, email, phone, destination, duration, travelers, budget, accommodation } = req.body;
+  const { customerName, email, phone, destination, duration, travelers, budget, accommodation, userId } = req.body;
   
   try {
     const p = prisma as any;
     const inquiry = await p.inquiry.create({
       data: {
+        userId: userId || null,
         customerName,
         email,
         phone,

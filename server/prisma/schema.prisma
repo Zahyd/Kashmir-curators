@@ -12,8 +12,10 @@ model User {
   email     String    @unique
   password  String
   name      String
+  phone     String?
   role      String    @default("user") // user, admin, sales, marketing
   bookings  Booking[]
+  inquiries Inquiry[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -109,6 +111,8 @@ model Booking {
 
 model Inquiry {
   id            String   @id @default(uuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
   customerName  String
   email         String
   phone         String

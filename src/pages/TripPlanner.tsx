@@ -51,7 +51,8 @@ export default function TripPlanner() {
           duration: formData.duration,
           travelers: formData.travelers,
           budget: formData.budget,
-          accommodation: formData.accommodation
+          accommodation: formData.accommodation,
+          userId: user?.id
         })
       });
 

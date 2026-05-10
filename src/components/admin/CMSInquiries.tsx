@@ -236,6 +236,10 @@ export default function CMSInquiries() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-72 bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white p-2 rounded-2xl shadow-2xl" align="end">
+              <DropdownMenuItem onClick={() => fetchInquiries()} className="cursor-pointer p-3 rounded-xl gap-3 text-kashmir-gold font-bold">
+                <ArrowUpDown className="w-4 h-4" /> Refresh Intelligence Queue
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/5 mx-2" />
               <DropdownMenuLabel className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/30">System Status Filter</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/5 mx-2" />
               {[

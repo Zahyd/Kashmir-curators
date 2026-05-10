@@ -1,5 +1,32 @@
-import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { Request, Response } from 'express';
+
+export const getAllBookings = async (req: Request, res: Response) => {
+  try {
+    const bookings = await prisma.booking.findMany({
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const parsedBookings = bookings.map(b => ({
+      ...b,
+      details: b.details ? JSON.parse(b.details) : {}
+    }));
+
+    res.json(parsedBookings);
+  } catch (error) {
+    console.error('Failed to fetch all bookings:', error);
+    res.status(500).json({ error: 'Failed to fetch bookings' });
+  }
+};
 
 export const createBooking = async (req: any, res: Response) => {
   const { type, itemName, bookingDate, totalAmount, details } = req.body;

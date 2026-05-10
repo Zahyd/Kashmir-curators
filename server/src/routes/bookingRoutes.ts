@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createBooking, getMyBookings, updateBookingStatus } from '../controllers/bookingController';
+import { createBooking, getMyBookings, updateBookingStatus, getAllBookings } from '../controllers/bookingController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -30,6 +30,20 @@ const router = Router();
  *         description: Booking created successfully
  */
 router.post('/', authenticateToken, createBooking);
+
+/**
+ * @swagger
+ * /api/bookings:
+ *   get:
+ *     summary: Get all bookings (Admin only)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all bookings
+ */
+router.get('/', authenticateToken, getAllBookings);
 
 /**
  * @swagger

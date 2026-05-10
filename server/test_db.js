@@ -4,11 +4,14 @@ const p = new PrismaClient();
 
 async function test() {
   try {
-    const count = await p.inquiry.count();
-    console.log('Inquiry count:', count);
+    const inquiries = await p.inquiry.count();
+    console.log('Inquiry count:', inquiries);
     
-    const inquiries = await p.inquiry.findMany({ take: 2 });
-    console.log('Sample inquiries:', JSON.stringify(inquiries, null, 2));
+    const users = await p.user.count();
+    console.log('User count:', users);
+    
+    const usersList = await p.user.findMany({ select: { id: true, name: true } });
+    console.log('Users:', JSON.stringify(usersList, null, 2));
   } catch (e) {
     console.log('Prisma error:', e.message);
   } finally {
