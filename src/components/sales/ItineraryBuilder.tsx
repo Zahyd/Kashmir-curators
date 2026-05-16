@@ -434,12 +434,12 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
           </div>
         </div>
         
-        <div className="flex items-center gap-4 w-full xl:w-auto relative z-10">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto relative z-10">
           <Button 
             onClick={handleSaveQuote}
             disabled={isGenerating}
             variant="outline" 
-            className="flex-1 xl:flex-none bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
+            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
           >
             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
             <span>Save</span>
@@ -448,7 +448,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
             onClick={generatePDF} 
             disabled={isGenerating}
             variant="outline" 
-            className="flex-1 xl:flex-none bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
+            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
           >
             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
             <span>Export</span>
@@ -456,7 +456,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
           <Button 
             onClick={handleSendProposal} 
             disabled={isGenerating}
-            className="flex-1 xl:flex-none bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-14 px-10 rounded-2xl shadow-xl shadow-kashmir-gold/20 hover:shadow-kashmir-gold/40 transition-all border-none"
+            className="flex-1 sm:flex-none bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-14 px-10 rounded-2xl shadow-xl shadow-kashmir-gold/20 hover:shadow-kashmir-gold/40 transition-all border-none"
           >
             {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
             <span>Send Proposal</span>
@@ -484,17 +484,17 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="px-6 py-3 bg-white/5 rounded-2xl border border-white/5">
+              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-4 w-full md:w-auto">
+                <div className="flex-1 px-6 py-3 bg-white/5 rounded-2xl border border-white/5">
                   <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-1">Total Revenue</p>
                   <p className="text-lg font-bold text-white">₹{totalRevenue.toLocaleString()}</p>
                 </div>
-                <div className="px-6 py-3 bg-white/5 rounded-2xl border border-white/5">
+                <div className="flex-1 px-6 py-3 bg-white/5 rounded-2xl border border-white/5">
                   <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-1">Total Net Cost</p>
                   <p className="text-lg font-bold text-white/60">₹{totalNetCost.toLocaleString()}</p>
                 </div>
                 <div className={cn(
-                  "px-8 py-3 rounded-2xl border shadow-lg transition-all",
+                  "flex-1 px-8 py-3 rounded-2xl border shadow-lg transition-all",
                   margin >= 20 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
                   margin >= 10 ? "bg-amber-500/10 border-amber-500/30 text-amber-500" :
                   "bg-red-500/10 border-red-500/30 text-red-400"

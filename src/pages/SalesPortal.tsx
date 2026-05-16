@@ -125,11 +125,19 @@ export default function SalesPortal() {
 
   if (isTeamLoading || !isTeamAuthenticated || !teamUser) return null;
 
-  const myInquiries = inquiries.filter(inq => 
-    (inq.assignedTo === teamUser.code || !inq.assignedTo) && 
-    (inq.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     inq.id.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const formatId = (id: string) => {
+    if (!id) return '';
+    return id.includes('-') ? `KC-${id.split('-')[0].toUpperCase()}` : `KC-${id.substring(0, 8).toUpperCase()}`;
+  };
+
+  const myInquiries = inquiries.filter(inq => {
+    const isAssigned = inq.assignedTo === teamUser.code || !inq.assignedTo;
+    const displayId = formatId(inq.id);
+    const matchesSearch = inq.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          displayId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          inq.id.toLowerCase().includes(searchTerm.toLowerCase());
+    return isAssigned && matchesSearch;
+  });
 
   const handleLogout = () => {
     teamLogout();
@@ -286,8 +294,8 @@ export default function SalesPortal() {
                           <div className="space-y-3 min-w-0">
                             <div className="flex flex-wrap items-center gap-4">
                               <h3 className="text-3xl font-display font-bold text-white tracking-tight truncate">{inq.customerName}</h3>
-                              <Badge className="bg-white/5 text-white/40 border-white/10 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest shrink-0">
-                                {inq.id}
+                              <Badge className="bg-white/5 text-white/40 border-white/10 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest shrink-0 truncate max-w-[120px]">
+                                {formatId(inq.id)}
                               </Badge>
                             </div>
                             <div className="flex flex-wrap items-center gap-6 text-[10px] font-black text-white/20 uppercase tracking-widest">
@@ -372,7 +380,7 @@ export default function SalesPortal() {
                             <div>
                               <h3 className="font-display text-2xl font-bold text-white group-hover:text-kashmir-gold transition-colors duration-500 tracking-tight">{inq.customerName}</h3>
                               <div className="flex items-center gap-3 text-xs text-white/30 font-bold uppercase tracking-widest mt-1.5">
-                                <span className="bg-white/5 px-2 py-0.5 rounded text-white/50">{inq.id}</span>
+                                <span className="bg-white/5 px-2 py-0.5 rounded text-white/50 truncate max-w-[100px]">{formatId(inq.id)}</span>
                                 <span>\u2022</span>
                                 <span>{inq.date}</span>
                               </div>
