@@ -9,7 +9,7 @@ export const getAllBookings = async (req: Request, res: Response) => {
           select: {
             name: true,
             email: true,
-            phone: true
+            phone: true, // TS cache refresh
           }
         }
       },

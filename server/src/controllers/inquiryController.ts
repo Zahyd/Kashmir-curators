@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { notificationService } from '../services/notificationService';
+
 
 export const getInquiries = async (req: Request, res: Response) => {
   try {
@@ -41,13 +43,8 @@ export const createInquiry = async (req: Request, res: Response) => {
       }
     });
 
-    if (req.io) {
-      req.io.to('admin-room').emit('new-system-event', {
-        type: 'CREATE',
-        message: `New Lead: ${customerName} interested in ${destination}`,
-        booking: { ...inquiry, entityType: 'inquiry' }
-      });
-    }
+    // Trigger automatic automation (Email + Socket)
+    await notificationService.triggerInquiryReceived(req.io, inquiry);
 
     res.status(201).json(inquiry);
   } catch (error) {
@@ -110,5 +107,25 @@ export const updateInquiry = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Inquiry update error:', (error as any).message);
     res.status(500).json({ error: 'Failed to update inquiry' });
+  }
+};
+
+export const sendProposal = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    
+    // 1. Update the status in DB
+    const inquiry = await p.inquiry.update({
+      where: { id: req.params.id },
+      data: { status: 'Quote Sent' }
+    });
+
+    // 2. Trigger the manual automation (Email + Socket)
+    await notificationService.triggerSendProposal(req.io, inquiry);
+
+    res.json({ success: true, inquiry });
+  } catch (error) {
+    console.error('Send proposal error:', (error as any).message);
+    res.status(500).json({ error: 'Failed to send proposal' });
   }
 };

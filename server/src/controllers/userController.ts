@@ -14,7 +14,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         _count: {
           select: {
             bookings: true,
-            inquiries: true
+            inquiries: true, // TS cache refresh
           }
         }
       },

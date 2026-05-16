@@ -378,6 +378,34 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     }
   };
 
+  const handleSendProposal = async () => {
+    setIsGenerating(true);
+    const toastId = toast.loading('Sending proposal to customer...');
+    
+    try {
+      // First save it
+      await handleSaveQuote();
+
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}/send-proposal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to send proposal');
+      
+      toast.success('Proposal successfully delivered!', { id: toastId });
+    } catch (error) {
+      console.error('Send Proposal Error:', error);
+      toast.error('Failed to send proposal. Please try again.', { id: toastId });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-700">
       {/* Premium Header */}
@@ -413,15 +441,24 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
             className="flex-1 xl:flex-none bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
           >
             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            <span>Save to Pipeline</span>
+            <span>Save</span>
           </Button>
           <Button 
             onClick={generatePDF} 
             disabled={isGenerating}
+            variant="outline" 
+            className="flex-1 xl:flex-none bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
+          >
+            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+            <span>Export</span>
+          </Button>
+          <Button 
+            onClick={handleSendProposal} 
+            disabled={isGenerating}
             className="flex-1 xl:flex-none bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-14 px-10 rounded-2xl shadow-xl shadow-kashmir-gold/20 hover:shadow-kashmir-gold/40 transition-all border-none"
           >
-            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5 mr-2" />}
-            <span>Export Proposal</span>
+            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
+            <span>Send Proposal</span>
           </Button>
         </div>
       </div>
