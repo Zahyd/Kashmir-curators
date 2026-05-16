@@ -218,8 +218,8 @@ export default function CMSInquiries() {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       {/* Strategic Controls */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
-        <div className="flex items-center gap-6 w-full xl:w-auto">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 xl:gap-8">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 md:gap-6 w-full xl:w-auto">
           <div className="relative flex-1 group">
             <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
               <Search className="w-5 h-5 text-white/20 group-focus-within:text-kashmir-gold transition-colors duration-500" />
@@ -275,7 +275,7 @@ export default function CMSInquiries() {
           </DropdownMenu>
         </div>
 
-        <div className="flex gap-4 w-full xl:w-auto">
+        <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
           <Button variant="outline" className="flex-1 xl:flex-none h-16 bg-white/[0.02] border-white/5 text-white/40 hover:text-white hover:bg-white/10 px-8 rounded-[1.5rem] transition-all duration-500 group">
             <Download className="w-5 h-5 mr-3 group-hover:-translate-y-0.5 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Export Data</span>
@@ -286,6 +286,7 @@ export default function CMSInquiries() {
           </Button>
         </div>
       </div>
+
 
       {/* Intelligence Grid */}
       {/* Desktop Table View */}
@@ -481,6 +482,93 @@ export default function CMSInquiries() {
           )}
         </div>
       </Card>
+
+      {/* Mobile Card View */}
+      <div className="grid grid-cols-1 gap-6 lg:hidden">
+        {filteredInquiries.map((inq) => (
+          <Card key={inq.id} className="bg-white/[0.02] border-white/5 backdrop-blur-xl rounded-[2rem] overflow-hidden shadow-xl p-6 relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
+            
+            <div className="flex justify-between items-start mb-6 relative z-10">
+              <div className="space-y-1">
+                <span className="text-white font-black text-sm tracking-widest">{formatId(inq.id)}</span>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">{inq.date}</p>
+              </div>
+              <Badge className={cn(
+                "px-3 py-1.5 rounded-[10px] text-[9px] font-black uppercase tracking-[0.2em] border-none shadow-lg",
+                inq.status === 'New' ? 'bg-blue-500/10 text-blue-400' :
+                inq.status === 'Pending Curation' ? 'bg-amber-500/10 text-amber-500' :
+                'bg-emerald-500/10 text-emerald-400'
+              )}>
+                {inq.status}
+              </Badge>
+            </div>
+            
+            <div className="flex items-center gap-5 mb-6 border-b border-white/5 pb-6 relative z-10">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-kashmir-gold font-black text-xl shadow-inner">
+                {inq.customerName.charAt(0)}
+              </div>
+              <div>
+                <p className="text-white font-bold text-lg">{inq.customerName}</p>
+                <div className="flex items-center gap-2 text-[10px] text-white/40 mt-1 uppercase tracking-widest font-bold">
+                  <Mail className="w-3 h-3 text-kashmir-gold/50" /> {inq.email}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6 relative z-10">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-white/40 uppercase tracking-[0.2em] font-black text-[10px]">Target Node</span>
+                <span className="text-white font-bold">{inq.destination}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-white/40 uppercase tracking-[0.2em] font-black text-[10px]">Temporal Frame</span>
+                <span className="text-white font-bold">{inq.duration}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-white/40 uppercase tracking-[0.2em] font-black text-[10px]">Fiscal Scale</span>
+                <span className="text-kashmir-gold font-black bg-kashmir-gold/10 px-3 py-1 rounded-lg text-[10px] tracking-widest">{inq.budget}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-5 border-t border-white/5 relative z-10">
+              <div className="flex-1">
+                {inq.assignedTo && canAssign && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <UserPlus className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">{inq.assignedTo}</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex gap-3">
+                <Button variant="ghost" size="icon" onClick={() => setSelectedInquiry(inq)} className="h-12 w-12 rounded-2xl bg-white/5 border border-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300">
+                  <Eye className="w-5 h-5" />
+                </Button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl bg-white/5 border border-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300">
+                      <MoreVertical className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white p-2 rounded-2xl shadow-2xl">
+                    <DropdownMenuItem onClick={() => handleStatusChange(inq.id, 'Pending Curation')} className="cursor-pointer p-3 rounded-xl gap-3 text-xs font-bold">
+                      <div className="w-2 h-2 rounded-full bg-amber-400" /> Start Curation
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-white/5 mx-2" />
+                    <DropdownMenuItem onClick={() => { setSelectedInquiry(inq); setIsUploadModalOpen(true); }} className="text-kashmir-gold font-black p-3 rounded-xl gap-3">
+                      <FileUp className="w-4 h-4" /> <span className="text-xs">Deploy Proposal</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
 
       {/* Details Intelligence Modal */}
       {selectedInquiry && !isUploadModalOpen && (
