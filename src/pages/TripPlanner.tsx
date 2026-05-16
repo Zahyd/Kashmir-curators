@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function TripPlanner() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function TripPlanner() {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/inquiries`, {
+      const response = await fetch(`${API_BASE_URL}/inquiries`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
