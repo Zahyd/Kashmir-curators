@@ -368,7 +368,8 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`Kashmir_Itinerary_${inquiry.id}.pdf`);
+      const shortId = inquiry.id.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${inquiry.id.substring(0, 8).toUpperCase()}`;
+      pdf.save(`Kashmir_Itinerary_${shortId}.pdf`);
       toast.success('Itinerary generated successfully!');
     } catch (error) {
       console.error('PDF Generation Error:', error);
@@ -1066,7 +1067,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-black text-2xl text-slate-900 tracking-widest">#{inquiry.id}</p>
+                <p className="font-black text-2xl text-slate-900 tracking-widest">{inquiry.id.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${inquiry.id.substring(0, 8).toUpperCase()}`}</p>
                 <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2">Proposal Created: {new Date().toLocaleDateString()}</p>
               </div>
             </div>

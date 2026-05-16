@@ -39,7 +39,8 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
 
   const generateUPILink = () => {
     const encodedName = encodeURIComponent(merchantName);
-    const encodedNote = encodeURIComponent(`Booking for ${inquiry.id}`);
+    const shortId = inquiry.id.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${inquiry.id.substring(0, 8).toUpperCase()}`;
+    const encodedNote = encodeURIComponent(`Booking for ${shortId}`);
     return `upi://pay?pa=${businessVPA}&pn=${encodedName}&am=${amount}&cu=INR&tn=${encodedNote}`;
   };
 

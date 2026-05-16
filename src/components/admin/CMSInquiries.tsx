@@ -96,13 +96,21 @@ export default function CMSInquiries() {
     }
   };
 
+  const formatId = (id: string) => {
+    if (!id) return '';
+    return id.includes('-') ? `KC-${id.split('-')[0].toUpperCase()}` : `KC-${id.substring(0, 8).toUpperCase()}`;
+  };
+
   const filteredInquiries = inquiries.filter(inq => {
-    const matchesSearch = inq.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const displayId = formatId(inq.id);
+    const matchesSearch = displayId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         inq.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          inq.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          inq.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter.length === 0 || statusFilter.includes(inq.status);
     return matchesSearch && matchesStatus;
   });
+
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
@@ -303,7 +311,7 @@ export default function CMSInquiries() {
                 <tr key={inq.id} className="hover:bg-white/[0.03] transition-all duration-500 group/row">
                   <td className="px-6 py-6">
                     <div className="space-y-1.5">
-                      <span className="text-white font-black text-sm tracking-widest group-hover/row:text-kashmir-gold transition-colors">{inq.id}</span>
+                      <span className="text-white font-black text-sm tracking-widest group-hover/row:text-kashmir-gold transition-colors">{formatId(inq.id)}</span>
                       <div className="flex items-center gap-2 text-[9px] text-white/30 uppercase tracking-[0.2em] font-black">
                         <div className="w-1.5 h-1.5 rounded-full bg-kashmir-gold/40" />
                         {inq.date}
@@ -484,7 +492,7 @@ export default function CMSInquiries() {
               <div className="flex items-center justify-between mb-12 border-b border-white/5 pb-8">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-kashmir-gold/60">Strategic Inquiry Detail</p>
-                  <h2 className="text-4xl font-display font-black text-white leading-tight">Node <span className="text-kashmir-gold">{selectedInquiry.id}</span></h2>
+                  <h2 className="text-4xl font-display font-black text-white leading-tight">Node <span className="text-kashmir-gold">{formatId(selectedInquiry.id)}</span></h2>
                 </div>
                 <Badge className={cn(
                   "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border-none shadow-xl",
