@@ -74,7 +74,7 @@ const ROLE_STATS: Record<string, any[]> = {
 
 export default function Admin() {
   const navigate = useNavigate();
-  const { teamUser, isTeamAuthenticated, isTeamLoading, canAccessAdmin, systemEvents } = useTeamAuth();
+  const { teamUser, isTeamAuthenticated, isTeamLoading, canAccessAdmin, systemEvents, teamLogout } = useTeamAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [dynamicStats, setDynamicStats] = useState<any>(null);
@@ -108,6 +108,13 @@ export default function Admin() {
         }
       });
       
+      // Super solid dynamic handling for expired/invalid tokens
+      if (response.status === 401 || response.status === 403) {
+        teamLogout();
+        navigate('/sales/auth');
+        return;
+      }
+
       if (!response.ok) throw new Error('Failed to fetch');
       
       const data = await response.json();
