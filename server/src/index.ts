@@ -17,6 +17,7 @@ import faqRoutes from './routes/faqRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import mediaRoutes from './routes/mediaRoutes';
 import userRoutes from './routes/userRoutes';
+import whatsappRoutes from './routes/whatsappRoutes';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -101,6 +102,7 @@ app.use('/api/faqs', faqRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 app.get('/health-check', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });

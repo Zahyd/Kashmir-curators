@@ -29,7 +29,7 @@ export const notificationService = {
       console.log('Message sent: %s', info.messageId);
       return true;
     } catch (error) {
-      console.error('Error sending email:', error);
+      console.error('Error sending email:', (error as any).message || error);
       return false;
     }
   },

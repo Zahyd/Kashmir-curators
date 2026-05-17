@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { notificationService } from '../services/notificationService';
+import { googleSheetsService } from '../services/googleSheetsService';
 
 
 export const getInquiries = async (req: Request, res: Response) => {
@@ -45,6 +46,9 @@ export const createInquiry = async (req: Request, res: Response) => {
 
     // Trigger automatic automation (Email + Socket)
     await notificationService.triggerInquiryReceived(req.io, inquiry);
+
+    // Sync to Google Sheets (fail-safe and non-blocking in background)
+    googleSheetsService.appendLeadToSheet(inquiry);
 
     res.status(201).json(inquiry);
   } catch (error) {
