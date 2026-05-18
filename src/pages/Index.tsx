@@ -2,6 +2,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import FloatingActions from '@/components/layout/FloatingActions';
 import HeroSection from '@/components/home/HeroSection';
+import { InteractiveTripPlanner } from '@/components/planner/InteractiveTripPlanner';
 import DestinationsGrid from '@/components/home/DestinationsGrid';
 import AuthenticityFeatures from '@/components/home/AuthenticityFeatures';
 import FeaturedPackages from '@/components/home/FeaturedPackages';
@@ -46,6 +47,13 @@ const Index = () => {
       <Navbar />
       <main>
         <HeroSection />
+        
+        <section className="py-12 bg-slate-50/50 dark:bg-slate-900/50" id="planner">
+          <div className="container mx-auto px-4">
+            <InteractiveTripPlanner />
+          </div>
+        </section>
+
         <DestinationsGrid />
         <AuthenticityFeatures />
         <FeaturedPackages />

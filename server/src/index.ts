@@ -31,6 +31,7 @@ import whatsappRoutes from './routes/whatsappRoutes';
 import weatherRoutes from './routes/weatherRoutes';
 import seoRoutes from './routes/seoRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import flightRoutes from './routes/flightRoutes';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -118,6 +119,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/flights', flightRoutes);
 app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers
