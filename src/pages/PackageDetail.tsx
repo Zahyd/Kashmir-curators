@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import PaymentSimulator from '@/components/payment/PaymentSimulator';
 import ReviewSection from '@/components/reviews/ReviewSection';
+import SeoMeta from '@/components/SeoMeta';
 
 export default function PackageDetail() {
   const { id } = useParams();
@@ -114,6 +115,32 @@ export default function PackageDetail() {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <SeoMeta 
+        title={`${pkg.name} - ${pkg.duration}`}
+        description={`Explore ${pkg.name} in Kashmir. Tour destination ${pkg.destination} for ${pkg.duration}. Highly rated: ${pkg.rating} stars. Book custom luxury travels with Kashmir Curators.`}
+        keywords={`${pkg.name}, ${pkg.destination} trip, kashmir luxury tours, kashmir travel package`}
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": pkg.name,
+          "description": pkg.description || `Bespoke travel package to ${pkg.destination} lasting ${pkg.duration}.`,
+          "image": pkg.image,
+          "offers": {
+            "@type": "Offer",
+            "priceCurrency": "INR",
+            "price": pkg.price,
+            "priceValidUntil": "2027-12-31",
+            "itemCondition": "https://schema.org/NewCondition",
+            "availability": "https://schema.org/InStock",
+            "url": window.location.href
+          },
+          "aggregateRating": pkg.rating ? {
+            "@type": "AggregateRating",
+            "ratingValue": pkg.rating,
+            "reviewCount": pkg.reviewCount || 12
+          } : undefined
+        }}
+      />
       <Navbar />
 
       {/* Back Button */}
