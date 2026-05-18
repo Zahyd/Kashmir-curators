@@ -135,7 +135,7 @@ export function InteractiveTripPlanner() {
                     type="date" 
                     value={formData.date} 
                     onChange={e => setFormData({ ...formData, date: e.target.value })}
-                    className="pl-12 h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all"
+                    className="pl-12 h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all text-slate-900 dark:text-white"
                   />
                   <Label className="absolute -top-3 left-4 bg-white px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Arrival Date</Label>
                 </div>
@@ -149,7 +149,7 @@ export function InteractiveTripPlanner() {
                     min="1" 
                     value={formData.adults} 
                     onChange={e => setFormData({ ...formData, adults: parseInt(e.target.value) })}
-                    className="pl-12 h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all"
+                    className="pl-12 h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all text-slate-900 dark:text-white"
                   />
                   <Label className="absolute -top-3 left-4 bg-white px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Guests</Label>
                 </div>
@@ -274,7 +274,7 @@ export function InteractiveTripPlanner() {
                   <Input 
                     value={formData.name} 
                     onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                    className="h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all px-4" 
+                    className="h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all px-4 text-slate-900 dark:text-white" 
                     placeholder="E.g. James Kensington"
                   />
                   <Label className="absolute -top-3 left-4 bg-white px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Full Name</Label>
@@ -285,7 +285,7 @@ export function InteractiveTripPlanner() {
                     type="email" 
                     value={formData.email} 
                     onChange={e => setFormData({ ...formData, email: e.target.value })} 
-                    className="h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all px-4"
+                    className="h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all px-4 text-slate-900 dark:text-white"
                     placeholder="james@example.com"
                   />
                   <Label className="absolute -top-3 left-4 bg-white px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email Address</Label>
@@ -296,7 +296,7 @@ export function InteractiveTripPlanner() {
                     type="tel" 
                     value={formData.phone} 
                     onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                    className="h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all px-4"
+                    className="h-14 bg-slate-50 border-slate-200 text-lg rounded-xl focus-visible:ring-[#b5852a] transition-all px-4 text-slate-900 dark:text-white"
                     placeholder="+91 98765 43210"
                   />
                   <Label className="absolute -top-3 left-4 bg-white px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">WhatsApp Number</Label>
