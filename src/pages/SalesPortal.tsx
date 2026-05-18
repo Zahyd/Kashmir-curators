@@ -93,15 +93,30 @@ export default function SalesPortal() {
     try {
       const token = localStorage.getItem('teamToken');
       const response = await fetch(`${API_BASE_URL}/inquiries`, {
-
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      // Gracefully handle expired/invalid tokens
+      if (response.status === 401 || response.status === 403) {
+        teamLogout();
+        navigate('/sales/auth');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to fetch inquiries');
+
       const data = await response.json();
-      setInquiries(data || []);
+      // Only set if we actually got an array, preventing type errors
+      if (Array.isArray(data)) {
+        setInquiries(data);
+      } else {
+        setInquiries([]);
+      }
     } catch (error) {
       console.error('Failed to fetch inquiries:', error);
+      setInquiries([]);
     } finally {
       setLoadingLeads(false);
     }
@@ -111,15 +126,26 @@ export default function SalesPortal() {
     try {
       const token = localStorage.getItem('teamToken');
       const response = await fetch(`${API_BASE_URL}/dashboard/sales`, {
-
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      // Gracefully handle expired/invalid tokens
+      if (response.status === 401 || response.status === 403) {
+        teamLogout();
+        navigate('/sales/auth');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to fetch sales stats');
+
       const data = await response.json();
-      setSalesStats(data);
+      if (data && !data.error) {
+        setSalesStats(data);
+      }
     } catch (error) {
-      console.error('Failed to fetch sales stats');
+      console.error('Failed to fetch sales stats:', error);
     }
   };
 
