@@ -86,34 +86,36 @@ export function InteractiveTripPlanner() {
   return (
     <div className="w-full max-w-3xl mx-auto py-12">
       <Card className="border-0 shadow-2xl bg-white/90 backdrop-blur-sm dark:bg-slate-950/90 ring-1 ring-slate-200 dark:ring-slate-800">
-        <CardHeader className="text-center pb-8 border-b dark:border-slate-800">
+        <CardHeader className="text-center pb-8 border-b dark:border-slate-800 bg-white dark:bg-slate-950 rounded-t-xl">
           <CardTitle className="text-3xl font-light text-[#b5852a]">Build Your Custom Trip</CardTitle>
-          <CardDescription className="text-lg mt-2">Design your perfect Kashmir experience in 3 simple steps</CardDescription>
+          <CardDescription className="text-lg text-slate-600 dark:text-slate-400 mt-2">Design your perfect Kashmir experience in 3 simple steps</CardDescription>
         </CardHeader>
         
         <CardContent className="p-8">
           {/* Step 1: Basics */}
           {step === 1 && (
             <div className="space-y-6 animate-in slide-in-from-right fade-in duration-500">
-              <h3 className="text-xl font-medium flex items-center gap-2">
+              <h3 className="text-xl font-medium flex items-center gap-2 text-slate-900 dark:text-white">
                 <CalendarIcon className="text-[#b5852a]" /> When are you traveling?
               </h3>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>Travel Date</Label>
+                  <Label className="text-slate-700 dark:text-slate-300">Travel Date</Label>
                   <Input 
                     type="date" 
                     value={formData.date} 
                     onChange={e => setFormData({ ...formData, date: e.target.value })}
+                    className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Number of Guests</Label>
+                  <Label className="text-slate-700 dark:text-slate-300">Number of Guests</Label>
                   <Input 
                     type="number" 
                     min="1" 
                     value={formData.adults} 
                     onChange={e => setFormData({ ...formData, adults: parseInt(e.target.value) })}
+                    className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300"
                   />
                 </div>
               </div>
@@ -125,10 +127,10 @@ export function InteractiveTripPlanner() {
             <div className="space-y-6 animate-in slide-in-from-right fade-in duration-500">
               <div className="flex items-center justify-between border-b pb-4">
                 <div>
-                  <h3 className="text-xl font-medium flex items-center gap-2">
+                  <h3 className="text-xl font-medium flex items-center gap-2 text-slate-900 dark:text-white">
                     <Plane className="text-[#b5852a]" /> Include Flights to Srinagar?
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-1">Get live pricing from major airports</p>
+                  <p className="text-sm text-slate-500 mt-1">Get live pricing from major airports</p>
                 </div>
                 <Switch 
                   checked={formData.includeFlights} 
@@ -140,9 +142,9 @@ export function InteractiveTripPlanner() {
                 <div className="space-y-4 pt-4">
                   <div className="flex gap-4 items-end">
                     <div className="flex-1 space-y-2">
-                      <Label>Flying From</Label>
+                      <Label className="text-slate-700 dark:text-slate-300">Flying From</Label>
                       <select 
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                        className="flex h-10 w-full rounded-md border border-slate-300 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white ring-offset-background"
                         value={formData.origin}
                         onChange={e => {
                           setFormData({ ...formData, origin: e.target.value });
@@ -162,7 +164,7 @@ export function InteractiveTripPlanner() {
 
                   {flightOffers.length > 0 && (
                     <div className="space-y-3 mt-6">
-                      <Label>Select a Flight Option</Label>
+                      <Label className="text-slate-700 dark:text-slate-300">Select a Flight Option</Label>
                       {flightOffers.map(offer => (
                         <div 
                           key={offer.offerId}
@@ -200,19 +202,19 @@ export function InteractiveTripPlanner() {
           {/* Step 3: Contact */}
           {step === 3 && (
             <div className="space-y-6 animate-in slide-in-from-right fade-in duration-500">
-              <h3 className="text-xl font-medium">Final Details</h3>
+              <h3 className="text-xl font-medium text-slate-900 dark:text-white">Final Details</h3>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Full Name</Label>
-                  <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                  <Label className="text-slate-700 dark:text-slate-300">Full Name</Label>
+                  <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                  <Label className="text-slate-700 dark:text-slate-300">Email</Label>
+                  <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Phone (WhatsApp preferred)</Label>
-                  <Input type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                  <Label className="text-slate-700 dark:text-slate-300">Phone (WhatsApp preferred)</Label>
+                  <Input type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300" />
                 </div>
               </div>
             </div>
