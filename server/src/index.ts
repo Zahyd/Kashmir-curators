@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import './config/env'; // Strictly validate environment variables at server boot
 import express from 'express';
 import cors from 'cors';
 import path from 'path';

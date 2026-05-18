@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma';
 import { googleSheetsService } from './googleSheetsService';
 import { notificationService } from './notificationService';
+import env from '../config/env';
 
 // Conversational States
 export type ChatState =
@@ -240,8 +241,8 @@ export class WhatsAppWorkflowEngine {
   public static async executeWhatsAppSenderNode(to: string, replyText: string): Promise<boolean> {
     console.log('[n8n Node: WhatsApp Message Dispatcher] Executing...');
     
-    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-    const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const accessToken = env.WHATSAPP_ACCESS_TOKEN;
+    const phoneId = env.WHATSAPP_PHONE_NUMBER_ID;
 
     if (!accessToken || !phoneId) {
       console.log(`\n======================================================`);

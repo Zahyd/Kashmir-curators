@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { whatsappService } from '../services/whatsappService';
+import env from '../config/env';
 
 /**
  * GET /api/whatsapp
@@ -12,7 +13,7 @@ export const verifyWebhook = async (req: Request, res: Response): Promise<any> =
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
   
-  const configVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'kashmir_connect_verify_token';
+  const configVerifyToken = env.WHATSAPP_VERIFY_TOKEN;
 
   if (mode && token) {
     if (mode === 'subscribe' && token === configVerifyToken) {

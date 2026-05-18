@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
+import env from '../config/env';
 
 class GoogleSheetsService {
   private sheets: any = null;
@@ -8,13 +9,13 @@ class GoogleSheetsService {
   private async getSheetsClient() {
     if (this.sheets) return this.sheets;
 
-    const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+    const spreadsheetId = env.GOOGLE_SPREADSHEET_ID;
     if (!spreadsheetId) {
       throw new Error('GOOGLE_SPREADSHEET_ID is not configured in environment variables.');
     }
 
     let auth: any = null;
-    const credsJsonEnv = process.env.GOOGLE_CREDS_JSON;
+    const credsJsonEnv = env.GOOGLE_CREDS_JSON;
     const credsFilePath = path.join(__dirname, '../../google-credentials.json');
 
     if (credsJsonEnv) {
@@ -51,7 +52,7 @@ class GoogleSheetsService {
 
   public async appendLeadToSheet(inquiry: any) {
     try {
-      const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+      const spreadsheetId = env.GOOGLE_SPREADSHEET_ID;
       if (!spreadsheetId) {
         console.warn('[GoogleSheetsService] Ingestion skipped: GOOGLE_SPREADSHEET_ID is missing.');
         return false;
