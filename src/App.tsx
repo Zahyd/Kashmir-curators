@@ -15,6 +15,8 @@ import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import TripPlanner from "./pages/TripPlanner";
 import NotFound from "./pages/NotFound";
+import BlogList from "./pages/BlogList";
+import BlogPost from "./pages/BlogPost";
 
 import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
@@ -39,6 +41,8 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/planner" element={<TripPlanner />} />
+              <Route path="/blog" element={<BlogList />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/sales/auth" element={<SalesAuth />} />
               <Route path="/sales/portal" element={<SalesPortal />} />
               <Route path="/sales" element={<SalesAuth />} />

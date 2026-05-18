@@ -4,6 +4,7 @@ export interface SeoMetaProps {
   title: string;
   description: string;
   keywords?: string;
+  image?: string;
   ogType?: 'website' | 'article' | 'travel';
   schema?: Record<string, any>;
 }
@@ -12,6 +13,7 @@ export const SeoMeta = ({
   title,
   description,
   keywords = 'kashmir connect, kashmir curators, gulmarg tour, pahalgam package, srinagar houseboats',
+  image,
   ogType = 'website',
   schema
 }: SeoMetaProps) => {
@@ -41,6 +43,9 @@ export const SeoMeta = ({
     setMetaTag('meta[property="og:description"]', 'property', 'og:description', description);
     setMetaTag('meta[property="og:type"]', 'property', 'og:type', ogType);
     setMetaTag('meta[property="og:url"]', 'property', 'og:url', window.location.href);
+    if (image) {
+      setMetaTag('meta[property="og:image"]', 'property', 'og:image', image);
+    }
 
     // 4. Set Twitter social cards
     setMetaTag('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
