@@ -67,6 +67,10 @@ export function InteractiveTripPlanner() {
           email: formData.email,
           phone: formData.phone,
           destination: 'Bespoke Srinagar Experience',
+          duration: '6 Days',
+          travelers: String(formData.adults),
+          budget: `₹${totalEstimate.toLocaleString()}`,
+          accommodation: formData.includeFlights ? 'Luxury Hotel + Flights' : 'Luxury Hotel Only',
           message: `Custom Build. Guests: ${formData.adults}. Include Flights: ${formData.includeFlights}. Origin: ${formData.origin}. Estimated Budget: ₹${totalEstimate.toLocaleString()}`,
         })
       });
@@ -74,6 +78,9 @@ export function InteractiveTripPlanner() {
       if (res.ok) {
         toast.dismiss();
         setStep(4);
+      } else {
+        toast.dismiss();
+        toast.error('Failed to submit request.');
       }
     } catch (e) {
       toast.dismiss();

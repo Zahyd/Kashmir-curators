@@ -34,14 +34,14 @@ export const createInquiry = async (req: Request, res: Response) => {
     const inquiry = await p.inquiry.create({
       data: {
         userId: userId || null,
-        customerName,
-        email,
-        phone,
-        destination,
-        duration,
-        travelers,
-        budget,
-        accommodation,
+        customerName: customerName || 'Valued Guest',
+        email: email || 'notprovided@kashmirconnect.com',
+        phone: phone || 'Not Provided',
+        destination: destination || 'Kashmir',
+        duration: duration || '6 Days',
+        travelers: travelers ? String(travelers) : '2',
+        budget: budget || 'Flexible',
+        accommodation: accommodation || 'Premium Hotel',
         status: 'New'
       }
     });
@@ -65,6 +65,7 @@ export const createInquiry = async (req: Request, res: Response) => {
 
     res.status(201).json(finalInquiry);
   } catch (error) {
+    console.error('Inquiry submission error:', error);
     res.status(500).json({ error: 'Failed to submit inquiry' });
   }
 };
