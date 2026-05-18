@@ -1,35 +1,36 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Configure the transporter with Gmail
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+// Configure the Resend client
+const resend = new Resend(process.env.RESEND_API_KEY || 're_mock_key_123');
 
 export const notificationService = {
   /**
    * Send an automated email to a customer
    */
   async sendCustomerEmail(to: string, subject: string, html: string) {
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-      console.warn('Email not sent: Gmail credentials missing in .env');
+    if (!process.env.RESEND_API_KEY) {
+      console.warn('Email not sent: RESEND_API_KEY missing in .env. Running in simulation mode.');
+      console.log(`[SIMULATED EMAIL] To: ${to} | Subject: ${subject}`);
       return false;
     }
 
     try {
-      const info = await transporter.sendMail({
-        from: `"Kashmir Curators" <${process.env.GMAIL_USER}>`,
+      const { data, error } = await resend.emails.send({
+        from: 'Kashmir Curators <booking@thekashmircurators.com>',
         to,
         subject,
         html,
       });
-      console.log('Message sent: %s', info.messageId);
+      
+      if (error) {
+        console.error('Error sending email via Resend API:', error);
+        return false;
+      }
+
+      console.log('Message sent successfully via Resend. ID: %s', data?.id);
       return true;
     } catch (error) {
-      console.error('Error sending email:', (error as any).message || error);
+      console.error('Exception sending email via Resend:', (error as any).message || error);
       return false;
     }
   },

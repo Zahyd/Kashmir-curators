@@ -1,5 +1,14 @@
 import 'dotenv/config';
 import './config/env'; // Strictly validate environment variables at server boot
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  integrations: [nodeProfilingIntegration()],
+  tracesSampleRate: 1.0,
+  profilesSampleRate: 1.0,
+});
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -110,6 +119,9 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/', seoRoutes);
+
+// The error handler must be before any other error middleware and after all controllers
+Sentry.setupExpressErrorHandler(app);
 
 app.get('/health-check', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
