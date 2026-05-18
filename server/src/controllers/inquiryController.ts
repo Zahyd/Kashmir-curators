@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { notificationService } from '../services/notificationService';
 import { googleSheetsService } from '../services/googleSheetsService';
+import { PricingService } from '../services/pricingService';
 
 
 export const getInquiries = async (req: Request, res: Response) => {
@@ -53,6 +54,26 @@ export const createInquiry = async (req: Request, res: Response) => {
     res.status(201).json(inquiry);
   } catch (error) {
     res.status(500).json({ error: 'Failed to submit inquiry' });
+  }
+};
+
+export const getDynamicQuote = async (req: Request, res: Response) => {
+  const { destination, durationDays, travelers, hotelTier, hasCab, cabType } = req.body;
+  
+  try {
+    const quote = PricingService.calculateQuote({
+      destination: destination || 'Kashmir',
+      durationDays: Number(durationDays) || 6,
+      travelers: Number(travelers) || 2,
+      hotelTier: hotelTier || 'STANDARD',
+      hasCab: hasCab === undefined ? true : !!hasCab,
+      cabType: cabType || 'SUV_COMFORT'
+    });
+    
+    res.json(quote);
+  } catch (error: any) {
+    console.error('[PricingEngine] Failed to compute dynamic quote:', error.message);
+    res.status(500).json({ error: 'Failed to calculate custom travel quote' });
   }
 };
 

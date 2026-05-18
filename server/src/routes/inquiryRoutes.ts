@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getInquiries, createInquiry, updateInquiry, sendProposal } from '../controllers/inquiryController';
+import { getInquiries, createInquiry, updateInquiry, sendProposal, getDynamicQuote } from '../controllers/inquiryController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -7,6 +7,7 @@ const router = Router();
 router.get('/', authenticateToken, getInquiries);
 router.patch('/:id', authenticateToken, updateInquiry);
 router.post('/:id/send-proposal', authenticateToken, sendProposal);
+router.post('/quote', getDynamicQuote);
 
 /**
  * @swagger
