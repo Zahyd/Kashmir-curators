@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Plane, Calendar as CalendarIcon, Users, ArrowRight, CheckCircle, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/lib/api';
 
 export function InteractiveTripPlanner() {
   const [step, setStep] = useState(1);
@@ -28,7 +29,7 @@ export function InteractiveTripPlanner() {
   const searchFlights = async () => {
     setIsSearchingFlights(true);
     try {
-      const res = await fetch(`/api/flights/search?origin=${formData.origin}&date=${formData.date}&adults=${formData.adults}`);
+      const res = await fetch(`${API_BASE_URL}/flights/search?origin=${formData.origin}&date=${formData.date}&adults=${formData.adults}`);
       const data = await res.json();
       if (data.success) {
         setFlightOffers(data.offers);
@@ -58,7 +59,7 @@ export function InteractiveTripPlanner() {
     const totalEstimate = basePrice + flightPrice;
 
     try {
-      const res = await fetch('/api/inquiries', {
+      const res = await fetch(`${API_BASE_URL}/inquiries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

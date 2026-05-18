@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer';
 import SeoMeta from '@/components/SeoMeta';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function BlogPost() {
   const { slug } = useParams();
@@ -12,7 +13,7 @@ export default function BlogPost() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/content/posts/${slug}`)
+    fetch(`${API_BASE_URL}/content/posts/${slug}`)
       .then(res => res.json())
       .then(data => {
         if (!data.error) setPost(data);

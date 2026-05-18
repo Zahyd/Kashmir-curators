@@ -5,13 +5,14 @@ import Footer from '@/components/layout/Footer';
 import SeoMeta from '@/components/SeoMeta';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function BlogList() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/content/posts')
+    fetch(`${API_BASE_URL}/content/posts`)
       .then(res => res.json())
       .then(data => {
         setPosts(data);
