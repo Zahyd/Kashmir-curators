@@ -41,7 +41,7 @@ export function validateEnv(): EnvSchema {
   const config: EnvSchema = {
     PORT: getEnvNumber('PORT', 5000),
     DATABASE_URL: getEnvString('DATABASE_URL'),
-    GOOGLE_SPREADSHEET_ID: getEnvString('GOOGLE_SPREADSHEET_ID'),
+    GOOGLE_SPREADSHEET_ID: getEnvString('GOOGLE_SPREADSHEET_ID', '', false),
     GOOGLE_CREDS_JSON: getEnvString('GOOGLE_CREDS_JSON', '', false),
     GMAIL_USER: getEnvString('GMAIL_USER', '', false),
     GMAIL_PASS: getEnvString('GMAIL_PASS', '', false),
