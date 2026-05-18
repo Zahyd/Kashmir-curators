@@ -8,16 +8,18 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String
-  phone     String?
-  role      String    @default("user") // user, admin, sales, marketing
-  bookings  Booking[]
-  inquiries Inquiry[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  name         String
+  phone        String?
+  role         String    @default("user") // user, admin, sales, marketing
+  isOnline     Boolean   @default(false)
+  leadCapacity Int       @default(5)
+  bookings     Booking[]
+  inquiries    Inquiry[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model Package {
@@ -139,5 +141,16 @@ model Media {
   size         Int?
   mimeType     String?
   publicId     String?  // Cloudinary public_id
+  createdAt    DateTime @default(now())
+}
+
+model TransactionLedger {
+  id           String   @id @default(uuid())
+  bookingId    String
+  amount       Float
+  type         String   // CREDIT, DEBIT
+  paymentId    String   @unique
+  orderId      String
+  description  String?
   createdAt    DateTime @default(now())
 }

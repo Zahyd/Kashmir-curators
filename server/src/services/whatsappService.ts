@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma';
 import { googleSheetsService } from './googleSheetsService';
 import { notificationService } from './notificationService';
+import { CRMService } from './crmService';
 import env from '../config/env';
 
 // Conversational States
@@ -175,6 +176,13 @@ export class WhatsAppWorkflowEngine {
           status: 'New'
         }
       });
+
+      // Auto-assign lead to active online sales agents using Round-Robin Routing
+      try {
+        await CRMService.assignLeadRoundRobin(inquiry.id);
+      } catch (err: any) {
+        console.error('[CRMService] WhatsApp auto-assign failure:', err.message);
+      }
 
       // Broadcast lead creation via WebSockets to open Admin CMS Panels in real-time
       if (io) {

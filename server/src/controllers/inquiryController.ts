@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { notificationService } from '../services/notificationService';
 import { googleSheetsService } from '../services/googleSheetsService';
 import { PricingService } from '../services/pricingService';
+import { CRMService } from '../services/crmService';
 
 
 export const getInquiries = async (req: Request, res: Response) => {
@@ -51,7 +52,18 @@ export const createInquiry = async (req: Request, res: Response) => {
     // Sync to Google Sheets (fail-safe and non-blocking in background)
     googleSheetsService.appendLeadToSheet(inquiry);
 
-    res.status(201).json(inquiry);
+    // Auto-assign lead to active online sales agents using Round-Robin Routing
+    let finalInquiry = inquiry;
+    try {
+      const assignedAgent = await CRMService.assignLeadRoundRobin(inquiry.id);
+      if (assignedAgent) {
+        finalInquiry = await p.inquiry.findUnique({ where: { id: inquiry.id } }) || inquiry;
+      }
+    } catch (routeErr: any) {
+      console.error('[crmService] Round-Robin assignment failure:', routeErr.message);
+    }
+
+    res.status(201).json(finalInquiry);
   } catch (error) {
     res.status(500).json({ error: 'Failed to submit inquiry' });
   }
