@@ -6,6 +6,7 @@ interface LogoProps extends React.SVGProps<SVGSVGElement> {
 }
 
 export function Logo({ className, isHero, ...props }: LogoProps) {
+  const textColor = isHero ? "text-white" : "text-[#0A2B5E] dark:text-white";
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -14,56 +15,66 @@ export function Logo({ className, isHero, ...props }: LogoProps) {
       {...props}
     >
       <defs>
-        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#F3E5AB" />
-          <stop offset="50%" stopColor="#D4AF37" />
-          <stop offset="100%" stopColor="#AA801E" />
+        <linearGradient id="sunGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#FFDE00"/>
+          <stop offset="100%" stopColor="#FFB300"/>
         </linearGradient>
       </defs>
       
-      {/* Mountain graphic */}
-      <g transform="translate(10, 15)">
-        {/* Back mountain */}
-        <path
-          d="M 60 75 L 85 25 L 115 75 Z"
-          fill="url(#goldGradient)"
-          opacity="0.8"
-        />
-        <path
-          d="M 85 25 L 100 55 L 115 75 L 75 75 Z"
-          fill="rgba(0,0,0,0.15)"
-        />
-        <path
-          d="M 85 25 L 78 39 L 84 43 L 90 35 L 96 45 L 100 38 Z"
-          fill="white"
-        />
+      <g transform="translate(5, 10)">
+        {/* Sun Background */}
+        <path d="M 20 80 C 20 30 100 30 100 80 Z" fill="url(#sunGradient)" />
+        <path d="M 23 55 Q 60 50 97 55 L 98 60 Q 60 55 22 60 Z" fill="#FFA000" opacity="0.6"/>
+        <path d="M 20 70 Q 60 65 100 70 L 100 75 Q 60 70 20 75 Z" fill="#FFA000" opacity="0.6"/>
 
-        {/* Front mountain */}
-        <path
-          d="M 20 85 L 55 15 L 90 85 Z"
-          fill="url(#goldGradient)"
-        />
-        <path
-          d="M 55 15 L 75 55 L 90 85 L 45 85 Z"
-          fill="rgba(0,0,0,0.2)"
-        />
-        <path
-          d="M 55 15 L 45 35 L 52 39 L 58 31 L 66 43 L 70 35 Z"
-          fill="white"
-        />
+        {/* Airplane */}
+        <g transform="translate(55, 15) rotate(-15) scale(0.6)">
+          <path d="M 0 10 L 25 10 L 40 -10 L 45 -10 L 35 10 L 55 10 C 60 10 65 13 65 15 C 65 17 60 20 55 20 L 35 20 L 45 40 L 40 40 L 25 20 L 0 20 L -5 25 L -10 25 L -5 15 L -10 5 L -5 5 Z" fill="currentColor" className={textColor} />
+        </g>
+
+        {/* Trees */}
+        <g fill="currentColor" className={textColor}>
+          {/* Tall Tree */}
+          <path d="M 22 84 Q 15 60 22 40 Q 24 60 26 84 Z" />
+          <path d="M 22 40 Q 10 40 5 45 Q 15 38 22 40 Z" />
+          <path d="M 22 40 Q 15 30 10 25 Q 18 32 22 40 Z" />
+          <path d="M 22 40 Q 25 28 30 25 Q 26 32 22 40 Z" />
+          <path d="M 22 40 Q 35 35 40 40 Q 30 38 22 40 Z" />
+          <path d="M 22 40 Q 30 45 35 50 Q 25 45 22 40 Z" />
+
+          {/* Short Tree */}
+          <path d="M 30 84 Q 26 65 30 55 Q 32 65 33 84 Z" />
+          <path d="M 30 55 Q 20 55 18 60 Q 25 53 30 55 Z" />
+          <path d="M 30 55 Q 25 45 22 40 Q 28 48 30 55 Z" />
+          <path d="M 30 55 Q 35 45 40 42 Q 33 50 30 55 Z" />
+          <path d="M 30 55 Q 42 55 45 60 Q 35 58 30 55 Z" />
+          <path d="M 30 55 Q 35 65 40 70 Q 32 60 30 55 Z" />
+        </g>
+
+        {/* Mountains Base */}
+        <path d="M 15 85 L 35 55 L 45 65 L 60 40 L 75 58 L 85 45 L 105 85 Z" fill="currentColor" className={textColor} />
+        
+        {/* Snowcaps */}
+        <path d="M 35 55 L 41 68 L 38 70 L 35 63 L 30 70 L 27 65 Z" fill="#FFFFFF" />
+        <path d="M 60 40 L 68 55 L 63 60 L 60 52 L 55 62 L 50 50 Z" fill="#FFFFFF" />
+        <path d="M 85 45 L 92 60 L 88 62 L 85 55 L 80 62 L 78 55 Z" fill="#FFFFFF" />
+
+        {/* Underscore swooshes */}
+        <path d="M 10 88 Q 60 82 110 88" stroke="currentColor" strokeWidth="1.5" fill="none" className={textColor} />
+        <path d="M 15 92 Q 60 87 105 92" stroke="currentColor" strokeWidth="1" fill="none" className={textColor} />
       </g>
 
       {/* Main Brand Text */}
       <text
         x="135"
         y="65"
-        fontFamily="'Playfair Display', 'Times New Roman', Georgia, serif"
-        fontSize="36"
-        fontWeight="600"
+        fontFamily="system-ui, -apple-system, sans-serif"
+        fontSize="40"
+        fontWeight="900"
         fill="currentColor"
-        className={isHero ? "text-white" : "text-slate-900 dark:text-white"}
+        className={textColor}
       >
-        The Kashmir Curators
+        KASHMIR CURATORS
       </text>
 
       {/* Subtitle */}
@@ -71,12 +82,12 @@ export function Logo({ className, isHero, ...props }: LogoProps) {
         x="138"
         y="92"
         fontFamily="system-ui, -apple-system, sans-serif"
-        fontSize="13"
-        letterSpacing="6"
-        fill="#D4AF37"
-        fontWeight="600"
+        fontSize="16"
+        letterSpacing="2"
+        fill="currentColor"
+        className={textColor}
       >
-        LUXURY TRAVEL
+        Travel Agency
       </text>
     </svg>
   );
