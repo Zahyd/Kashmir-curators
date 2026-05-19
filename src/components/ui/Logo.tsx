@@ -140,41 +140,43 @@ export function Logo({ className, isHero, ...props }: LogoProps) {
 
       {/* Exquisite 3D Typography */}
       <g transform="translate(180, 0)">
-        {/* Deep drop shadow for the white text to guarantee absolute readability */}
+        {/* Deep drop shadow for the cozy serif text to guarantee absolute readability */}
         <text
           x="2"
-          y="77"
-          fontFamily="Montserrat, 'Inter', system-ui, -apple-system, sans-serif"
-          fontSize="38"
-          fontWeight="900"
-          letterSpacing="1"
+          y="78"
+          fontFamily="'Playfair Display', Georgia, serif"
+          fontSize="43"
+          fontWeight="700"
+          fontStyle="italic"
+          letterSpacing="0.5"
           fill="#000000"
-          opacity="0.4"
+          opacity="0.35"
           filter="url(#shadowLight)"
         >
-          KASHMIR CURATORS
+          Kashmir Curators
         </text>
-        {/* Main Brand Title: High-end Solid White */}
+        {/* Main Brand Title: Cozy Editorial White Serif */}
         <text
           x="0"
-          y="75"
-          fontFamily="Montserrat, 'Inter', system-ui, -apple-system, sans-serif"
-          fontSize="38"
-          fontWeight="900"
-          letterSpacing="1"
+          y="76"
+          fontFamily="'Playfair Display', Georgia, serif"
+          fontSize="43"
+          fontWeight="700"
+          fontStyle="italic"
+          letterSpacing="0.5"
           fill="#FFFFFF"
         >
-          KASHMIR CURATORS
+          Kashmir Curators
         </text>
 
-        {/* Subtitle: Perfectly aligned and tracked gold accent */}
+        {/* Subtitle: Perfectly aligned DM Sans tracked gold accent */}
         <text
           x="4"
-          y="104"
-          fontFamily="Montserrat, 'Inter', system-ui, -apple-system, sans-serif"
-          fontSize="13"
-          fontWeight="800"
-          letterSpacing="9"
+          y="105"
+          fontFamily="'DM Sans', system-ui, sans-serif"
+          fontSize="11"
+          fontWeight="700"
+          letterSpacing="8"
           fill="url(#gold3D)"
           filter="url(#shadowLight)"
         >
