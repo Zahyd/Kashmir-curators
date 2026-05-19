@@ -140,39 +140,37 @@ export function Logo({ className, isHero, ...props }: LogoProps) {
 
       {/* Exquisite 3D Typography */}
       <g transform="translate(180, 0)">
-        {/* Deep drop shadow for the cozy serif text to guarantee absolute readability */}
+        {/* Deep drop shadow for the cursive calligraphy to make it pop beautifully */}
         <text
           x="2"
-          y="78"
-          fontFamily="'Playfair Display', Georgia, serif"
-          fontSize="43"
-          fontWeight="700"
-          fontStyle="italic"
-          letterSpacing="0.5"
+          y="82"
+          fontFamily="'Great Vibes', 'Pinyon Script', cursive"
+          fontSize="58"
+          fontWeight="400"
+          letterSpacing="0"
           fill="#000000"
-          opacity="0.35"
+          opacity="0.3"
           filter="url(#shadowLight)"
         >
           Kashmir Curators
         </text>
-        {/* Main Brand Title: Cozy Editorial White Serif */}
+        {/* Main Brand Title: Luxury Signature Calligraphy in White */}
         <text
           x="0"
-          y="76"
-          fontFamily="'Playfair Display', Georgia, serif"
-          fontSize="43"
-          fontWeight="700"
-          fontStyle="italic"
-          letterSpacing="0.5"
+          y="80"
+          fontFamily="'Great Vibes', 'Pinyon Script', cursive"
+          fontSize="58"
+          fontWeight="400"
+          letterSpacing="0"
           fill="#FFFFFF"
         >
           Kashmir Curators
         </text>
 
-        {/* Subtitle: Perfectly aligned DM Sans tracked gold accent */}
+        {/* Subtitle: Perfectly aligned and tracked gold accent */}
         <text
-          x="4"
-          y="105"
+          x="6"
+          y="110"
           fontFamily="'DM Sans', system-ui, sans-serif"
           fontSize="11"
           fontWeight="700"
