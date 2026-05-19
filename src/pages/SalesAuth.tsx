@@ -75,7 +75,14 @@ export default function SalesAuth() {
       if (result.success) {
         setIsOtpSent(true);
         setMaskedPhone(result.phone || '');
-        toast.success('Security verification OTP dispatched via SMS');
+        if (result.otp) {
+          toast.info(`Local Validation Mode: Twilio is unconfigured. Please use security code: ${result.otp}`, {
+            duration: 15000,
+            icon: '🔑'
+          });
+        } else {
+          toast.success('Security verification OTP dispatched via SMS');
+        }
       } else {
         setError(result.error || 'Authentication failed to dispatch code');
         toast.error('Authentication Failed');
@@ -263,7 +270,14 @@ export default function SalesAuth() {
                     setIsProcessing(false);
                     if (result.success) {
                       setMaskedPhone(result.phone || '');
-                      toast.success('New OTP Dispatched via SMS');
+                      if (result.otp) {
+                        toast.info(`Local Validation Mode: Twilio is unconfigured. Please use security code: ${result.otp}`, {
+                          duration: 15000,
+                          icon: '🔑'
+                        });
+                      } else {
+                        toast.success('New OTP Dispatched via SMS');
+                      }
                     } else {
                       setError('Failed to resend code.');
                     }
