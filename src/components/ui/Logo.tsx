@@ -140,55 +140,41 @@ export function Logo({ className, isHero, ...props }: LogoProps) {
 
       {/* Exquisite 3D Typography */}
       <g transform="translate(180, 0)">
-        {/* Shadow */}
+        {/* Deep drop shadow for the white text to guarantee absolute readability */}
         <text
           x="2"
-          y="73"
+          y="77"
           fontFamily="Montserrat, 'Inter', system-ui, -apple-system, sans-serif"
-          fontSize="46"
+          fontSize="38"
           fontWeight="900"
-          letterSpacing="-0.5"
+          letterSpacing="1"
           fill="#000000"
-          opacity="0.6"
+          opacity="0.4"
           filter="url(#shadowLight)"
         >
           KASHMIR CURATORS
         </text>
-        {/* Main Text Body */}
+        {/* Main Brand Title: High-end Solid White */}
         <text
           x="0"
-          y="70"
+          y="75"
           fontFamily="Montserrat, 'Inter', system-ui, -apple-system, sans-serif"
-          fontSize="46"
+          fontSize="38"
           fontWeight="900"
-          letterSpacing="-0.5"
-          fill="currentColor"
-          className={textColor}
-        >
-          KASHMIR CURATORS
-        </text>
-        {/* Inner Highlight to make text pop dynamically */}
-        <text
-          x="0"
-          y="70"
-          fontFamily="Montserrat, 'Inter', system-ui, -apple-system, sans-serif"
-          fontSize="46"
-          fontWeight="900"
-          letterSpacing="-0.5"
-          fill="url(#gold3D)"
-          style={{ mixBlendMode: 'overlay', opacity: 0.8 }}
+          letterSpacing="1"
+          fill="#FFFFFF"
         >
           KASHMIR CURATORS
         </text>
 
-        {/* Subtitle */}
+        {/* Subtitle: Perfectly aligned and tracked gold accent */}
         <text
-          x="5"
-          y="102"
+          x="4"
+          y="104"
           fontFamily="Montserrat, 'Inter', system-ui, -apple-system, sans-serif"
-          fontSize="15"
+          fontSize="13"
           fontWeight="800"
-          letterSpacing="10"
+          letterSpacing="9"
           fill="url(#gold3D)"
           filter="url(#shadowLight)"
         >
