@@ -140,37 +140,37 @@ export function Logo({ className, isHero, ...props }: LogoProps) {
 
       {/* Exquisite 3D Typography */}
       <g transform="translate(180, 0)">
-        {/* Deep drop shadow for the cursive calligraphy to make it pop beautifully */}
+        {/* Deep drop shadow for the classical Roman letters to make it pop beautifully */}
         <text
           x="2"
-          y="82"
-          fontFamily="'Great Vibes', 'Pinyon Script', cursive"
-          fontSize="58"
-          fontWeight="400"
-          letterSpacing="0"
+          y="77"
+          fontFamily="'Cinzel', Georgia, serif"
+          fontSize="36"
+          fontWeight="700"
+          letterSpacing="2"
           fill="#000000"
-          opacity="0.3"
+          opacity="0.4"
           filter="url(#shadowLight)"
         >
-          Kashmir Curators
+          KASHMIR CURATORS
         </text>
-        {/* Main Brand Title: Luxury Signature Calligraphy in White */}
+        {/* Main Brand Title: Luxury Roman Serif (Cinzel) in White */}
         <text
           x="0"
-          y="80"
-          fontFamily="'Great Vibes', 'Pinyon Script', cursive"
-          fontSize="58"
-          fontWeight="400"
-          letterSpacing="0"
+          y="75"
+          fontFamily="'Cinzel', Georgia, serif"
+          fontSize="36"
+          fontWeight="700"
+          letterSpacing="2"
           fill="#FFFFFF"
         >
-          Kashmir Curators
+          KASHMIR CURATORS
         </text>
 
         {/* Subtitle: Perfectly aligned and tracked gold accent */}
         <text
-          x="6"
-          y="110"
+          x="4"
+          y="104"
           fontFamily="'DM Sans', system-ui, sans-serif"
           fontSize="11"
           fontWeight="700"
