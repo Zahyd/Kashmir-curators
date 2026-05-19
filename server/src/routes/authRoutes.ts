@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, teamLogin } from '../controllers/authController';
+import { register, login, getMe, teamLogin, teamSendOtp, teamVerifyOtp } from '../controllers/authController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -63,5 +63,7 @@ router.post('/login', login);
  */
 router.get('/me', authenticateToken, getMe);
 router.post('/team-login', teamLogin);
+router.post('/team-send-otp', teamSendOtp);
+router.post('/team-verify-otp', teamVerifyOtp);
 
 export default router;

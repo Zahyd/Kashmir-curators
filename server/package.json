@@ -44,6 +44,7 @@
     "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "twilio": "^6.0.2",
     "typescript": "^6.0.3"
   },
   "devDependencies": {

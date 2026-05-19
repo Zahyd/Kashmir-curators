@@ -78,6 +78,8 @@ interface TeamAuthContextType {
   isTeamLoading: boolean;
   systemEvents: SystemEvent[];
   teamLogin: (code: string) => Promise<{ success: boolean; error?: string }>;
+  teamSendOtp: (code: string, phone?: string) => Promise<{ success: boolean; simulated?: boolean; otp?: string; phone?: string; error?: string }>;
+  teamVerifyOtp: (code: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   teamLogout: () => void;
   hasPermission: (permission: string) => boolean;
   canAccessAdmin: boolean;
@@ -180,6 +182,55 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const teamSendOtp = async (code: string, phone?: string): Promise<{ success: boolean; simulated?: boolean; otp?: string; phone?: string; error?: string }> => {
+    try {
+      const response = await fetch(`${SOCKET_URL}/api/auth/team-send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, phone })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Failed to send OTP' };
+      }
+
+      return {
+        success: true,
+        simulated: data.simulated,
+        otp: data.otp,
+        phone: data.phone
+      };
+    } catch (error) {
+      return { success: false, error: 'Network error sending OTP. Is the server running?' };
+    }
+  };
+
+  const teamVerifyOtp = async (code: string, otp: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch(`${SOCKET_URL}/api/auth/team-verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, otp })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Verification failed' };
+      }
+
+      const { user, token } = await response.json();
+      
+      setTeamUser(user);
+      localStorage.setItem('team_user', JSON.stringify(user));
+      localStorage.setItem('teamToken', token);
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'Network error verifying OTP.' };
+    }
+  };
+
   const teamLogout = () => {
     setTeamUser(null);
     if (socket) socket.disconnect();
@@ -208,6 +259,8 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       isTeamLoading,
       systemEvents,
       teamLogin,
+      teamSendOtp,
+      teamVerifyOtp,
       teamLogout,
       hasPermission,
       canAccessAdmin,

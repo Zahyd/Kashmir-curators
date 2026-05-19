@@ -11,8 +11,12 @@ import { SOCKET_URL } from '@/lib/api';
 
 export default function SalesAuth() {
   const navigate = useNavigate();
-  const { teamUser, isTeamAuthenticated, teamLogin } = useTeamAuth();
+  const { teamUser, isTeamAuthenticated, teamSendOtp, teamVerifyOtp } = useTeamAuth();
   const [employeeCode, setEmployeeCode] = useState('');
+  const [otp, setOtp] = useState('');
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [maskedPhone, setMaskedPhone] = useState('');
+  const [simulatedOtp, setSimulatedOtp] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,10 +32,20 @@ export default function SalesAuth() {
     // Luxury workspace handshaking simulation
     await new Promise((resolve) => setTimeout(resolve, 1500));
     
-    const result = await teamLogin(account.code);
+    const result = await teamSendOtp(account.code);
     
     if (result.success) {
-      toast.success(`Access granted! Google Workspace verified.`);
+      toast.success(`Google Workspace verified. Real-time OTP dispatched.`);
+      setEmployeeCode(account.code);
+      setIsOtpSent(true);
+      setMaskedPhone(result.phone || '');
+      if (result.simulated && result.otp) {
+        setSimulatedOtp(result.otp);
+        toast.info(`Dev Mode Simulated OTP: ${result.otp}`, {
+          duration: 12000,
+          icon: '🔑'
+        });
+      }
       setShowGoogleModal(false);
     } else {
       setError(result.error || 'Google Workspace auth failed');
@@ -41,6 +55,7 @@ export default function SalesAuth() {
     setGoogleLoading(false);
     setSelectedGoogleEmail('');
   };
+
   useEffect(() => {
     if (isTeamAuthenticated && teamUser) {
       if (teamUser.role === 'sales') {
@@ -61,14 +76,42 @@ export default function SalesAuth() {
     setIsProcessing(true);
     setError('');
 
-    const result = await teamLogin(employeeCode);
+    if (!isOtpSent) {
+      // Step 1: Send OTP
+      const result = await teamSendOtp(employeeCode);
 
-    if (result.success) {
-      toast.success(`Welcome to Kashmir Curators Command Center`);
-      // Navigation handled by useEffect above
+      if (result.success) {
+        setIsOtpSent(true);
+        setMaskedPhone(result.phone || '');
+        if (result.simulated && result.otp) {
+          setSimulatedOtp(result.otp);
+          toast.success(`OTP Dispatched (Simulated Code: ${result.otp})`, {
+            duration: 12000,
+            icon: '🔑'
+          });
+        } else {
+          toast.success('Security verification OTP dispatched via SMS');
+        }
+      } else {
+        setError(result.error || 'Authentication failed to dispatch code');
+        toast.error('Authentication Failed');
+      }
     } else {
-      setError(result.error || 'Authentication failed');
-      toast.error('Authentication Failed');
+      // Step 2: Verify OTP
+      if (!otp.trim()) {
+        setError('Verification OTP is required');
+        setIsProcessing(false);
+        return;
+      }
+
+      const result = await teamVerifyOtp(employeeCode, otp);
+
+      if (result.success) {
+        toast.success(`Welcome to Kashmir Curators Command Center`);
+      } else {
+        setError(result.error || 'Invalid or expired OTP code');
+        toast.error('Identity Verification Failed');
+      }
     }
 
     setIsProcessing(false);
@@ -125,35 +168,89 @@ export default function SalesAuth() {
           
           <div className="mb-8">
             <h2 className="text-xl font-bold text-white mb-2">Secure Team Access</h2>
-            <p className="text-white/40 text-sm">Enter your employee code to access your role-based workspace.</p>
+            <p className="text-white/40 text-sm">
+              {!isOtpSent 
+                ? "Enter your employee code to access your role-based workspace." 
+                : `Enter the 6-digit OTP code dispatched to your registered phone number.`}
+            </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">Employee ID Code</label>
-              <div className="relative group/input">
-                <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/20 group-focus-within/input:text-kashmir-gold transition-colors" />
-                <Input
-                  type="text"
-                  placeholder="e.g. SALES001, OPS001, ADMIN001"
-                  value={employeeCode}
-                  onChange={(e) => {
-                    setEmployeeCode(e.target.value.toUpperCase());
-                    setError('');
-                  }}
-                  className={cn(
-                    "pl-12 h-14 bg-white/5 border-white/10 text-white placeholder:text-white/20 rounded-2xl focus:ring-kashmir-gold/30 focus:border-kashmir-gold transition-all",
-                    error && "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20"
-                  )}
-                />
-              </div>
-              {error && (
-                <div className="flex items-center gap-2 text-red-400 text-xs mt-2 ml-1 animate-in fade-in slide-in-from-top-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>{error}</span>
+            {!isOtpSent ? (
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">Employee ID Code</label>
+                <div className="relative group/input">
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/20 group-focus-within/input:text-kashmir-gold transition-colors" />
+                  <Input
+                    type="text"
+                    placeholder="e.g. SALES001, OPS001, ADMIN001"
+                    value={employeeCode}
+                    onChange={(e) => {
+                      setEmployeeCode(e.target.value.toUpperCase());
+                      setError('');
+                    }}
+                    className={cn(
+                      "pl-12 h-14 bg-white/5 border-white/10 text-white placeholder:text-white/20 rounded-2xl focus:ring-kashmir-gold/30 focus:border-kashmir-gold transition-all",
+                      error && "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20"
+                    )}
+                  />
                 </div>
-              )}
-            </div>
+                {error && (
+                  <div className="flex items-center gap-2 text-red-400 text-xs mt-2 ml-1 animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{error}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Employee Badge display */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-kashmir-gold animate-pulse" />
+                    <span className="text-xs text-white/60 font-semibold tracking-wide">Identity Check: <b className="text-white font-mono">{employeeCode}</b></span>
+                  </div>
+                  <Badge className="bg-kashmir-gold text-black hover:bg-amber-500 text-[10px] font-black tracking-widest uppercase">OTP DISPATCHED</Badge>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center ml-1">
+                    <label className="text-xs font-bold uppercase tracking-widest text-white/50">Enter verification OTP</label>
+                    {maskedPhone && <span className="text-[10px] text-kashmir-gold/80 font-mono tracking-wider">{maskedPhone}</span>}
+                  </div>
+                  <div className="relative group/input">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/20 group-focus-within/input:text-kashmir-gold transition-colors" />
+                    <Input
+                      type="text"
+                      maxLength={6}
+                      placeholder="Enter 6-digit code"
+                      value={otp}
+                      onChange={(e) => {
+                        setOtp(e.target.value.replace(/\D/g, ''));
+                        setError('');
+                      }}
+                      className={cn(
+                        "pl-12 h-14 bg-white/5 border-white/10 text-white placeholder:text-white/20 rounded-2xl tracking-[0.3em] font-mono text-center text-lg focus:ring-kashmir-gold/30 focus:border-kashmir-gold transition-all",
+                        error && "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20"
+                      )}
+                    />
+                  </div>
+                  {error && (
+                    <div className="flex items-center gap-2 text-red-400 text-xs mt-2 ml-1 animate-in fade-in slide-in-from-top-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                </div>
+
+                {simulatedOtp && (
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center animate-pulse">
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-kashmir-gold">Developer Sandbox Mode</p>
+                    <p className="text-xs text-white/80 mt-1">Use simulated OTP: <b className="text-white font-mono tracking-widest bg-white/10 px-2 py-0.5 rounded ml-1 text-sm">{simulatedOtp}</b></p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <Button
               type="submit"
@@ -163,15 +260,55 @@ export default function SalesAuth() {
               {isProcessing ? (
                 <div className="flex items-center gap-3">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Authenticating...</span>
+                  <span>{!isOtpSent ? "Sending verification..." : "Verifying..."}</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  <span>Access Portal</span>
+                  <span>{!isOtpSent ? "Access Portal" : "Verify & Access"}</span>
                   <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
                 </div>
               )}
             </Button>
+
+            {isOtpSent && (
+              <div className="flex justify-between items-center text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOtpSent(false);
+                    setOtp('');
+                    setError('');
+                    setSimulatedOtp('');
+                  }}
+                  className="text-white/30 hover:text-white/60 transition-colors font-bold uppercase tracking-wider text-[10px]"
+                >
+                  ← Change Employee Code
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsProcessing(true);
+                    setError('');
+                    const result = await teamSendOtp(employeeCode);
+                    setIsProcessing(false);
+                    if (result.success) {
+                      setMaskedPhone(result.phone || '');
+                      if (result.simulated && result.otp) {
+                        setSimulatedOtp(result.otp);
+                        toast.success(`New OTP Dispatched (Simulated: ${result.otp})`, { icon: '🔑' });
+                      } else {
+                        toast.success('New OTP Dispatched via SMS');
+                      }
+                    } else {
+                      setError('Failed to resend code.');
+                    }
+                  }}
+                  className="text-kashmir-gold hover:text-amber-500 transition-colors font-bold uppercase tracking-wider text-[10px]"
+                >
+                  Resend OTP Code
+                </button>
+              </div>
+            )}
             
             {/* Premium Divider */}
             <div className="relative flex py-2 items-center">
