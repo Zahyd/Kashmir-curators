@@ -16,7 +16,6 @@ export default function SalesAuth() {
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [maskedPhone, setMaskedPhone] = useState('');
-  const [simulatedOtp, setSimulatedOtp] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
 
@@ -39,13 +38,6 @@ export default function SalesAuth() {
       setEmployeeCode(account.code);
       setIsOtpSent(true);
       setMaskedPhone(result.phone || '');
-      if (result.simulated && result.otp) {
-        setSimulatedOtp(result.otp);
-        toast.info(`Dev Mode Simulated OTP: ${result.otp}`, {
-          duration: 12000,
-          icon: '🔑'
-        });
-      }
       setShowGoogleModal(false);
     } else {
       setError(result.error || 'Google Workspace auth failed');
@@ -83,15 +75,7 @@ export default function SalesAuth() {
       if (result.success) {
         setIsOtpSent(true);
         setMaskedPhone(result.phone || '');
-        if (result.simulated && result.otp) {
-          setSimulatedOtp(result.otp);
-          toast.success(`OTP Dispatched (Simulated Code: ${result.otp})`, {
-            duration: 12000,
-            icon: '🔑'
-          });
-        } else {
-          toast.success('Security verification OTP dispatched via SMS');
-        }
+        toast.success('Security verification OTP dispatched via SMS');
       } else {
         setError(result.error || 'Authentication failed to dispatch code');
         toast.error('Authentication Failed');
@@ -116,13 +100,6 @@ export default function SalesAuth() {
 
     setIsProcessing(false);
   };
-
-  const roleCards = [
-    { code: 'ADMIN001', role: 'Director', desc: 'Full system access', color: 'text-kashmir-gold', bg: 'bg-kashmir-gold/10' },
-    { code: 'OPS001', role: 'Operations', desc: 'Lead review & assignment', color: 'text-blue-400', bg: 'bg-blue-500/10' },
-    { code: 'SALES001', role: 'Sales', desc: 'Pipeline & itinerary builder', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { code: 'MKT001', role: 'Marketing', desc: 'Content & media management', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-  ];
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 bg-[#05080a] overflow-hidden">
@@ -243,12 +220,6 @@ export default function SalesAuth() {
                   )}
                 </div>
 
-                {simulatedOtp && (
-                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center animate-pulse">
-                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-kashmir-gold">Developer Sandbox Mode</p>
-                    <p className="text-xs text-white/80 mt-1">Use simulated OTP: <b className="text-white font-mono tracking-widest bg-white/10 px-2 py-0.5 rounded ml-1 text-sm">{simulatedOtp}</b></p>
-                  </div>
-                )}
               </div>
             )}
 
@@ -278,7 +249,6 @@ export default function SalesAuth() {
                     setIsOtpSent(false);
                     setOtp('');
                     setError('');
-                    setSimulatedOtp('');
                   }}
                   className="text-white/30 hover:text-white/60 transition-colors font-bold uppercase tracking-wider text-[10px]"
                 >
@@ -293,12 +263,7 @@ export default function SalesAuth() {
                     setIsProcessing(false);
                     if (result.success) {
                       setMaskedPhone(result.phone || '');
-                      if (result.simulated && result.otp) {
-                        setSimulatedOtp(result.otp);
-                        toast.success(`New OTP Dispatched (Simulated: ${result.otp})`, { icon: '🔑' });
-                      } else {
-                        toast.success('New OTP Dispatched via SMS');
-                      }
+                      toast.success('New OTP Dispatched via SMS');
                     } else {
                       setError('Failed to resend code.');
                     }
@@ -359,30 +324,6 @@ export default function SalesAuth() {
             </div>
           </form>
 
-          {/* Role Quick-Access Cards */}
-          <div className="mt-10 pt-8 border-t border-white/5">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 text-center">Available Roles for Testing</p>
-            <div className="grid grid-cols-2 gap-3">
-              {roleCards.map((rc) => (
-                <button
-                  key={rc.code}
-                  type="button"
-                  onClick={() => {
-                    setEmployeeCode(rc.code);
-                    setError('');
-                  }}
-                  className={cn(
-                    "p-4 rounded-2xl border border-white/5 text-left hover:border-white/20 transition-all duration-300 group/role",
-                    rc.bg
-                  )}
-                >
-                  <p className={cn("text-xs font-black", rc.color)}>{rc.role}</p>
-                  <p className="text-[9px] text-white/30 mt-0.5">{rc.desc}</p>
-                  <p className="text-[8px] text-white/15 mt-2 font-mono">{rc.code}</p>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Footer Info */}

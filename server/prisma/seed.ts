@@ -195,6 +195,56 @@ async function main() {
     });
   }
 
+  // 6. Real Team Employees
+  const employees = [
+    {
+      email: "admin001@kashmirconnect.com",
+      name: "Zahid Khan (Director)",
+      role: "admin",
+      phone: "+919103798448",
+      employeeCode: "ADMIN001"
+    },
+    {
+      email: "sales001@kashmirconnect.com",
+      name: "Sales Executive 001",
+      role: "sales",
+      phone: "+919103798448",
+      employeeCode: "SALES001"
+    },
+    {
+      email: "ops001@kashmirconnect.com",
+      name: "Operations Executive 001",
+      role: "operations",
+      phone: "+919103798448",
+      employeeCode: "OPS001"
+    },
+    {
+      email: "mkt001@kashmirconnect.com",
+      name: "Marketing Executive 001",
+      role: "marketing",
+      phone: "+919103798448",
+      employeeCode: "MKT001"
+    }
+  ];
+
+  for (const emp of employees) {
+    await prisma.user.upsert({
+      where: { email: emp.email },
+      update: {
+        phone: emp.phone,
+        employeeCode: emp.employeeCode,
+        role: emp.role
+      },
+      create: {
+        email: emp.email,
+        name: emp.name,
+        role: emp.role,
+        phone: emp.phone,
+        employeeCode: emp.employeeCode
+      }
+    });
+  }
+
   console.log('Luxury Seeding complete!');
 }
 

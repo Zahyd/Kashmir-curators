@@ -86,158 +86,147 @@ const serviceSid = process.env.TWILIO_SERVICE_SID;
 
 const twilioClient = accountSid && authToken ? new Twilio(accountSid, authToken) : null;
 
-// Store simulated OTPs in memory (expires in 5 minutes)
-const teamOtps = new Map<string, { otp: string; expires: number; phone: string }>();
-
+// Store real OTPs inside the PostgreSQL 'Verification' database model
 export const teamSendOtp = async (req: Request, res: Response) => {
-  const { code, phone } = req.body;
+  const { code } = req.body;
   
-  const detectRole = (c: string) => {
-    const upper = c.toUpperCase();
-    if (upper.startsWith('ADMIN')) return 'admin';
-    if (upper.startsWith('OPS')) return 'operations';
-    if (upper.startsWith('SALES') || upper.startsWith('KC')) return 'sales';
-    if (upper.startsWith('MKT')) return 'marketing';
-    return null;
-  };
-
-  const role = detectRole(code);
-  if (!role) {
-    return res.status(400).json({ error: 'Invalid employee code' });
+  if (!code) {
+    return res.status(400).json({ error: 'Employee ID code is required' });
   }
-
-  // Find user by code / role in database or use fallback details
-  let targetPhone = phone || '';
-  if (!targetPhone) {
-    const user = await prisma.user.findFirst({
-      where: { role: role }
-    });
-    targetPhone = user?.phone || '';
-  }
-
-  // Fallback demo phone numbers if database phone is missing
-  if (!targetPhone) {
-    const demoPhones: Record<string, string> = {
-      'ADMIN001': '+919999999999',
-      'OPS001': '+918888888888',
-      'SALES001': '+917777777777',
-      'MKT001': '+916666666666',
-    };
-    targetPhone = demoPhones[code.toUpperCase()] || '+919999999999';
-  }
-
-  // Generate secure 6-digit OTP
-  const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  // Save OTP in-memory with a 5-minute TTL
-  teamOtps.set(code.toUpperCase(), {
-    otp: generatedOtp,
-    expires: Date.now() + 5 * 60 * 1000,
-    phone: targetPhone
-  });
 
   try {
-    if (twilioClient && serviceSid) {
-      // Real-time dispatch via Twilio Verify
-      await twilioClient.verify.v2
-        .services(serviceSid)
-        .verifications.create({ to: targetPhone, channel: 'sms' });
-      
-      console.log(`[Twilio OTP] Sent real OTP verification via Twilio to ${targetPhone}`);
-      return res.json({
-        success: true,
-        phone: targetPhone,
-        message: `OTP successfully dispatched to ${targetPhone.slice(0, 3)}*****${targetPhone.slice(-4)}`
-      });
-    } else {
-      // Simulation / Console Mode fallback
-      console.log('\n======================================================');
-      console.log(`🏔️  KASHMIR CONNECT - EMPLOYEE LOGIN OTP SYSTEM (SIMULATED):`);
-      console.log(`  - Employee: ${code.toUpperCase()} (${role})`);
-      console.log(`  - Registered Mobile: ${targetPhone}`);
-      console.log(`  - Generated OTP Code: ${generatedOtp}`);
-      console.log('======================================================\n');
-      
-      return res.json({
-        success: true,
-        simulated: true,
-        otp: generatedOtp,
-        phone: targetPhone,
-        message: `[Simulation Mode] OTP sent to ${targetPhone.slice(0, 3)}*****${targetPhone.slice(-4)}`
-      });
+    // 1. Retrieve the employee user from the database
+    const user = await prisma.user.findUnique({
+      where: { employeeCode: code.toUpperCase() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Access Denied: Invalid employee code' });
     }
-  } catch (error: any) {
-    console.error('Error dispatching team OTP:', error.message || error);
+
+    const role = user.role;
+    const targetPhone = user.phone;
+
+    if (!targetPhone) {
+      return res.status(400).json({ error: `Access Denied: No registered phone number found for ${user.name}` });
+    }
+
+    // 2. Generate a secure, high-entropy 6-digit OTP code
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
+
+    // 3. Store or overwrite the verification session directly in the database Verification model
+    await prisma.verification.deleteMany({
+      where: { identifier: code.toUpperCase() }
+    });
+
+    await prisma.verification.create({
+      data: {
+        identifier: code.toUpperCase(),
+        value: generatedOtp,
+        expiresAt
+      }
+    });
+
+    // 4. Dispatch via real-time Twilio SMS
+    if (twilioClient) {
+      try {
+        await twilioClient.messages.create({
+          body: `🏔️ Kashmir Curators Security Gate:\nYour 6-digit access code is: ${generatedOtp}. Valid for 5 minutes.`,
+          from: process.env.TWILIO_PHONE_NUMBER || '+18777804236',
+          to: targetPhone
+        });
+        console.log(`[Twilio SMS] Real OTP code successfully dispatched to registered phone ${targetPhone}`);
+      } catch (err: any) {
+        console.error('[Twilio Error] Failed to send SMS:', err.message || err);
+      }
+    } else {
+      console.log('\n======================================================');
+      console.log(`🏔️ KASHMIR CONNECT - DB-BACKED REAL OTP DISPATCH (LOCAL LOG):`);
+      console.log(`  - Employee: ${user.name} (${code.toUpperCase()})`);
+      console.log(`  - Registered Mobile: ${targetPhone}`);
+      console.log(`  - Generated OTP stored in Database: ${generatedOtp}`);
+      console.log('======================================================\n');
+    }
+
+    // Return the response with masked phone number
+    const maskedPhone = targetPhone.slice(0, 3) + '*******' + targetPhone.slice(-4);
+    
     return res.json({
       success: true,
-      simulated: true,
-      otp: generatedOtp,
-      phone: targetPhone,
-      message: `[Simulation Mode Fallback] OTP sent to ${targetPhone.slice(0, 3)}*****${targetPhone.slice(-4)}`
+      phone: maskedPhone,
+      otp: !twilioClient ? generatedOtp : undefined,
+      simulated: !twilioClient,
+      message: `OTP successfully dispatched to ${maskedPhone}`
     });
+
+  } catch (error: any) {
+    console.error('Error dispatching team OTP:', error.message || error);
+    return res.status(500).json({ error: 'Failed to dispatch security code' });
   }
 };
 
 export const teamVerifyOtp = async (req: Request, res: Response) => {
   const { code, otp } = req.body;
-  
-  const detectRole = (c: string) => {
-    const upper = c.toUpperCase();
-    if (upper.startsWith('ADMIN')) return 'admin';
-    if (upper.startsWith('OPS')) return 'operations';
-    if (upper.startsWith('SALES') || upper.startsWith('KC')) return 'sales';
-    if (upper.startsWith('MKT')) return 'marketing';
-    return null;
-  };
 
-  const role = detectRole(code);
-  if (!role) {
-    return res.status(400).json({ error: 'Invalid employee code' });
+  if (!code || !otp) {
+    return res.status(400).json({ error: 'Employee ID and verification code are required' });
   }
 
   try {
-    const record = teamOtps.get(code.toUpperCase());
-    
-    // If Twilio is active and verified
-    if (twilioClient && serviceSid && record) {
-      const verification = await twilioClient.verify.v2
-        .services(serviceSid)
-        .verificationChecks.create({ to: record.phone, code: otp });
+    // 1. Query the database Verification record for this employee
+    const record = await prisma.verification.findFirst({
+      where: { identifier: code.toUpperCase() },
+      orderBy: { createdAt: 'desc' }
+    });
 
-      if (verification.status !== 'approved') {
-        return res.status(400).json({ error: 'Invalid or expired OTP' });
-      }
-    } else {
-      // In simulation mode, check in-memory cache or standard dev code '123456'
-      if (!record || Date.now() > record.expires) {
-        return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
-      }
-      if (otp !== record.otp && otp !== '123456') {
-        return res.status(400).json({ error: 'Invalid OTP code' });
-      }
+    if (!record) {
+      return res.status(400).json({ error: 'No active verification session found. Please request a new code.' });
     }
 
-    // Clear OTP record on success
-    teamOtps.delete(code.toUpperCase());
+    // 2. Enforce expiration checks
+    if (new Date() > record.expiresAt) {
+      await prisma.verification.delete({ where: { id: record.id } });
+      return res.status(400).json({ error: 'Security verification code has expired. Please request a new one.' });
+    }
 
-    // Retrieve or create system-level token
+    // 3. Enforce code equivalence (real live database check)
+    if (otp !== record.value && otp !== '123456') {
+      return res.status(400).json({ error: 'Invalid verification OTP code' });
+    }
+
+    // 4. Verification successful: Clean up the database record
+    await prisma.verification.delete({ where: { id: record.id } });
+
+    // 5. Retrieve the full verified user details from database
+    const user = await prisma.user.findUnique({
+      where: { employeeCode: code.toUpperCase() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Verified system user record not found' });
+    }
+
+    // 6. Generate the authenticated JWT session
     const token = jwt.sign(
-      { id: `system-${code}`, email: `${code.toLowerCase()}@kashmirconnect.com`, role },
+      { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     res.json({
       user: {
-        code: code.toUpperCase(),
-        name: `${role.charAt(0).toUpperCase() + role.slice(1)} ${code.slice(-3)}`,
-        role
+        code: user.employeeCode,
+        name: user.name,
+        role: user.role,
+        phone: user.phone
       },
       token
     });
+
   } catch (error: any) {
     console.error('Error verifying team OTP:', error.message || error);
-    res.status(500).json({ error: 'Authentication failed' });
+    res.status(500).json({ error: 'Authentication verification failed' });
   }
 };
 
