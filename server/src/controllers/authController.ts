@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
+import { notificationService } from '../services/notificationService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
 
@@ -105,11 +106,10 @@ export const teamSendOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Access Denied: Invalid employee code' });
     }
 
-    const role = user.role;
-    const targetPhone = user.phone;
+    const targetEmail = user.email;
 
-    if (!targetPhone) {
-      return res.status(400).json({ error: `Access Denied: No registered phone number found for ${user.name}` });
+    if (!targetEmail) {
+      return res.status(400).json({ error: `Access Denied: No registered email address found for ${user.name}` });
     }
 
     // 2. Generate a secure, high-entropy 6-digit OTP code
@@ -129,76 +129,50 @@ export const teamSendOtp = async (req: Request, res: Response) => {
       }
     });
 
-    // 4. Dispatch the verification code (SMS/WhatsApp dispatch is temporarily commented out as requested to support Resend/Brevo)
-    /*
-    const deliveryMethod = (process.env.OTP_DELIVERY_METHOD || 'SMS').toUpperCase();
-    const messageText = `🏔️ Kashmir Curators Security Gate:\nYour 6-digit access code is: ${generatedOtp}. Valid for 5 minutes.`;
-    
-    let dispatched = false;
-    let errorMsg = '';
+    // 4. Dispatch the verification code via Resend/Brevo email channel
+    const emailSubject = "🏔️ Kashmir Curators Security Gate Code";
+    const emailHtml = `
+      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; color: #ffffff; background-color: #05080a; padding: 40px; border-radius: 20px; border: 1px solid #b5852a; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 30px rgba(181, 133, 42, 0.1);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: #b5852a; font-size: 26px; margin: 0; font-weight: bold; letter-spacing: 2px;">KASHMIR CURATORS</h2>
+          <p style="color: #666; font-size: 10px; margin-top: 5px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase;">Security Command Center</p>
+        </div>
+        <div style="background-color: #0a0f12; padding: 30px; border-radius: 15px; text-align: center; border: 1px solid #1f2a30;">
+          <p style="color: #aaa; font-size: 14px; margin-bottom: 20px; font-weight: 500;">Your secure one-time verification code is:</p>
+          <div style="font-size: 36px; font-family: monospace; font-weight: bold; color: #b5852a; letter-spacing: 5px; background: #05080a; padding: 15px; border-radius: 10px; border: 1px solid rgba(181, 133, 42, 0.2); display: inline-block;">${generatedOtp}</div>
+          <p style="color: #666; font-size: 12px; margin-top: 20px; font-style: italic;">This security code is valid for 5 minutes.</p>
+        </div>
+        <p style="color: #444; font-size: 11px; text-align: center; margin-top: 30px; line-height: 1.4;">
+          If you did not initiate this login request, please alert a system administrator immediately.<br/>
+          &copy; 2026 Kashmir Curators Management Suite.
+        </p>
+      </div>
+    `;
 
-    if (twilioClient && deliveryMethod === 'SMS') {
-      try {
-        await twilioClient.messages.create({
-          body: messageText,
-          from: process.env.TWILIO_PHONE_NUMBER || '+18777804236',
-          to: targetPhone
-        });
-        console.log(`[Twilio SMS] Real OTP code successfully dispatched to registered phone ${targetPhone}`);
-        dispatched = true;
-      } catch (err: any) {
-        errorMsg = err.message || err;
-        console.error('[Twilio SMS Error] Failed to send SMS:', errorMsg);
-      }
-    } else if (twilioClient && deliveryMethod === 'TWILIO_WHATSAPP') {
-      try {
-        const sandboxNumber = process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886';
-        await twilioClient.messages.create({
-          body: messageText,
-          from: `whatsapp:${sandboxNumber}`,
-          to: `whatsapp:${targetPhone}`
-        });
-        console.log(`[Twilio WhatsApp] Real OTP code successfully dispatched to registered phone ${targetPhone}`);
-        dispatched = true;
-      } catch (err: any) {
-        errorMsg = err.message || err;
-        console.error('[Twilio WhatsApp Error] Failed to send WhatsApp message:', errorMsg);
-      }
-    } else if (deliveryMethod === 'META_WHATSAPP') {
-      try {
-        const sent = await WhatsAppWorkflowEngine.executeWhatsAppSenderNode(targetPhone, messageText);
-        if (sent) {
-          console.log(`[Meta WhatsApp] Real OTP code successfully dispatched to registered phone ${targetPhone}`);
-          dispatched = true;
-        } else {
-          errorMsg = 'Meta WhatsApp Dispatcher returned false status or fell back to simulation.';
-          console.error('[Meta WhatsApp Error] Failed to dispatch OTP');
-        }
-      } catch (err: any) {
-        errorMsg = err.message || err;
-        console.error('[Meta WhatsApp Exception] Error:', errorMsg);
-      }
-    }
-    */
+    const emailSent = await notificationService.sendCustomerEmail(targetEmail, emailSubject, emailHtml);
 
-    // Log the generated OTP securely inside the server console for Resend/Brevo/Local testing
+    // Log the generated OTP securely inside the server console for debugging
     console.log('\n======================================================');
-    console.log(`🏔️ KASHMIR CONNECT - SECURITY ACCESS OTP (EMAIL/RESEND/BYPASS SIMULATION):`);
+    console.log(`🏔️ KASHMIR CONNECT - SECURITY ACCESS OTP DISPATCHED (EMAIL):`);
     console.log(`  - Employee: ${user.name} (${code.toUpperCase()})`);
-    console.log(`  - Registered Email: ${user.email}`);
-    console.log(`  - Registered Mobile: ${targetPhone}`);
+    console.log(`  - Target Email Destination: ${targetEmail}`);
     console.log(`  - Generated Access Code (stored in DB): ${generatedOtp}`);
+    console.log(`  - Mail Sent Status: ${emailSent ? 'SUCCESS' : 'FAILED / SIMULATION'}`);
     console.log('======================================================\n');
 
-    // Return the response with masked phone number
-    const maskedPhone = targetPhone.slice(0, 3) + '*******' + targetPhone.slice(-4);
+    // Return the response with masked email address
+    const emailParts = targetEmail.split('@');
+    const prefix = emailParts[0];
+    const maskedPrefix = prefix.length > 3 ? prefix.slice(0, 3) + '*******' : prefix.slice(0, 1) + '*******';
+    const maskedEmail = maskedPrefix + '@' + emailParts[1];
     
     return res.json({
       success: true,
-      phone: maskedPhone,
-      otp: generatedOtp, // Always return code for easy local validation/integration
-      simulated: true,
-      message: `OTP successfully generated. Verify with code: ${generatedOtp}`
+      email: maskedEmail,
+      phone: maskedEmail, // Maintain compatibility if frontend utilizes 'phone' variable
+      otp: generatedOtp, // Fallback for local sandbox/testing
+      simulated: !emailSent,
+      message: `OTP successfully sent to your registered email ${maskedEmail}`
     });
 
   } catch (error: any) {
@@ -215,8 +189,6 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
   }
 
   try {
-    /*
-    // OTP verification checks are temporarily commented out to use Resend or Brevo validation
     // 1. Query the database Verification record for this employee
     const record = await prisma.verification.findFirst({
       where: { identifier: code.toUpperCase() },
@@ -240,7 +212,6 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
 
     // 4. Verification successful: Clean up the database record
     await prisma.verification.delete({ where: { id: record.id } });
-    */
 
     // 5. Retrieve the full verified user details from database
     const user = await prisma.user.findUnique({

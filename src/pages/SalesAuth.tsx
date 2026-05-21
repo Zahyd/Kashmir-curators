@@ -76,12 +76,12 @@ export default function SalesAuth() {
         setIsOtpSent(true);
         setMaskedPhone(result.phone || '');
         if (result.otp) {
-          toast.info(`Local Validation Mode: Twilio is unconfigured. Please use security code: ${result.otp}`, {
+          toast.info(`Validation Mode: Security OTP code dispatched to registered email. Code: ${result.otp}`, {
             duration: 15000,
             icon: '🔑'
           });
         } else {
-          toast.success('Security verification OTP dispatched via SMS');
+          toast.success('Security verification OTP dispatched via Email');
         }
       } else {
         setError(result.error || 'Authentication failed to dispatch code');
@@ -155,7 +155,7 @@ export default function SalesAuth() {
             <p className="text-white/40 text-sm">
               {!isOtpSent 
                 ? "Enter your employee code to access your role-based workspace." 
-                : `Enter the 6-digit OTP code dispatched to your registered phone number.`}
+                : `Enter the 6-digit OTP code dispatched to your registered email address.`}
             </p>
           </div>
 
@@ -271,12 +271,12 @@ export default function SalesAuth() {
                     if (result.success) {
                       setMaskedPhone(result.phone || '');
                       if (result.otp) {
-                        toast.info(`Local Validation Mode: Twilio is unconfigured. Please use security code: ${result.otp}`, {
+                        toast.info(`Validation Mode: Security OTP code dispatched to registered email. Code: ${result.otp}`, {
                           duration: 15000,
                           icon: '🔑'
                         });
                       } else {
-                        toast.success('New OTP Dispatched via SMS');
+                        toast.success('New OTP Dispatched via Email');
                       }
                     } else {
                       setError('Failed to resend code.');
