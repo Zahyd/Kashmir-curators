@@ -496,7 +496,7 @@ export default function Auth() {
             ) : (
               <div className="space-y-3">
                 {[
-                  { name: 'Zahid Khan', email: 'zahid@gmail.com', avatar: 'ZK' },
+                  { name: 'Zahid Riyaz', email: 'zahid@gmail.com', avatar: 'ZR' },
                   { name: 'Traveler Curators', email: 'traveler@kashmirconnect.com', avatar: 'TC' },
                 ].map((account) => (
                   <button

@@ -371,7 +371,7 @@ export default function SalesAuth() {
             ) : (
               <div className="space-y-3">
                 {[
-                  { name: 'Zahid Khan (Director)', email: 'admin001@kashmirconnect.com', avatar: 'ZK', code: 'ADMIN001' },
+                  { name: 'Zahid Riyaz (Director)', email: 'Zahidreyaz44123@gmail.com', avatar: 'ZR', code: 'ADMIN001' },
                   { name: 'Sales Executive (001)', email: 'sales001@kashmirconnect.com', avatar: 'SE', code: 'SALES001' },
                 ].map((account) => (
                   <button

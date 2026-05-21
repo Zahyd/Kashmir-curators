@@ -72,15 +72,15 @@ export default function Footer() {
                   <MapPin className="h-4 w-4 text-kashmir-gold" />
                 </div>
                 <span className="text-sm font-medium text-white/50 leading-relaxed">
-                  Boulevard Road, Dal Gate,<br />Srinagar, Kashmir 190001
+                  Watergam, Rafiabad,<br />Sopore, 193303
                 </span>
               </li>
               <li className="flex items-center gap-4 group">
                 <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:border-kashmir-gold/30 transition-colors">
                   <Phone className="h-4 w-4 text-kashmir-gold" />
                 </div>
-                <a href="tel:+911234567890" className="text-sm font-bold text-white/50 hover:text-white transition-colors">
-                  +91 123 456 7890
+                <a href="tel:+919103798448" className="text-sm font-bold text-white/50 hover:text-white transition-colors">
+                  +91 91037 98448
                 </a>
               </li>
               <li className="flex items-center gap-4 group">

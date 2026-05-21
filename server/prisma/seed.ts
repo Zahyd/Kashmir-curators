@@ -198,8 +198,8 @@ async function main() {
   // 6. Real Team Employees
   const employees = [
     {
-      email: "admin001@kashmirconnect.com",
-      name: "Zahid Khan (Director)",
+      email: "Zahidreyaz44123@gmail.com",
+      name: "Zahid Riyaz (Director)",
       role: "admin",
       phone: "+919103798448",
       employeeCode: "ADMIN001"
