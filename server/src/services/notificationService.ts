@@ -15,8 +15,9 @@ export const notificationService = {
     }
 
     try {
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
       const { data, error } = await resend.emails.send({
-        from: 'Kashmir Curators <booking@thekashmircurators.com>',
+        from: `Kashmir Curators <${fromEmail}>`,
         to,
         subject,
         html,

@@ -170,7 +170,7 @@ export const teamSendOtp = async (req: Request, res: Response) => {
       success: true,
       email: maskedEmail,
       phone: maskedEmail, // Maintain compatibility if frontend utilizes 'phone' variable
-      otp: generatedOtp, // Fallback for local sandbox/testing
+      ...(emailSent ? {} : { otp: generatedOtp }), // Only return code in local simulation mode
       simulated: !emailSent,
       message: `OTP successfully sent to your registered email ${maskedEmail}`
     });
