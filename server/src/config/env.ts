@@ -13,6 +13,8 @@ export interface EnvSchema {
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_VERIFY_TOKEN: string;
+  OTP_DELIVERY_METHOD?: string;
+  TWILIO_WHATSAPP_NUMBER?: string;
 }
 
 export function validateEnv(): EnvSchema {
@@ -48,6 +50,8 @@ export function validateEnv(): EnvSchema {
     WHATSAPP_ACCESS_TOKEN: getEnvString('WHATSAPP_ACCESS_TOKEN', '', false),
     WHATSAPP_PHONE_NUMBER_ID: getEnvString('WHATSAPP_PHONE_NUMBER_ID', '', false),
     WHATSAPP_VERIFY_TOKEN: getEnvString('WHATSAPP_VERIFY_TOKEN', 'kashmir_connect_verify_token'),
+    OTP_DELIVERY_METHOD: getEnvString('OTP_DELIVERY_METHOD', 'META_WHATSAPP', false),
+    TWILIO_WHATSAPP_NUMBER: getEnvString('TWILIO_WHATSAPP_NUMBER', '+14155238886', false),
   };
 
   if (errors.length > 0) {

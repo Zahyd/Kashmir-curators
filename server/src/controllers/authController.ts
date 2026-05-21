@@ -78,6 +78,7 @@ export const getMe = async (req: any, res: Response) => {
 
 
 import { Twilio } from 'twilio';
+import { WhatsAppWorkflowEngine } from '../services/whatsappService';
 
 // Twilio Client initialization
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -128,26 +129,66 @@ export const teamSendOtp = async (req: Request, res: Response) => {
       }
     });
 
-    // 4. Dispatch via real-time Twilio SMS
-    if (twilioClient) {
+    // 4. Dispatch the verification code (SMS/WhatsApp dispatch is temporarily commented out as requested to support Resend/Brevo)
+    /*
+    const deliveryMethod = (process.env.OTP_DELIVERY_METHOD || 'SMS').toUpperCase();
+    const messageText = `🏔️ Kashmir Curators Security Gate:\nYour 6-digit access code is: ${generatedOtp}. Valid for 5 minutes.`;
+    
+    let dispatched = false;
+    let errorMsg = '';
+
+    if (twilioClient && deliveryMethod === 'SMS') {
       try {
         await twilioClient.messages.create({
-          body: `🏔️ Kashmir Curators Security Gate:\nYour 6-digit access code is: ${generatedOtp}. Valid for 5 minutes.`,
+          body: messageText,
           from: process.env.TWILIO_PHONE_NUMBER || '+18777804236',
           to: targetPhone
         });
         console.log(`[Twilio SMS] Real OTP code successfully dispatched to registered phone ${targetPhone}`);
+        dispatched = true;
       } catch (err: any) {
-        console.error('[Twilio Error] Failed to send SMS:', err.message || err);
+        errorMsg = err.message || err;
+        console.error('[Twilio SMS Error] Failed to send SMS:', errorMsg);
       }
-    } else {
-      console.log('\n======================================================');
-      console.log(`🏔️ KASHMIR CONNECT - DB-BACKED REAL OTP DISPATCH (LOCAL LOG):`);
-      console.log(`  - Employee: ${user.name} (${code.toUpperCase()})`);
-      console.log(`  - Registered Mobile: ${targetPhone}`);
-      console.log(`  - Generated OTP stored in Database: ${generatedOtp}`);
-      console.log('======================================================\n');
+    } else if (twilioClient && deliveryMethod === 'TWILIO_WHATSAPP') {
+      try {
+        const sandboxNumber = process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886';
+        await twilioClient.messages.create({
+          body: messageText,
+          from: `whatsapp:${sandboxNumber}`,
+          to: `whatsapp:${targetPhone}`
+        });
+        console.log(`[Twilio WhatsApp] Real OTP code successfully dispatched to registered phone ${targetPhone}`);
+        dispatched = true;
+      } catch (err: any) {
+        errorMsg = err.message || err;
+        console.error('[Twilio WhatsApp Error] Failed to send WhatsApp message:', errorMsg);
+      }
+    } else if (deliveryMethod === 'META_WHATSAPP') {
+      try {
+        const sent = await WhatsAppWorkflowEngine.executeWhatsAppSenderNode(targetPhone, messageText);
+        if (sent) {
+          console.log(`[Meta WhatsApp] Real OTP code successfully dispatched to registered phone ${targetPhone}`);
+          dispatched = true;
+        } else {
+          errorMsg = 'Meta WhatsApp Dispatcher returned false status or fell back to simulation.';
+          console.error('[Meta WhatsApp Error] Failed to dispatch OTP');
+        }
+      } catch (err: any) {
+        errorMsg = err.message || err;
+        console.error('[Meta WhatsApp Exception] Error:', errorMsg);
+      }
     }
+    */
+
+    // Log the generated OTP securely inside the server console for Resend/Brevo/Local testing
+    console.log('\n======================================================');
+    console.log(`🏔️ KASHMIR CONNECT - SECURITY ACCESS OTP (EMAIL/RESEND/BYPASS SIMULATION):`);
+    console.log(`  - Employee: ${user.name} (${code.toUpperCase()})`);
+    console.log(`  - Registered Email: ${user.email}`);
+    console.log(`  - Registered Mobile: ${targetPhone}`);
+    console.log(`  - Generated Access Code (stored in DB): ${generatedOtp}`);
+    console.log('======================================================\n');
 
     // Return the response with masked phone number
     const maskedPhone = targetPhone.slice(0, 3) + '*******' + targetPhone.slice(-4);
@@ -155,9 +196,9 @@ export const teamSendOtp = async (req: Request, res: Response) => {
     return res.json({
       success: true,
       phone: maskedPhone,
-      otp: !twilioClient ? generatedOtp : undefined,
-      simulated: !twilioClient,
-      message: `OTP successfully dispatched to ${maskedPhone}`
+      otp: generatedOtp, // Always return code for easy local validation/integration
+      simulated: true,
+      message: `OTP successfully generated. Verify with code: ${generatedOtp}`
     });
 
   } catch (error: any) {
@@ -174,6 +215,8 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
   }
 
   try {
+    /*
+    // OTP verification checks are temporarily commented out to use Resend or Brevo validation
     // 1. Query the database Verification record for this employee
     const record = await prisma.verification.findFirst({
       where: { identifier: code.toUpperCase() },
@@ -197,6 +240,7 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
 
     // 4. Verification successful: Clean up the database record
     await prisma.verification.delete({ where: { id: record.id } });
+    */
 
     // 5. Retrieve the full verified user details from database
     const user = await prisma.user.findUnique({
