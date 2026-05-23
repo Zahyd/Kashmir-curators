@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, MapPin, Search, Wifi, UtensilsCrossed, Dumbbell, Sparkles, Calendar, Users } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
@@ -15,6 +15,8 @@ import { useHotels, useLocations, CMSHotel } from '@/hooks/useCMSData';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import PaymentSimulator from '@/components/payment/PaymentSimulator';
+import { io } from 'socket.io-client';
+import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
 
 const amenityIcons: Record<string, any> = {
   WiFi: Wifi,
@@ -44,6 +46,45 @@ export default function Hotels() {
     guests: '2',
     roomType: '',
   });
+
+  // Dynamic Hotels Hero states
+  const [heroTitle, setHeroTitle] = useState('Luxury Stays in Kashmir');
+  const [heroSubtitle, setHeroSubtitle] = useState('From lakeside houseboats to cozy mountain retreats, find your perfect stay.');
+  const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1600');
+
+  useEffect(() => {
+    const fetchHeroContent = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/site-content`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hotelsHero) {
+            setHeroTitle(data.hotelsHero.title || 'Luxury Stays in Kashmir');
+            setHeroSubtitle(data.hotelsHero.subtitle || 'From lakeside houseboats to cozy mountain retreats, find your perfect stay.');
+            setHeroImage(data.hotelsHero.image_url || 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1600');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load real-time hotels hero data:', err);
+      }
+    };
+    fetchHeroContent();
+
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling']
+    });
+    socket.on('site-content-updated', (payload) => {
+      if (payload.sectionKey === 'hotelsHero' && payload.data) {
+        setHeroTitle(payload.data.title || 'Luxury Stays in Kashmir');
+        setHeroSubtitle(payload.data.subtitle || 'From lakeside houseboats to cozy mountain retreats, find your perfect stay.');
+        setHeroImage(payload.data.image_url || 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1600');
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const filteredHotels = useMemo(() => {
     if (!hotels) return [];
@@ -112,15 +153,15 @@ export default function Hotels() {
 
       {/* Header */}
       <div className="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1600")' }}>
+        <div className="absolute inset-0 bg-cover bg-center transition-all duration-1000" style={{ backgroundImage: `url("${heroImage}")` }}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
         </div>
         <div className="container mx-auto px-4 relative z-10 text-center">
           <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4 animate-fade-up">
-            Luxury Stays in Kashmir
+            {heroTitle}
           </h1>
           <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '100ms' }}>
-            From lakeside houseboats to cozy mountain retreats, find your perfect stay.
+            {heroSubtitle}
           </p>
         </div>
       </div>

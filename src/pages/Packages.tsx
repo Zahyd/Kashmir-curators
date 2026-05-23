@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Star, Clock, MapPin, Filter, X, Search, ArrowUpDown, Compass, ArrowRight } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { usePackages, useDestinations, useCabs } from '@/hooks/useCMSData';
 import { cn } from '@/lib/utils';
+import { io } from 'socket.io-client';
+import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
 
 export default function Packages() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,6 +30,45 @@ export default function Packages() {
     rating: '',
     sortBy: 'popularity',
   });
+
+  // Dynamic Packages Hero states
+  const [heroTitle, setHeroTitle] = useState('PRIVATE PORTFOLIO');
+  const [heroSubtitle, setHeroSubtitle] = useState('A meticulously curated registry of the finest expeditions across the Kashmir valley.');
+  const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=1600');
+
+  useEffect(() => {
+    const fetchHeroContent = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/site-content`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.packagesHero) {
+            setHeroTitle(data.packagesHero.title || 'PRIVATE PORTFOLIO');
+            setHeroSubtitle(data.packagesHero.subtitle || 'A meticulously curated registry of the finest expeditions across the Kashmir valley.');
+            setHeroImage(data.packagesHero.image_url || 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=1600');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load real-time packages hero data:', err);
+      }
+    };
+    fetchHeroContent();
+
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling']
+    });
+    socket.on('site-content-updated', (payload) => {
+      if (payload.sectionKey === 'packagesHero' && payload.data) {
+        setHeroTitle(payload.data.title || 'PRIVATE PORTFOLIO');
+        setHeroSubtitle(payload.data.subtitle || 'A meticulously curated registry of the finest expeditions across the Kashmir valley.');
+        setHeroImage(payload.data.image_url || 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=1600');
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const filteredPackages = useMemo(() => {
     if (!packages) return [];
@@ -158,8 +199,8 @@ export default function Packages() {
         {/* Background Parallax Effect */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=1600" 
-            className="w-full h-full object-cover opacity-30 grayscale"
+            src={heroImage} 
+            className="w-full h-full object-cover opacity-30 grayscale transition-all duration-1000"
             alt="Kashmir"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[#05080a] via-[#05080a]/80 to-[#05080a]" />
@@ -170,11 +211,20 @@ export default function Packages() {
             <Filter className="w-3.5 h-3.5 text-kashmir-gold" />
             <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/60">Curation Registry</span>
           </div>
-          <h1 className="font-display text-6xl md:text-8xl font-black text-white tracking-tighter mb-8 leading-[0.9]">
-            PRIVATE <span className="text-kashmir-gold italic">PORTFOLIO</span>
+          <h1 className="font-display text-6xl md:text-8xl font-black text-white tracking-tighter mb-8 leading-[0.9] uppercase">
+            {heroTitle.trim().split(' ').length > 1 ? (
+              <>
+                {heroTitle.trim().split(' ').slice(0, -1).join(' ')}{' '}
+                <span className="text-kashmir-gold italic">
+                  {heroTitle.trim().split(' ').slice(-1)[0]}
+                </span>
+              </>
+            ) : (
+              heroTitle
+            )}
           </h1>
           <p className="text-white/40 text-lg md:text-xl max-w-2xl mx-auto font-medium leading-relaxed">
-            A meticulously curated registry of the finest expeditions across the Kashmir valley.
+            {heroSubtitle}
           </p>
         </div>
       </div>

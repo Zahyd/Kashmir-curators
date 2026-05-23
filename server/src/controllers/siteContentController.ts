@@ -54,6 +54,20 @@ const defaultContent: Record<string, any> = {
     subtitle: 'Reliable cab services for airport transfers, local sightseeing, and outstation trips.',
     content: {},
     image_url: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600'
+  },
+  hotelsHero: {
+    section_key: 'hotelsHero',
+    title: 'Luxury Stays in Kashmir',
+    subtitle: 'From lakeside houseboats to cozy mountain retreats, find your perfect stay.',
+    content: {},
+    image_url: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1600'
+  },
+  packagesHero: {
+    section_key: 'packagesHero',
+    title: 'PRIVATE PORTFOLIO',
+    subtitle: 'A meticulously curated registry of the finest expeditions across the Kashmir valley.',
+    content: {},
+    image_url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=1600'
   }
 };
 
