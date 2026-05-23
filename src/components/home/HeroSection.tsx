@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Calendar, Users, Loader2, Sparkles, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, Users, Loader2, Sparkles, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import heroImage from '@/assets/kashmir-hero-new.jpg';
 import { useDestinations } from '@/hooks/useCMSData';
-import { cn } from '@/lib/utils';
+import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { io } from 'socket.io-client';
 
 export default function HeroSection() {
   const navigate = useNavigate();
@@ -18,6 +19,58 @@ export default function HeroSection() {
     dates: '',
     travelers: '',
   });
+
+  const [heroData, setHeroData] = useState({
+    title: 'BEYOND the ORDINARY',
+    subtitle: 'Experience Kashmir as it was meant to be seen: Private, Peerless, and Profoundly Beautiful.',
+    imageUrl: heroImage,
+    stats: [
+      { value: '1,200+', label: 'Elite Curations' },
+      { value: '4.95', label: 'Satisfaction Index' },
+      { value: '24/7', label: 'Concierge Protocol' },
+    ]
+  });
+
+  const updateHeroState = (h: Record<string, any>) => {
+    setHeroData({
+      title: h.title || 'BEYOND the ORDINARY',
+      subtitle: h.subtitle || 'Experience Kashmir as it was meant to be seen: Private, Peerless, and Profoundly Beautiful.',
+      imageUrl: h.image_url || heroImage,
+      stats: [
+        { value: h.content?.stat1_value || '1,200+', label: h.content?.stat1_label || 'Elite Curations' },
+        { value: h.content?.stat2_value || '4.95', label: h.content?.stat2_label || 'Satisfaction Index' },
+        { value: h.content?.stat3_value || '24/7', label: h.content?.stat3_label || 'Concierge Protocol' },
+      ]
+    });
+  };
+
+  useEffect(() => {
+    const fetchHeroContent = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/site-content`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hero) {
+            updateHeroState(data.hero);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load real-time hero data:', err);
+      }
+    };
+    fetchHeroContent();
+
+    const socket = io(SOCKET_URL);
+    socket.on('site-content-updated', (update) => {
+      if (update.sectionKey === 'hero') {
+        updateHeroState(update.data);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,13 +87,28 @@ export default function HeroSection() {
     setIsSearching(false);
   };
 
+  const renderStyledTitle = (title: string) => {
+    const words = title.trim().split(' ');
+    if (words.length <= 1) return title;
+    const lastWord = words.pop();
+    const rest = words.join(' ');
+    return (
+      <>
+        {rest} <br className="hidden md:block" />
+        <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/20">
+          {lastWord}
+        </span>
+      </>
+    );
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#05080a]">
       {/* Cinematic Background */}
       <div className="absolute inset-0 z-0">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-110 animate-slow-zoom"
-          style={{ backgroundImage: `url(${heroImage})` }}
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-110 animate-slow-zoom transition-all duration-[2000ms]"
+          style={{ backgroundImage: `url(${heroData.imageUrl})` }}
         />
         {/* Luxury Overlays */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-[#05080a]" />
@@ -59,12 +127,11 @@ export default function HeroSection() {
 
           {/* Headline - Editorial Style */}
           <div className="max-w-5xl mb-10 space-y-4">
-            <h1 className="font-display text-6xl md:text-8xl lg:text-9xl font-black text-white leading-[0.9] tracking-tighter animate-fade-up" style={{ animationDelay: '100ms' }}>
-              BEYOND the <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/20">ORDINARY</span>
+            <h1 className="font-display text-5xl md:text-8xl lg:text-9xl font-black text-white leading-[0.9] tracking-tighter animate-fade-up transition-all duration-700 uppercase" style={{ animationDelay: '100ms' }}>
+              {renderStyledTitle(heroData.title)}
             </h1>
-            <p className="text-lg md:text-xl text-white/50 font-medium max-w-2xl mx-auto tracking-wide animate-fade-up" style={{ animationDelay: '200ms' }}>
-              Experience Kashmir as it was meant to be seen: Private, Peerless, and Profoundly Beautiful.
+            <p className="text-lg md:text-xl text-white/50 font-medium max-w-2xl mx-auto tracking-wide animate-fade-up transition-all duration-700" style={{ animationDelay: '200ms' }}>
+              {heroData.subtitle}
             </p>
           </div>
 
@@ -169,11 +236,7 @@ export default function HeroSection() {
 
           {/* Floating High-Fidelity Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mt-20 w-full max-w-4xl animate-fade-up" style={{ animationDelay: '400ms' }}>
-            {[
-              { value: '1,200+', label: 'Elite Curations' },
-              { value: '4.95', label: 'Satisfaction Index' },
-              { value: '24/7', label: 'Concierge Protocol' },
-            ].map((stat) => (
+            {heroData.stats.map((stat) => (
               <div key={stat.label} className="text-center group cursor-default">
                 <div className="font-display text-4xl font-black text-white mb-2 tracking-tight group-hover:text-kashmir-gold transition-colors duration-500">
                   {stat.value}

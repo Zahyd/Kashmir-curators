@@ -33,6 +33,7 @@ import seoRoutes from './routes/seoRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import flightRoutes from './routes/flightRoutes';
 import blogRoutes from './routes/blogRoutes';
+import siteContentRoutes from './routes/siteContentRoutes';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -122,6 +123,7 @@ app.use('/api/weather', weatherRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/flights', flightRoutes);
 app.use('/api/content', blogRoutes);
+app.use('/api/site-content', siteContentRoutes);
 app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers

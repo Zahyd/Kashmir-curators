@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import MediaPicker from './MediaPicker';
+import { API_BASE_URL } from '@/lib/api';
 
 interface SiteContent {
   id?: string;
@@ -20,24 +21,24 @@ interface SiteContent {
 const defaultContent: Record<string, Partial<SiteContent>> = {
   hero: {
     section_key: 'hero',
-    title: 'Discover the Magic of Kashmir',
-    subtitle: 'Experience breathtaking landscapes, rich culture, and warm hospitality in paradise on Earth',
+    title: 'BEYOND the ORDINARY',
+    subtitle: 'Experience Kashmir as it was meant to be seen: Private, Peerless, and Profoundly Beautiful.',
     content: {
-      stat1_label: 'Happy Travelers',
-      stat1_value: '15,000+',
-      stat2_label: 'Tour Packages',
-      stat2_value: '50+',
-      stat3_label: 'Average Rating',
-      stat3_value: '4.9',
+      stat1_label: 'Elite Curations',
+      stat1_value: '1,200+',
+      stat2_label: 'Satisfaction Index',
+      stat2_value: '4.95',
+      stat3_label: 'Concierge Protocol',
+      stat3_value: '24/7',
     },
     image_url: '',
   },
   about: {
     section_key: 'about',
-    title: 'About Kashmir Alle',
-    subtitle: 'Your trusted travel partner for Kashmir adventures',
+    title: 'The Kashmir Curators Difference',
+    subtitle: 'Uncompromising Luxury and Authentic Experiences',
     content: {
-      description: 'We are a premier travel company specializing in Kashmir tourism...',
+      description: 'We are a premier luxury travel atelier specializing in bespoke Kashmir tourism, delivering unparalleled private experiences.',
     },
     image_url: '',
   },
@@ -53,21 +54,11 @@ export default function CMSSiteContent() {
   }, []);
 
   const fetchContent = async () => {
-    // Mock fetch for UI demonstration
     try {
-      const mockContent = localStorage.getItem('mock_site_content');
-      if (mockContent) {
-        const parsed = JSON.parse(mockContent);
-        // Merge with defaults
-        const merged = { ...defaultContent };
-        Object.keys(parsed).forEach(key => {
-          if (merged[key]) {
-             merged[key] = { ...merged[key], ...parsed[key] };
-          } else {
-             merged[key] = parsed[key];
-          }
-        });
-        setContent(merged as Record<string, SiteContent>);
+      const response = await fetch(`${API_BASE_URL}/site-content`);
+      if (response.ok) {
+        const data = await response.json();
+        setContent(data as Record<string, SiteContent>);
       } else {
         setContent(defaultContent as Record<string, SiteContent>);
       }
@@ -105,16 +96,25 @@ export default function CMSSiteContent() {
     setSaving(sectionKey);
     const sectionData = content[sectionKey];
 
-    // Mock save delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
     try {
-      const currentStored = JSON.parse(localStorage.getItem('mock_site_content') || '{}');
-      currentStored[sectionKey] = sectionData;
-      localStorage.setItem('mock_site_content', JSON.stringify(currentStored));
-      toast.success('Content saved successfully!');
+      const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/site-content/${sectionKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(sectionData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save to server');
+      }
+
+      toast.success('Content saved successfully in real-time!');
     } catch (e) {
-      toast.error('Failed to save content locally');
+      console.error(e);
+      toast.error('Failed to save content to the server');
     }
 
     setSaving(null);
