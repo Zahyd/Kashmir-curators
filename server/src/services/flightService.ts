@@ -55,7 +55,7 @@ export class FlightService {
             totalAmount: offer.total_amount,
             totalCurrency: offer.total_currency || 'INR',
             airlineName: offer.owner?.name || 'Partner Airline',
-            airlineLogo: offer.owner?.logo_symbol_url || 'https://assets.duffel.com/img/airlines/sm/6E.png',
+            airlineLogo: offer.owner?.iata_code ? `https://pics.avs.io/200/200/${offer.owner.iata_code}.png` : 'https://pics.avs.io/200/200/6E.png',
             departureTime: segment ? segment.departing_at : `${departureDate}T09:00:00`,
             arrivalTime: segment ? segment.arriving_at : `${departureDate}T10:45:00`,
             duration: slice.duration || 'PT1H45M'
@@ -152,7 +152,7 @@ export class FlightService {
           totalAmount: price1.toString(),
           totalCurrency: 'INR',
           airlineName: 'IndiGo',
-          airlineLogo: 'https://assets.duffel.com/img/airlines/sm/6E.png',
+          airlineLogo: 'https://pics.avs.io/200/200/6E.png',
           departureTime: `${date}T${dep1}`,
           arrivalTime: `${date}T${arr1}`,
           duration: duration
@@ -162,7 +162,7 @@ export class FlightService {
           totalAmount: price2.toString(),
           totalCurrency: 'INR',
           airlineName: 'Air India',
-          airlineLogo: 'https://assets.duffel.com/img/airlines/sm/AI.png',
+          airlineLogo: 'https://pics.avs.io/200/200/AI.png',
           departureTime: `${date}T${dep2}`,
           arrivalTime: `${date}T${arr2}`,
           duration: duration2
