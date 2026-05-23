@@ -280,3 +280,51 @@ export const teamLogin = async (req: Request, res: Response) => {
   });
 };
 
+export const updateProfile = async (req: any, res: Response) => {
+  const { name, email, phone, image, password } = req.body;
+  const userId = req.user.id;
+
+  try {
+    if (email) {
+      const existing = await prisma.user.findFirst({
+        where: { 
+          email,
+          NOT: { id: userId }
+        }
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'Email already in use by another account' });
+      }
+    }
+
+    const dataToUpdate: any = {};
+    if (name) dataToUpdate.name = name;
+    if (email) dataToUpdate.email = email;
+    if (phone !== undefined) dataToUpdate.phone = phone;
+    if (image !== undefined) dataToUpdate.image = image;
+    if (password) {
+      dataToUpdate.password = await bcrypt.hash(password, 10);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: dataToUpdate
+    });
+
+    res.json({
+      success: true,
+      user: {
+        code: updatedUser.employeeCode,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        image: updatedUser.image
+      }
+    });
+  } catch (error: any) {
+    console.error('Failed to update profile:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+};
+

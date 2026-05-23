@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, teamLogin, teamSendOtp, teamVerifyOtp } from '../controllers/authController';
+import { register, login, getMe, teamLogin, teamSendOtp, teamVerifyOtp, updateProfile } from '../controllers/authController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -62,6 +62,7 @@ router.post('/login', login);
  *         description: User profile retrieved
  */
 router.get('/me', authenticateToken, getMe);
+router.put('/profile', authenticateToken, updateProfile);
 router.post('/team-login', teamLogin);
 router.post('/team-send-otp', teamSendOtp);
 router.post('/team-verify-otp', teamVerifyOtp);

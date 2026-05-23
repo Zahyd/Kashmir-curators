@@ -81,6 +81,7 @@ interface TeamAuthContextType {
   teamSendOtp: (code: string, phone?: string) => Promise<{ success: boolean; simulated?: boolean; otp?: string; phone?: string; error?: string }>;
   teamVerifyOtp: (code: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   teamLogout: () => void;
+  updateTeamProfile: (data: any) => Promise<{ success: boolean; error?: string }>;
   hasPermission: (permission: string) => boolean;
   canAccessAdmin: boolean;
   canAccessSales: boolean;
@@ -239,6 +240,31 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('teamToken');
   };
 
+  const updateTeamProfile = async (data: any): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${SOCKET_URL}/api/auth/profile`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(data)
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        return { success: false, error: resData.error || 'Failed to update profile' };
+      }
+
+      setTeamUser(resData.user);
+      localStorage.setItem('team_user', JSON.stringify(resData.user));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'Network error updating profile.' };
+    }
+  };
+
   const hasPermission = (permission: string): boolean => {
     if (!teamUser) return false;
     return ROLE_PERMISSIONS[teamUser.role].includes(permission);
@@ -262,6 +288,7 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       teamSendOtp,
       teamVerifyOtp,
       teamLogout,
+      updateTeamProfile,
       hasPermission,
       canAccessAdmin,
       canAccessSales,

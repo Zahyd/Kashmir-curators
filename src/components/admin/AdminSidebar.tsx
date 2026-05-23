@@ -186,9 +186,16 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
 
       {/* User & Logout */}
       <div className="p-8 border-t border-white/5 mt-auto bg-white/[0.01]">
-        <div className="flex items-center gap-4 mb-4 px-2 group cursor-pointer">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center group-hover:border-kashmir-gold/30 transition-all duration-500">
-            <Users className="w-6 h-6 text-kashmir-gold" />
+        <div 
+          onClick={() => onSectionChange('profile')}
+          className="flex items-center gap-4 mb-4 px-2 group cursor-pointer hover:bg-white/[0.02] p-2 rounded-2xl transition-all duration-300"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center group-hover:border-kashmir-gold/30 transition-all duration-500 overflow-hidden shrink-0">
+            {teamUser?.image ? (
+              <img src={teamUser.image} alt={teamUser.name} className="w-full h-full object-cover" />
+            ) : (
+              <Users className="w-6 h-6 text-kashmir-gold" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-black text-white uppercase tracking-widest truncate">{teamUser?.name || 'Admin'}</p>
