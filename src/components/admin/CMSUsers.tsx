@@ -44,6 +44,8 @@ export default function CMSUsers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'clients' | 'team'>('clients');
+  const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Add Team Member Modal State
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
@@ -124,14 +126,17 @@ export default function CMSUsers() {
     }
   };
 
-  const handleDeleteUser = async (id: string, name: string) => {
-    if (!confirm(`Are you absolutely sure you want to revoke access and remove the profile for ${name}?`)) {
-      return;
-    }
+  const handleDeleteUser = (id: string, name: string) => {
+    setUserToDelete({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    setIsDeleting(true);
 
     try {
       const token = localStorage.getItem('teamToken');
-      const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/users/${userToDelete.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -141,10 +146,13 @@ export default function CMSUsers() {
         throw new Error(result.error || 'Failed to delete user');
       }
 
-      toast.success(`Access successfully revoked for ${name}.`);
+      toast.success(`Access successfully revoked for ${userToDelete.name}.`);
+      setUserToDelete(null);
       fetchUsers();
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete user profile');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -516,6 +524,40 @@ export default function CMSUsers() {
               </Button>
             </form>
           </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#0f1115] border border-red-500/20 w-full max-w-md rounded-3xl p-8 relative shadow-2xl shadow-red-900/20 animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 mx-auto">
+              <Trash2 className="w-8 h-8 text-red-500" />
+            </div>
+            
+            <h2 className="text-2xl font-display font-black text-white text-center mb-2">Delete Profile?</h2>
+            <p className="text-sm text-white/50 text-center mb-8">
+              Are you absolutely sure you want to revoke access and permanently remove the profile for <span className="text-white font-bold">{userToDelete.name}</span>? This action cannot be undone.
+            </p>
+
+            <div className="flex gap-4">
+              <Button 
+                onClick={() => setUserToDelete(null)}
+                variant="outline"
+                className="flex-1 bg-transparent border-white/10 hover:bg-white/5 text-white"
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={confirmDelete}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold"
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
