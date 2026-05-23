@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Loader2, Car, Users, Zap, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Loader2, Car, Users, Zap, Star, Save, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -60,6 +60,63 @@ export default function CMSCabs() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
+  // Fleet Hero config states
+  const [heroTitle, setHeroTitle] = useState('Premium Transport');
+  const [heroSubtitle, setHeroSubtitle] = useState('Reliable cab services for airport transfers, local sightseeing, and outstation trips.');
+  const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600');
+  const [savingHero, setSavingHero] = useState(false);
+  const [loadingHero, setLoadingHero] = useState(true);
+
+  const fetchHeroData = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/site-content`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.fleetHero) {
+          setHeroTitle(data.fleetHero.title || 'Premium Transport');
+          setHeroSubtitle(data.fleetHero.subtitle || 'Reliable cab services for airport transfers, local sightseeing, and outstation trips.');
+          setHeroImage(data.fleetHero.image_url || 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600');
+        }
+      }
+    } catch (error) {
+      console.error('[CMSCabs] Error loading hero settings:', error);
+    } finally {
+      setLoadingHero(false);
+    }
+  };
+
+  const handleSaveHero = async () => {
+    setSavingHero(true);
+    const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+    try {
+      const response = await fetch(`${API_BASE_URL}/site-content/fleetHero`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          section_key: 'fleetHero',
+          title: heroTitle,
+          subtitle: heroSubtitle,
+          content: {},
+          image_url: heroImage
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Fleet page hero settings updated successfully in real-time!');
+      } else {
+        throw new Error('Failed to save to server');
+      }
+    } catch (error: any) {
+      console.error('[CMSCabs] Error saving hero settings:', error);
+      toast.error('Failed to save hero settings');
+    } finally {
+      setSavingHero(false);
+    }
+  };
+
   const fetchCabs = async () => {
     console.log('[CMSCabs] Initiating fetch for transport nodes...');
     try {
@@ -96,6 +153,7 @@ export default function CMSCabs() {
 
   useEffect(() => {
     fetchCabs();
+    fetchHeroData();
   }, []);
 
   useEffect(() => {
@@ -243,6 +301,81 @@ export default function CMSCabs() {
           <span className="text-[10px] uppercase tracking-[0.2em]">Deploy Vehicle</span>
         </Button>
       </div>
+
+      {/* Fleet Hero CMS Panel */}
+      <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-kashmir-gold" />
+              Fleet Page Hero Configuration
+            </h3>
+            <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1">Configure the main background asset and hero copy for the public Fleet page</p>
+          </div>
+          <Button 
+            onClick={handleSaveHero} 
+            disabled={savingHero || loadingHero}
+            className="w-full md:w-auto bg-white text-black hover:bg-kashmir-gold hover:text-black font-black px-6 h-12 rounded-xl transition-all duration-300 shadow-lg active:scale-95 flex items-center gap-2"
+          >
+            {savingHero ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            <span className="text-[9px] uppercase tracking-widest">{savingHero ? 'Saving...' : 'Save Configuration'}</span>
+          </Button>
+        </div>
+
+        {loadingHero ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-6 w-6 animate-spin text-kashmir-gold" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Hero Background Image</label>
+                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
+                  <MediaPicker
+                    value={heroImage}
+                    onChange={(url) => setHeroImage(url)}
+                  />
+                  {heroImage && (
+                    <div className="mt-4 relative aspect-[21/9] rounded-xl overflow-hidden border border-white/10">
+                      <img src={heroImage} alt="Hero Background Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Fleet Page Headline</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-white placeholder-white/20 focus:border-kashmir-gold/50 transition-all font-bold"
+                  value={heroTitle}
+                  onChange={(e) => setHeroTitle(e.target.value)}
+                  placeholder="e.g., Premium Transport"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Fleet Page Subheadline</label>
+                <Textarea
+                  className="bg-white/5 border-white/10 rounded-xl min-h-[96px] text-white placeholder-white/20 focus:border-kashmir-gold/50 transition-all resize-none font-medium leading-relaxed"
+                  value={heroSubtitle}
+                  onChange={(e) => setHeroSubtitle(e.target.value)}
+                  placeholder="e.g., Reliable cab services for airport transfers, local sightseeing, and outstation trips."
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* Desktop View */}
       <div className="hidden lg:block bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">

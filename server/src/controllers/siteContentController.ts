@@ -47,6 +47,13 @@ const defaultContent: Record<string, any> = {
       youtube: 'https://youtube.com'
     },
     image_url: ''
+  },
+  fleetHero: {
+    section_key: 'fleetHero',
+    title: 'Premium Transport',
+    subtitle: 'Reliable cab services for airport transfers, local sightseeing, and outstation trips.',
+    content: {},
+    image_url: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600'
   }
 };
 

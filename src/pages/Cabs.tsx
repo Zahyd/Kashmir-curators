@@ -15,6 +15,8 @@ import { cabRoutes } from '@/data/routes';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import PaymentSimulator from '@/components/payment/PaymentSimulator';
+import { io } from 'socket.io-client';
+import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
 
 export default function Cabs() {
   const navigate = useNavigate();
@@ -32,6 +34,43 @@ export default function Cabs() {
     time: '',
     returnDate: '',
   });
+  const [heroTitle, setHeroTitle] = useState('Premium Transport');
+  const [heroSubtitle, setHeroSubtitle] = useState('Reliable cab services for airport transfers, local sightseeing, and outstation trips.');
+  const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600');
+
+  useEffect(() => {
+    const fetchHeroContent = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/site-content`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.fleetHero) {
+            setHeroTitle(data.fleetHero.title || 'Premium Transport');
+            setHeroSubtitle(data.fleetHero.subtitle || 'Reliable cab services for airport transfers, local sightseeing, and outstation trips.');
+            setHeroImage(data.fleetHero.image_url || 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load real-time fleet hero data:', err);
+      }
+    };
+    fetchHeroContent();
+
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling']
+    });
+    socket.on('site-content-updated', (payload) => {
+      if (payload.sectionKey === 'fleetHero' && payload.data) {
+        setHeroTitle(payload.data.title || 'Premium Transport');
+        setHeroSubtitle(payload.data.subtitle || 'Reliable cab services for airport transfers, local sightseeing, and outstation trips.');
+        setHeroImage(payload.data.image_url || 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600');
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const isLoading = isLoadingCabs;
 
@@ -96,15 +135,15 @@ export default function Cabs() {
 
       {/* Header */}
       <div className="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600")' }}>
+        <div className="absolute inset-0 bg-cover bg-center transition-all duration-1000" style={{ backgroundImage: `url("${heroImage}")` }}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
         </div>
         <div className="container mx-auto px-4 relative z-10 text-center">
           <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4 animate-fade-up">
-            Premium Transport
+            {heroTitle}
           </h1>
           <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '100ms' }}>
-            Reliable cab services for airport transfers, local sightseeing, and outstation trips.
+            {heroSubtitle}
           </p>
         </div>
       </div>
