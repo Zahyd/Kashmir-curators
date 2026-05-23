@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, LogOut, ChevronDown, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Sparkles, LayoutDashboard, Building, Car, Compass, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/contexts/AuthContext';
@@ -116,6 +116,25 @@ export default function Navbar() {
                           </Link>
                         </DropdownMenuItem>
                       )}
+                      <DropdownMenuSeparator className="bg-white/5 mx-2 my-1" />
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 focus:bg-white/5 cursor-pointer">
+                        <Link to="/planner" className="flex items-center gap-3">
+                          <Compass className="w-4 h-4 text-kashmir-gold" />
+                          <span className="text-xs font-bold text-white/80">Trip Curators</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 focus:bg-white/5 cursor-pointer">
+                        <Link to="/hotels" className="flex items-center gap-3">
+                          <Building className="w-4 h-4 text-purple-400" />
+                          <span className="text-xs font-bold text-white/80">Estates Index</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 focus:bg-white/5 cursor-pointer">
+                        <Link to="/cabs" className="flex items-center gap-3">
+                          <Car className="w-4 h-4 text-amber-500" />
+                          <span className="text-xs font-bold text-white/80">Fleet Dispatch</span>
+                        </Link>
+                      </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuSeparator className="bg-white/5 mx-2 my-2" />
