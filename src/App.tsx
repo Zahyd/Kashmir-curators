@@ -20,12 +20,16 @@ import BlogPost from "./pages/BlogPost";
 
 import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
+import { useAntiTheft } from "./hooks/useAntiTheft";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TeamAuthProvider>
+const App = () => {
+  useAntiTheft();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TeamAuthProvider>
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
@@ -54,6 +58,7 @@ const App = () => (
       </AuthProvider>
     </TeamAuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

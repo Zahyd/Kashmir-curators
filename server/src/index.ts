@@ -14,6 +14,8 @@ import cors from 'cors';
 import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import packageRoutes from './routes/packageRoutes';
@@ -87,6 +89,20 @@ app.get('/health-check', (req, res) => {
 });
 
 app.use(cors());
+
+// Apply HTTP security headers
+app.use(helmet());
+
+// Apply rate limiting to all requests
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
 app.use(express.json());
 
 // Socket.io Connection
@@ -141,6 +157,11 @@ app.get('/db-check', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Database connection failed' });
   }
 });
+
+import { cronService } from './services/cronService';
+
+// Initialize background cron workers
+cronService.initialize();
 
 httpServer.listen(PORT, () => {
   console.log(`Real-Time Server is running on port ${PORT}`);
