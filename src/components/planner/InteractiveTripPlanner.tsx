@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plane, Calendar as CalendarIcon, Users, ArrowRight, CheckCircle, MapPin, ArrowLeftRight, Clock, ChevronDown } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Loader2, Plane, Calendar as CalendarIcon, Users, ArrowRight, CheckCircle, MapPin, ArrowLeftRight, Clock, ChevronDown, IndianRupee, TrendingUp, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { format, addDays, isBefore, startOfToday } from 'date-fns';
 
 // Comprehensive Indian airport database
 const AIRPORTS = [
@@ -151,13 +154,99 @@ function AirportSearchInput({
   );
 }
 
+// Date Picker Popover Component — styled like premium flight apps
+function DatePickerField({
+  date,
+  onSelect,
+  label,
+  minDate,
+  placeholder = 'Select date',
+}: {
+  date: Date | undefined;
+  onSelect: (date: Date | undefined) => void;
+  label: string;
+  minDate?: Date;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative flex-1 min-w-0">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            className={`w-full h-16 pl-12 pr-4 rounded-xl border bg-[#0a0f12] text-left flex items-center transition-all duration-300 group ${
+              open 
+                ? 'border-kashmir-gold/60 ring-1 ring-kashmir-gold/30 shadow-[0_0_20px_rgba(212,175,55,0.08)]' 
+                : 'border-white/10 hover:border-white/20'
+            }`}
+          >
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <CalendarIcon className={`h-5 w-5 transition-colors duration-300 ${open ? 'text-kashmir-gold' : 'text-kashmir-gold/70'}`} />
+            </div>
+            {date ? (
+              <div className="flex flex-col">
+                <span className="text-white font-semibold text-lg leading-tight">{format(date, 'dd MMM')}</span>
+                <span className="text-white/30 text-xs">{format(date, 'EEEE, yyyy')}</span>
+              </div>
+            ) : (
+              <span className="text-white/30 text-lg">{placeholder}</span>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent 
+          className="w-auto p-0 bg-[#0d1317] border-white/10 shadow-2xl shadow-black/60 rounded-2xl overflow-hidden" 
+          align="start"
+          sideOffset={8}
+        >
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={(d) => {
+              onSelect(d);
+              setOpen(false);
+            }}
+            disabled={(d) => minDate ? isBefore(d, minDate) : isBefore(d, startOfToday())}
+            initialFocus
+            className="bg-[#0d1317] text-white"
+            classNames={{
+              months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+              month: "space-y-4",
+              caption: "flex justify-center pt-1 relative items-center text-white",
+              caption_label: "text-sm font-semibold text-white",
+              nav: "space-x-1 flex items-center",
+              nav_button: "h-8 w-8 bg-white/5 border border-white/10 rounded-lg p-0 hover:bg-kashmir-gold/20 hover:border-kashmir-gold/40 text-white/60 hover:text-white inline-flex items-center justify-center transition-all",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse space-y-1",
+              head_row: "flex",
+              head_cell: "text-white/30 rounded-md w-10 font-medium text-[0.75rem] uppercase",
+              row: "flex w-full mt-1",
+              cell: "h-10 w-10 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+              day: "h-10 w-10 p-0 font-normal text-white/70 hover:bg-kashmir-gold/20 hover:text-white rounded-lg transition-all inline-flex items-center justify-center",
+              day_range_end: "day-range-end",
+              day_selected: "bg-kashmir-gold text-black hover:bg-kashmir-gold hover:text-black focus:bg-kashmir-gold focus:text-black font-bold shadow-[0_0_12px_rgba(212,175,55,0.3)]",
+              day_today: "bg-white/10 text-white font-bold ring-1 ring-white/20",
+              day_outside: "text-white/15 opacity-50",
+              day_disabled: "text-white/10 opacity-30 cursor-not-allowed",
+              day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+              day_hidden: "invisible",
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+      <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider z-10">{label}</Label>
+    </div>
+  );
+}
+
 export function InteractiveTripPlanner() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     origin: 'DEL',
     destination: 'SXR',
-    date: '2026-10-15',
-    returnDate: '',
+    departureDate: addDays(new Date(), 30) as Date | undefined,
+    returnDate: undefined as Date | undefined,
     adults: 2,
     includeFlights: false,
     tripType: 'oneway' as 'oneway' | 'roundtrip',
@@ -174,6 +263,33 @@ export function InteractiveTripPlanner() {
   const [heroTitle, setHeroTitle] = useState('Design Your Journey');
   const [heroSubtitle, setHeroSubtitle] = useState('BESPOKE TRAVEL CURATED FOR YOU');
   const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80');
+
+  // ─── Real-time trip cost calculator ───
+  const tripCost = useMemo(() => {
+    const PACKAGE_RATE_PER_PERSON = 15000; // Base luxury hotel per night
+    const NIGHTS = 5;
+    const accommodationTotal = formData.adults * PACKAGE_RATE_PER_PERSON * NIGHTS;
+
+    const flightPerPerson = selectedFlight ? parseInt(selectedFlight.totalAmount) : 0;
+    const flightTotal = formData.includeFlights && selectedFlight 
+      ? flightPerPerson * formData.adults * (formData.tripType === 'roundtrip' ? 2 : 1)
+      : 0;
+
+    const taxRate = 0.05; // 5% GST
+    const subtotal = accommodationTotal + flightTotal;
+    const taxes = Math.round(subtotal * taxRate);
+    const grandTotal = subtotal + taxes;
+
+    return {
+      accommodationTotal,
+      flightPerPerson,
+      flightTotal,
+      taxes,
+      subtotal,
+      grandTotal,
+      nights: NIGHTS,
+    };
+  }, [formData.adults, formData.includeFlights, formData.tripType, selectedFlight]);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -233,13 +349,18 @@ export function InteractiveTripPlanner() {
   };
 
   const searchFlights = async () => {
+    if (!formData.departureDate) {
+      toast.error('Please select a departure date first.');
+      return;
+    }
     setIsSearchingFlights(true);
     setSelectedFlight(null);
     try {
+      const dateStr = format(formData.departureDate, 'yyyy-MM-dd');
       const params = new URLSearchParams({
         origin: formData.origin,
         destination: formData.destination,
-        date: formData.date,
+        date: dateStr,
         adults: formData.adults.toString(),
         cabinClass: formData.cabinClass,
       });
@@ -275,10 +396,6 @@ export function InteractiveTripPlanner() {
 
   const handleSubmit = async () => {
     toast.loading('Curating your experience...');
-    
-    const basePrice = formData.adults * 15000;
-    const flightPrice = selectedFlight ? parseInt(selectedFlight.totalAmount) * formData.adults : 0;
-    const totalEstimate = basePrice + flightPrice;
 
     const originAirport = AIRPORTS.find(a => a.code === formData.origin);
     const destAirport = AIRPORTS.find(a => a.code === formData.destination);
@@ -292,11 +409,11 @@ export function InteractiveTripPlanner() {
           email: formData.email,
           phone: formData.phone,
           destination: destAirport?.city || 'Bespoke Kashmir Experience',
-          duration: '6 Days',
+          duration: `${tripCost.nights} Nights`,
           travelers: String(formData.adults),
-          budget: `₹${totalEstimate.toLocaleString()}`,
+          budget: `₹${tripCost.grandTotal.toLocaleString()}`,
           accommodation: formData.includeFlights ? 'Luxury Hotel + Flights' : 'Luxury Hotel Only',
-          message: `Custom Build. Route: ${originAirport?.city || formData.origin} → ${destAirport?.city || formData.destination}. Guests: ${formData.adults}. Flights: ${formData.includeFlights}. Cabin: ${formData.cabinClass}. Trip: ${formData.tripType}. Budget: ₹${totalEstimate.toLocaleString()}`,
+          message: `Custom Build. Route: ${originAirport?.city || formData.origin} → ${destAirport?.city || formData.destination}. Guests: ${formData.adults}. Flights: ${formData.includeFlights}. Cabin: ${formData.cabinClass}. Trip: ${formData.tripType}. Dates: ${formData.departureDate ? format(formData.departureDate, 'dd MMM yyyy') : 'TBD'}${formData.returnDate ? ' – ' + format(formData.returnDate, 'dd MMM yyyy') : ''}. Total Estimate: ₹${tripCost.grandTotal.toLocaleString()} (incl. GST)`,
         })
       });
 
@@ -340,6 +457,75 @@ export function InteractiveTripPlanner() {
     </div>
   );
 
+  // ─── Real-Time Cost Breakdown Panel ───
+  const CostBreakdown = () => (
+    <div className="mt-8 p-6 rounded-2xl border border-kashmir-gold/20 bg-gradient-to-br from-kashmir-gold/5 to-transparent backdrop-blur-sm animate-in fade-in duration-500">
+      <div className="flex items-center gap-2 mb-5">
+        <div className="w-8 h-8 rounded-full bg-kashmir-gold/10 flex items-center justify-center">
+          <TrendingUp className="w-4 h-4 text-kashmir-gold" />
+        </div>
+        <h4 className="text-sm font-bold text-white uppercase tracking-wider">Live Trip Estimate</h4>
+        <div className="ml-auto flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-medium text-emerald-400/80 uppercase tracking-wider">Real-time</span>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {/* Accommodation */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-white/40 text-sm">🏨</span>
+            <span className="text-white/60 text-sm">Luxury Stay × {tripCost.nights} nights × {formData.adults} guests</span>
+          </div>
+          <span className="text-white font-medium text-sm">₹{tripCost.accommodationTotal.toLocaleString()}</span>
+        </div>
+
+        {/* Flights */}
+        {formData.includeFlights && (
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-white/40 text-sm">✈️</span>
+              <span className="text-white/60 text-sm">
+                Flights{selectedFlight ? ` (${selectedFlight.airlineName})` : ''} × {formData.adults}
+                {formData.tripType === 'roundtrip' ? ' × 2 ways' : ''}
+              </span>
+            </div>
+            <span className={`font-medium text-sm ${selectedFlight ? 'text-white' : 'text-white/30 italic'}`}>
+              {selectedFlight ? `₹${tripCost.flightTotal.toLocaleString()}` : 'Select a flight'}
+            </span>
+          </div>
+        )}
+
+        {/* Divider */}
+        <div className="border-t border-white/5 my-2" />
+
+        {/* Subtotal */}
+        <div className="flex justify-between items-center text-white/40 text-xs">
+          <span>Subtotal</span>
+          <span>₹{tripCost.subtotal.toLocaleString()}</span>
+        </div>
+
+        {/* Taxes */}
+        <div className="flex justify-between items-center text-white/40 text-xs">
+          <span>GST (5%)</span>
+          <span>₹{tripCost.taxes.toLocaleString()}</span>
+        </div>
+
+        {/* Grand Total */}
+        <div className="border-t border-kashmir-gold/20 pt-3 mt-2">
+          <div className="flex justify-between items-center">
+            <span className="text-white font-semibold text-base">Estimated Total</span>
+            <div className="text-right">
+              <span className="text-kashmir-gold font-bold text-2xl tracking-tight">₹{tripCost.grandTotal.toLocaleString()}</span>
+              <p className="text-white/20 text-[10px] uppercase tracking-wider mt-0.5">For {formData.adults} {formData.adults === 1 ? 'guest' : 'guests'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="w-full max-w-4xl mx-auto py-12 relative">
       {/* Decorative blurred background elements for luxury feel */}
@@ -357,42 +543,59 @@ export function InteractiveTripPlanner() {
         <div className="p-8 md:p-12">
           {step < 4 && <StepIndicator />}
 
-          {/* Step 1: Basics */}
+          {/* Step 1: Dates & Guests */}
           {step === 1 && (
             <div className="space-y-10 animate-in slide-in-from-right fade-in duration-500 max-w-2xl mx-auto">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-light text-white">When do you wish to travel?</h3>
-                <p className="text-white/40 mt-2">Select your intended dates and party size.</p>
+                <p className="text-white/40 mt-2">Pick your dates and party size.</p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="group relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <CalendarIcon className="h-5 w-5 text-kashmir-gold group-focus-within:text-kashmir-gold transition-colors" />
-                  </div>
-                  <Input 
-                    type="date" 
-                    value={formData.date} 
-                    onChange={e => setFormData({ ...formData, date: e.target.value })}
-                    className="pl-12 h-14 bg-white/5 border-white/10 rounded-xl text-white text-lg focus-visible:ring-kashmir-gold transition-all"
-                  />
-                  <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider">Arrival Date</Label>
-                </div>
+              {/* Calendar Date Pickers */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <DatePickerField
+                  date={formData.departureDate}
+                  onSelect={(d) => setFormData(prev => ({ ...prev, departureDate: d }))}
+                  label="Departure Date"
+                  placeholder="Pick departure"
+                />
+                <DatePickerField
+                  date={formData.returnDate}
+                  onSelect={(d) => setFormData(prev => ({ ...prev, returnDate: d }))}
+                  label="Return Date"
+                  placeholder="Pick return (optional)"
+                  minDate={formData.departureDate ? addDays(formData.departureDate, 1) : addDays(new Date(), 1)}
+                />
+              </div>
 
-                <div className="group relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              {/* Guest Counter */}
+              <div className="relative">
+                <div className="flex items-center justify-between h-16 px-5 rounded-xl border border-white/10 bg-[#0a0f12]">
+                  <div className="flex items-center gap-3">
                     <Users className="h-5 w-5 text-kashmir-gold" />
+                    <span className="text-white/60 text-sm">Travellers</span>
                   </div>
-                  <Input 
-                    type="number" 
-                    min="1" 
-                    value={formData.adults} 
-                    onChange={e => setFormData({ ...formData, adults: parseInt(e.target.value) })}
-                    className="pl-12 h-14 bg-white/5 border-white/10 rounded-xl text-white text-lg focus-visible:ring-kashmir-gold transition-all"
-                  />
-                  <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider">Guests</Label>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setFormData(prev => ({ ...prev, adults: Math.max(1, prev.adults - 1) }))}
+                      className="w-9 h-9 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/50 hover:bg-kashmir-gold/10 hover:border-kashmir-gold/40 hover:text-white transition-all active:scale-90"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="text-white font-bold text-2xl w-8 text-center tabular-nums">{formData.adults}</span>
+                    <button
+                      onClick={() => setFormData(prev => ({ ...prev, adults: Math.min(12, prev.adults + 1) }))}
+                      className="w-9 h-9 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/50 hover:bg-kashmir-gold/10 hover:border-kashmir-gold/40 hover:text-white transition-all active:scale-90"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
+                <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider z-10">Guests</Label>
               </div>
+
+              {/* Live Cost Preview on Step 1 */}
+              <CostBreakdown />
             </div>
           )}
 
@@ -496,22 +699,24 @@ export function InteractiveTripPlanner() {
                     />
                   </div>
 
-                  {/* Return date for round trip */}
-                  {formData.tripType === 'roundtrip' && (
-                    <div className="group relative animate-in fade-in duration-300">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <CalendarIcon className="h-5 w-5 text-kashmir-gold" />
-                      </div>
-                      <Input
-                        type="date"
-                        value={formData.returnDate}
-                        min={formData.date}
-                        onChange={e => setFormData(prev => ({ ...prev, returnDate: e.target.value }))}
-                        className="pl-12 h-14 bg-white/5 border-white/10 rounded-xl text-white text-lg focus-visible:ring-kashmir-gold transition-all"
+                  {/* Departure Date for Flight */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <DatePickerField
+                      date={formData.departureDate}
+                      onSelect={(d) => setFormData(prev => ({ ...prev, departureDate: d }))}
+                      label="Departure"
+                      placeholder="Select date"
+                    />
+                    {formData.tripType === 'roundtrip' && (
+                      <DatePickerField
+                        date={formData.returnDate}
+                        onSelect={(d) => setFormData(prev => ({ ...prev, returnDate: d }))}
+                        label="Return"
+                        placeholder="Select return"
+                        minDate={formData.departureDate ? addDays(formData.departureDate, 1) : addDays(new Date(), 1)}
                       />
-                      <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider">Return Date</Label>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Search Button */}
                   <Button
@@ -592,8 +797,14 @@ export function InteractiveTripPlanner() {
                       </div>
                     </div>
                   )}
+
+                  {/* Live Cost Breakdown after flight selection */}
+                  <CostBreakdown />
                 </div>
               )}
+
+              {/* Show cost even if flights are off */}
+              {!formData.includeFlights && <CostBreakdown />}
             </div>
           )}
 
@@ -638,6 +849,9 @@ export function InteractiveTripPlanner() {
                   <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider">WhatsApp Number</Label>
                 </div>
               </div>
+
+              {/* Final Cost Summary */}
+              <CostBreakdown />
             </div>
           )}
 
@@ -651,9 +865,15 @@ export function InteractiveTripPlanner() {
               <p className="text-lg text-white/60 max-w-md mx-auto leading-relaxed">
                 Our luxury travel curators are meticulously analyzing your preferences and securing the best rates. You will receive a WhatsApp message shortly.
               </p>
-              <Button onClick={() => window.location.reload()} variant="outline" className="mt-10 rounded-full px-8 h-12 border-white/10 text-white hover:bg-white/5">
-                Plan Another Trip
-              </Button>
+              <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10 inline-block">
+                <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Your Estimated Budget</p>
+                <p className="text-kashmir-gold text-3xl font-bold">₹{tripCost.grandTotal.toLocaleString()}</p>
+              </div>
+              <div className="mt-8">
+                <Button onClick={() => window.location.reload()} variant="outline" className="rounded-full px-8 h-12 border-white/10 text-white hover:bg-white/5">
+                  Plan Another Trip
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -668,6 +888,13 @@ export function InteractiveTripPlanner() {
             >
               Back
             </Button>
+
+            {/* Floating cost in footer */}
+            <div className="hidden sm:flex items-center gap-2 text-white/30">
+              <IndianRupee className="w-3.5 h-3.5" />
+              <span className="text-sm font-medium text-kashmir-gold">₹{tripCost.grandTotal.toLocaleString()}</span>
+              <span className="text-[10px] uppercase tracking-wider">est.</span>
+            </div>
             
             {step < 3 ? (
               <Button 
