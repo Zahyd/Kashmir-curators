@@ -36,6 +36,18 @@ const defaultContent: Record<string, any> = {
     },
     image_url: '',
   },
+  socialMedia: {
+    section_key: 'socialMedia',
+    title: 'Brand Social Footprint',
+    subtitle: 'Manage the outbound connection links for the Footer.',
+    content: {
+      facebook: 'https://facebook.com',
+      instagram: 'https://instagram.com',
+      twitter: 'https://twitter.com',
+      youtube: 'https://youtube.com'
+    },
+    image_url: ''
+  }
 };
 
 // Reads local cache JSON file

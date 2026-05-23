@@ -1,8 +1,50 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube, ShieldCheck, Globe, Star } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
+import { io } from 'socket.io-client';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function Footer() {
+  const [socialLinks, setSocialLinks] = useState({
+    facebook: '',
+    instagram: '',
+    twitter: '',
+    youtube: ''
+  });
+
+  useEffect(() => {
+    // 1. Fetch initial social footprint from REST API
+    const fetchContent = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/site-content`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.socialMedia?.content) {
+            setSocialLinks(data.socialMedia.content);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch social links', err);
+      }
+    };
+    fetchContent();
+
+    // 2. Subscribe to real-time updates via Socket.io
+    const socket = io(API_BASE_URL.replace('/api', ''), {
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('site-content-updated', (payload) => {
+      if (payload.sectionKey === 'socialMedia' && payload.data?.content) {
+        setSocialLinks(payload.data.content);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
   return (
     <footer className="bg-[#05080a] text-white border-t border-white/5 relative overflow-hidden">
       {/* Background Subtle Gradient */}
@@ -19,11 +61,26 @@ export default function Footer() {
               The premier registry for high-fidelity travel experiences across the Kashmir valley. Curating excellence since 2012.
             </p>
             <div className="flex gap-4">
-              {[Facebook, Instagram, Twitter, Youtube].map((Icon, i) => (
-                <a key={i} href="#" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-kashmir-gold hover:text-black hover:border-kashmir-gold transition-all duration-500">
-                  <Icon className="h-4 w-4" />
+              {socialLinks.facebook && (
+                <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-kashmir-gold hover:text-black hover:border-kashmir-gold transition-all duration-500">
+                  <Facebook className="h-4 w-4" />
                 </a>
-              ))}
+              )}
+              {socialLinks.instagram && (
+                <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-kashmir-gold hover:text-black hover:border-kashmir-gold transition-all duration-500">
+                  <Instagram className="h-4 w-4" />
+                </a>
+              )}
+              {socialLinks.twitter && (
+                <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-kashmir-gold hover:text-black hover:border-kashmir-gold transition-all duration-500">
+                  <Twitter className="h-4 w-4" />
+                </a>
+              )}
+              {socialLinks.youtube && (
+                <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-kashmir-gold hover:text-black hover:border-kashmir-gold transition-all duration-500">
+                  <Youtube className="h-4 w-4" />
+                </a>
+              )}
             </div>
           </div>
 

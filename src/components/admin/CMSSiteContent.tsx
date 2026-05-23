@@ -267,6 +267,56 @@ export default function CMSSiteContent() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Social Media Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Brand Social Footprint</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-1 block">Facebook URL</label>
+            <Input
+              value={(content.socialMedia?.content as Record<string, string>)?.facebook || ''}
+              onChange={(e) => updateContentField('socialMedia', 'facebook', e.target.value)}
+              placeholder="https://facebook.com/kashmircurators"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Instagram URL</label>
+            <Input
+              value={(content.socialMedia?.content as Record<string, string>)?.instagram || ''}
+              onChange={(e) => updateContentField('socialMedia', 'instagram', e.target.value)}
+              placeholder="https://instagram.com/kashmircurators"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Twitter (X) URL</label>
+            <Input
+              value={(content.socialMedia?.content as Record<string, string>)?.twitter || ''}
+              onChange={(e) => updateContentField('socialMedia', 'twitter', e.target.value)}
+              placeholder="https://twitter.com/kashmircurators"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">YouTube URL</label>
+            <Input
+              value={(content.socialMedia?.content as Record<string, string>)?.youtube || ''}
+              onChange={(e) => updateContentField('socialMedia', 'youtube', e.target.value)}
+              placeholder="https://youtube.com/@kashmircurators"
+            />
+          </div>
+
+          <Button onClick={() => saveSection('socialMedia')} disabled={saving === 'socialMedia'}>
+            {saving === 'socialMedia' ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save Social Links
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

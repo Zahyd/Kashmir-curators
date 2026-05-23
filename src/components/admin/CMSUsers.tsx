@@ -335,6 +335,15 @@ export default function CMSUsers() {
                         <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Inquiries</p>
                         <p className="font-bold text-white">{u._count?.inquiries || 0}</p>
                       </div>
+                      <div className="pl-4 border-l border-white/5 flex items-center justify-center">
+                        <button
+                          onClick={() => handleDeleteUser(u.id, u.name)}
+                          className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500 hover:text-black border border-red-500/20 hover:border-red-500 flex items-center justify-center text-red-400 transition-all duration-300 shadow-lg"
+                          title="Delete Traveler Profile"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between w-full">
