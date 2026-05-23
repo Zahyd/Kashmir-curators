@@ -1,74 +1,133 @@
-import { Duffel } from '@duffel/api';
-
 export class FlightService {
-  private static getDuffelClient() {
-    return new Duffel({
-      // Fallback to test token if not provided in env
-      token: process.env.DUFFEL_ACCESS_TOKEN || 'duffel_test_mock_token_abc123'
-    });
+  /**
+   * Helper to resolve standard IATA codes or city names to Skyscanner SkyIds and EntityIds
+   */
+  private static async resolveAirport(query: string) {
+    const apiKey = process.env.RAPIDAPI_KEY;
+    const apiHost = process.env.RAPIDAPI_HOST || 'skyscanner-flights4.p.rapidapi.com';
+    
+    if (!apiKey) {
+      return { skyId: query.toUpperCase(), entityId: '' };
+    }
+
+    try {
+      const url = `https://${apiHost}/api/v1/flights/searchAirport?query=${encodeURIComponent(query)}`;
+      const res = await fetch(url, {
+        headers: {
+          'X-RapidAPI-Key': apiKey,
+          'X-RapidAPI-Host': apiHost
+        }
+      });
+
+      if (!res.ok) throw new Error(`Search airport failed with status ${res.status}`);
+      const payload: any = await res.json();
+      
+      const relevant = payload?.data?.[0]?.navigation?.relevantFlightParams;
+      if (relevant && relevant.skyId && relevant.entityId) {
+        return {
+          skyId: relevant.skyId,
+          entityId: relevant.entityId
+        };
+      }
+      
+      return {
+        skyId: query.toUpperCase(),
+        entityId: ''
+      };
+    } catch (e: any) {
+      console.error('[FlightService] Failed to resolve airport:', e.message);
+      return {
+        skyId: query.toUpperCase(),
+        entityId: ''
+      };
+    }
   }
 
   /**
-   * Search for flights to Srinagar (SXR)
+   * Search for flights to Srinagar (SXR) using Skyscanner Flights API
    */
   public static async searchFlights(originIata: string, departureDate: string, adults: number = 1) {
     const originUpper = (originIata || 'DEL').toUpperCase().trim();
-    
+    const apiKey = process.env.RAPIDAPI_KEY;
+    const apiHost = process.env.RAPIDAPI_HOST || 'skyscanner-flights4.p.rapidapi.com';
+
+    // Failsafe fallback if no key is configured
+    if (!apiKey) {
+      console.warn('[FlightService] Skyscanner RapidAPI Key missing. Seamlessly serving high-fidelity simulated pricing.');
+      return this.getMockFlightData(originUpper, departureDate);
+    }
+
     try {
-      const duffel = this.getDuffelClient();
+      // 1. Resolve Skyscanner specific SkyId and EntityId for Origin and Destination (SXR)
+      const originRes = await this.resolveAirport(originUpper);
+      const destRes = await this.resolveAirport('SXR');
 
-      if (!process.env.DUFFEL_ACCESS_TOKEN || process.env.DUFFEL_ACCESS_TOKEN.startsWith('duffel_test_mock_token')) {
-        console.warn('[FlightService] Live access token missing or mock token detected. Seamlessly serving high-fidelity simulated pricing.');
-        return this.getMockFlightData(originUpper, departureDate);
-      }
+      // 2. Fetch live flight itineraries from Skyscanner Flights
+      const searchUrl = new URL(`https://${apiHost}/api/v1/flights/searchFlights`);
+      searchUrl.searchParams.append('originSkyId', originRes.skyId);
+      searchUrl.searchParams.append('destinationSkyId', destRes.skyId);
+      if (originRes.entityId) searchUrl.searchParams.append('originEntityId', originRes.entityId);
+      if (destRes.entityId) searchUrl.searchParams.append('destinationEntityId', destRes.entityId);
+      searchUrl.searchParams.append('date', departureDate);
+      searchUrl.searchParams.append('adults', adults.toString());
+      searchUrl.searchParams.append('cabinClass', 'economy');
+      searchUrl.searchParams.append('currency', 'INR');
+      searchUrl.searchParams.append('market', 'en-US');
+      searchUrl.searchParams.append('countryCode', 'IN');
 
-      // Create an Offer Request via Duffel API
-      const offerRequestResponse = await duffel.offerRequests.create({
-        return_offers: true,
-        slices: [
-          {
-            origin: originUpper,
-            destination: 'SXR', // Srinagar International Airport
-            departure_date: departureDate,
-          },
-        ] as any,
-        passengers: Array.from({ length: adults }).map(() => ({ type: 'adult' })),
-        cabin_class: 'economy',
+      const res = await fetch(searchUrl.toString(), {
+        headers: {
+          'X-RapidAPI-Key': apiKey,
+          'X-RapidAPI-Host': apiHost
+        }
       });
 
-      const rawOffers = offerRequestResponse?.data?.offers || [];
-      if (rawOffers.length === 0) {
-        console.warn(`[FlightService] No flights returned by Duffel for ${originUpper} -> SXR. Falling back to high-fidelity simulated pricing.`);
+      if (!res.ok) {
+        throw new Error(`Skyscanner searchFlights failed with status ${res.status}`);
+      }
+
+      const payload: any = await res.json();
+      const itineraries = payload?.data?.itineraries || [];
+
+      if (itineraries.length === 0) {
+        console.warn(`[FlightService] No flights returned by Skyscanner for ${originUpper} -> SXR. Serving simulated quotes.`);
         return this.getMockFlightData(originUpper, departureDate);
       }
 
-      // Transform raw offers into a simplified payload for the client with robust safety checks
-      const offers = rawOffers
-        .filter(offer => offer && offer.slices && offer.slices.length > 0)
-        .slice(0, 5)
-        .map(offer => {
-          const slice = offer.slices[0];
-          const segment = slice.segments && slice.segments.length > 0 ? slice.segments[0] : null;
-          
-          return {
-            offerId: offer.id,
-            totalAmount: offer.total_amount,
-            totalCurrency: offer.total_currency || 'INR',
-            airlineName: offer.owner?.name || 'Partner Airline',
-            airlineLogo: offer.owner?.iata_code ? `https://pics.avs.io/200/200/${offer.owner.iata_code}.png` : 'https://pics.avs.io/200/200/6E.png',
-            departureTime: segment ? segment.departing_at : `${departureDate}T09:00:00`,
-            arrivalTime: segment ? segment.arriving_at : `${departureDate}T10:45:00`,
-            duration: slice.duration || 'PT1H45M'
-          };
-        });
+      // 3. Transform Skyscanner itineraries into dynamic client payloads
+      const offers = itineraries.slice(0, 5).map((itinerary: any) => {
+        const leg = itinerary.legs?.[0];
+        const carrier = leg?.carriers?.marketing?.[0] || {};
+        const alternateId = carrier.alternateId || ''; // e.g. 6E, AI
+        
+        // Convert minutes to ISO duration string e.g., 100 -> PT1H40M
+        const durationMinutes = leg?.durationInMinutes || 105;
+        const hrs = Math.floor(durationMinutes / 60);
+        const mins = durationMinutes % 60;
+        const durationIso = `PT${hrs}H${mins}M`;
+
+        return {
+          offerId: itinerary.id || `skyscanner_${Math.random()}`,
+          totalAmount: Math.round(itinerary.price?.raw || 5500).toString(),
+          totalCurrency: itinerary.price?.currency || 'INR',
+          airlineName: carrier.name || 'Partner Airline',
+          airlineLogo: alternateId 
+            ? `https://pics.avs.io/200/200/${alternateId.toUpperCase()}.png`
+            : 'https://pics.avs.io/200/200/6E.png',
+          departureTime: leg?.departure || `${departureDate}T09:00:00`,
+          arrivalTime: leg?.arrival || `${departureDate}T10:45:00`,
+          duration: durationIso
+        };
+      });
 
       return {
         success: true,
         offers
       };
-    } catch (error) {
-      console.error('[FlightService] Failed to query Duffel API:', (error as any).message);
-      console.warn('[FlightService] Activating failsafe high-fidelity real-time quote generation.');
+
+    } catch (error: any) {
+      console.error('[FlightService] Failed to query Skyscanner API:', error.message);
+      console.warn('[FlightService] Activating failsafe high-fidelity real-time mock quote generator.');
       return this.getMockFlightData(originUpper, departureDate);
     }
   }
