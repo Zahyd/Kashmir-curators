@@ -24,7 +24,7 @@ export interface SystemEvent {
 const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
   admin: [
     'dashboard', 'inquiries', 'bookings', 'revenue', 'users', 'payments', 
-    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 
+    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 'planner', 
     'assign_leads', 'view_financials', 'sales_portal'
   ],
   operations: [
@@ -34,7 +34,7 @@ const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
     'sales_portal', 'builder', 'payments', 'vault', 'work_log', 'performance'
   ],
   marketing: [
-    'dashboard', 'packages', 'reviews', 'media', 'content'
+    'dashboard', 'packages', 'reviews', 'media', 'content', 'planner'
   ],
 };
 
@@ -42,11 +42,11 @@ const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
 export const ADMIN_SIDEBAR_ITEMS: Record<TeamRole, string[]> = {
   admin: [
     'dashboard', 'inquiries', 'bookings', 'revenue', 'users', 'payments', 
-    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content'
+    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 'planner'
   ],
   operations: ['dashboard', 'inquiries', 'bookings', 'hotels', 'cabs'],
   sales: [],
-  marketing: ['dashboard', 'packages', 'reviews', 'media', 'content'],
+  marketing: ['dashboard', 'packages', 'reviews', 'media', 'content', 'planner'],
 };
 
 // Available sales agents for assignment

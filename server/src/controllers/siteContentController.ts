@@ -68,6 +68,13 @@ const defaultContent: Record<string, any> = {
     subtitle: 'A meticulously curated registry of the finest expeditions across the Kashmir valley.',
     content: {},
     image_url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=1600'
+  },
+  journeyHero: {
+    section_key: 'journeyHero',
+    title: 'Design Your Journey',
+    subtitle: 'BESPOKE TRAVEL CURATED FOR YOU',
+    content: {},
+    image_url: 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80'
   }
 };
 

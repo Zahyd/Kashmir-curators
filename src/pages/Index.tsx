@@ -48,7 +48,7 @@ const Index = () => {
       <main>
         <HeroSection />
         
-        <section className="py-24 bg-[#fdfbf7] dark:bg-slate-900 relative overflow-hidden" id="planner">
+        <section className="py-24 bg-transparent relative overflow-hidden" id="planner">
           {/* Subtle background decoration */}
           <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(#b5852a 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
           <div className="container mx-auto px-4 relative z-10">

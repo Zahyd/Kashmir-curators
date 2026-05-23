@@ -44,6 +44,7 @@ import CMSBookings from '@/components/admin/CMSBookings';
 import CMSRevenue from '@/components/admin/CMSRevenue';
 import CMSUsers from '@/components/admin/CMSUsers';
 import CMSPayments from '@/components/admin/CMSPayments';
+import CMSJourney from '@/components/admin/CMSJourney';
 
 const ROLE_STATS: Record<string, any[]> = {
   admin: [
@@ -368,6 +369,7 @@ export default function Admin() {
       case 'reviews': return <div className="animate-in fade-in duration-500"><CMSTestimonials /></div>;
       case 'faqs': return <div className="animate-in fade-in duration-500"><CMSFaqs /></div>;
       case 'media': return <div className="animate-in fade-in duration-500"><MediaLibrary /></div>;
+      case 'planner': return <div className="animate-in fade-in duration-500"><CMSJourney /></div>;
       case 'content': return <div className="animate-in fade-in duration-500"><CMSSiteContent /></div>;
       default: return null;
     }

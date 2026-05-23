@@ -52,6 +52,7 @@ const allMenuItems = [
   { id: 'reviews', label: 'Reviews', icon: Users },
   { id: 'faqs', label: 'FAQs', icon: HelpCircle },
   { id: 'media', label: 'Media Library', icon: ImageIcon },
+  { id: 'planner', label: 'Planner CMS', icon: Sparkles },
   { id: 'content', label: 'Site Content', icon: Settings },
 ];
 
