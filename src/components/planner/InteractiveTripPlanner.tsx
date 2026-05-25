@@ -264,32 +264,7 @@ export function InteractiveTripPlanner() {
   const [heroSubtitle, setHeroSubtitle] = useState('BESPOKE TRAVEL CURATED FOR YOU');
   const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80');
 
-  // ─── Real-time trip cost calculator ───
-  const tripCost = useMemo(() => {
-    const PACKAGE_RATE_PER_PERSON = 15000; // Base luxury hotel per night
-    const NIGHTS = 5;
-    const accommodationTotal = formData.adults * PACKAGE_RATE_PER_PERSON * NIGHTS;
 
-    const flightPerPerson = selectedFlight ? parseInt(selectedFlight.totalAmount) : 0;
-    const flightTotal = formData.includeFlights && selectedFlight 
-      ? flightPerPerson * formData.adults * (formData.tripType === 'roundtrip' ? 2 : 1)
-      : 0;
-
-    const taxRate = 0.05; // 5% GST
-    const subtotal = accommodationTotal + flightTotal;
-    const taxes = Math.round(subtotal * taxRate);
-    const grandTotal = subtotal + taxes;
-
-    return {
-      accommodationTotal,
-      flightPerPerson,
-      flightTotal,
-      taxes,
-      subtotal,
-      grandTotal,
-      nights: NIGHTS,
-    };
-  }, [formData.adults, formData.includeFlights, formData.tripType, selectedFlight]);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -409,11 +384,11 @@ export function InteractiveTripPlanner() {
           email: formData.email,
           phone: formData.phone,
           destination: destAirport?.city || 'Bespoke Kashmir Experience',
-          duration: `${tripCost.nights} Nights`,
+          duration: `5 Nights`,
           travelers: String(formData.adults),
-          budget: `₹${tripCost.grandTotal.toLocaleString()}`,
+          budget: `TBD`,
           accommodation: formData.includeFlights ? 'Luxury Hotel + Flights' : 'Luxury Hotel Only',
-          message: `Custom Build. Route: ${originAirport?.city || formData.origin} → ${destAirport?.city || formData.destination}. Guests: ${formData.adults}. Flights: ${formData.includeFlights}. Cabin: ${formData.cabinClass}. Trip: ${formData.tripType}. Dates: ${formData.departureDate ? format(formData.departureDate, 'dd MMM yyyy') : 'TBD'}${formData.returnDate ? ' – ' + format(formData.returnDate, 'dd MMM yyyy') : ''}. Total Estimate: ₹${tripCost.grandTotal.toLocaleString()} (incl. GST)`,
+          message: `Custom Build. Route: ${originAirport?.city || formData.origin} → ${destAirport?.city || formData.destination}. Guests: ${formData.adults}. Flights: ${formData.includeFlights}. Cabin: ${formData.cabinClass}. Trip: ${formData.tripType}. Dates: ${formData.departureDate ? format(formData.departureDate, 'dd MMM yyyy') : 'TBD'}${formData.returnDate ? ' – ' + format(formData.returnDate, 'dd MMM yyyy') : ''}. Total Estimate: TBD`,
         })
       });
 
@@ -457,74 +432,7 @@ export function InteractiveTripPlanner() {
     </div>
   );
 
-  // ─── Real-Time Cost Breakdown Panel ───
-  const CostBreakdown = () => (
-    <div className="mt-8 p-6 rounded-2xl border border-kashmir-gold/20 bg-gradient-to-br from-kashmir-gold/5 to-transparent backdrop-blur-sm animate-in fade-in duration-500">
-      <div className="flex items-center gap-2 mb-5">
-        <div className="w-8 h-8 rounded-full bg-kashmir-gold/10 flex items-center justify-center">
-          <TrendingUp className="w-4 h-4 text-kashmir-gold" />
-        </div>
-        <h4 className="text-sm font-bold text-white uppercase tracking-wider">Live Trip Estimate</h4>
-        <div className="ml-auto flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[10px] font-medium text-emerald-400/80 uppercase tracking-wider">Real-time</span>
-        </div>
-      </div>
 
-      <div className="space-y-3">
-        {/* Accommodation */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="text-white/40 text-sm">🏨</span>
-            <span className="text-white/60 text-sm">Luxury Stay × {tripCost.nights} nights × {formData.adults} guests</span>
-          </div>
-          <span className="text-white font-medium text-sm">₹{tripCost.accommodationTotal.toLocaleString()}</span>
-        </div>
-
-        {/* Flights */}
-        {formData.includeFlights && (
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-white/40 text-sm">✈️</span>
-              <span className="text-white/60 text-sm">
-                Flights{selectedFlight ? ` (${selectedFlight.airlineName})` : ''} × {formData.adults}
-                {formData.tripType === 'roundtrip' ? ' × 2 ways' : ''}
-              </span>
-            </div>
-            <span className={`font-medium text-sm ${selectedFlight ? 'text-white' : 'text-white/30 italic'}`}>
-              {selectedFlight ? `₹${tripCost.flightTotal.toLocaleString()}` : 'Select a flight'}
-            </span>
-          </div>
-        )}
-
-        {/* Divider */}
-        <div className="border-t border-white/5 my-2" />
-
-        {/* Subtotal */}
-        <div className="flex justify-between items-center text-white/40 text-xs">
-          <span>Subtotal</span>
-          <span>₹{tripCost.subtotal.toLocaleString()}</span>
-        </div>
-
-        {/* Taxes */}
-        <div className="flex justify-between items-center text-white/40 text-xs">
-          <span>GST (5%)</span>
-          <span>₹{tripCost.taxes.toLocaleString()}</span>
-        </div>
-
-        {/* Grand Total */}
-        <div className="border-t border-kashmir-gold/20 pt-3 mt-2">
-          <div className="flex justify-between items-center">
-            <span className="text-white font-semibold text-base">Estimated Total</span>
-            <div className="text-right">
-              <span className="text-kashmir-gold font-bold text-2xl tracking-tight">₹{tripCost.grandTotal.toLocaleString()}</span>
-              <p className="text-white/20 text-[10px] uppercase tracking-wider mt-0.5">For {formData.adults} {formData.adults === 1 ? 'guest' : 'guests'}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="w-full max-w-4xl mx-auto py-12 relative">
@@ -594,8 +502,7 @@ export function InteractiveTripPlanner() {
                 <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider z-10">Guests</Label>
               </div>
 
-              {/* Live Cost Preview on Step 1 */}
-              <CostBreakdown />
+
             </div>
           )}
 
@@ -797,15 +704,8 @@ export function InteractiveTripPlanner() {
                       </div>
                     </div>
                   )}
-
-                  {/* Live Cost Breakdown after flight selection */}
-                  <CostBreakdown />
                 </div>
-              )}
-
-              {/* Show cost even if flights are off */}
-              {!formData.includeFlights && <CostBreakdown />}
-            </div>
+              )}            </div>
           )}
 
           {/* Step 3: Contact */}
@@ -850,8 +750,7 @@ export function InteractiveTripPlanner() {
                 </div>
               </div>
 
-              {/* Final Cost Summary */}
-              <CostBreakdown />
+
             </div>
           )}
 
@@ -865,10 +764,7 @@ export function InteractiveTripPlanner() {
               <p className="text-lg text-white/60 max-w-md mx-auto leading-relaxed">
                 Our luxury travel curators are meticulously analyzing your preferences and securing the best rates. You will receive a WhatsApp message shortly.
               </p>
-              <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10 inline-block">
-                <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Your Estimated Budget</p>
-                <p className="text-kashmir-gold text-3xl font-bold">₹{tripCost.grandTotal.toLocaleString()}</p>
-              </div>
+
               <div className="mt-8">
                 <Button onClick={() => window.location.reload()} variant="outline" className="rounded-full px-8 h-12 border-white/10 text-white hover:bg-white/5">
                   Plan Another Trip
@@ -889,12 +785,7 @@ export function InteractiveTripPlanner() {
               Back
             </Button>
 
-            {/* Floating cost in footer */}
-            <div className="hidden sm:flex items-center gap-2 text-white/30">
-              <IndianRupee className="w-3.5 h-3.5" />
-              <span className="text-sm font-medium text-kashmir-gold">₹{tripCost.grandTotal.toLocaleString()}</span>
-              <span className="text-[10px] uppercase tracking-wider">est.</span>
-            </div>
+
             
             {step < 3 ? (
               <Button 
