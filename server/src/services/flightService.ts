@@ -70,7 +70,7 @@ export class FlightService {
       const destRes = await this.resolveAirport(destUpper);
 
       // 2. Fetch live flight itineraries from Skyscanner Flights
-      const searchUrl = new URL(`https://${apiHost}/api/v1/flights/searchFlights`);
+      const searchUrl = new URL(`https://${apiHost}/api/v2/flights/searchFlights`);
       searchUrl.searchParams.append('originSkyId', originRes.skyId);
       searchUrl.searchParams.append('destinationSkyId', destRes.skyId);
       if (originRes.entityId) searchUrl.searchParams.append('originEntityId', originRes.entityId);
