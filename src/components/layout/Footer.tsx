@@ -159,10 +159,10 @@ export default function Footer() {
               © {new Date().getFullYear()} The Kashmir Curators
             </p>
             <div className="flex gap-6">
-              {['Privacy', 'Terms', 'Sales Portal'].map((item) => (
+              {['Privacy', 'Terms'].map((item) => (
                 <Link 
                   key={item}
-                  to={item === 'Sales Portal' ? '/sales' : `/${item.toLowerCase()}`}
+                  to={`/${item.toLowerCase()}`}
                   className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-kashmir-gold transition-colors"
                 >
                   {item}
