@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Star, Clock, MapPin, Check, X, ChevronLeft, ChevronRight, Calendar, Users, Building, Car, Loader2, ArrowLeft, ZoomIn } from 'lucide-react';
+import { Star, Clock, MapPin, Check, X, ChevronLeft, ChevronRight, Calendar, Users, Building, Car, Loader2, ArrowLeft, ZoomIn, Crown, ShieldCheck } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import FloatingActions from '@/components/layout/FloatingActions';
@@ -33,6 +34,28 @@ export default function PackageDetail() {
     hotelCategory: 'standard',
     cabType: 'sedan',
   });
+  const [curators, setCurators] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCurators = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/curators`);
+        if (res.ok) {
+          const data = await res.json();
+          setCurators(data);
+        }
+      } catch (err) {
+        console.error('Failed to load curators:', err);
+      }
+    };
+    fetchCurators();
+  }, []);
+
+  const curator = curators.find(c => {
+    if (id === 'pkg-royal-kashmir' && c.id === 'curator-priya') return true;
+    if (id === 'pkg-winter-wonder' && c.id === 'curator-faheem') return true;
+    return false;
+  }) || curators[0];
 
   if (isLoading) {
     return (
@@ -235,6 +258,28 @@ export default function PackageDetail() {
                 </div>
               </div>
 
+              {/* Certified Local Curator Section */}
+              {curator && (
+                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center shadow-xl relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shrink-0 border-2 border-kashmir-gold/20 shadow-lg relative z-10">
+                    <img src={curator.avatar} alt={curator.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="text-center md:text-left flex-1 relative z-10">
+                    <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-kashmir-gold/10 border border-kashmir-gold/20 text-[8px] font-black uppercase tracking-wider text-kashmir-gold mb-2">
+                      <Crown className="w-2.5 h-2.5" /> Native Tour Curator
+                    </div>
+                    <h4 className="text-lg font-display font-bold text-white mb-1">{curator.name}</h4>
+                    <p className="text-xs text-kashmir-gold font-medium mb-3">{curator.role} • License: {curator.licenseNo}</p>
+                    <p className="text-xs text-white/50 leading-relaxed max-w-xl">{curator.bio}</p>
+                    <div className="mt-3 flex flex-wrap items-center justify-center md:justify-start gap-4 text-[10px] text-white/40">
+                      <span>Languages: {curator.languages}</span>
+                      <span className="text-kashmir-gold font-bold">★ {curator.rating} Verified Curator</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Itinerary */}
               {pkg.itinerary && pkg.itinerary.length > 0 && (
                 <div className="mb-6">
@@ -417,6 +462,17 @@ export default function PackageDetail() {
               <p className="text-xs text-muted-foreground text-center mt-4">
                 Free cancellation up to 7 days before
               </p>
+
+              {/* Zero Hidden Costs Guarantee Badge */}
+              <div className="mt-6 p-4 rounded-xl bg-kashmir-gold/10 border border-kashmir-gold/20 flex gap-3 items-start text-left">
+                <ShieldCheck className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
+                <div>
+                  <h5 className="text-[10px] font-black text-white uppercase tracking-wider mb-1">Zero Hidden Costs Guarantee</h5>
+                  <p className="text-[10px] text-white/50 leading-relaxed">
+                    Includes all permit fees, driver allowances, toll taxes, fuel charges, and local houseboat levies. No surprise surcharges, guaranteed.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

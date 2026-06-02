@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { API_BASE_URL } from '@/lib/api';
 
 const statusColors = {
   confirmed: 'bg-green-500/10 text-green-600 border-green-500/20',
@@ -33,6 +34,22 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [conciergeMsg, setConciergeMsg] = useState('');
   const [weather, setWeather] = useState({ temp: 18, condition: 'Partly Cloudy' });
+  const [advisories, setAdvisories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchAdvisories = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/advisories`);
+        if (res.ok) {
+          const data = await res.json();
+          setAdvisories(data);
+        }
+      } catch (err) {
+        console.error('Failed to load travel advisories:', err);
+      }
+    };
+    fetchAdvisories();
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -136,22 +153,57 @@ export default function Profile() {
               {activeTab === 'overview' && (
                 <div className="space-y-8">
                   
-                  {/* Weather & Live Update Widget */}
-                  <div className="bg-gradient-to-r from-blue-900/40 to-teal-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
-                    <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md shrink-0">
-                        <CloudSun className="w-8 h-8 text-yellow-300" />
+                  {/* Weather & Live Advisory Desk */}
+                  <div className="bg-gradient-to-r from-[#0d1520] to-[#070b10] backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 flex flex-col lg:flex-row items-stretch justify-between gap-8 shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/5 rounded-full blur-3xl pointer-events-none" />
+                    
+                    {/* Left: Weather */}
+                    <div className="flex items-center gap-6 lg:border-r border-white/5 lg:pr-8">
+                      <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center backdrop-blur-md shrink-0">
+                        <CloudSun className="w-8 h-8 text-yellow-300 animate-pulse" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-white/60 tracking-wider uppercase mb-1">Live from Srinagar</p>
-                        <h3 className="text-3xl font-display font-bold text-white">{weather.temp.toFixed(1)}°C <span className="text-xl font-normal text-white/60">{weather.condition}</span></h3>
+                        <p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-1">Live from Srinagar</p>
+                        <h3 className="text-3xl font-display font-bold text-white">{weather.temp.toFixed(1)}°C</h3>
+                        <p className="text-sm text-white/50">{weather.condition} • Shikara Ready</p>
                       </div>
                     </div>
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-sm md:max-w-xs backdrop-blur-md">
-                      <div className="flex items-center gap-2 text-kashmir-gold mb-1">
-                        <ShieldCheck className="w-4 h-4" /> <span className="font-bold">Travel Advisory</span>
+
+                    {/* Right: Dynamic Advisories Desk */}
+                    <div className="flex-1 space-y-4">
+                      <div className="flex items-center gap-2 text-kashmir-gold">
+                        <ShieldCheck className="w-5 h-5 animate-pulse" />
+                        <span className="text-xs font-black uppercase tracking-wider">Live Hotspot Clearance Desk</span>
                       </div>
-                      <p className="text-white/70">All roads to Gulmarg and Pahalgam are open and clear. Perfect weather for Shikara rides.</p>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {advisories.length > 0 ? (
+                          advisories.map((adv) => (
+                            <div key={adv.id} className="bg-white/[0.02] border border-white/5 rounded-2xl p-3 flex gap-3 items-start hover:border-kashmir-gold/20 transition-colors">
+                              <span className={cn(
+                                "w-2 h-2 rounded-full shrink-0 mt-1",
+                                adv.status === 'Open' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' :
+                                adv.status === 'Caution' ? 'bg-kashmir-gold shadow-[0_0_10px_rgba(212,175,55,0.5)]' :
+                                'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+                              )} />
+                              <div className="text-left">
+                                <h5 className="text-xs font-black text-white">{adv.location}</h5>
+                                <p className="text-[9px] text-white/50 leading-normal mt-0.5">{adv.message}</p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          ['Gulmarg', 'Pahalgam', 'Srinagar', 'Sonamarg'].map((loc) => (
+                            <div key={loc} className="bg-white/[0.02] border border-white/5 rounded-2xl p-3 flex gap-3 items-start">
+                              <span className="w-2 h-2 rounded-full bg-green-500 shrink-0 mt-1" />
+                              <div className="text-left">
+                                <h5 className="text-xs font-black text-white">{loc}</h5>
+                                <p className="text-[9px] text-white/50 leading-normal mt-0.5">All routes clear. Operations running fully with native escorts.</p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -650,6 +702,84 @@ function BookingTicket({ booking, onCancel, cancellingId }: { booking: any, onCa
             </div>
           </div>
         </div>
+
+        {/* Milestone Stepper & Download Slips */}
+        {booking.status === 'confirmed' && booking.type === 'package' && (
+          <div className="mt-8 border-t border-white/5 pt-6 relative z-10">
+            <div className="flex flex-col mb-4">
+              <h4 className="font-display text-xs font-bold text-white uppercase tracking-wider mb-1 flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-kashmir-gold animate-pulse" /> Trip Curation Progress
+              </h4>
+              <p className="text-[10px] text-white/40">Watch your premium travel portfolio come together in real-time.</p>
+            </div>
+
+            {/* Stepper Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2.5 rounded-xl">
+                <div className="w-6 h-6 rounded-full bg-kashmir-gold text-black flex items-center justify-center font-bold text-[10px] shrink-0 shadow-lg shadow-kashmir-gold/20">✓</div>
+                <div className="text-left">
+                  <p className="text-[9px] font-black uppercase text-kashmir-gold tracking-widest leading-none">Curator</p>
+                  <p className="text-[11px] text-white font-medium">Assigned</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2.5 rounded-xl">
+                <div className="w-6 h-6 rounded-full bg-kashmir-gold text-black flex items-center justify-center font-bold text-[10px] shrink-0 shadow-lg shadow-kashmir-gold/20">✓</div>
+                <div className="text-left">
+                  <p className="text-[9px] font-black uppercase text-kashmir-gold tracking-widest leading-none">Flights</p>
+                  <p className="text-[11px] text-white font-medium">Locked & Secured</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2.5 rounded-xl">
+                <div className="w-6 h-6 rounded-full bg-kashmir-gold text-black flex items-center justify-center font-bold text-[10px] shrink-0 shadow-lg shadow-kashmir-gold/20">✓</div>
+                <div className="text-left">
+                  <p className="text-[9px] font-black uppercase text-kashmir-gold tracking-widest leading-none">Hotels</p>
+                  <p className="text-[11px] text-white font-medium">Vouchers Issued</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-gradient-to-r from-kashmir-gold/10 to-transparent border border-kashmir-gold/20 p-2.5 rounded-xl animate-pulse">
+                <div className="w-6 h-6 rounded-full bg-kashmir-gold/15 text-kashmir-gold border border-kashmir-gold/30 flex items-center justify-center font-bold text-[10px] shrink-0">4</div>
+                <div className="text-left">
+                  <p className="text-[9px] font-black uppercase text-kashmir-gold tracking-widest leading-none">Chauffeur</p>
+                  <p className="text-[11px] text-white font-medium">Driver Dispatched</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Simulated Action Links */}
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  toast.success("Downloading verified hotel vouchers...", { description: "Vouchers successfully saved to downloads folder." });
+                }}
+                className="bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-xl text-[10px] h-8 border border-white/5 flex items-center gap-2"
+              >
+                <Building className="w-3 h-3 text-kashmir-gold" /> Hotel Vouchers
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  toast.success("Downloading flight e-tickets...", { description: "Verified flight tickets downloaded." });
+                }}
+                className="bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-xl text-[10px] h-8 border border-white/5 flex items-center gap-2"
+              >
+                <Ticket className="w-3 h-3 text-kashmir-gold" /> Flight Tickets
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  toast.success("Downloading Chauffeur details...", { description: "Assigned: Toyota Innova Crysta | Hilal Ahmad (+91 91037 98448)" });
+                }}
+                className="bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-xl text-[10px] h-8 border border-white/5 flex items-center gap-2"
+              >
+                <Car className="w-3 h-3 text-kashmir-gold" /> Driver Allocation Slip
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right side - Actions */}

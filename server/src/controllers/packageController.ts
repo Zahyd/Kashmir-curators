@@ -150,3 +150,81 @@ export const deletePackage = async (req: any, res: Response) => {
     res.status(500).json({ error: 'Failed to delete package' });
   }
 };
+
+export const getPackageReviews = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const reviews = await prisma.packageReview.findMany({
+      where: { packageId: id },
+      orderBy: { date: 'desc' }
+    });
+    res.json(reviews);
+  } catch (error: any) {
+    console.error('Reviews fetch error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+};
+
+export const createPackageReview = async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { userName, userAvatar, rating, text, tripType } = req.body;
+    const userId = req.user?.id || null;
+
+    let isVerified = false;
+    if (userId) {
+      const packageObj = await prisma.package.findUnique({ where: { id } });
+      if (packageObj) {
+        const completedBooking = await prisma.booking.findFirst({
+          where: {
+            userId,
+            itemName: packageObj.name,
+            status: 'confirmed'
+          }
+        });
+        if (completedBooking) {
+          isVerified = true;
+        }
+      }
+    }
+
+    const review = await prisma.packageReview.create({
+      data: {
+        packageId: id,
+        userId,
+        userName: String(userName || req.user?.name || 'Anonymous'),
+        userAvatar: userAvatar || '',
+        rating: Number(rating),
+        text: String(text),
+        tripType: tripType || 'Leisure',
+        isVerified
+      }
+    });
+
+    const packageReviews = await prisma.packageReview.findMany({
+      where: { packageId: id }
+    });
+    const avgRating = packageReviews.reduce((sum, r) => sum + r.rating, 0) / packageReviews.length;
+    
+    await prisma.package.update({
+      where: { id },
+      data: {
+        rating: Number(avgRating.toFixed(1)),
+        reviewCount: packageReviews.length
+      }
+    });
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'CREATE',
+        message: `New review for package. Verified: ${isVerified}`,
+        booking: { ...review, entityType: 'review' }
+      });
+    }
+
+    res.status(201).json(review);
+  } catch (error: any) {
+    console.error('Review creation error:', error.message);
+    res.status(500).json({ error: 'Failed to submit review' });
+  }
+};

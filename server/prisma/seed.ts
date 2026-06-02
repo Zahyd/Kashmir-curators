@@ -228,6 +228,22 @@ async function main() {
   ];
 
   for (const emp of employees) {
+    if (emp.employeeCode) {
+      const codeDuplicate = await prisma.user.findFirst({
+        where: {
+          employeeCode: emp.employeeCode,
+          NOT: { email: emp.email }
+        }
+      });
+      if (codeDuplicate) {
+        console.log(`Clearing duplicate employeeCode ${emp.employeeCode} on user ${codeDuplicate.email} to avoid conflict...`);
+        await prisma.user.update({
+          where: { id: codeDuplicate.id },
+          data: { employeeCode: null }
+        });
+      }
+    }
+
     await prisma.user.upsert({
       where: { email: emp.email },
       update: {
@@ -242,6 +258,133 @@ async function main() {
         phone: emp.phone,
         employeeCode: emp.employeeCode
       }
+    });
+  }
+
+  // 7. Curators (Native Local Guides)
+  const curators = [
+    {
+      id: "curator-faheem",
+      name: "Mir Faheem",
+      role: "Senior Curator & Gulmarg Backcountry Expert",
+      licenseNo: "JKT-2024-889",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200",
+      bio: "Born and raised in Gulmarg, Faheem has over 15 years of backcountry ski guiding and high-altitude curation experience. Officially certified by the J&K Tourism department.",
+      languages: "English, Hindi, Kashmiri",
+      phone: "+919103798448",
+      rating: 4.9
+    },
+    {
+      id: "curator-priya",
+      name: "Priya Koul",
+      role: "Srinagar Heritage & Houseboat Curator",
+      licenseNo: "JKT-2024-912",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200",
+      bio: "Specializing in the rich artistic history of Dal Lake houseboats and Mughal gardens. Priya ensures our guest experiences capture the authentic soul of royal Kashmiri craft.",
+      languages: "English, Hindi, Kashmiri, Dogri",
+      phone: "+919103798448",
+      rating: 5.0
+    },
+    {
+      id: "curator-zahoor",
+      name: "Zahoor Ahmad",
+      role: "Sonamarg & Pahalgam Expedition Planner",
+      licenseNo: "JKT-2024-411",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200",
+      bio: "An avid trekker and professional expedition leader. Zahoor curates our custom high-altitude retreats, off-road SUV trails, and private Lidder camping setups.",
+      languages: "English, Kashmiri, Balti, Urdu",
+      phone: "+919103798448",
+      rating: 4.8
+    }
+  ];
+
+  for (const cur of curators) {
+    await prisma.curator.upsert({
+      where: { id: cur.id },
+      update: {},
+      create: cur
+    });
+  }
+
+  // 8. Travel Advisories
+  const advisories = [
+    {
+      id: "adv-srinagar",
+      location: "Srinagar",
+      status: "Open",
+      message: "Weather is pleasant. Mughal gardens and Nigeen/Dal Lake shikara tours operating fully without restrictions."
+    },
+    {
+      id: "adv-gulmarg",
+      location: "Gulmarg",
+      status: "Open",
+      message: "Gulmarg Gondola Phase 1 & 2 fully operational. Road conditions are clear, standard access active."
+    },
+    {
+      id: "adv-pahalgam",
+      location: "Pahalgam",
+      status: "Open",
+      message: "Lidder river rafting and Betaab/Aru Valley routes are fully open. Perfect clear skies for private mountain picnics."
+    },
+    {
+      id: "adv-sonamarg",
+      location: "Sonamarg",
+      status: "Open",
+      message: "Zojila pass routes clear. High-altitude trails open and completely secure for guided group excursions."
+    }
+  ];
+
+  for (const adv of advisories) {
+    await prisma.travelAdvisory.upsert({
+      where: { id: adv.id },
+      update: {
+        status: adv.status,
+        message: adv.message,
+        lastUpdated: new Date()
+      },
+      create: adv
+    });
+  }
+
+  // 9. Trip-Verified Package Reviews
+  const reviews = [
+    {
+      id: "rev-1",
+      packageId: "pkg-royal-kashmir",
+      userName: "Rohan & Sneha Malhotra",
+      userAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100",
+      rating: 5,
+      text: "We booked our honeymoon through Kashmir Curators, and it was absolute perfection. Our private curator Priya Koul arranged a sunset wazwan dinner on Nigeen lake that we will cherish forever. Fully verified luxury experience!",
+      tripType: "Honeymoon",
+      isVerified: true
+    },
+    {
+      id: "rev-2",
+      packageId: "pkg-royal-kashmir",
+      userName: "Dr. Vikram K. Chatterjee",
+      userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
+      rating: 5,
+      text: "Extremely professional chauffeur and elite concierge support. Every detail from the Khyber resort booking to Gondola passes was organized before we arrived. Mir Faheem was our assigned curator and did an outstanding job.",
+      tripType: "Family Trip",
+      isVerified: true
+    },
+    {
+      id: "rev-3",
+      packageId: "pkg-winter-wonder",
+      userName: "Ayesha Ahmed",
+      userAvatar: "",
+      rating: 5,
+      text: "The snow trails in Gulmarg were stunning, and our custom snowboarding itinerary curated by Faheem was exceptional. No hidden charges whatsoever. The SUV base prices and driver allowances were fully detailed upfront. Absolute trust gained!",
+      tripType: "Solo Travel",
+      isVerified: true
+    }
+  ];
+
+  for (const rev of reviews) {
+    await prisma.packageReview.upsert({
+      where: { id: rev.id },
+      update: {},
+      create: rev
     });
   }
 

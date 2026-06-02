@@ -238,3 +238,42 @@ model SiteContent {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model Curator {
+  id           String    @id @default(uuid())
+  name         String
+  role         String
+  licenseNo    String
+  avatar       String
+  bio          String
+  languages    String
+  phone        String
+  rating       Float     @default(5.0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model TravelAdvisory {
+  id           String    @id @default(uuid())
+  location     String
+  status       String
+  message      String
+  lastUpdated  DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model PackageReview {
+  id           String    @id @default(uuid())
+  packageId    String
+  userId       String?
+  userName     String
+  userAvatar   String?
+  rating       Int
+  text         String
+  date         DateTime  @default(now())
+  helpful      Int       @default(0)
+  tripType     String?
+  isVerified   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
