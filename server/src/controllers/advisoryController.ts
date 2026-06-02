@@ -19,7 +19,7 @@ export const updateAdvisory = async (req: any, res: Response) => {
     const { status, message } = req.body;
 
     const advisory = await prisma.travelAdvisory.update({
-      where: { id },
+      where: { id: String(id) },
       data: {
         status: String(status),
         message: String(message),

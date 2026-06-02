@@ -17,7 +17,7 @@ export const getCuratorById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const curator = await prisma.curator.findUnique({
-      where: { id }
+      where: { id: String(id) }
     });
     if (!curator) return res.status(404).json({ error: 'Curator not found' });
     res.json(curator);

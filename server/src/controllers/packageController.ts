@@ -155,7 +155,7 @@ export const getPackageReviews = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const reviews = await prisma.packageReview.findMany({
-      where: { packageId: id },
+      where: { packageId: String(id) },
       orderBy: { date: 'desc' }
     });
     res.json(reviews);
@@ -173,7 +173,7 @@ export const createPackageReview = async (req: any, res: Response) => {
 
     let isVerified = false;
     if (userId) {
-      const packageObj = await prisma.package.findUnique({ where: { id } });
+      const packageObj = await prisma.package.findUnique({ where: { id: String(id) } });
       if (packageObj) {
         const completedBooking = await prisma.booking.findFirst({
           where: {
