@@ -3,7 +3,7 @@ export class FlightService {
    * Helper to resolve standard IATA codes or city names to Skyscanner SkyIds and EntityIds
    */
   private static async resolveAirport(query: string) {
-    const apiKey = process.env.RAPIDAPI_KEY || '831a1832afmshb67e276ba8718a8p15c5c3jsn711adf37bfe7';
+    const apiKey = process.env.RAPIDAPI_KEY || '20a49c2208mshbc177e9b7509ca0p132e46jsn448eea7feff5';
     const apiHost = process.env.RAPIDAPI_HOST || 'sky-scrapper.p.rapidapi.com';
     
     if (!apiKey) {
@@ -55,7 +55,7 @@ export class FlightService {
   ) {
     const originUpper = (originIata || 'DEL').toUpperCase().trim();
     const destUpper = (destinationIata || 'SXR').toUpperCase().trim();
-    const apiKey = process.env.RAPIDAPI_KEY || '831a1832afmshb67e276ba8718a8p15c5c3jsn711adf37bfe7';
+    const apiKey = process.env.RAPIDAPI_KEY || '20a49c2208mshbc177e9b7509ca0p132e46jsn448eea7feff5';
     const apiHost = process.env.RAPIDAPI_HOST || 'sky-scrapper.p.rapidapi.com';
 
     // Failsafe fallback if no key is configured
