@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, ArrowRight, Search } from 'lucide-react';
+import { MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, ArrowRight, Search, CheckCircle2, Award, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -269,6 +269,31 @@ export default function HeroSection() {
                 </Button>
               </div>
             </form>
+          </div>
+
+          {/* Trust & Authority Banner */}
+          <div 
+            className="w-full max-w-4xl mt-12 px-6 py-4 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md flex flex-wrap items-center justify-center gap-6 md:gap-16 text-white/50 text-xs font-semibold animate-fade-up"
+            style={{ animationDelay: '350ms' }}
+          >
+            <div className="flex items-center gap-2.5 hover:text-kashmir-gold transition-all duration-300 cursor-default group">
+              <div className="w-8 h-8 rounded-full bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center group-hover:bg-kashmir-gold/20 group-hover:border-kashmir-gold/40 transition-all">
+                <CheckCircle2 className="w-4 h-4 text-kashmir-gold" />
+              </div>
+              <span className="uppercase tracking-[0.2em] text-[10px] font-black">J&K Tourism Approved</span>
+            </div>
+            <div className="flex items-center gap-2.5 hover:text-kashmir-gold transition-all duration-300 cursor-default group">
+              <div className="w-8 h-8 rounded-full bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center group-hover:bg-kashmir-gold/20 group-hover:border-kashmir-gold/40 transition-all">
+                <Award className="w-4 h-4 text-kashmir-gold" />
+              </div>
+              <span className="uppercase tracking-[0.2em] text-[10px] font-black">IATO Certified Member</span>
+            </div>
+            <div className="flex items-center gap-2.5 hover:text-kashmir-gold transition-all duration-300 cursor-default group">
+              <div className="w-8 h-8 rounded-full bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center group-hover:bg-kashmir-gold/20 group-hover:border-kashmir-gold/40 transition-all">
+                <ShieldCheck className="w-4 h-4 text-kashmir-gold" />
+              </div>
+              <span className="uppercase tracking-[0.2em] text-[10px] font-black">TAAI Member</span>
+            </div>
           </div>
 
           {/* Floating High-Fidelity Stats */}

@@ -6,6 +6,7 @@ import { InteractiveTripPlanner } from '@/components/planner/InteractiveTripPlan
 import DestinationsGrid from '@/components/home/DestinationsGrid';
 import AuthenticityFeatures from '@/components/home/AuthenticityFeatures';
 import FeaturedPackages from '@/components/home/FeaturedPackages';
+import VisualItinerary from '@/components/home/VisualItinerary';
 import HowItWorks from '@/components/home/HowItWorks';
 import Testimonials from '@/components/home/Testimonials';
 import FAQSection from '@/components/home/FAQSection';
@@ -59,6 +60,7 @@ const Index = () => {
         <DestinationsGrid />
         <AuthenticityFeatures />
         <FeaturedPackages />
+        <VisualItinerary />
         <HowItWorks />
         <Testimonials />
         <FAQSection />
@@ -72,3 +74,4 @@ const Index = () => {
 };
 
 export default Index;
+

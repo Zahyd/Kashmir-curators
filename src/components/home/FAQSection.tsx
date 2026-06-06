@@ -4,7 +4,24 @@ import { useFAQs } from '@/hooks/useCMSData';
 import { HelpCircle, ShieldCheck } from 'lucide-react';
 
 export default function FAQSection() {
-  const { data: faqs = [], isLoading } = useFAQs();
+  const { data: cmsFaqs = [], isLoading } = useFAQs();
+
+  const staticFAQs = [
+    {
+      question: "Is travel to Kashmir safe for families and solo travelers?",
+      answer: "Yes, absolutely. Tourism is the primary livelihood in the valley and the local community is exceptionally welcoming. Kashmir hosts millions of domestic and international travelers annually, and secure tourist corridors, dedicated tourist police, and high safety standards ensure a worry-free experience for families and solo travelers."
+    },
+    {
+      question: "How do mobile networks (prepaid vs postpaid) work in the valley?",
+      answer: "Due to regional security regulations, prepaid mobile SIM cards issued outside Jammu & Kashmir will not work in the valley (they lose signal immediately). You must carry a postpaid connection (Jio, Airtel, and BSNL offer the best coverage). If you only have a prepaid SIM, you can purchase a local tourist SIM upon arrival by providing your passport/Aadhaar card."
+    },
+    {
+      question: "What is your refund and cancellation policy for peak-season bookings?",
+      answer: "For peak periods (such as tulip season in April, summer vacations, or Gulmarg ski season), hotels and transport partners require advance commitments. Our policy offers a 100% refund for cancellations made 30 days or more prior to arrival. Cancellations between 15-30 days are eligible for a 50% refund, while cancellations under 15 days are non-refundable but can be rescheduled under specific curator guidelines."
+    }
+  ];
+
+  const faqs = [...staticFAQs, ...cmsFaqs];
 
   return (
     <section className="py-32 bg-[#05080a] relative overflow-hidden">

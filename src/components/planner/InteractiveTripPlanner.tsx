@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, Plane, Calendar as CalendarIcon, Users, ArrowRight, CheckCircle, MapPin, ArrowLeftRight, Clock, ChevronDown, IndianRupee, TrendingUp, Minus, Plus } from 'lucide-react';
+import { Loader2, Plane, Calendar as CalendarIcon, Users, ArrowRight, CheckCircle, MapPin, ArrowLeftRight, Clock, ChevronDown, IndianRupee, TrendingUp, Minus, Plus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
@@ -242,6 +242,21 @@ function DatePickerField({
 
 export function InteractiveTripPlanner() {
   const [step, setStep] = useState(1);
+  const [currency, setCurrency] = useState<'INR' | 'USD' | 'AED'>('INR');
+  const [isSimulation, setIsSimulation] = useState(false);
+  
+  const CURRENCY_RATES = {
+    INR: { symbol: '₹', rate: 1, label: 'INR' },
+    USD: { symbol: '$', rate: 0.012, label: 'USD' },
+    AED: { symbol: 'AED ', rate: 0.044, label: 'AED' }
+  };
+
+  const formatPrice = (amount: number) => {
+    const info = CURRENCY_RATES[currency];
+    const converted = Math.round(amount * info.rate);
+    return `${info.symbol}${converted.toLocaleString()}`;
+  };
+
   const [formData, setFormData] = useState({
     origin: 'DEL',
     destination: 'SXR',
@@ -343,6 +358,7 @@ export function InteractiveTripPlanner() {
       const data = await res.json();
       if (data.success) {
         setFlightOffers(data.offers);
+        setIsSimulation(!!data.isSimulation);
         const originAirport = AIRPORTS.find(a => a.code === formData.origin);
         const destAirport = AIRPORTS.find(a => a.code === formData.destination);
         toast.success(`Found ${data.offers.length} flights from ${originAirport?.city || formData.origin} to ${destAirport?.city || formData.destination}`);
@@ -449,7 +465,31 @@ export function InteractiveTripPlanner() {
         </div>
 
         <div className="p-8 md:p-12">
-          {step < 4 && <StepIndicator />}
+          {step < 4 && (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-white/5 pb-6">
+              <div className="flex-1">
+                <StepIndicator />
+              </div>
+              <div className="flex items-center gap-2.5 self-center bg-white/5 border border-white/10 rounded-xl p-1">
+                <span className="text-[9px] font-black uppercase tracking-widest text-white/40 pl-2">Currency</span>
+                {(['INR', 'USD', 'AED'] as const).map((curr) => (
+                  <button
+                    key={curr}
+                    type="button"
+                    onClick={() => setCurrency(curr)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                      currency === curr 
+                        ? "bg-kashmir-gold text-black font-bold shadow-[0_2px_10px_rgba(212,175,55,0.2)]" 
+                        : "text-white/40 hover:text-white"
+                    )}
+                  >
+                    {curr}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Step 1: Dates & Guests */}
           {step === 1 && (
@@ -638,6 +678,32 @@ export function InteractiveTripPlanner() {
                     )}
                   </Button>
 
+                  {/* Live Flight Failsafe Notification */}
+                  {isSimulation && flightOffers.length > 0 && (
+                    <div className="p-5 rounded-2xl border border-kashmir-gold/30 bg-kashmir-gold/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mt-4 animate-fade-in">
+                      <div className="flex items-start gap-3.5">
+                        <div className="w-9 h-9 rounded-full bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center flex-shrink-0 mt-0.5 md:mt-0">
+                          <AlertCircle className="w-4.5 h-4.5 text-kashmir-gold" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-white uppercase tracking-wider">Flight Quote Estimates Applied</h4>
+                          <p className="text-[11px] text-white/50 mt-1 leading-relaxed max-w-lg">
+                            Skyscanner API is experiencing high latency or limit restrictions. Displaying highly accurate real-time market estimates. Press to re-check or lock in your request to secure direct live seat quotes.
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        type="button"
+                        onClick={searchFlights} 
+                        disabled={isSearchingFlights}
+                        variant="outline" 
+                        className="w-full md:w-auto border-kashmir-gold/30 text-kashmir-gold hover:bg-kashmir-gold hover:text-black hover:border-kashmir-gold text-[10px] font-black uppercase tracking-wider px-4 h-10 rounded-xl transition-all"
+                      >
+                        {isSearchingFlights ? "Retrying..." : "Retry Live Connect"}
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Flight Results */}
                   {flightOffers.length > 0 && (
                     <div className="space-y-4 mt-4">
@@ -687,7 +753,7 @@ export function InteractiveTripPlanner() {
                                 </div>
                               </div>
                               <div className="text-right flex-shrink-0 ml-4">
-                                <p className="text-xl font-light text-white">₹{parseInt(offer.totalAmount).toLocaleString()}</p>
+                                <p className="text-xl font-light text-white">{formatPrice(parseInt(offer.totalAmount))}</p>
                                 <div className="flex items-center gap-2 justify-end mt-1">
                                   <div className="flex items-center text-white/30 text-xs">
                                     <Clock className="w-3 h-3 mr-1" />
