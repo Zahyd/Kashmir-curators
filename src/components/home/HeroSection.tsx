@@ -156,7 +156,7 @@ export default function HeroSection() {
                         value={searchData.destination}
                         onValueChange={(value) => setSearchData(prev => ({ ...prev, destination: value }))}
                       >
-                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0">
+                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 after:absolute after:inset-0">
                           <SelectValue placeholder="Where to?" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl">
@@ -170,7 +170,7 @@ export default function HeroSection() {
                 </div>
 
                 {/* Dates */}
-                <div className="relative group/field">
+                <label className="relative group/field block cursor-pointer">
                   <div className="absolute inset-0 bg-white/[0.02] rounded-2xl border border-white/5 group-hover/field:border-kashmir-gold/20 transition-all duration-500" />
                   <div className="relative px-5 py-4 flex items-center gap-4">
                     <Calendar className="w-5 h-5 text-kashmir-gold" />
@@ -187,7 +187,7 @@ export default function HeroSection() {
                       />
                     </div>
                   </div>
-                </div>
+                </label>
 
                 {/* Travelers */}
                 <div className="relative group/field">
@@ -200,7 +200,7 @@ export default function HeroSection() {
                         value={searchData.travelers}
                         onValueChange={(value) => setSearchData(prev => ({ ...prev, travelers: value }))}
                       >
-                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0">
+                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 after:absolute after:inset-0">
                           <SelectValue placeholder="Guests" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl">
