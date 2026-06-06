@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Clock, MapPin, CheckCircle2, ChevronRight, Compass, Calendar, Plane, Coffee } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, MapPin, CheckCircle, ChevronRight, Compass, Calendar, Plane, Coffee } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ItineraryDay {
@@ -41,7 +41,7 @@ const ITINERARY_DAYS: ItineraryDay[] = [
     highlights: ["Saffron fields visit & tasting", "10th-century Avantipura ruins guided stop", "Soundscapes at Lidder riverside cottage"],
     inclusions: [
       { icon: <Clock className="w-3.5 h-3.5" />, label: "Private Chauffeur Escort" },
-      { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: "Heritage Ruins Permits" },
+      { icon: <CheckCircle className="w-3.5 h-3.5" />, label: "Heritage Ruins Permits" },
       { icon: <Coffee className="w-3.5 h-3.5" />, label: "Riverside Fine-Dining Dinner" }
     ]
   },
@@ -56,7 +56,7 @@ const ITINERARY_DAYS: ItineraryDay[] = [
     highlights: ["Guided hike through pine-forested meadows", "Picnic lunch beside glacier stream", "Interaction with local shepherd communities"],
     inclusions: [
       { icon: <Compass className="w-3.5 h-3.5" />, label: "Local Nature Guide" },
-      { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: "Betaab & Aru Entry Permits" },
+      { icon: <CheckCircle className="w-3.5 h-3.5" />, label: "Betaab & Aru Entry Permits" },
       { icon: <Coffee className="w-3.5 h-3.5" />, label: "Gourmet Meadow Picnic" }
     ]
   },
@@ -71,7 +71,7 @@ const ITINERARY_DAYS: ItineraryDay[] = [
     highlights: ["Scenic drive passing high apple orchards", "Luxury alpine resort check-in", "Sunset woodland trail trek"],
     inclusions: [
       { icon: <Clock className="w-3.5 h-3.5" />, label: "Premium SUV Transfer" },
-      { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: "Gulmarg Eco-Zone Access" },
+      { icon: <CheckCircle className="w-3.5 h-3.5" />, label: "Gulmarg Eco-Zone Access" },
       { icon: <Coffee className="w-3.5 h-3.5" />, label: "Traditional Wazwan Dinner" }
     ]
   },
@@ -86,7 +86,7 @@ const ITINERARY_DAYS: ItineraryDay[] = [
     highlights: ["Pre-booked VIP Gondola passes (both phases)", "Apharwat peak snow photography", "Hot tea at 14,000 feet alpine cafe"],
     inclusions: [
       { icon: <Compass className="w-3.5 h-3.5" />, label: "Pre-booked Gondola Tickets" },
-      { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: "Ski / Snow Marshal Liaison" },
+      { icon: <CheckCircle className="w-3.5 h-3.5" />, label: "Ski / Snow Marshal Liaison" },
       { icon: <Coffee className="w-3.5 h-3.5" />, label: "High-Altitude Tea Service" }
     ]
   },
@@ -214,7 +214,7 @@ export default function VisualItinerary() {
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     {currentDay.highlights.map((highlight, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-xs text-white/70 font-semibold">
-                        <CheckCircle2 className="w-4 h-4 text-kashmir-gold flex-shrink-0 mt-0.5" />
+                        <CheckCircle className="w-4 h-4 text-kashmir-gold flex-shrink-0 mt-0.5" />
                         <span>{highlight}</span>
                       </li>
                     ))}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, ArrowRight, Search, CheckCircle2, Award, ShieldCheck } from 'lucide-react';
+import { MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, ArrowRight, Search, CheckCircle, Award, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -278,7 +278,7 @@ export default function HeroSection() {
           >
             <div className="flex items-center gap-2.5 hover:text-kashmir-gold transition-all duration-300 cursor-default group">
               <div className="w-8 h-8 rounded-full bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center group-hover:bg-kashmir-gold/20 group-hover:border-kashmir-gold/40 transition-all">
-                <CheckCircle2 className="w-4 h-4 text-kashmir-gold" />
+                <CheckCircle className="w-4 h-4 text-kashmir-gold" />
               </div>
               <span className="uppercase tracking-[0.2em] text-[10px] font-black">J&K Tourism Approved</span>
             </div>
