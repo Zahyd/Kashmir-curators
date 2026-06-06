@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Calendar, Users, Loader2, Sparkles, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import heroImage from '@/assets/kashmir-hero-new.jpg';
 import { useDestinations } from '@/hooks/useCMSData';
@@ -14,6 +17,7 @@ export default function HeroSection() {
   const navigate = useNavigate();
   const { data: destinations = [] } = useDestinations();
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [searchData, setSearchData] = useState({
     destination: '',
     dates: '',
@@ -139,29 +143,30 @@ export default function HeroSection() {
           <div className="w-full max-w-5xl animate-fade-up" style={{ animationDelay: '300ms' }}>
             <form 
               onSubmit={handleSearch}
-              className="bg-[#0a0f12]/40 backdrop-blur-3xl border border-white/5 rounded-[3rem] p-4 md:p-6 shadow-2xl luxury-shadow flex flex-col md:flex-row gap-4 relative group"
+              className="bg-[#070b0e]/75 backdrop-blur-3xl border border-white/10 rounded-[2rem] md:rounded-full p-2 md:p-3 shadow-2xl flex flex-col md:flex-row gap-2 md:gap-0 relative group transition-all duration-500 hover:border-kashmir-gold/25 hover:shadow-[0_25px_60px_-15px_rgba(212,175,55,0.08)]"
             >
               {/* Internal Glow */}
-              <div className="absolute inset-0 rounded-[3rem] bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 rounded-[2rem] md:rounded-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
 
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-0">
                 {/* Destination */}
-                <div className="relative group/field">
-                  <div className="absolute inset-0 bg-white/[0.02] rounded-2xl border border-white/5 group-hover/field:border-kashmir-gold/20 transition-all duration-500" />
-                  <div className="relative px-5 py-4 flex items-center gap-4">
-                    <MapPin className="w-5 h-5 text-kashmir-gold" />
-                    <div className="flex-1 text-left">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-1">Destination</p>
+                <div className="flex-1 md:flex-[1.2] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                  <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                      <MapPin className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Where</span>
                       <Select
                         value={searchData.destination}
                         onValueChange={(value) => setSearchData(prev => ({ ...prev, destination: value }))}
                       >
-                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 after:absolute after:inset-0">
-                          <SelectValue placeholder="Where to?" />
+                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                          <SelectValue placeholder="Search destinations" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl">
+                        <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
                           {destinations.map((dest) => (
-                            <SelectItem key={dest} value={dest} className="hover:bg-white/5 focus:bg-white/5 rounded-xl">{dest}</SelectItem>
+                            <SelectItem key={dest} value={dest} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{dest}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -169,43 +174,73 @@ export default function HeroSection() {
                   </div>
                 </div>
 
-                {/* Dates */}
-                <label className="relative group/field block cursor-pointer">
-                  <div className="absolute inset-0 bg-white/[0.02] rounded-2xl border border-white/5 group-hover/field:border-kashmir-gold/20 transition-all duration-500" />
-                  <div className="relative px-5 py-4 flex items-center gap-4">
-                    <Calendar className="w-5 h-5 text-kashmir-gold" />
-                    <div className="flex-1 text-left">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-1">Duration</p>
-                      <Input
-                        type="text"
-                        placeholder="Select Dates"
-                        className="h-auto p-0 border-none bg-transparent text-white font-bold placeholder:text-white/20 focus-visible:ring-0"
-                        value={searchData.dates}
-                        onChange={(e) => setSearchData(prev => ({ ...prev, dates: e.target.value }))}
-                        onFocus={(e) => e.target.type = 'date'}
-                        onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
+                {/* Divider */}
+                <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                {/* Dates (Duration) */}
+                <div className="flex-1 md:flex-1 relative rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="w-full text-left outline-none focus:outline-none"
+                      >
+                        <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold transition-all duration-300">
+                            <CalendarIcon className="w-4.5 h-4.5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">When</span>
+                            <span className={cn(
+                              "block text-sm md:text-base font-bold truncate leading-tight transition-colors",
+                              selectedDate ? "text-white" : "text-white/40"
+                            )}>
+                              {selectedDate ? format(selectedDate, "dd MMM yyyy") : "Select dates"}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-[#0c1216] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-3xl z-50" align="start" sideOffset={8}>
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => {
+                          setSelectedDate(date);
+                          setSearchData(prev => ({
+                            ...prev,
+                            dates: date ? format(date, 'yyyy-MM-dd') : ''
+                          }));
+                        }}
+                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                        initialFocus
+                        className="bg-[#0c1216] text-white rounded-2xl"
                       />
-                    </div>
-                  </div>
-                </label>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Divider */}
+                <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
 
                 {/* Travelers */}
-                <div className="relative group/field">
-                  <div className="absolute inset-0 bg-white/[0.02] rounded-2xl border border-white/5 group-hover/field:border-kashmir-gold/20 transition-all duration-500" />
-                  <div className="relative px-5 py-4 flex items-center gap-4">
-                    <Users className="w-5 h-5 text-kashmir-gold" />
-                    <div className="flex-1 text-left">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-1">Travelers</p>
+                <div className="flex-1 md:flex-[0.9] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                  <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                      <Users className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Who</span>
                       <Select
                         value={searchData.travelers}
                         onValueChange={(value) => setSearchData(prev => ({ ...prev, travelers: value }))}
                       >
-                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 after:absolute after:inset-0">
-                          <SelectValue placeholder="Guests" />
+                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                          <SelectValue placeholder="Add guests" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl">
+                        <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
                           {[1, 2, 4, 6, 8, '10+'].map((num) => (
-                            <SelectItem key={num} value={num.toString()} className="hover:bg-white/5 focus:bg-white/5 rounded-xl">
+                            <SelectItem key={num} value={num.toString()} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">
                               {num} {num === 1 ? 'Guest' : 'Guests'}
                             </SelectItem>
                           ))}
@@ -217,20 +252,22 @@ export default function HeroSection() {
               </div>
 
               {/* Action Button */}
-              <Button 
-                type="submit" 
-                disabled={isSearching}
-                className="h-auto py-6 md:py-0 md:px-10 rounded-[1.8rem] bg-kashmir-gold text-black hover:bg-amber-500 font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-kashmir-gold/20 transition-all duration-500 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
-              >
-                {isSearching ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <span>Begin Journey</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </Button>
+              <div className="p-1 md:p-0 flex items-center">
+                <Button 
+                  type="submit" 
+                  disabled={isSearching}
+                  className="w-full md:w-auto h-14 md:h-14 md:px-8 rounded-[1.5rem] md:rounded-full bg-gradient-to-r from-kashmir-gold to-amber-500 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-[0.25em] shadow-lg shadow-kashmir-gold/25 hover:shadow-kashmir-gold/40 hover:scale-[1.03] active:scale-95 transition-all duration-500 flex items-center justify-center gap-2.5"
+                >
+                  {isSearching ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-black" />
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4 text-black group-hover:rotate-12 transition-transform duration-300" />
+                      <span>Explore</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
           </div>
 
