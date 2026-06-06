@@ -21,7 +21,7 @@ export default function FAQSection() {
     }
   ];
 
-  const faqs = [...staticFAQs, ...cmsFaqs];
+  const faqs = [...staticFAQs, ...(Array.isArray(cmsFaqs) ? cmsFaqs : [])];
 
   return (
     <section className="py-32 bg-[#05080a] relative overflow-hidden">
