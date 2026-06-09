@@ -53,6 +53,89 @@ export default function CMSInquiries() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [isCreatingManual, setIsCreatingManual] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    customerName: '',
+    email: '',
+    phone: '',
+    destination: 'Kashmir',
+    duration: '6 Days',
+    travelers: '2',
+    budget: 'Premium',
+    accommodation: 'Premium Hotel',
+    assignedTo: ''
+  });
+
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreatingManual(true);
+
+    try {
+      const token = localStorage.getItem('teamToken');
+      
+      const response = await fetch(`${API_BASE_URL}/inquiries`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          customerName: manualForm.customerName,
+          email: manualForm.email,
+          phone: manualForm.phone,
+          destination: manualForm.destination,
+          duration: manualForm.duration,
+          travelers: manualForm.travelers,
+          budget: manualForm.budget,
+          accommodation: manualForm.accommodation
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to create inquiry');
+      const newInquiry = await response.json();
+
+      if (manualForm.assignedTo) {
+        const assignResponse = await fetch(`${API_BASE_URL}/inquiries/${newInquiry.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            assignedTo: manualForm.assignedTo,
+            status: 'Pending Curation'
+          })
+        });
+
+        if (!assignResponse.ok) {
+          toast.warning('Inquiry created, but failed to assign agent.');
+        }
+      }
+
+      toast.success('Manual inquiry created successfully!');
+      fetchInquiries();
+      setIsManualModalOpen(false);
+      
+      setManualForm({
+        customerName: '',
+        email: '',
+        phone: '',
+        destination: 'Kashmir',
+        duration: '6 Days',
+        travelers: '2',
+        budget: 'Premium',
+        accommodation: 'Premium Hotel',
+        assignedTo: ''
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to create manual inquiry.');
+    } finally {
+      setIsCreatingManual(false);
+    }
+  };
+
   useEffect(() => {
     fetchInquiries();
   }, []);
@@ -280,7 +363,10 @@ export default function CMSInquiries() {
             <Download className="w-5 h-5 mr-3 group-hover:-translate-y-0.5 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Export Data</span>
           </Button>
-          <Button className="flex-1 xl:flex-none h-16 bg-kashmir-gold text-black hover:bg-amber-500 font-black px-10 rounded-[1.5rem] shadow-2xl shadow-kashmir-gold/10 transition-all duration-500 hover:scale-[1.02]">
+          <Button 
+            onClick={() => setIsManualModalOpen(true)}
+            className="flex-1 xl:flex-none h-16 bg-kashmir-gold text-black hover:bg-amber-500 font-black px-10 rounded-[1.5rem] shadow-2xl shadow-kashmir-gold/10 transition-all duration-500 hover:scale-[1.02]"
+          >
             <PlusCircle className="w-5 h-5 mr-3" />
             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Manual Entry</span>
           </Button>
@@ -739,6 +825,170 @@ export default function CMSInquiries() {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Manual Entry Modal */}
+      {isManualModalOpen && (
+        <Dialog open={isManualModalOpen} onOpenChange={setIsManualModalOpen}>
+          <DialogContent className="max-w-2xl bg-[#0a0f12]/95 backdrop-blur-3xl border-white/5 text-white p-12 overflow-hidden rounded-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
+            
+            <div className="text-center mb-8">
+              <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-none px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.3em] mb-4">
+                Manual Lead Creation
+              </Badge>
+              <h2 className="text-3xl font-display font-black text-white leading-tight">Create <span className="text-kashmir-gold">Customized</span> Package</h2>
+            </div>
+
+            <form onSubmit={handleManualSubmit} className="space-y-6 relative z-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Customer Name</label>
+                  <Input 
+                    required 
+                    value={manualForm.customerName}
+                    onChange={(e) => setManualForm({...manualForm, customerName: e.target.value})}
+                    placeholder="John Doe" 
+                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Email Address</label>
+                  <Input 
+                    type="email"
+                    required
+                    value={manualForm.email}
+                    onChange={(e) => setManualForm({...manualForm, email: e.target.value})}
+                    placeholder="john@example.com" 
+                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Phone Number</label>
+                  <Input 
+                    required 
+                    value={manualForm.phone}
+                    onChange={(e) => setManualForm({...manualForm, phone: e.target.value})}
+                    placeholder="+91 98765 43210" 
+                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Destination</label>
+                  <select 
+                    value={manualForm.destination}
+                    onChange={(e) => setManualForm({...manualForm, destination: e.target.value})}
+                    className="w-full h-10 px-3 rounded-xl bg-[#0c1216] border border-white/5 text-white text-sm focus:ring-kashmir-gold/20 focus:border-kashmir-gold/20"
+                  >
+                    <option value="Kashmir">Kashmir (General)</option>
+                    <option value="Srinagar & Gulmarg">Srinagar & Gulmarg</option>
+                    <option value="Pahalgam & Sonamarg">Pahalgam & Sonamarg</option>
+                    <option value="Leh Ladakh">Leh Ladakh</option>
+                    <option value="Complete Kashmir Valley">Complete Kashmir Valley</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Duration</label>
+                  <select 
+                    value={manualForm.duration}
+                    onChange={(e) => setManualForm({...manualForm, duration: e.target.value})}
+                    className="w-full h-10 px-3 rounded-xl bg-[#0c1216] border border-white/5 text-white text-sm focus:ring-kashmir-gold/20 focus:border-kashmir-gold/20"
+                  >
+                    <option value="4 Days">4 Days (3 Nights)</option>
+                    <option value="5 Days">5 Days (4 Nights)</option>
+                    <option value="6 Days">6 Days (5 Nights)</option>
+                    <option value="7 Days">7 Days (6 Nights)</option>
+                    <option value="8 Days">8 Days (7 Nights)</option>
+                    <option value="9 Days">9 Days (8 Nights)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Travelers</label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    required
+                    value={manualForm.travelers}
+                    onChange={(e) => setManualForm({...manualForm, travelers: e.target.value})}
+                    className="bg-white/[0.02] border-white/5 text-white rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Budget Tier</label>
+                  <select 
+                    value={manualForm.budget}
+                    onChange={(e) => setManualForm({...manualForm, budget: e.target.value})}
+                    className="w-full h-10 px-3 rounded-xl bg-[#0c1216] border border-white/5 text-white text-sm focus:ring-kashmir-gold/20 focus:border-kashmir-gold/20"
+                  >
+                    <option value="Standard">Standard</option>
+                    <option value="Premium">Premium</option>
+                    <option value="Luxury">Luxury</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Accommodation</label>
+                  <select 
+                    value={manualForm.accommodation}
+                    onChange={(e) => setManualForm({...manualForm, accommodation: e.target.value})}
+                    className="w-full h-10 px-3 rounded-xl bg-[#0c1216] border border-white/5 text-white text-sm focus:ring-kashmir-gold/20 focus:border-kashmir-gold/20"
+                  >
+                    <option value="Standard Hotel">Standard Hotels</option>
+                    <option value="Premium Hotel">Premium Hotels</option>
+                    <option value="Luxury Resort">Luxury Resorts</option>
+                    <option value="Houseboat & Hotel">Houseboat & Hotel Mix</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Assign Agent (Optional)</label>
+                  <select 
+                    value={manualForm.assignedTo}
+                    onChange={(e) => setManualForm({...manualForm, assignedTo: e.target.value})}
+                    className="w-full h-10 px-3 rounded-xl bg-[#0c1216] border border-white/5 text-white text-sm focus:ring-kashmir-gold/20 focus:border-kashmir-gold/20"
+                  >
+                    <option value="">Do Not Assign (Round-Robin)</option>
+                    {SALES_AGENTS.map(agent => (
+                      <option key={agent.code} value={agent.code}>{agent.name} ({agent.code})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-6">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => setIsManualModalOpen(false)} 
+                  className="flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isCreatingManual}
+                  className="flex-[2] h-14 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-kashmir-gold/20"
+                >
+                  {isCreatingManual ? (
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Creating Inquiry...</span>
+                    </div>
+                  ) : (
+                    <span>Create Inquiry</span>
+                  )}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       )}

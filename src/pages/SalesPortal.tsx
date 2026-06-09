@@ -625,6 +625,7 @@ export default function SalesPortal() {
                   setSelectedInquiry(inq);
                   setActiveTab('builder');
                 }}
+                teamUser={teamUser}
               />
             )
           ) : activeTab === 'payments' ? (
@@ -643,6 +644,7 @@ export default function SalesPortal() {
                   setSelectedInquiry(inq);
                   setActiveTab('payments');
                 }}
+                teamUser={teamUser}
               />
             )
           ) : activeTab === 'vault' ? (
@@ -661,6 +663,7 @@ export default function SalesPortal() {
                   setSelectedInquiry(inq);
                   setActiveTab('vault');
                 }}
+                teamUser={teamUser}
               />
             )
           ) : activeTab === 'work-log' ? (
