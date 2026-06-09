@@ -37,13 +37,13 @@ export default function HeroSection() {
 
   const updateHeroState = (h: Record<string, any>) => {
     setHeroData({
-      title: h.title || 'BEYOND the ORDINARY',
-      subtitle: h.subtitle || 'Experience Kashmir as it was meant to be seen: Private, Peerless, and Profoundly Beautiful.',
-      imageUrl: h.image_url || heroImage,
+      title: h?.title || 'BEYOND the ORDINARY',
+      subtitle: h?.subtitle || 'Experience Kashmir as it was meant to be seen: Private, Peerless, and Profoundly Beautiful.',
+      imageUrl: h?.image_url || heroImage,
       stats: [
-        { value: h.content?.stat1_value || '1,200+', label: h.content?.stat1_label || 'Elite Curations' },
-        { value: h.content?.stat2_value || '4.95', label: h.content?.stat2_label || 'Satisfaction Index' },
-        { value: h.content?.stat3_value || '24/7', label: h.content?.stat3_label || 'Concierge Protocol' },
+        { value: h?.content?.stat1_value || '1,200+', label: h?.content?.stat1_label || 'Elite Curations' },
+        { value: h?.content?.stat2_value || '4.95', label: h?.content?.stat2_label || 'Satisfaction Index' },
+        { value: h?.content?.stat3_value || '24/7', label: h?.content?.stat3_label || 'Concierge Protocol' },
       ]
     });
   };
