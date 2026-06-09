@@ -353,7 +353,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     if (!pdfContentRef.current) return;
     
     setIsGenerating(true);
-    toast.info('Generating premium PDF itinerary...');
+    const toastId = toast.loading('Generating premium PDF itinerary...');
 
     try {
       const element = pdfContentRef.current;
@@ -371,41 +371,37 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
       // Small delay to ensure styles are fully applied
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: true,
-        backgroundColor: '#faf9f6',
-        windowWidth: 1200, 
-      });
-      
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
+      const pageElements = Array.from(element.querySelectorAll('.pdf-page'));
+      if (pageElements.length === 0) {
+        throw new Error("No PDF pages found in DOM");
+      }
+
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210;
-      const pageHeight = 295; 
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
 
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      for (let i = 0; i < pageElements.length; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight - 1; // Small overlap to avoid lines
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        const canvas = await html2canvas(pageElements[i] as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#faf9f6',
+          windowWidth: 1200,
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
       }
 
       const shortId = inquiry.id.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${inquiry.id.substring(0, 8).toUpperCase()}`;
       pdf.save(`Kashmir_Itinerary_${shortId}.pdf`);
-      toast.success('Itinerary generated successfully!');
+      toast.success('Itinerary generated successfully!', { id: toastId });
     } catch (error) {
       console.error('PDF Generation Error:', error);
-      toast.error('Failed to generate PDF. Please try again.');
+      toast.error('Failed to generate PDF. Please try again.', { id: toastId });
     } finally {
       setIsGenerating(false);
     }
@@ -438,6 +434,14 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
       setIsGenerating(false);
     }
   };
+
+  const firstTwoDays = days.slice(0, 2);
+  const remainingDays = days.slice(2);
+  const dayPairs: ItineraryDay[][] = [];
+  for (let i = 0; i < remainingDays.length; i += 2) {
+    dayPairs.push(remainingDays.slice(i, i + 2));
+  }
+  const totalPagesCount = 2 + dayPairs.length; // Page 1, Day Pairs, Final Page
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-700">
@@ -993,7 +997,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 </div>
                 <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Group & Stay</p>
-                  <p className="text-lg font-bold text-white mb-4">{inquiry.duration}</p>
+                  <p className="text-lg font-bold text-white mb-4">{days.length} Days ({days.length - 1} Nights)</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-[8px] text-white/20 uppercase font-black tracking-widest ml-1">Adults</label>
@@ -1122,180 +1126,300 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
       <div className="fixed -left-[10000px] top-0 pointer-events-none opacity-0">
         <div 
           ref={pdfContentRef}
-          className="w-[1200px] bg-[#faf9f6] text-slate-900 font-sans p-24"
+          className="w-[1200px] bg-transparent p-0"
         >
-          {/* PDF Cover Header */}
-          <div className="relative mb-20">
-            <div className="absolute top-[-40px] right-[-40px] w-64 h-64 bg-amber-50 rounded-full opacity-50 blur-3xl" />
-            <div className="flex justify-between items-end border-b-8 border-amber-500 pb-12 relative z-10">
-              <div className="flex items-center gap-8">
-                <Logo className="w-64 h-auto text-slate-900" />
-                <div className="h-16 w-px bg-amber-500/20" />
-                <div>
-                  <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px] mb-1">Luxury Travel Curators</p>
-                  <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest italic">Exclusively for {inquiry.customerName}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-black text-2xl text-slate-900 tracking-widest">{inquiry.id.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${inquiry.id.substring(0, 8).toUpperCase()}`}</p>
-                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2">Proposal Created: {new Date().toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Client Details Section */}
-          <div className="grid grid-cols-3 gap-12 mb-20 bg-slate-50 p-12 rounded-[2rem] border border-slate-100">
-            <div className="col-span-2">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">Bespoke Itinerary for</h3>
-              <p className="text-3xl font-serif font-bold text-slate-900 mb-2">{inquiry.customerName}</p>
-              <div className="flex gap-6 mt-6">
-                <div className="flex items-center gap-2 text-slate-600 text-sm font-medium">
-                  <MapPin className="w-4 h-4 text-amber-500" /> {inquiry.destination}
-                </div>
-                <div className="flex items-center gap-2 text-slate-600 text-sm font-medium">
-                  <Calendar className="w-4 h-4 text-amber-500" /> {inquiry.duration}
-                </div>
-                <div className="flex items-center gap-2 text-slate-600 text-sm font-medium">
-                  <Users className="w-4 h-4 text-amber-500" /> {pax.adults} Adults {pax.children > 0 && `• ${pax.children} Children`}
-                </div>
-              </div>
-            </div>
-            <div className="text-right border-l border-slate-200 pl-12 flex flex-col justify-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Travel Class</p>
-              <p className="text-xl font-bold text-amber-600 uppercase tracking-widest">{inquiry.budget}</p>
-            </div>
-          </div>
-
-          {/* Itinerary Body */}
-          <div className="space-y-16">
-            {days.map((day) => (
-              <div key={day.day} className="relative pl-24 border-l-4 border-amber-500/10 pb-16 last:pb-0" style={{ pageBreakInside: 'avoid' }}>
-                <div className="absolute left-[-22px] top-0 w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-amber-500/20">
-                  {day.day}
-                </div>
-                
-                <div className="mb-10">
-                  <h3 className="text-3xl font-serif font-bold text-slate-900 mb-2">{day.title}</h3>
-                  {day.showDateTime && (day.date || day.time) && (
-                    <div className="flex items-center gap-4 text-xs font-bold text-amber-700 uppercase tracking-wider mb-6 bg-amber-500/5 py-2 px-4 rounded-xl border border-amber-500/10 w-fit">
-                      {day.date && (
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                          {formatPDFDate(day.date)}
-                        </span>
-                      )}
-                      {day.date && day.time && <span className="text-amber-500/30">•</span>}
-                      {day.time && (
-                        <span className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-amber-600" />
-                          {formatPDFTime(day.time)}
-                        </span>
-                      )}
+          {/* Page 1 */}
+          <div className="pdf-page bg-[#faf9f6] text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
+            <div>
+              {/* PDF Cover Header */}
+              <div className="relative mb-14">
+                <div className="absolute top-[-40px] right-[-40px] w-64 h-64 bg-amber-50 rounded-full opacity-50 blur-3xl" />
+                <div className="flex justify-between items-end border-b-8 border-amber-500 pb-10 relative z-10">
+                  <div className="flex items-center gap-8">
+                    <Logo className="w-64 h-auto text-slate-900" />
+                    <div className="h-16 w-px bg-amber-500/20" />
+                    <div>
+                      <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px] mb-1">Luxury Travel Curators</p>
+                      <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest italic">Exclusively for {inquiry.customerName}</p>
                     </div>
-                  )}
-                  <div className="bg-slate-50/50 rounded-[2rem] p-10 border border-slate-100/50">
-                    <div className="flex flex-col md:flex-row gap-8 mb-10">
-                      <div className="flex-1">
-                        <p className="text-slate-700 text-lg leading-relaxed whitespace-pre-line">{day.activities}</p>
-                      </div>
-                      {day.hotelImage && (
-                        <div className="w-full md:w-64 h-48 rounded-2xl overflow-hidden shadow-lg shrink-0 border-4 border-white">
-                          <img 
-                            src={day.hotelImage} 
-                            alt={day.hotelName} 
-                            className="w-full h-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        </div>
-                      )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-2xl text-slate-900 tracking-widest">{inquiry.id.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${inquiry.id.substring(0, 8).toUpperCase()}`}</p>
+                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2">Proposal Created: {new Date().toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Client Details Section */}
+              <div className="grid grid-cols-3 gap-12 mb-14 bg-slate-50 p-10 rounded-[2rem] border border-slate-100">
+                <div className="col-span-2">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">Bespoke Itinerary for</h3>
+                  <p className="text-3xl font-serif font-bold text-slate-900 mb-2">{inquiry.customerName}</p>
+                  <div className="flex gap-6 mt-6">
+                    <div className="flex items-center gap-2 text-slate-600 text-sm font-medium">
+                      <MapPin className="w-4 h-4 text-amber-500" /> {inquiry.destination}
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600 text-sm font-medium">
+                      <Calendar className="w-4 h-4 text-amber-500" /> {days.length} Days ({days.length - 1} Nights)
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600 text-sm font-medium">
+                      <Users className="w-4 h-4 text-amber-500" /> {pax.adults} Adults {pax.children > 0 && `• ${pax.children} Children`}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right border-l border-slate-200 pl-12 flex flex-col justify-center">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Travel Class</p>
+                  <p className="text-xl font-bold text-amber-600 uppercase tracking-widest">{inquiry.budget}</p>
+                </div>
+              </div>
+
+              {/* Day 1 & Day 2 in Page 1 */}
+              <div className="space-y-12">
+                {firstTwoDays.map((day) => (
+                  <div key={day.day} className="relative pl-24 border-l-4 border-amber-500/10">
+                    <div className="absolute left-[-22px] top-0 w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-amber-500/20">
+                      {day.day}
                     </div>
                     
-                    <div className="flex items-center gap-8 mb-4">
-                      <div className="flex items-center gap-5 flex-1">
-                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-                          <HotelIcon className="w-6 h-6 text-amber-600" />
+                    <div className="mb-2">
+                      <h3 className="text-3xl font-serif font-bold text-slate-900 mb-2">{day.title}</h3>
+                      {day.showDateTime && (day.date || day.time) && (
+                        <div className="flex items-center gap-4 text-xs font-bold text-amber-700 uppercase tracking-wider mb-4 bg-amber-500/5 py-2 px-4 rounded-xl border border-amber-500/10 w-fit">
+                          {day.date && (
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                              {formatPDFDate(day.date)}
+                            </span>
+                          )}
+                          {day.date && day.time && <span className="text-amber-500/30">•</span>}
+                          {day.time && (
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-amber-600" />
+                              {formatPDFTime(day.time)}
+                            </span>
+                          )}
                         </div>
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Accommodation</p>
-                          <p className="text-base font-bold text-slate-900">{day.hotelName}</p>
-                          <p className="text-[10px] text-amber-600 font-bold mt-0.5">
-                            {day.roomType} • {day.mealPlan} • Stay: ₹{day.hotelPrice.toLocaleString()}
-                            {day.extraBedPrice > 0 && ` • Extra Bed: ₹${day.extraBedPrice.toLocaleString()}`}
-                          </p>
+                      )}
+                      <div className="bg-slate-50/50 rounded-[2rem] p-10 border border-slate-100/50">
+                        <div className="flex flex-col md:flex-row gap-8 mb-10">
+                          <div className="flex-1">
+                            <p className="text-slate-700 text-lg leading-relaxed whitespace-pre-line">{day.activities}</p>
+                          </div>
+                          {day.hotelImage && (
+                            <div className="w-full md:w-64 h-48 rounded-2xl overflow-hidden shadow-lg shrink-0 border-4 border-white">
+                              <img 
+                                src={day.hotelImage} 
+                                alt={day.hotelName} 
+                                className="w-full h-full object-cover"
+                                crossOrigin="anonymous"
+                              />
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-5 flex-1 pl-12 border-l border-slate-100">
-                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-                          <Car className="w-6 h-6 text-amber-600" />
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Transportation</p>
-                          <p className="text-base font-bold text-slate-900">{day.transport}</p>
-                          <p className="text-[10px] text-amber-600 font-bold mt-0.5">Premium Service • ₹{day.transportPrice.toLocaleString()}</p>
+                        
+                        <div className="flex items-center gap-8">
+                          <div className="flex items-center gap-5 flex-1">
+                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                              <HotelIcon className="w-6 h-6 text-amber-600" />
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Accommodation</p>
+                              <p className="text-base font-bold text-slate-900">{day.hotelName}</p>
+                              <p className="text-[10px] text-amber-600 font-bold mt-0.5">
+                                {day.roomType} • {day.mealPlan} • Stay: ₹{day.hotelPrice.toLocaleString()}
+                                {day.extraBedPrice > 0 && ` • Extra Bed: ₹${day.extraBedPrice.toLocaleString()}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-5 flex-1 pl-12 border-l border-slate-100">
+                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                              <Car className="w-6 h-6 text-amber-600" />
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Transportation</p>
+                              <p className="text-base font-bold text-slate-900">{day.transport}</p>
+                              <p className="text-[10px] text-amber-600 font-bold mt-0.5">Premium Service • ₹{day.transportPrice.toLocaleString()}</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center border-t border-slate-200/50 pt-6 mt-6">
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Kashmir Curators Proposal</p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Page 1 of {totalPagesCount}</p>
+            </div>
+          </div>
+
+          {/* Day Pairs (Page 2..N) */}
+          {dayPairs.map((pair, pIdx) => {
+            const pageNum = pIdx + 2;
+            return (
+              <div key={pIdx} className="pdf-page bg-[#faf9f6] text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
+                <div>
+                  <div className="flex justify-between items-center border-b-2 border-amber-500/20 pb-6 mb-12">
+                    <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px]">Itinerary Continued</p>
+                    <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">{inquiry.customerName}</p>
+                  </div>
+                  
+                  <div className="space-y-12">
+                    {pair.map((day) => (
+                      <div key={day.day} className="relative pl-24 border-l-4 border-amber-500/10">
+                        <div className="absolute left-[-22px] top-0 w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-amber-500/20">
+                          {day.day}
+                        </div>
+                        
+                        <div className="mb-2">
+                          <h3 className="text-3xl font-serif font-bold text-slate-900 mb-2">{day.title}</h3>
+                          {day.showDateTime && (day.date || day.time) && (
+                            <div className="flex items-center gap-4 text-xs font-bold text-amber-700 uppercase tracking-wider mb-6 bg-amber-500/5 py-2 px-4 rounded-xl border border-amber-500/10 w-fit">
+                              {day.date && (
+                                <span className="flex items-center gap-1.5">
+                                  <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                                  {formatPDFDate(day.date)}
+                                </span>
+                              )}
+                              {day.date && day.time && <span className="text-amber-500/30">•</span>}
+                              {day.time && (
+                                <span className="flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                  {formatPDFTime(day.time)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div className="bg-slate-50/50 rounded-[2rem] p-10 border border-slate-100/50">
+                            <div className="flex flex-col md:flex-row gap-8 mb-10">
+                              <div className="flex-1">
+                                <p className="text-slate-700 text-lg leading-relaxed whitespace-pre-line">{day.activities}</p>
+                              </div>
+                              {day.hotelImage && (
+                                <div className="w-full md:w-64 h-48 rounded-2xl overflow-hidden shadow-lg shrink-0 border-4 border-white">
+                                  <img 
+                                    src={day.hotelImage} 
+                                    alt={day.hotelName} 
+                                    className="w-full h-full object-cover"
+                                    crossOrigin="anonymous"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-8">
+                              <div className="flex items-center gap-5 flex-1">
+                                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                                  <HotelIcon className="w-6 h-6 text-amber-600" />
+                                </div>
+                                <div>
+                                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Accommodation</p>
+                                  <p className="text-base font-bold text-slate-900">{day.hotelName}</p>
+                                  <p className="text-[10px] text-amber-600 font-bold mt-0.5">
+                                    {day.roomType} • {day.mealPlan} • Stay: ₹{day.hotelPrice.toLocaleString()}
+                                    {day.extraBedPrice > 0 && ` • Extra Bed: ₹${day.extraBedPrice.toLocaleString()}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-5 flex-1 pl-12 border-l border-slate-100">
+                                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                                  <Car className="w-6 h-6 text-amber-600" />
+                                </div>
+                                <div>
+                                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Transportation</p>
+                                  <p className="text-base font-bold text-slate-900">{day.transport}</p>
+                                  <p className="text-[10px] text-amber-600 font-bold mt-0.5">Premium Service • ₹{day.transportPrice.toLocaleString()}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center border-t border-slate-200/50 pt-6 mt-6">
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Kashmir Curators Proposal</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Page {pageNum} of {totalPagesCount}</p>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
 
-          {/* Special Inclusions Section */}
-          <div className="mt-20 p-12 bg-amber-50 rounded-[2.5rem] border border-amber-100">
-            <h3 className="text-xl font-serif font-bold text-slate-900 mb-6">Exclusive Inclusions</h3>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
-                <p className="text-sm text-slate-600 font-medium">All transfers and sightseeing by private luxury vehicle.</p>
+          {/* Final Page */}
+          <div className="pdf-page bg-[#faf9f6] text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
+            <div>
+              <div className="flex justify-between items-center border-b-2 border-amber-500/20 pb-6 mb-12">
+                <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px]">Package Terms & Value</p>
+                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">{inquiry.customerName}</p>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
-                <p className="text-sm text-slate-600 font-medium">Accommodation in hand-picked luxury hotels/houseboats.</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
-                <p className="text-sm text-slate-600 font-medium">Meal plans as specified (Daily Breakfast & Dinner included).</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
-                <p className="text-sm text-slate-600 font-medium">24/7 Local support and expert curation.</p>
+
+              <div className="space-y-12">
+                {/* Special Inclusions Section */}
+                <div className="p-10 bg-amber-50/50 rounded-[2.5rem] border border-amber-100">
+                  <h3 className="text-xl font-serif font-bold text-slate-900 mb-6">Exclusive Inclusions</h3>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
+                      <p className="text-sm text-slate-600 font-medium">All transfers and sightseeing by private luxury vehicle.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
+                      <p className="text-sm text-slate-600 font-medium">Accommodation in hand-picked luxury hotels/houseboats.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
+                      <p className="text-sm text-slate-600 font-medium">Meal plans as specified (Daily Breakfast & Dinner included).</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
+                      <p className="text-sm text-slate-600 font-medium">24/7 Local support and expert curation.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Exclusions Section */}
+                <div className="p-10 bg-red-50/50 rounded-[2.5rem] border border-red-100">
+                  <h3 className="text-xl font-serif font-bold text-red-900 mb-6 flex items-center gap-3">
+                    <ShieldX className="w-6 h-6 text-red-600" /> Package Exclusions
+                  </h3>
+                  <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line font-medium italic">
+                    {exclusions}
+                  </p>
+                </div>
+
+                {/* Pricing & Total Section */}
+                <div className="bg-slate-900 rounded-[3rem] p-12 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px]" />
+                  <div className="flex justify-between items-center relative z-10">
+                    <div>
+                      <h3 className="text-amber-500 font-black uppercase tracking-[0.4em] text-[10px] mb-4">Total Package Investment</h3>
+                      <p className="text-4xl font-serif font-bold">Comprehensive Tour Price</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-6xl font-bold text-amber-500 tracking-tighter">₹{totalCost.toLocaleString()}</p>
+                      <p className="text-white/40 text-[10px] font-bold uppercase mt-2">*Inclusive of GST & All Taxes</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Exclusions Section */}
-          <div className="mt-12 p-12 bg-red-50 rounded-[2.5rem] border border-red-100">
-            <h3 className="text-xl font-serif font-bold text-red-900 mb-6 flex items-center gap-3">
-              <ShieldX className="w-6 h-6" /> Package Exclusions
-            </h3>
-            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line font-medium italic">
-              {exclusions}
-            </p>
-          </div>
-
-          {/* Pricing & Total Section */}
-          <div className="mt-12 bg-slate-900 rounded-[3rem] p-16 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px]" />
-            <div className="flex justify-between items-center relative z-10">
-              <div>
-                <h3 className="text-amber-500 font-black uppercase tracking-[0.4em] text-[10px] mb-4">Total Package Investment</h3>
-                <p className="text-4xl font-serif font-bold">Comprehensive Tour Price</p>
+            <div className="flex flex-col items-center">
+              <p className="text-slate-400 text-xs font-medium tracking-[0.2em] mb-4 uppercase">Official Proposal from Kashmir Curators Experience Team</p>
+              <div className="inline-flex flex-col items-center mb-6">
+                <h4 className="text-2xl font-serif font-bold text-slate-900 mb-1">The Kashmir Curators</h4>
+                <div className="w-12 h-1 bg-amber-500 rounded-full mb-3" />
+                <p className="text-[10px] font-black uppercase tracking-[0.6em] text-amber-700">Luxury Travel Reimagined</p>
               </div>
-              <div className="text-right">
-                <p className="text-6xl font-bold text-amber-500 tracking-tighter">₹{totalCost.toLocaleString()}</p>
-                <p className="text-white/40 text-[10px] font-bold uppercase mt-2">*Inclusive of GST & All Taxes</p>
+              
+              <div className="flex justify-between items-center border-t border-slate-200/50 pt-6 w-full">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Kashmir Curators Proposal</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Page {totalPagesCount} of {totalPagesCount}</p>
               </div>
-            </div>
-          </div>
-
-          {/* PDF Footer */}
-          <div className="mt-24 pt-16 border-t-2 border-slate-100 text-center">
-            <p className="text-slate-400 text-xs font-medium tracking-[0.2em] mb-10 uppercase">Official Proposal from Kashmir Curators Experience Team</p>
-            <div className="inline-flex flex-col items-center">
-              <h4 className="text-3xl font-serif font-bold text-slate-900 mb-2">The Kashmir Curators</h4>
-              <div className="w-16 h-1.5 bg-amber-500 rounded-full mb-6" />
-              <p className="text-[12px] font-black uppercase tracking-[0.6em] text-amber-700">Luxury Travel Reimagined</p>
             </div>
           </div>
         </div>
