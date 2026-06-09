@@ -73,12 +73,38 @@ interface ItineraryDay {
   transportNetCost: number;
   paxCount: string;
   vendorStatus: 'pending' | 'confirmed' | 'waitlist';
+  showDateTime?: boolean;
+  date?: string;
+  time?: string;
 }
 
 interface ItineraryBuilderProps {
   inquiry: any;
   onBack: () => void;
 }
+
+const formatPDFDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+const formatPDFTime = (timeStr: string) => {
+  if (!timeStr) return '';
+  try {
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayHour = h % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  } catch (e) {
+    return timeStr;
+  }
+};
 
 const activityTemplates = [
   "Shikara ride on Dal Lake at sunset",
@@ -139,7 +165,10 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
       hotelNetCost: 0,
       transportNetCost: 0,
       paxCount: '2',
-      vendorStatus: 'pending' as const
+      vendorStatus: 'pending' as const,
+      showDateTime: false,
+      date: '',
+      time: ''
     }));
     setDays(initialDays);
   }, [inquiry]);
@@ -168,7 +197,10 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
       hotelNetCost: 0,
       transportNetCost: 0,
       paxCount: days[days.length - 1]?.paxCount || '2',
-      vendorStatus: 'pending' as const
+      vendorStatus: 'pending' as const,
+      showDateTime: false,
+      date: '',
+      time: ''
     }]);
   };
 
@@ -468,10 +500,11 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
         {/* Editor Side */}
         <div className="lg:col-span-8 space-y-10">
           {/* Financial Control Panel */}
-          <Card className="bg-slate-900/80 backdrop-blur-2xl border-white/10 p-8 rounded-[3rem] sticky top-8 z-30 shadow-2xl overflow-hidden group border-l-kashmir-gold border-l-4">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-              <IndianRupee className="w-32 h-32" />
+          <Card className="bg-[#0b1317]/90 backdrop-blur-3xl border border-white/10 p-8 rounded-[3rem] sticky top-8 z-30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden group border-l-kashmir-gold border-l-4">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity duration-700">
+              <IndianRupee className="w-32 h-32 text-kashmir-gold" />
             </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-kashmir-gold/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
             
             <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
               <div className="flex items-center gap-6">
@@ -485,19 +518,19 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
               </div>
 
               <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-4 w-full md:w-auto">
-                <div className="flex-1 px-6 py-3 bg-white/5 rounded-2xl border border-white/5">
+                <div className="flex-1 px-6 py-3 bg-[#0f171b]/60 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
                   <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-1">Total Revenue</p>
                   <p className="text-lg font-bold text-white">₹{totalRevenue.toLocaleString()}</p>
                 </div>
-                <div className="flex-1 px-6 py-3 bg-white/5 rounded-2xl border border-white/5">
+                <div className="flex-1 px-6 py-3 bg-[#0f171b]/60 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
                   <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-1">Total Net Cost</p>
                   <p className="text-lg font-bold text-white/60">₹{totalNetCost.toLocaleString()}</p>
                 </div>
                 <div className={cn(
-                  "flex-1 px-8 py-3 rounded-2xl border shadow-lg transition-all",
-                  margin >= 20 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
-                  margin >= 10 ? "bg-amber-500/10 border-amber-500/30 text-amber-500" :
-                  "bg-red-500/10 border-red-500/30 text-red-400"
+                  "flex-1 px-8 py-3 rounded-2xl border shadow-lg transition-all duration-300",
+                  margin >= 20 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                  margin >= 10 ? "bg-amber-500/10 border-amber-500/20 text-amber-500" :
+                  "bg-red-500/10 border-red-500/20 text-red-400"
                 )}>
                   <p className="text-[8px] uppercase font-black tracking-widest opacity-60 mb-1">Profit Margin</p>
                   <div className="flex items-center gap-2">
@@ -538,9 +571,44 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                           className="bg-transparent border-none text-2xl font-display font-bold text-white p-0 h-auto focus-visible:ring-0 placeholder:text-white/10"
                           placeholder="Untitled Day"
                         />
-                        <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/30">
-                          <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> Full Day Plan</span>
-                          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Real-time Preview Ready</span>
+                        <div className="flex flex-wrap items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-white/30">
+                          <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-white/20" /> Full Day Plan</span>
+                          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Live Preview</span>
+                          <div className="h-4 w-px bg-white/10" />
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-kashmir-gold transition-colors">
+                            <input 
+                              type="checkbox" 
+                              checked={day.showDateTime || false} 
+                              onChange={(e) => handleUpdateDay(index, 'showDateTime', e.target.checked)}
+                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-kashmir-gold focus:ring-0 focus:ring-offset-0 cursor-pointer accent-kashmir-gold"
+                            />
+                            <span>Set Date & Time</span>
+                          </label>
+
+                          {day.showDateTime && (
+                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
+                              <div className="relative flex items-center">
+                                <Calendar className="absolute left-3 w-3.5 h-3.5 text-kashmir-gold" />
+                                <input 
+                                  type="date" 
+                                  value={day.date || ''} 
+                                  onChange={(e) => handleUpdateDay(index, 'date', e.target.value)}
+                                  className="bg-[#0f171b]/80 border border-white/10 rounded-xl h-10 pl-9 pr-3 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/40 focus:bg-white/[0.08] transition-all w-38 color-scheme-dark"
+                                  style={{ colorScheme: 'dark' }}
+                                />
+                              </div>
+                              <div className="relative flex items-center">
+                                <Clock className="w-3.5 h-3.5 absolute left-3 text-kashmir-gold" />
+                                <input 
+                                  type="time" 
+                                  value={day.time || ''} 
+                                  onChange={(e) => handleUpdateDay(index, 'time', e.target.value)}
+                                  className="bg-[#0f171b]/80 border border-white/10 rounded-xl h-10 pl-9 pr-3 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/40 focus:bg-white/[0.08] transition-all w-28 color-scheme-dark"
+                                  style={{ colorScheme: 'dark' }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -567,7 +635,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                             value={day.activities}
                             onChange={(e) => handleUpdateDay(index, 'activities', e.target.value)}
                             placeholder="Craft the magic here..."
-                            className="bg-white/5 border-white/5 rounded-3xl min-h-[200px] focus:border-kashmir-gold/30 text-white/80 leading-relaxed transition-all focus:bg-white/[0.08]"
+                            className="bg-[#0f171b]/60 border border-white/5 rounded-[2rem] min-h-[200px] focus:border-kashmir-gold/30 focus:bg-[#0f171b]/90 text-white/90 leading-relaxed transition-all duration-300 focus:ring-0 focus-visible:ring-0 placeholder:text-white/10"
                           />
                         </div>
                         
@@ -576,7 +644,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                             <button
                               key={tIdx}
                               onClick={() => addTemplate(index, template)}
-                              className="text-[9px] font-bold px-4 py-2 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-kashmir-gold hover:border-kashmir-gold/30 hover:bg-kashmir-gold/5 transition-all"
+                              className="text-[9px] font-bold px-4 py-2 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-kashmir-gold hover:border-kashmir-gold/30 hover:bg-kashmir-gold/5 transition-all duration-300"
                             >
                               + {template.split(' ').slice(0, 3).join(' ')}...
                             </button>
@@ -593,7 +661,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                           <div className="flex gap-4">
                             <div 
                               onClick={() => setShowImageActions(index)}
-                              className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden relative cursor-pointer hover:bg-white/10 transition-all group/himg shadow-inner"
+                              className="w-20 h-20 rounded-2xl bg-[#0f171b]/60 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden relative cursor-pointer hover:bg-white/10 transition-all duration-300 group/himg shadow-inner"
                             >
                               {day.hotelImage ? (
                                 <img src={day.hotelImage} className="w-full h-full object-cover group-hover/himg:scale-110 transition-transform duration-500" />
@@ -608,7 +676,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                               <Input 
                                 value={day.hotelName}
                                 onChange={(e) => handleUpdateDay(index, 'hotelName', e.target.value)}
-                                className="bg-white/5 border-white/5 rounded-2xl h-20 pl-14 pr-12 focus:border-kashmir-gold/30 font-bold text-lg placeholder:text-white/10"
+                                className="bg-[#0f171b]/60 border border-white/5 rounded-2xl h-20 pl-14 pr-12 focus:border-kashmir-gold/30 font-bold text-lg placeholder:text-white/10 transition-colors focus:bg-[#0f171b]/90"
                                 placeholder="Select Luxury Stay..."
                               />
                               <HotelIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
@@ -624,14 +692,14 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
 
                         {/* Accommodation Details Grid */}
                         {day.hotelName && (
-                          <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                          <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 bg-[#0f171b]/40 border border-white/5 p-6 rounded-[2rem]">
                             {/* Row 1: Room, Plan, Pax */}
                             <div className="grid grid-cols-3 gap-6">
                               <div className="space-y-3">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Bed className="w-3.5 h-3.5" /> Room Type</label>
+                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Bed className="w-3.5 h-3.5 text-kashmir-gold/50" /> Room Type</label>
                                 <Select value={day.roomType} onValueChange={(value) => handleUpdateDay(index, 'roomType', value)}>
-                                  <SelectTrigger className="bg-white/5 border-white/10 rounded-2xl h-14 font-bold text-xs"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-[#0a0f12] border-white/10 text-white">
+                                  <SelectTrigger className="bg-[#0f171b]/80 border-white/10 rounded-2xl h-14 font-bold text-xs focus:border-kashmir-gold/30 hover:border-white/20 transition-all"><SelectValue /></SelectTrigger>
+                                  <SelectContent className="bg-[#0b1317] border-white/10 text-white">
                                     <SelectItem value="Deluxe Room">Deluxe Room</SelectItem>
                                     <SelectItem value="Premium Room">Premium Room</SelectItem>
                                     <SelectItem value="Luxury Suite">Luxury Suite</SelectItem>
@@ -639,10 +707,10 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                                 </Select>
                               </div>
                               <div className="space-y-3">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Coffee className="w-3.5 h-3.5" /> Meal Plan</label>
+                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Coffee className="w-3.5 h-3.5 text-kashmir-gold/50" /> Meal Plan</label>
                                 <Select value={day.mealPlan} onValueChange={(value) => handleUpdateDay(index, 'mealPlan', value)}>
-                                  <SelectTrigger className="bg-white/5 border-white/10 rounded-2xl h-14 font-bold text-xs"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-[#0a0f12] border-white/10 text-white">
+                                  <SelectTrigger className="bg-[#0f171b]/80 border-white/10 rounded-2xl h-14 font-bold text-xs focus:border-kashmir-gold/30 hover:border-white/20 transition-all"><SelectValue /></SelectTrigger>
+                                  <SelectContent className="bg-[#0b1317] border-white/10 text-white">
                                     <SelectItem value="EP (Room Only)">EP (Room Only)</SelectItem>
                                     <SelectItem value="CP (Breakfast)">CP (Breakfast)</SelectItem>
                                     <SelectItem value="MAP (Breakfast + Dinner)">MAP (Bf + Din)</SelectItem>
@@ -650,17 +718,17 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                                 </Select>
                               </div>
                               <div className="space-y-3">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Users className="w-3.5 h-3.5" /> Pax Count</label>
+                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Users className="w-3.5 h-3.5 text-kashmir-gold/50" /> Pax Count</label>
                                 <Input 
                                   value={day.paxCount} 
                                   onChange={(e) => handleUpdateDay(index, 'paxCount', e.target.value)} 
-                                  className="bg-white/5 border-white/10 rounded-2xl h-14 font-bold text-center text-sm" 
+                                  className="bg-[#0f171b]/80 border-white/10 rounded-2xl h-14 font-bold text-center text-sm focus:border-kashmir-gold/30 hover:border-white/20 transition-all" 
                                 />
                               </div>
                             </div>
 
                             {/* Row 2: Stay Pricing */}
-                            <div className="grid grid-cols-2 gap-6 p-4 rounded-3xl bg-white/[0.02] border border-white/5">
+                            <div className="grid grid-cols-2 gap-6 p-4 rounded-2xl bg-white/[0.01] border border-white/5">
                               <div className="space-y-2">
                                 <label className="text-[9px] font-black uppercase tracking-widest text-kashmir-gold/50 ml-1 flex items-center gap-2">Stay Selling Price</label>
                                 <div className="relative">
@@ -669,7 +737,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                                     type="number"
                                     value={day.hotelPrice === 0 ? '' : day.hotelPrice}
                                     onChange={(e) => handleUpdateDay(index, 'hotelPrice', parseInt(e.target.value) || 0)}
-                                    className="bg-white/5 border-white/10 rounded-xl h-12 pl-10 font-bold text-white focus:border-kashmir-gold/30"
+                                    className="bg-[#0f171b]/80 border-white/10 rounded-xl h-12 pl-10 font-bold text-white focus:border-kashmir-gold/30 hover:border-white/20 transition-all"
                                   />
                                 </div>
                               </div>
@@ -681,7 +749,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                                     type="number"
                                     value={day.hotelNetCost === 0 ? '' : day.hotelNetCost}
                                     onChange={(e) => handleUpdateDay(index, 'hotelNetCost', parseInt(e.target.value) || 0)}
-                                    className="bg-white/5 border-white/10 rounded-xl h-12 pl-10 font-bold text-white/40 focus:border-white/20"
+                                    className="bg-[#0f171b]/80 border-white/10 rounded-xl h-12 pl-10 font-bold text-white/40 focus:border-white/20 hover:border-white/20 transition-all"
                                   />
                                 </div>
                               </div>
@@ -703,16 +771,16 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                           </Badge>
                         </div>
                         
-                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 items-end bg-white/[0.02] p-10 rounded-[3rem] border border-white/5 shadow-inner">
+                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 items-end bg-[#0f171b]/40 p-10 rounded-[2.5rem] border border-white/5 shadow-inner hover:border-white/10 transition-all duration-300">
                           {/* Transport Config */}
                           <div className="xl:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-8">
                             <div className="space-y-4">
                               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 ml-1">Assigned Vehicle</p>
                               <Select value={day.transport} onValueChange={(value) => handleUpdateDay(index, 'transport', value)}>
-                                <SelectTrigger className="bg-white/5 border-white/10 rounded-2xl h-16 focus:ring-kashmir-gold/30 font-bold text-sm">
+                                <SelectTrigger className="bg-[#0f171b]/80 border-white/10 rounded-2xl h-16 focus:ring-kashmir-gold/30 focus:border-kashmir-gold/30 hover:border-white/20 transition-all font-bold text-sm">
                                   <SelectValue placeholder="Select Transport" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#0a0f12] border-white/10 text-white">
+                                <SelectContent className="bg-[#0b1317] border-white/10 text-white">
                                   <SelectItem value="Private Luxury Sedan">Private Luxury Sedan</SelectItem>
                                   <SelectItem value="Luxury SUV (Innova)">Luxury SUV (Innova)</SelectItem>
                                   <SelectItem value="Tempo Traveller">Tempo Traveller</SelectItem>
@@ -728,7 +796,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                                   type="number"
                                   value={day.transportPrice === 0 ? '' : day.transportPrice}
                                   onChange={(e) => handleUpdateDay(index, 'transportPrice', parseInt(e.target.value) || 0)}
-                                  className="bg-white/5 border-white/10 rounded-2xl h-16 pl-12 focus:border-kashmir-gold/30 font-bold text-xl text-white transition-all focus:bg-white/[0.08]"
+                                  className="bg-[#0f171b]/80 border border-white/10 rounded-2xl h-16 pl-12 focus:border-kashmir-gold/30 font-bold text-xl text-white transition-all hover:border-white/20 focus:bg-[#0f171b]/95"
                                 />
                               </div>
                             </div>
@@ -740,7 +808,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                                   type="number"
                                   value={day.transportNetCost === 0 ? '' : day.transportNetCost}
                                   onChange={(e) => handleUpdateDay(index, 'transportNetCost', parseInt(e.target.value) || 0)}
-                                  className="bg-white/5 border-blue-500/10 rounded-2xl h-16 pl-12 focus:border-blue-400/30 font-bold text-xl text-blue-300/60 transition-all focus:bg-white/[0.08]"
+                                  className="bg-[#0f171b]/80 border border-blue-500/10 rounded-2xl h-16 pl-12 focus:border-blue-400/30 font-bold text-xl text-blue-300/60 transition-all hover:border-white/20 focus:bg-[#0f171b]/95"
                                 />
                               </div>
                             </div>
@@ -751,24 +819,26 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                             <div className="flex justify-between items-center px-1">
                               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Operational Status</p>
                               <Badge className={cn(
-                                "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border-none",
-                                day.vendorStatus === 'confirmed' ? "bg-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-500/10" :
-                                day.vendorStatus === 'waitlist' ? "bg-red-500/20 text-red-400 shadow-lg shadow-red-500/10" :
-                                "bg-amber-500/20 text-amber-500 shadow-lg shadow-amber-500/10"
+                                "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border-none shadow-lg",
+                                day.vendorStatus === 'confirmed' ? "bg-emerald-500/20 text-emerald-400 shadow-emerald-500/10" :
+                                day.vendorStatus === 'waitlist' ? "bg-red-500/20 text-red-400 shadow-red-500/10" :
+                                "bg-amber-500/20 text-amber-500 shadow-amber-500/10"
                               )}>
                                 {day.vendorStatus}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-1 p-1 bg-black/40 rounded-[1.3rem] border border-white/5">
+                            <div className="flex items-center gap-1.5 p-1.5 bg-[#0a0f12]/60 rounded-2xl border border-white/5">
                               {(['pending', 'confirmed', 'waitlist'] as const).map((status) => (
                                 <button
                                   key={status}
                                   onClick={() => handleUpdateDay(index, 'vendorStatus', status)}
                                   className={cn(
-                                    "flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-300 truncate px-2",
+                                    "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-500 truncate px-2 border border-transparent",
                                     day.vendorStatus === status 
-                                      ? "bg-white/10 text-white shadow-2xl border border-white/10 scale-[1.02]" 
-                                      : "text-white/10 hover:text-white/40 hover:bg-white/5"
+                                      ? status === 'confirmed' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]" :
+                                        status === 'waitlist' ? "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]" :
+                                        "bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
+                                      : "text-white/20 hover:text-white/50 hover:bg-white/[0.02]"
                                   )}
                                 >
                                   {status}
@@ -1105,7 +1175,24 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 </div>
                 
                 <div className="mb-10">
-                  <h3 className="text-3xl font-serif font-bold text-slate-900 mb-6">{day.title}</h3>
+                  <h3 className="text-3xl font-serif font-bold text-slate-900 mb-2">{day.title}</h3>
+                  {day.showDateTime && (day.date || day.time) && (
+                    <div className="flex items-center gap-4 text-xs font-bold text-amber-700 uppercase tracking-wider mb-6 bg-amber-500/5 py-2 px-4 rounded-xl border border-amber-500/10 w-fit">
+                      {day.date && (
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                          {formatPDFDate(day.date)}
+                        </span>
+                      )}
+                      {day.date && day.time && <span className="text-amber-500/30">•</span>}
+                      {day.time && (
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          {formatPDFTime(day.time)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="bg-slate-50/50 rounded-[2rem] p-10 border border-slate-100/50">
                     <div className="flex flex-col md:flex-row gap-8 mb-10">
                       <div className="flex-1">
