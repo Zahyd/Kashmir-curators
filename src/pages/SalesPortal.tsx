@@ -508,153 +508,176 @@ export default function SalesPortal() {
                     <p className="text-white/40 text-base max-w-xl">Review leads, curate itineraries, and accelerate conversions.</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Button variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 gap-2 h-12 px-6 rounded-2xl">
-                      <Filter className="w-4 h-4 text-kashmir-gold" />
-                      <span className="font-bold text-sm">Sort Pipeline</span>
-                    </Button>
+                    <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Active Pipeline</p>
+                        <p className="text-xs font-bold text-kashmir-gold">{myInquiries.length} Assigned Leads</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-lg bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Inquiry Cards Grid - Single Column for Premium Spacing */}
-                <div className="grid grid-cols-1 gap-10">
+                <div className="flex flex-col md:flex-row gap-6 items-stretch justify-between bg-white/[0.02] border border-white/5 p-6 rounded-[2.5rem] backdrop-blur-2xl">
+                  {/* Search input */}
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <Input 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search guest name, ID, destination..." 
+                      className="pl-11 bg-white/5 border-white/5 h-12 rounded-xl text-xs font-bold text-white focus:bg-white/10 focus:border-kashmir-gold/30 transition-all placeholder:text-white/20"
+                    />
+                  </div>
+
+                  {/* Quick Filters Info */}
+                  <div className="flex items-center gap-4 text-[10px] font-black text-white/30 uppercase tracking-widest">
+                    <span>Double-click card actions to open details</span>
+                  </div>
+                </div>
+
+                {/* Inquiry Cards Grid - 2-Column Responsive Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {myInquiries.length > 0 ? (
-                  myInquiries.map((inq, index) => (
-                    <Card 
-                      key={inq.id} 
-                      className="group bg-white/[0.03] border-white/5 overflow-hidden rounded-[2.5rem] hover:border-kashmir-gold/40 transition-all duration-700 backdrop-blur-2xl relative"
-                      style={{ transitionDelay: `${index * 50}ms` }}
-                    >
-                      <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
-                        <MessageSquare className="w-32 h-32" />
-                      </div>
-                      
-                      <div className="p-10 relative z-10">
-                        <div className="flex justify-between items-start mb-8">
-                          <div className="flex items-center gap-5">
-                            <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-kashmir-gold/30 via-amber-600/20 to-transparent flex items-center justify-center text-kashmir-gold text-2xl font-bold border border-kashmir-gold/20 shadow-lg group-hover:scale-110 transition-transform duration-500">
-                              {inq.customerName.charAt(0)}
-                            </div>
-                            <div>
-                              <h3 className="font-display text-2xl font-bold text-white group-hover:text-kashmir-gold transition-colors duration-500 tracking-tight">{inq.customerName}</h3>
-                              <div className="flex items-center gap-3 text-xs text-white/30 font-bold uppercase tracking-widest mt-1.5">
-                                <span className="bg-white/5 px-2 py-0.5 rounded text-white/50 truncate max-w-[100px]">{formatId(inq.id)}</span>
-                                <span>\u2022</span>
-                                <span>{inq.date}</span>
+                  myInquiries.map((inq, index) => {
+                    const displayId = formatId(inq.id);
+                    const prio = inq.priority || 'Low';
+                    
+                    return (
+                      <Card 
+                        key={inq.id} 
+                        className="group bg-white/[0.02] border-white/5 overflow-hidden rounded-[2rem] hover:border-kashmir-gold/30 hover:bg-white/[0.04] transition-all duration-500 backdrop-blur-2xl relative flex flex-col justify-between shadow-xl"
+                        style={{ transitionDelay: `${index * 30}ms` }}
+                      >
+                        {/* Decorative top priority line */}
+                        <div className={cn(
+                          "h-[3px] w-full absolute top-0 left-0",
+                          prio === 'High' ? "bg-gradient-to-r from-red-500 via-rose-500 to-red-500 shadow-[0_1px_10px_rgba(239,68,68,0.5)]" :
+                          prio === 'Medium' ? "bg-gradient-to-r from-amber-500 to-orange-500" :
+                          "bg-white/5"
+                        )} />
+
+                        <div className="p-6 space-y-6">
+                          {/* Header section */}
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-lg font-bold text-white shadow-md group-hover:scale-105 group-hover:border-kashmir-gold/20 transition-all duration-300">
+                                {inq.customerName.charAt(0)}
                               </div>
+                              <div className="min-w-0">
+                                <h3 className="font-display text-base font-bold text-white group-hover:text-kashmir-gold transition-colors truncate">{inq.customerName}</h3>
+                                <p className="text-[9px] font-mono font-bold text-white/30 uppercase tracking-wider">{displayId}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col items-end gap-1.5 shrink-0">
+                              <Badge className={cn(
+                                "text-[8px] font-black tracking-widest px-2 py-0.5 rounded-md border-none uppercase shadow-md",
+                                inq.status === 'New' ? 'bg-blue-500/20 text-blue-400 shadow-blue-500/10' :
+                                inq.status === 'Pending Curation' ? 'bg-amber-500/20 text-amber-500 shadow-amber-500/10' :
+                                inq.status === 'Ready for Review' ? 'bg-purple-500/20 text-purple-400 shadow-purple-500/10' :
+                                'bg-emerald-500/20 text-emerald-400 shadow-emerald-500/10'
+                              )}>
+                                {inq.status}
+                              </Badge>
+                              {inq.priority && (
+                                <span className={cn(
+                                  "text-[7px] font-black uppercase tracking-widest px-1 py-0.5 rounded",
+                                  prio === 'High' ? "bg-red-500/10 text-red-400" : "bg-white/5 text-white/40"
+                                )}>
+                                  {prio} PRIORITY
+                                </span>
+                              )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <Badge className={cn(
-                              "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border-none shadow-lg",
-                              inq.status === 'New' ? 'bg-blue-500/20 text-blue-400 shadow-blue-500/10' :
-                              inq.status === 'Pending Curation' ? 'bg-amber-500/20 text-amber-500 shadow-amber-500/10' :
-                              inq.status === 'Ready for Review' ? 'bg-purple-500/20 text-purple-400 shadow-purple-500/10' :
-                              'bg-emerald-500/20 text-emerald-400 shadow-emerald-500/10'
-                            )}>
-                              {inq.status}
-                            </Badge>
-                            {inq.priority && (
-                              <div className={cn(
-                                "flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
-                                inq.priority === 'High' ? "bg-red-500/10 text-red-400" : "bg-white/5 text-white/40"
-                              )}>
-                                <Target className="w-3 h-3" />
-                                {inq.priority} Priority
+
+                          {/* Stats Grid */}
+                          <div className="grid grid-cols-2 gap-4 p-4 bg-white/[0.01] rounded-2xl border border-white/5">
+                            {[
+                              { label: 'Destination', value: inq.destination, icon: MapPin },
+                              { label: 'Duration', value: inq.duration, icon: Clock },
+                              { label: 'Experience', value: `${inq.budget} • ${inq.accommodation}`, icon: Sparkles },
+                              { label: 'Travelers', value: inq.travelers, icon: Users },
+                            ].map((stat, i) => (
+                              <div key={i} className="min-w-0">
+                                <p className="text-[8px] font-bold text-white/25 uppercase tracking-wider mb-0.5">{stat.label}</p>
+                                <p className="text-xs font-bold text-white/90 truncate">{stat.value}</p>
                               </div>
+                            ))}
+                          </div>
+
+                          {/* Instant Engagements */}
+                          <div className="flex items-center gap-2 p-2 bg-white/5 rounded-xl border border-white/5">
+                            <span className="text-[8px] font-bold uppercase tracking-wider text-white/20 ml-2 mr-auto">Engage</span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 px-3 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 gap-1.5 text-[9px] font-bold"
+                              onClick={() => window.open(`https://wa.me/${inq.phone.replace(/\s+/g, '')}?text=Hello ${inq.customerName}, this is ${teamUser.name} from The Kashmir Curators...`, '_blank')}
+                            >
+                              <MessageCircle className="w-3 h-3" /> WhatsApp
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 px-3 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 gap-1.5 text-[9px] font-bold"
+                              onClick={() => window.location.href = `mailto:${inq.email}?subject=Your Luxury Kashmir Proposal - ${inq.id}`}
+                            >
+                              <Mail className="w-3 h-3" /> Email
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Action Footer */}
+                        <div className="p-6 pt-0 border-t border-white/[0.02] space-y-3 mt-auto">
+                          <div className="flex gap-2">
+                            <Button 
+                              onClick={() => openBuilder(inq)}
+                              className="flex-1 h-11 bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-[10px] rounded-xl gap-2 shadow-lg shadow-kashmir-gold/5"
+                            >
+                              <FilePlus className="w-3.5 h-3.5" />
+                              <span>{inq.quoteData ? 'Edit Itinerary' : 'Build Itinerary'}</span>
+                            </Button>
+                            {inq.proposalUrl ? (
+                              <Button 
+                                onClick={() => window.open(inq.proposalUrl, '_blank')}
+                                className="flex-1 h-11 bg-emerald-500 text-white hover:bg-emerald-600 font-black uppercase tracking-widest text-[10px] rounded-xl gap-2 shadow-lg shadow-emerald-500/10"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>Proposal</span>
+                              </Button>
+                            ) : (
+                              <Button 
+                                onClick={() => openPayment(inq)}
+                                variant="outline"
+                                className="flex-1 border-white/10 text-white hover:bg-white/10 h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2"
+                              >
+                                <CreditCard className="w-3.5 h-3.5 text-kashmir-gold" />
+                                <span>Payment</span>
+                              </Button>
                             )}
                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6 mb-10">
-                          <div className="p-5 bg-white/5 rounded-3xl border border-white/5 group-hover:bg-white/[0.07] transition-all duration-500">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/20 mb-2 flex items-center gap-2">
-                              <Zap className="w-3 h-3 text-kashmir-gold" /> Destination
-                            </p>
-                            <p className="text-base font-bold text-white/90">{inq.destination}</p>
-                          </div>
-                          <div className="p-5 bg-white/5 rounded-3xl border border-white/5 group-hover:bg-white/[0.07] transition-all duration-500">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/20 mb-2 flex items-center gap-2">
-                              <Clock className="w-3 h-3 text-blue-400" /> Duration
-                            </p>
-                            <p className="text-base font-bold text-white/90">{inq.duration}</p>
-                          </div>
-                          <div className="p-5 bg-white/5 rounded-3xl border border-white/5 group-hover:bg-white/[0.07] transition-all duration-500">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/20 mb-2 flex items-center gap-2">
-                              <Sparkles className="w-3 h-3 text-purple-400" /> Experience
-                            </p>
-                            <p className="text-base font-bold text-white/90">{inq.budget} • {inq.accommodation}</p>
-                          </div>
-                          <div className="p-5 bg-white/5 rounded-3xl border border-white/5 group-hover:bg-white/[0.07] transition-all duration-500">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/20 mb-2 flex items-center gap-2">
-                              <Users className="w-3 h-3 text-emerald-400" /> Travelers
-                            </p>
-                            <p className="text-base font-bold text-white/90">{inq.travelers}</p>
-                          </div>
-                        </div>
-
-                        {/* Communication Bar */}
-                        <div className="flex items-center gap-3 mb-8 p-3 bg-white/5 rounded-2xl border border-white/5">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 ml-2 mr-auto">Instant Engagements</p>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-9 px-4 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 gap-2 text-[10px] font-bold"
-                            onClick={() => window.open(`https://wa.me/${inq.phone.replace(/\s+/g, '')}?text=Hello ${inq.customerName}, this is ${teamUser.name} from The Kashmir Curators...`, '_blank')}
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-9 px-4 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 gap-2 text-[10px] font-bold"
-                            onClick={() => window.location.href = `mailto:${inq.email}?subject=Your Luxury Kashmir Proposal - ${inq.id}`}
-                          >
-                            <Mail className="w-3.5 h-3.5" /> Email
-                          </Button>
-                        </div>
-
-                        <div className="flex flex-col lg:flex-row items-center gap-4">
-                          <Button 
-                            onClick={() => openBuilder(inq)}
-                            className="flex-1 w-full bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-14 rounded-2xl transition-all duration-500 shadow-xl shadow-kashmir-gold/10 group-hover:shadow-kashmir-gold/20 gap-2"
-                          >
-                            <FilePlus className="w-4 h-4" />
-                            <span className="truncate">{inq.quoteData ? 'Edit Itinerary' : 'Build Itinerary'}</span>
-                          </Button>
-                          {inq.proposalUrl ? (
-                            <Button 
-                              onClick={() => window.open(inq.proposalUrl, '_blank')}
-                              className="flex-1 w-full bg-emerald-500 text-white hover:bg-emerald-600 font-black uppercase tracking-widest text-xs h-14 rounded-2xl transition-all duration-500 shadow-xl shadow-emerald-500/10 gap-2"
-                            >
-                              <FileText className="w-4 h-4" />
-                              <span className="truncate">View Proposal</span>
-                            </Button>
-                          ) : (
-                            <Button 
-                              onClick={() => openPayment(inq)}
-                              variant="outline"
-                              className="flex-1 w-full border-white/10 text-white hover:bg-white/10 h-14 rounded-2xl font-black uppercase tracking-widest text-xs gap-2"
-                            >
-                              <CreditCard className="w-4 h-4 text-kashmir-gold" />
-                              <span className="truncate">Collect Payment</span>
-                            </Button>
-                          )}
-                          <div className="flex gap-4 w-full lg:w-auto">
+                          <div className="flex gap-2 justify-end pt-1">
                             <Button 
                               onClick={() => openVault(inq)}
                               variant="outline" 
-                              className="flex-1 lg:flex-none bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/30 h-14 w-14 rounded-2xl p-0 transition-all shrink-0"
+                              className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/30 h-10 rounded-xl gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-all"
                             >
-                              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                              <ShieldCheck className="w-4 h-4 text-emerald-400" /> Vault
                             </Button>
-                            <Button variant="outline" className="flex-1 lg:flex-none bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/30 h-14 w-14 rounded-2xl p-0 transition-all shrink-0">
-                              <Eye className="w-5 h-5" />
+                            <Button 
+                              variant="outline" 
+                              className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/30 h-10 rounded-xl gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-all"
+                            >
+                              <Eye className="w-4 h-4 text-white/50" /> Preview
                             </Button>
                           </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))
+                      </Card>
+                    );
+                  })
                 ) : (
                   <div className="col-span-full py-32 flex flex-col items-center justify-center bg-white/[0.02] border-2 border-dashed border-white/5 rounded-[4rem] animate-in fade-in zoom-in duration-1000">
                     <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/5">
