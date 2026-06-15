@@ -80,26 +80,50 @@ export const getMyBookings = async (req: any, res: Response) => {
 
 export const updateBookingStatus = async (req: any, res: Response) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, details, totalAmount, bookingDate, itemName } = req.body;
   
   try {
+    const updateData: any = {};
+    if (status !== undefined) updateData.status = status;
+    if (details !== undefined) {
+      updateData.details = typeof details === 'string' ? details : JSON.stringify(details);
+    }
+    if (totalAmount !== undefined) updateData.totalAmount = Number(totalAmount);
+    if (bookingDate !== undefined) updateData.bookingDate = new Date(bookingDate);
+    if (itemName !== undefined) updateData.itemName = itemName;
+
     const booking = await prisma.booking.update({
       where: { id },
-      data: { status }
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          }
+        }
+      }
     });
+
+    const parsedBooking = {
+      ...booking,
+      details: booking.details ? JSON.parse(booking.details) : {}
+    };
 
     // Emit real-time update to the user
     if (req.io) {
-      const payload = { type: 'UPDATE', booking };
+      const payload = { type: 'UPDATE', booking: parsedBooking };
       req.io.to(`user-${booking.userId}`).emit('booking-updated', payload);
       req.io.to('admin-room').emit('new-system-event', {
         ...payload,
-        message: `Booking ${booking.id.slice(0,8)} status changed to ${booking.status}`
+        message: `Booking ${booking.itemName} (Ref: ${booking.id.slice(0,8)}) updated`
       });
     }
 
-    res.json(booking);
+    res.json(parsedBooking);
   } catch (error) {
+    console.error('Failed to update booking:', error);
     res.status(500).json({ error: 'Failed to update booking' });
   }
 };
