@@ -17,6 +17,7 @@ import {
   Search,
   Sparkles,
   CreditCard,
+  CalendarCheck,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,7 @@ interface AdminSidebarProps {
 const allMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'inquiries', label: 'Trip Inquiries', icon: MessageSquare, badge: 'New' },
+  { id: 'reservations', label: 'Hotel Reservations', icon: CalendarCheck },
   { id: 'bookings', label: 'Bookings Engine', icon: Package },
   { id: 'revenue', label: 'Revenue Intel', icon: TrendingUp },
   { id: 'users', label: 'Client Directory', icon: Users },

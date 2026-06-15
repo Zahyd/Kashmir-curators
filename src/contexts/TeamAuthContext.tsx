@@ -25,10 +25,10 @@ const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
   admin: [
     'dashboard', 'inquiries', 'bookings', 'revenue', 'users', 'payments', 
     'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 'planner', 
-    'assign_leads', 'view_financials', 'sales_portal'
+    'assign_leads', 'view_financials', 'sales_portal', 'reservations'
   ],
   operations: [
-    'dashboard', 'inquiries', 'bookings', 'hotels', 'cabs', 'assign_leads'
+    'dashboard', 'inquiries', 'bookings', 'hotels', 'cabs', 'assign_leads', 'reservations'
   ],
   sales: [
     'sales_portal', 'builder', 'payments', 'vault', 'work_log', 'performance'
@@ -42,9 +42,9 @@ const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
 export const ADMIN_SIDEBAR_ITEMS: Record<TeamRole, string[]> = {
   admin: [
     'dashboard', 'inquiries', 'bookings', 'revenue', 'users', 'payments', 
-    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 'planner'
+    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 'planner', 'reservations'
   ],
-  operations: ['dashboard', 'inquiries', 'bookings', 'hotels', 'cabs'],
+  operations: ['dashboard', 'inquiries', 'bookings', 'hotels', 'cabs', 'reservations'],
   sales: [],
   marketing: ['dashboard', 'packages', 'reviews', 'media', 'content', 'planner'],
 };

@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Zap,
   Star,
-  MapPin
+  MapPin,
+  CalendarCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ROLE_LABELS } from '@/contexts/TeamAuthContext';
@@ -46,6 +47,7 @@ import CMSUsers from '@/components/admin/CMSUsers';
 import CMSPayments from '@/components/admin/CMSPayments';
 import CMSJourney from '@/components/admin/CMSJourney';
 import CMSProfile from '@/components/admin/CMSProfile';
+import CMSReservations from '@/components/admin/CMSReservations';
 
 const ROLE_STATS: Record<string, any[]> = {
   admin: [
@@ -55,10 +57,10 @@ const ROLE_STATS: Record<string, any[]> = {
     { label: 'Packages Sold', value: '0', icon: TrendingUp, change: '0%', color: 'text-kashmir-gold', section: 'packages' },
   ],
   operations: [
-    { label: 'Active Inquiries', value: '0', icon: MessageSquare, change: 'Live', color: 'text-blue-400' },
-    { label: 'Pending Bookings', value: '0', icon: Package, change: '0', color: 'text-amber-400' },
-    { label: 'Cab Availability', value: '100%', icon: Car, change: 'High', color: 'text-emerald-400' },
-    { label: 'Hotel Nodes', value: '0', icon: Building, change: '0', color: 'text-purple-400' },
+    { label: 'Pending Reservations', value: '0', icon: CalendarCheck, change: 'Urgent', color: 'text-amber-400', section: 'reservations' },
+    { label: 'Today Check-ins', value: '0', icon: Calendar, change: 'Today', color: 'text-blue-400', section: 'reservations' },
+    { label: 'Hotel Dues Pending', value: '₹0', icon: DollarSign, change: 'Finance', color: 'text-red-400', section: 'reservations' },
+    { label: 'Net Profit Margin', value: '₹0', icon: TrendingUp, change: 'Profit', color: 'text-emerald-400', section: 'reservations' },
   ],
   marketing: [
     { label: 'New Reviews', value: '0', icon: Users, change: '0', color: 'text-kashmir-gold' },
@@ -150,6 +152,12 @@ export default function Admin() {
       if (stat.label === 'Active Inquiries') value = dynamicStats.activeInquiries ?? 0;
       if (stat.label === 'Pending Bookings') value = dynamicStats.pendingBookings ?? 0;
       if (stat.label === 'Hotel Nodes') value = dynamicStats.hotelNodes ?? 0;
+      
+      // B2B Operations
+      if (stat.label === 'Pending Reservations') value = (dynamicStats.pendingReservations ?? 0).toLocaleString();
+      if (stat.label === 'Today Check-ins') value = `${dynamicStats.dailyCheckIns ?? 0} In / ${dynamicStats.dailyCheckOuts ?? 0} Out`;
+      if (stat.label === 'Hotel Dues Pending') value = `₹${(dynamicStats.hotelDues ?? 0).toLocaleString()}`;
+      if (stat.label === 'Net Profit Margin') value = `₹${(dynamicStats.profitMargins ?? 0).toLocaleString()}`;
       
       // Marketing
       if (stat.label === 'New Reviews') value = dynamicStats.newReviews ?? 0;
@@ -360,6 +368,7 @@ export default function Admin() {
           </div>
         );
       case 'inquiries': return <div className="animate-in fade-in duration-500"><CMSInquiries /></div>;
+      case 'reservations': return <div className="animate-in fade-in duration-500"><CMSReservations /></div>;
       case 'bookings': return <div className="animate-in fade-in duration-500"><CMSBookings /></div>;
       case 'revenue': return <div className="animate-in fade-in duration-500"><CMSRevenue /></div>;
       case 'users': return <div className="animate-in fade-in duration-500"><CMSUsers /></div>;

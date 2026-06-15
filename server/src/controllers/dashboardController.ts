@@ -4,8 +4,29 @@ import prisma from '../lib/prisma';
 export const getAdminStats = async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
     // Run each query independently so one failure doesn't crash all stats
-    const [totalBookings, totalRevenue, totalUsers, totalPackages, activeInquiries, pendingBookings, hotelNodes, newReviews, activeFaqs] = await Promise.all([
+    const [
+      totalBookings,
+      totalRevenue,
+      totalUsers,
+      totalPackages,
+      activeInquiries,
+      pendingBookings,
+      hotelNodes,
+      newReviews,
+      activeFaqs,
+      pendingReservations,
+      confirmedReservations,
+      dailyCheckIns,
+      dailyCheckOuts,
+      totalHotelDues,
+      totalProfitMargin
+    ] = await Promise.all([
       p.booking.count().catch(() => 0),
       p.booking.aggregate({
         _sum: { totalAmount: true },
@@ -18,7 +39,18 @@ export const getAdminStats = async (req: Request, res: Response) => {
       p.hotel.count().catch(() => 0),
       p.testimonial.count().catch(() => 0),
       p.fAQ.count().catch(() => 0),
+      p.hotelReservation.count({ where: { status: { in: ['Pending', 'Sent'] } } }).catch(() => 0),
+      p.hotelReservation.count({ where: { status: 'Confirmed' } }).catch(() => 0),
+      p.hotelReservation.count({ where: { checkIn: { gte: todayStart, lte: todayEnd } } }).catch(() => 0),
+      p.hotelReservation.count({ where: { checkOut: { gte: todayStart, lte: todayEnd } } }).catch(() => 0),
+      p.hotelReservation.aggregate({ _sum: { hotelDues: true } }).catch(() => ({ _sum: { hotelDues: 0 } })),
+      p.hotelReservation.aggregate({ _sum: { profitMargin: true } }).catch(() => ({ _sum: { profitMargin: 0 } }))
     ]);
+
+    const recentInquiries = await p.inquiry.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' }
+    }).catch(() => []);
 
     res.json({
       totalBookings,
@@ -31,6 +63,13 @@ export const getAdminStats = async (req: Request, res: Response) => {
       hotelNodes,
       newReviews,
       activeFaqs,
+      pendingReservations,
+      confirmedReservations,
+      dailyCheckIns,
+      dailyCheckOuts,
+      hotelDues: (totalHotelDues as any)._sum?.hotelDues || 0,
+      profitMargins: (totalProfitMargin as any)._sum?.profitMargin || 0,
+      recentInquiries
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);

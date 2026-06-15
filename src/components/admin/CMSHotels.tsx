@@ -45,6 +45,12 @@ interface Hotel {
   rating: number;
   reviewCount: number;
   isActive: boolean;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  paymentTerms?: string | null;
+  commissionStructure?: string | null;
+  seasonalPricing?: string | null;
 }
 
 const defaultHotel: Omit<Hotel, 'id'> = {
@@ -59,6 +65,12 @@ const defaultHotel: Omit<Hotel, 'id'> = {
   rating: 4.5,
   reviewCount: 0,
   isActive: true,
+  contactName: '',
+  contactEmail: '',
+  contactPhone: '',
+  paymentTerms: 'Prepayment',
+  commissionStructure: '10%',
+  seasonalPricing: '[]',
 };
 
 export default function CMSHotels() {
@@ -73,6 +85,7 @@ export default function CMSHotels() {
   const [roomTypesInput, setRoomTypesInput] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [dialogTab, setDialogTab] = useState<'basic' | 'crm'>('basic');
 
   // Hotels Hero config states
   const [heroTitle, setHeroTitle] = useState('Luxury Stays in Kashmir');
@@ -183,16 +196,26 @@ export default function CMSHotels() {
     setFormData(defaultHotel);
     setAmenitiesInput('');
     setRoomTypesInput('');
+    setDialogTab('basic');
     setDialogOpen(true);
   };
 
   const openEditDialog = (hotel: Hotel) => {
     setEditingHotel(hotel);
-    setFormData(hotel);
+    setFormData({
+      ...hotel,
+      contactName: hotel.contactName || '',
+      contactEmail: hotel.contactEmail || '',
+      contactPhone: hotel.contactPhone || '',
+      paymentTerms: hotel.paymentTerms || 'Prepayment',
+      commissionStructure: hotel.commissionStructure || '10%',
+      seasonalPricing: hotel.seasonalPricing || '[]'
+    });
     setAmenitiesInput(hotel.amenities?.join('\n') || '');
     setRoomTypesInput(
       hotel.roomTypes?.map((r) => `${r.name}:${r.price}`).join('\n') || ''
     );
+    setDialogTab('basic');
     setDialogOpen(true);
   };
 
@@ -547,116 +570,220 @@ export default function CMSHotels() {
           <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 via-transparent to-transparent pointer-events-none" />
           <DialogHeader className="p-10 pb-0">
             <DialogTitle className="text-3xl font-display font-black tracking-tight">{editingHotel ? 'Reconfigure Hospitality Node' : 'Commission New Property'}</DialogTitle>
+            
+            {/* Tab Header */}
+            <div className="flex gap-4 border-b border-white/5 mt-6 pb-2">
+              <button 
+                type="button"
+                onClick={() => setDialogTab('basic')}
+                className={cn(
+                  "text-[10px] font-black uppercase tracking-widest pb-2 transition-all border-b-2",
+                  dialogTab === 'basic' ? "text-kashmir-gold border-kashmir-gold" : "text-white/40 border-transparent hover:text-white"
+                )}
+              >
+                Basic Details
+              </button>
+              <button 
+                type="button"
+                onClick={() => setDialogTab('crm')}
+                className={cn(
+                  "text-[10px] font-black uppercase tracking-widest pb-2 transition-all border-b-2",
+                  dialogTab === 'crm' ? "text-kashmir-gold border-kashmir-gold" : "text-white/40 border-transparent hover:text-white"
+                )}
+              >
+                B2B Partner CRM
+              </button>
+            </div>
           </DialogHeader>
-          <div className="p-10 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Identity</label>
-                <Input
-                  className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., The Grand Palace"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Geographic Location</label>
-                <Input
-                  className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g., Srinagar, Dal Lake"
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-6">
-               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Asset Grade</label>
-                <Select
-                  value={formData.starRating.toString()}
-                  onValueChange={(v) => setFormData({ ...formData, starRating: Number(v) })}
-                >
-                  <SelectTrigger className="bg-white/5 border-white/10 h-14 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0f1416] border-white/10 text-white">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <SelectItem key={n} value={n.toString()}>{n} Star</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Price (₹/nt)</label>
-                <Input
-                  type="number"
-                  className="bg-white/5 border-white/10 rounded-xl h-14"
-                  value={formData.pricePerNight}
-                  onChange={(e) => setFormData({ ...formData, pricePerNight: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">User Sentiment</label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  className="bg-white/5 border-white/10 rounded-xl h-14"
-                  value={formData.rating}
-                  onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
-                />
-              </div>
-            </div>
+          <div className="p-10 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+            {dialogTab === 'basic' ? (
+              <>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Identity</label>
+                    <Input
+                      className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g., The Grand Palace"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Geographic Location</label>
+                    <Input
+                      className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      placeholder="e.g., Srinagar, Dal Lake"
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Asset Overview</label>
-              <Textarea
-                className="bg-white/5 border-white/10 rounded-2xl min-h-[100px] py-4 text-base resize-none"
-                value={formData.description || ''}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe the luxury experience..."
-              />
-            </div>
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Asset Grade</label>
+                    <Select
+                      value={formData.starRating.toString()}
+                      onValueChange={(v) => setFormData({ ...formData, starRating: Number(v) })}
+                    >
+                      <SelectTrigger className="bg-white/5 border-white/10 h-14 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0f1416] border-white/10 text-white">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={n.toString()}>{n} Star</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Price (₹/nt)</label>
+                    <Input
+                      type="number"
+                      className="bg-white/5 border-white/10 rounded-xl h-14"
+                      value={formData.pricePerNight}
+                      onChange={(e) => setFormData({ ...formData, pricePerNight: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">User Sentiment</label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      className="bg-white/5 border-white/10 rounded-xl h-14"
+                      value={formData.rating}
+                      onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Primary Asset Image</label>
-              <MediaPicker
-                value={formData.imageUrl || ''}
-                onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-              />
-            </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Asset Overview</label>
+                  <Textarea
+                    className="bg-white/5 border-white/10 rounded-2xl min-h-[100px] py-4 text-base resize-none"
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Describe the luxury experience..."
+                  />
+                </div>
 
-            <div className="grid grid-cols-2 gap-6">
-               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Amenities (New Line)</label>
-                <Textarea
-                  className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] text-xs resize-none"
-                  value={amenitiesInput}
-                  onChange={(e) => setAmenitiesInput(e.target.value)}
-                  placeholder="WiFi&#10;Spa&#10;Butler"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Inventory (Name:Price)</label>
-                <Textarea
-                  className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] text-xs resize-none"
-                  value={roomTypesInput}
-                  onChange={(e) => setRoomTypesInput(e.target.value)}
-                  placeholder="Deluxe:5000&#10;Suite:9000"
-                />
-              </div>
-            </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Primary Asset Image</label>
+                  <MediaPicker
+                    value={formData.imageUrl || ''}
+                    onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                  />
+                </div>
 
-            <div className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-bold text-white">System Availability</span>
-                <span className="text-[9px] text-white/30 uppercase tracking-widest font-black">Active in Public Listing</span>
-              </div>
-              <Switch
-                checked={formData.isActive}
-                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              />
-            </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Amenities (New Line)</label>
+                    <Textarea
+                      className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] text-xs resize-none"
+                      value={amenitiesInput}
+                      onChange={(e) => setAmenitiesInput(e.target.value)}
+                      placeholder="WiFi&#10;Spa&#10;Butler"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Inventory (Name:Price)</label>
+                    <Textarea
+                      className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] text-xs resize-none"
+                      value={roomTypesInput}
+                      onChange={(e) => setRoomTypesInput(e.target.value)}
+                      placeholder="Deluxe:5000&#10;Suite:9000"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-bold text-white">System Availability</span>
+                    <span className="text-[9px] text-white/30 uppercase tracking-widest font-black">Active in Public Listing</span>
+                  </div>
+                  <Switch
+                    checked={formData.isActive}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Partner Contact Name</label>
+                    <Input
+                      className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
+                      value={formData.contactName || ''}
+                      onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                      placeholder="e.g., Ghulam Hassan"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Partner Email Address</label>
+                    <Input
+                      type="email"
+                      className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
+                      value={formData.contactEmail || ''}
+                      onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                      placeholder="partner@hoteldomain.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Partner Phone Number</label>
+                    <Input
+                      className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
+                      value={formData.contactPhone || ''}
+                      onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                      placeholder="e.g., +91 94190 XXXXX"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Payment Net Terms</label>
+                    <Select
+                      value={formData.paymentTerms || 'Prepayment'}
+                      onValueChange={(v) => setFormData({ ...formData, paymentTerms: v })}
+                    >
+                      <SelectTrigger className="bg-white/5 border-white/10 h-14 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0f1416] border-white/10 text-white">
+                        <SelectItem value="Prepayment">Prepayment Required</SelectItem>
+                        <SelectItem value="Net 7">Net 7 Days</SelectItem>
+                        <SelectItem value="Net 15">Net 15 Days</SelectItem>
+                        <SelectItem value="Net 30">Net 30 Days</SelectItem>
+                        <SelectItem value="On Checkout">Dues on Checkout</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">B2B Commission Structure</label>
+                  <Input
+                    className="bg-white/5 border-white/10 rounded-xl h-14 focus:border-kashmir-gold/50 transition-all text-base"
+                    value={formData.commissionStructure || ''}
+                    onChange={(e) => setFormData({ ...formData, commissionStructure: e.target.value })}
+                    placeholder="e.g., 15% on Gross Booking Rate"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Seasonal Markup/Pricing Rules (JSON)</label>
+                  <Textarea
+                    className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] py-4 text-xs font-mono resize-none"
+                    value={formData.seasonalPricing || ''}
+                    onChange={(e) => setFormData({ ...formData, seasonalPricing: e.target.value })}
+                    placeholder='[{"season": "Peak Summer", "start": "05-01", "end": "08-31", "markup": 1.25}]'
+                  />
+                  <p className="text-[9px] text-white/20 mt-1 uppercase ml-1">Provide custom season markups as a JSON array of seasonal overrides</p>
+                </div>
+              </>
+            )}
 
             <Button onClick={handleSave} className="w-full h-16 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-2xl transition-all shadow-xl shadow-kashmir-gold/20" disabled={saving}>
               {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingHotel ? 'Confirm Reconfiguration' : 'Authorize Commissioning')}

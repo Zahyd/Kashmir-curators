@@ -49,7 +49,7 @@ export const getHotelById = async (req: Request, res: Response) => {
 
 export const createHotel = async (req: any, res: Response) => {
   try {
-    const { name, location, starRating, pricePerNight, description, imageUrl, amenities, roomTypes, rating, reviewCount, isActive } = req.body;
+    const { name, location, starRating, pricePerNight, description, imageUrl, amenities, roomTypes, rating, reviewCount, isActive, contactName, contactEmail, contactPhone, paymentTerms, commissionStructure, seasonalPricing } = req.body;
     
     const data = {
       name: String(name),
@@ -62,7 +62,13 @@ export const createHotel = async (req: any, res: Response) => {
       roomTypes: JSON.stringify(Array.isArray(roomTypes) ? roomTypes : []),
       rating: Number(rating || 4.5),
       reviewCount: Number(reviewCount || 0),
-      isActive: isActive !== undefined ? Boolean(isActive) : true
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
+      contactName: contactName ? String(contactName) : null,
+      contactEmail: contactEmail ? String(contactEmail) : null,
+      contactPhone: contactPhone ? String(contactPhone) : null,
+      paymentTerms: paymentTerms ? String(paymentTerms) : null,
+      commissionStructure: commissionStructure ? String(commissionStructure) : null,
+      seasonalPricing: seasonalPricing ? String(seasonalPricing) : null
     };
 
     const hotel = await prisma.hotel.create({ data });
@@ -102,6 +108,12 @@ export const updateHotel = async (req: any, res: Response) => {
     if (req.body.rating !== undefined) updateData.rating = Number(req.body.rating);
     if (req.body.reviewCount !== undefined) updateData.reviewCount = Number(req.body.reviewCount);
     if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive);
+    if (req.body.contactName !== undefined) updateData.contactName = req.body.contactName ? String(req.body.contactName) : null;
+    if (req.body.contactEmail !== undefined) updateData.contactEmail = req.body.contactEmail ? String(req.body.contactEmail) : null;
+    if (req.body.contactPhone !== undefined) updateData.contactPhone = req.body.contactPhone ? String(req.body.contactPhone) : null;
+    if (req.body.paymentTerms !== undefined) updateData.paymentTerms = req.body.paymentTerms ? String(req.body.paymentTerms) : null;
+    if (req.body.commissionStructure !== undefined) updateData.commissionStructure = req.body.commissionStructure ? String(req.body.commissionStructure) : null;
+    if (req.body.seasonalPricing !== undefined) updateData.seasonalPricing = req.body.seasonalPricing ? String(req.body.seasonalPricing) : null;
     
     const hotel = await prisma.hotel.update({
       where: { id },

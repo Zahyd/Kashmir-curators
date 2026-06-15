@@ -38,6 +38,7 @@ import blogRoutes from './routes/blogRoutes';
 import siteContentRoutes from './routes/siteContentRoutes';
 import curatorRoutes from './routes/curatorRoutes';
 import advisoryRoutes from './routes/advisoryRoutes';
+import hotelReservationRoutes from './routes/hotelReservationRoutes';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -139,6 +140,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/reservations', hotelReservationRoutes);
 app.use('/api/flights', flightRoutes);
 app.use('/api/content', blogRoutes);
 app.use('/api/site-content', siteContentRoutes);

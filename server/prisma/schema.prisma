@@ -8,21 +8,22 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String
-  emailVerified Boolean   @default(false)
-  image         String?
-  password      String?
-  phone        String?
-  role         String    @default("user") // user, admin, sales, marketing
-  employeeCode String?   @unique
-  isOnline     Boolean   @default(false)
-  leadCapacity Int       @default(5)
-  bookings     Booking[]
-  inquiries    Inquiry[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String             @id @default(uuid())
+  email             String             @unique
+  name              String
+  emailVerified     Boolean            @default(false)
+  image             String?
+  password          String?
+  phone             String?
+  role              String             @default("user") // user, admin, sales, marketing, operations
+  employeeCode      String?            @unique
+  isOnline          Boolean            @default(false)
+  leadCapacity      Int                @default(5)
+  bookings          Booking[]
+  inquiries         Inquiry[]
+  hotelReservations HotelReservation[] @relation("UserReservations")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   sessions      Session[]
   accounts      Account[]
@@ -51,20 +52,27 @@ model Package {
 }
 
 model Hotel {
-  id            String   @id @default(uuid())
-  name          String
-  location      String
-  starRating    Int
-  rating        Float    @default(0)
-  reviewCount   Int      @default(0)
-  pricePerNight Float
-  image         String
-  description   String
-  amenities     String   // JSON string
-  roomTypes     String   // JSON string
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                  String             @id @default(uuid())
+  name                String
+  location            String
+  starRating          Int
+  rating              Float              @default(0)
+  reviewCount         Int                @default(0)
+  pricePerNight       Float
+  image               String
+  description         String
+  amenities           String             // JSON string
+  roomTypes           String             // JSON string
+  isActive            Boolean            @default(true)
+  contactName         String?
+  contactEmail        String?
+  contactPhone        String?
+  paymentTerms        String?
+  commissionStructure String?
+  seasonalPricing     String?            // JSON string
+  reservations        HotelReservation[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 }
 
 model Cab {
@@ -118,25 +126,26 @@ model Booking {
 }
 
 model Inquiry {
-  id            String   @id @default(uuid())
-  userId        String?
-  user          User?    @relation(fields: [userId], references: [id])
-  customerName  String
-  email         String
-  phone         String
-  destination   String
-  duration      String
-  travelers     String
-  budget        String
-  accommodation String
-  status        String   @default("New") // New, Pending Curation, Ready for Review, Booked, Lost
-  assignedTo    String?  // Sales team user code
-  priority      String?  // Low, Medium, High
-  sentiment     String?  // Cold, Warm, Hot, Ready to Book
-  quoteData     String?  // JSON string of days/pricing
-  proposalUrl   String?  // URL to uploaded PDF
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String             @id @default(uuid())
+  userId            String?
+  user              User?              @relation(fields: [userId], references: [id])
+  customerName      String
+  email             String
+  phone             String
+  destination       String
+  duration          String
+  travelers         String
+  budget            String
+  accommodation     String
+  status            String             @default("New") // New, Pending Curation, Ready for Review, Booked, Lost
+  assignedTo        String?            // Sales team user code
+  priority          String?            // Low, Medium, High
+  sentiment         String?            // Cold, Warm, Hot, Ready to Book
+  quoteData         String?            // JSON string of days/pricing
+  proposalUrl       String?            // URL to uploaded PDF
+  hotelReservations HotelReservation[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
 model Media {
@@ -276,4 +285,36 @@ model PackageReview {
   isVerified   Boolean   @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+model HotelReservation {
+  id               String    @id @default(uuid())
+  inquiryId        String?
+  inquiry          Inquiry?  @relation(fields: [inquiryId], references: [id])
+  hotelId          String
+  hotel            Hotel     @relation(fields: [hotelId], references: [id])
+  guestName        String
+  guestEmail       String?
+  guestPhone       String?
+  checkIn          DateTime
+  checkOut         DateTime
+  roomType         String
+  roomsCount       Int       @default(1)
+  mealPlan         String    // EP, CP, MAP, AP
+  specialRequests  String?
+  status           String    @default("Pending") // Pending, Sent, Confirmed, Hold, Rejected, Cancelled
+  paymentStatus    String    @default("Unpaid")  // Unpaid, Partially Paid, Paid
+  bookingReference String?
+  contractRate     Float     @default(0)
+  seasonalPricing  Float?
+  commissionRate   Float     @default(0)
+  totalAmount      Float     @default(0)
+  profitMargin     Float     @default(0)
+  hotelDues        Float     @default(0)
+  holdUntil        DateTime? // hold countdown timer
+  createdById      String?
+  createdBy        User?     @relation("UserReservations", fields: [createdById], references: [id])
+  auditLogs        String?   // JSON string of updates/actions
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
