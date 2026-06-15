@@ -170,7 +170,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
               )}
             </TabsContent>
 
-            <TabsContent value="upload" className="mt-4">
+            <TabsContent value="upload" className="flex-1 overflow-auto mt-4 pr-1">
               <div className="border-2 border-dashed rounded-lg p-12 text-center">
                 <input
                   ref={fileInputRef}
@@ -195,8 +195,8 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
               </div>
             </TabsContent>
 
-            <TabsContent value="url" className="mt-4">
-              <div className="space-y-4">
+            <TabsContent value="url" className="flex-1 overflow-auto mt-4 pr-1">
+              <div className="space-y-4 pb-2">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Image URL</label>
                   <Input
@@ -206,7 +206,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
                   />
                 </div>
                 {urlInput && (
-                  <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                  <div className="aspect-video max-h-64 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
                     <img
                       src={urlInput}
                       alt="Preview"
