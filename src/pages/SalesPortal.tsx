@@ -62,6 +62,9 @@ export default function SalesPortal() {
   const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [leadSearch, setLeadSearch] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<'All' | 'High' | 'Medium' | 'Low'>('All');
+  const [sortBy, setSortBy] = useState<'priority' | 'time'>('priority');
   const [inquiries, setInquiries] = useState<any[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [salesStats, setSalesStats] = useState<any>(null);
@@ -164,6 +167,40 @@ export default function SalesPortal() {
                           inq.id.toLowerCase().includes(searchTerm.toLowerCase());
     return isAssigned && matchesSearch;
   });
+
+  const liveLeads = inquiries
+    .filter(inq => {
+      if (inq.status !== 'Pending Curation') return false;
+
+      const isAssigned = inq.assignedTo === teamUser?.code || !inq.assignedTo;
+      if (!isAssigned) return false;
+
+      const displayId = formatId(inq.id);
+      const matchesSearch = inq.customerName.toLowerCase().includes(leadSearch.toLowerCase()) || 
+                            displayId.toLowerCase().includes(leadSearch.toLowerCase()) ||
+                            inq.destination.toLowerCase().includes(leadSearch.toLowerCase());
+      if (!matchesSearch) return false;
+
+      if (priorityFilter !== 'All') {
+        const p = inq.priority || 'Low';
+        if (p.toLowerCase() !== priorityFilter.toLowerCase()) return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'priority') {
+        const priorityWeight: Record<string, number> = { High: 3, Medium: 2, Low: 1 };
+        const weightA = priorityWeight[a.priority || 'Low'] || 1;
+        const weightB = priorityWeight[b.priority || 'Low'] || 1;
+        if (weightA !== weightB) {
+          return weightB - weightA;
+        }
+      }
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
 
   const handleLogout = () => {
     teamLogout();
@@ -298,70 +335,164 @@ export default function SalesPortal() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-8">
-                {myInquiries.filter(inq => inq.status === 'Pending Curation').map((inq, index) => (
-                  <Card 
-                    key={inq.id} 
-                    className="group bg-gradient-to-r from-white/[0.04] to-transparent border-white/5 overflow-hidden rounded-[3rem] hover:border-kashmir-gold/40 transition-all duration-700 backdrop-blur-2xl relative p-1"
+            <div className="flex flex-col xl:flex-row gap-6 items-stretch justify-between bg-white/[0.02] border border-white/5 p-6 rounded-[2.5rem] backdrop-blur-2xl">
+              {/* Search input */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <Input 
+                  value={leadSearch}
+                  onChange={(e) => setLeadSearch(e.target.value)}
+                  placeholder="Search guest name, ID, destination..." 
+                  className="pl-11 bg-white/5 border-white/5 h-12 rounded-xl text-xs font-bold text-white focus:bg-white/10 focus:border-kashmir-gold/30 transition-all placeholder:text-white/20"
+                />
+              </div>
+
+              {/* Priority Filters and Sorting */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Priority tabs */}
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                  {(['All', 'High', 'Medium', 'Low'] as const).map((prio) => {
+                    const count = inquiries.filter(inq => {
+                      if (inq.status !== 'Pending Curation') return false;
+                      const isAssigned = inq.assignedTo === teamUser?.code || !inq.assignedTo;
+                      if (!isAssigned) return false;
+                      if (prio !== 'All' && (inq.priority || 'Low').toLowerCase() !== prio.toLowerCase()) return false;
+                      return true;
+                    }).length;
+
+                    return (
+                      <button
+                        key={prio}
+                        onClick={() => setPriorityFilter(prio)}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2",
+                          priorityFilter === prio 
+                            ? "bg-kashmir-gold text-black shadow-lg" 
+                            : "text-white/40 hover:text-white"
+                        )}
+                      >
+                        {prio}
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded-md text-[8px] font-bold",
+                          priorityFilter === prio ? "bg-black/10 text-black" : "bg-white/5 text-white/40"
+                        )}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Sorting options */}
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                  <button
+                    onClick={() => setSortBy('priority')}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5",
+                      sortBy === 'priority' ? "bg-white/5 text-white border border-white/5" : "text-white/40 hover:text-white"
+                    )}
                   >
-                    <div className="bg-[#0a0f12]/80 rounded-[2.8rem] p-8 lg:p-12 space-y-10">
-                      <div className="flex flex-col xl:flex-row items-center gap-10">
+                    <Target className="w-3.5 h-3.5 text-kashmir-gold" />
+                    Priority First
+                  </button>
+                  <button
+                    onClick={() => setSortBy('time')}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5",
+                      sortBy === 'time' ? "bg-white/5 text-white border border-white/5" : "text-white/40 hover:text-white"
+                    )}
+                  >
+                    <Clock className="w-3.5 h-3.5 text-blue-400" />
+                    Newest First
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {liveLeads.length === 0 ? (
+              <div className="py-20 text-center bg-white/[0.01] border-2 border-dashed border-white/5 rounded-[3rem] max-w-xl mx-auto w-full">
+                <AlertCircle className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                <p className="text-white/30 font-bold uppercase tracking-widest text-xs">No active leads match the filters</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {liveLeads.map((inq, index) => {
+                  const displayId = formatId(inq.id);
+                  const prio = inq.priority || 'Low';
+                  
+                  return (
+                    <Card 
+                      key={inq.id} 
+                      className="group bg-white/[0.02] border-white/5 overflow-hidden rounded-[2rem] hover:border-kashmir-gold/30 hover:bg-white/[0.04] transition-all duration-500 backdrop-blur-2xl relative flex flex-col justify-between shadow-xl"
+                      style={{ transitionDelay: `${index * 30}ms` }}
+                    >
+                      {/* Decorative top priority line */}
+                      <div className={cn(
+                        "h-[3px] w-full absolute top-0 left-0",
+                        prio === 'High' ? "bg-gradient-to-r from-red-500 via-rose-500 to-red-500 shadow-[0_1px_10px_rgba(239,68,68,0.5)]" :
+                        prio === 'Medium' ? "bg-gradient-to-r from-amber-500 to-orange-500" :
+                        "bg-white/5"
+                      )} />
+
+                      <div className="p-6 space-y-6">
                         {/* Avatar & Basic Info */}
-                        <div className="flex items-center gap-8 flex-1 w-full">
-                          <div className="relative shrink-0">
-                            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-3xl font-bold text-white shadow-2xl">
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-lg font-bold text-white shadow-md group-hover:scale-105 group-hover:border-kashmir-gold/20 transition-all duration-300">
                               {inq.customerName.charAt(0)}
                             </div>
-                            <div className="absolute -top-3 -right-3 px-3 py-1 bg-kashmir-gold text-black text-[10px] font-black rounded-full shadow-lg animate-bounce">
-                              NEW
+                            <div className="min-w-0">
+                              <h3 className="font-display text-lg font-bold text-white group-hover:text-kashmir-gold transition-colors truncate">{inq.customerName}</h3>
+                              <p className="text-[9px] font-mono font-bold text-white/30 uppercase tracking-wider">{displayId}</p>
                             </div>
                           </div>
-
-                          <div className="space-y-3 min-w-0">
-                            <div className="flex flex-wrap items-center gap-4">
-                              <h3 className="text-3xl font-display font-bold text-white tracking-tight truncate">{inq.customerName}</h3>
-                              <Badge className="bg-white/5 text-white/40 border-white/10 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest shrink-0 truncate max-w-[120px]">
-                                {formatId(inq.id)}
-                              </Badge>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-6 text-[10px] font-black text-white/20 uppercase tracking-widest">
-                              <span className="flex items-center gap-2 text-kashmir-gold"><Zap className="w-3 h-3 fill-kashmir-gold" /> Source: App</span>
-                              <span className="flex items-center gap-2"><Clock className="w-3 h-3" /> 12m ago</span>
-                              <span className="flex items-center gap-2"><Target className="w-3 h-3" /> High Priority</span>
-                            </div>
+                          
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <Badge className={cn(
+                              "text-[8px] font-black tracking-widest px-2 py-0.5 rounded-md border-none uppercase",
+                              prio === 'High' ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                              prio === 'Medium' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                              "bg-white/5 text-white/40"
+                            )}>
+                              {prio}
+                            </Badge>
+                            <span className="text-[8px] text-white/20 uppercase font-black tracking-wider flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" /> 12m ago
+                            </span>
                           </div>
                         </div>
 
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-12 gap-y-6 w-full xl:w-auto xl:min-w-[500px] border-l border-white/5 xl:pl-12">
+                        <div className="grid grid-cols-2 gap-4 p-4 bg-white/[0.01] rounded-2xl border border-white/5">
                           {[
                             { label: 'Destination', value: inq.destination, icon: MapPin },
                             { label: 'Duration', value: inq.duration, icon: Clock },
                             { label: 'Stay', value: inq.accommodation, icon: Sparkles },
                             { label: 'Budget', value: inq.budget || 'Premium', icon: DollarSign },
                           ].map((stat, i) => (
-                            <div key={i} className="space-y-1">
-                              <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">{stat.label}</p>
-                              <p className="text-base font-bold text-white whitespace-nowrap">{stat.value}</p>
+                            <div key={i} className="min-w-0">
+                              <p className="text-[8px] font-bold text-white/25 uppercase tracking-wider mb-0.5">{stat.label}</p>
+                              <p className="text-xs font-bold text-white/90 truncate">{stat.value}</p>
                             </div>
                           ))}
                         </div>
-
-                        {/* Action Button */}
-                        <div className="w-full xl:w-auto shrink-0">
-                          <Button 
-                            onClick={() => openBuilder(inq)}
-                            className="w-full xl:w-auto h-16 px-12 bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-[0.2em] text-xs rounded-2xl gap-3 shadow-xl shadow-kashmir-gold/10"
-                          >
-                            <Sparkles className="w-4 h-4" />
-                            Claim & Build
-                          </Button>
-                        </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+
+                      {/* CTA Footer */}
+                      <div className="p-6 pt-0 border-t border-white/[0.02] mt-auto">
+                        <Button 
+                          onClick={() => openBuilder(inq)}
+                          className="w-full h-11 bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-[0.15em] text-[10px] rounded-xl gap-2 shadow-lg shadow-kashmir-gold/5 transition-all duration-300"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Claim & Build
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
+            )}
             </div>
           ) : activeTab === 'my-inquiries' ? (
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-12 animate-in fade-in duration-700 slide-in-from-bottom-4">
