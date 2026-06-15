@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/dialog';
 import { API_BASE_URL } from '@/lib/api';
 import { toast } from 'sonner';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
 interface Booking {
   id: string;
@@ -57,6 +58,7 @@ interface Booking {
 }
 
 export default function CMSBookings() {
+  const { systemEvents } = useTeamAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,6 +68,14 @@ export default function CMSBookings() {
   useEffect(() => {
     fetchBookings();
   }, []);
+
+  // Real-time updates trigger
+  useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent && latestEvent.booking && ('type' in latestEvent.booking || latestEvent.booking.entityType === 'booking')) {
+      fetchBookings();
+    }
+  }, [systemEvents]);
 
   const fetchBookings = async () => {
     try {
