@@ -25,7 +25,12 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [urlError, setUrlError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setUrlError(false);
+  }, [urlInput]);
 
   const fetchMedia = async () => {
     setLoading(true);
@@ -103,28 +108,59 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
 
   return (
     <div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 w-full">
         {value ? (
-          <div className="relative w-full">
-            <div className="flex items-center gap-2 p-2 border rounded-md">
-              <img src={value} alt="Selected" className="w-12 h-12 object-cover rounded" />
-              <span className="flex-1 text-sm truncate">{value}</span>
-              <Button variant="ghost" size="icon" onClick={() => onChange('')}>
+          <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-white/[0.02] aspect-video w-full max-h-48 flex items-center justify-center">
+            <img 
+              src={value} 
+              alt="Selected" 
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+              onError={(e) => {
+                // If it fails to load, fallback to showing a placeholder styling but keep url
+                e.currentTarget.style.opacity = '0.3';
+              }}
+            />
+            
+            {/* Control Overlay */}
+            <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="rounded-xl font-bold bg-white text-black hover:bg-kashmir-gold hover:text-black transition-all"
+                onClick={() => {
+                  setDialogOpen(true);
+                  fetchMedia();
+                }}
+              >
+                <ImageIcon className="h-4 w-4 mr-1.5" />
+                Change Image
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="icon" 
+                className="rounded-xl h-9 w-9"
+                onClick={() => onChange('')}
+              >
                 <X className="h-4 w-4" />
               </Button>
+            </div>
+            
+            {/* Small floating info badge */}
+            <div className="absolute bottom-2 left-2 right-2 bg-black/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center justify-between pointer-events-none group-hover:opacity-0 transition-opacity duration-300">
+              <span className="text-[10px] text-white/50 truncate font-semibold flex-1 mr-2">{value}</span>
             </div>
           </div>
         ) : (
           <Button
             variant="outline"
-            className="w-full justify-start text-muted-foreground"
+            className="w-full h-28 border-dashed border-2 border-white/10 hover:border-kashmir-gold/40 bg-white/[0.01] hover:bg-white/[0.03] rounded-2xl flex flex-col items-center justify-center gap-2 text-white/40 hover:text-white transition-all duration-300 py-6"
             onClick={() => {
               setDialogOpen(true);
               fetchMedia();
             }}
           >
-            <ImageIcon className="h-4 w-4 mr-2" />
-            Select Image
+            <ImageIcon className="h-6 w-6 text-white/30" />
+            <span className="text-xs font-bold uppercase tracking-wider">Select Display Image</span>
           </Button>
         )}
       </div>
@@ -203,19 +239,36 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     placeholder="https://example.com/image.jpg"
+                    className="bg-white/5 border-white/10 rounded-xl"
                   />
                 </div>
                 {urlInput && (
-                  <div className="aspect-video max-h-64 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                  <div className="aspect-video max-h-60 bg-muted rounded-xl overflow-hidden flex items-center justify-center relative border border-white/5">
                     <img
                       src={urlInput}
                       alt="Preview"
                       className="w-full h-full object-contain"
-                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        setUrlError(true);
+                      }}
+                      onLoad={() => {
+                        setUrlError(false);
+                      }}
                     />
+                    {urlError && (
+                      <div className="absolute inset-0 bg-red-950/40 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+                        <span className="text-sm font-black text-red-400">Unable to load image preview</span>
+                        <span className="text-[10px] text-white/50 mt-1 max-w-xs">Please verify the URL is a direct link to an image file (PNG, JPG, WEBP, or data URI)</span>
+                      </div>
+                    )}
                   </div>
                 )}
-                <Button onClick={handleUrlSubmit} className="w-full" disabled={!urlInput.trim()}>
+                <Button 
+                  onClick={handleUrlSubmit} 
+                  className="w-full bg-white text-black hover:bg-kashmir-gold hover:text-black font-bold h-11 rounded-xl transition-all" 
+                  disabled={!urlInput.trim() || urlError}
+                >
                   Use This Image
                 </Button>
               </div>

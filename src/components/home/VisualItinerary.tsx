@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, MapPin, CheckCircle, ChevronRight, Compass, Calendar, Plane, Coffee } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { io } from 'socket.io-client';
 
 interface ItineraryDay {
   day: number;
@@ -134,6 +135,25 @@ export default function VisualItinerary() {
     };
 
     fetchItineraryData();
+
+    // Listen to real-time updates via WebSocket
+    const socket = io(SOCKET_URL);
+    socket.on('site-content-updated', (update) => {
+      if (update.sectionKey === 'signatureItinerary') {
+        const sectionData = update.data;
+        if (sectionData) {
+          setSectionTitle(sectionData.title || 'THE SIGNATURE ITINERARY');
+          setSectionSubtitle(sectionData.subtitle || 'Day-by-day blueprint of our flagship 6-day Kashmir expedition.');
+          if (sectionData.content && Array.isArray(sectionData.content.days) && sectionData.content.days.length > 0) {
+            setItineraryDays(sectionData.content.days);
+          }
+        }
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const getInclusionIcon = (iconName: string) => {
