@@ -124,6 +124,8 @@ export default function CMSReservations() {
   const [activeReservation, setActiveReservation] = useState<HotelReservation | null>(null);
   const [confirmRefCode, setConfirmRefCode] = useState('');
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<HotelReservation | null>(null);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -475,6 +477,32 @@ export default function CMSReservations() {
       fetchReservations();
     } catch (e: any) {
       toast.error(e.message || 'Failed to confirm reservation');
+    }
+  };
+
+  const openDeleteDialog = (resItem: HotelReservation) => {
+    setItemToDelete(resItem);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteReservation = async () => {
+    if (!itemToDelete) return;
+    const token = localStorage.getItem('teamToken');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/reservations/${itemToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete reservation');
+      toast.success('Reservation deleted successfully');
+      setDeleteConfirmOpen(false);
+      fetchReservations();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete reservation');
     }
   };
 
@@ -987,6 +1015,15 @@ export default function CMSReservations() {
                         >
                           <Download className="w-4 h-4" />
                         </Button>
+                        <Button
+                          onClick={() => openDeleteDialog(item)}
+                          size="icon"
+                          variant="outline"
+                          className="w-9 h-9 rounded-xl border-white/5 bg-white/5 hover:bg-red-500/10 text-red-400"
+                          title="Delete Reservation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1328,6 +1365,18 @@ export default function CMSReservations() {
           )}
 
           <DialogFooter className="mt-8 gap-3 border-t border-white/5 pt-6">
+            {activeReservation && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setFormOpen(false);
+                  openDeleteDialog(activeReservation);
+                }}
+                className="bg-red-500/20 hover:bg-red-500 border border-red-500/30 text-red-400 hover:text-black font-bold uppercase tracking-widest px-6 h-12 rounded-xl transition-all mr-auto"
+              >
+                Delete
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => setFormOpen(false)} className="rounded-xl border border-white/5 h-12 text-white/40 hover:text-white hover:bg-white/5">
               Cancel
             </Button>
@@ -1426,6 +1475,36 @@ export default function CMSReservations() {
           <DialogFooter className="pt-4 border-t border-white/5">
             <Button variant="ghost" onClick={() => setTimelineOpen(false)} className="rounded-xl border border-white/5 text-white/40 hover:text-white hover:bg-white/5">
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md bg-[#0a0f12]/95 border-white/10 text-white rounded-3xl p-8 backdrop-blur-3xl">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-xl font-bold flex items-center gap-3 text-red-400">
+              <Trash2 className="w-5 h-5 text-red-400" />
+              Decommission Reservation
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-xs text-white/60 leading-relaxed">
+              Are you sure you want to delete the B2B hotel reservation for <span className="text-white font-bold">{itemToDelete?.guestName}</span> at <span className="text-white font-bold">{itemToDelete?.hotel?.name}</span>? This action is permanent and cannot be undone.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)} className="rounded-xl border border-white/5 text-white/40 hover:text-white hover:bg-white/5">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDeleteReservation}
+              className="bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-widest px-5 h-11 rounded-xl"
+            >
+              Delete Permanently
             </Button>
           </DialogFooter>
         </DialogContent>

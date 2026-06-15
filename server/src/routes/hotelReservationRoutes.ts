@@ -5,7 +5,8 @@ import {
   createReservation,
   updateReservation,
   confirmReservation,
-  simulateSendQuote
+  simulateSendQuote,
+  deleteReservation
 } from '../controllers/hotelReservationController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -17,5 +18,6 @@ router.post('/', authenticateToken, createReservation);
 router.patch('/:id', authenticateToken, updateReservation);
 router.post('/:id/confirm', authenticateToken, confirmReservation);
 router.post('/:id/send', authenticateToken, simulateSendQuote);
+router.delete('/:id', authenticateToken, deleteReservation);
 
 export default router;

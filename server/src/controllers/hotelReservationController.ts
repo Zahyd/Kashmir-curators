@@ -451,3 +451,28 @@ export const simulateSendQuote = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to dispatch quote' });
   }
 };
+
+// Delete a B2B reservation
+export const deleteReservation = async (req: AuthRequest, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+
+    const existing = await p.hotelReservation.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+
+    await p.hotelReservation.delete({ where: { id } });
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'DELETE',
+        message: `Reservation for ${existing.guestName} deleted`,
+        booking: { id, entityType: 'reservation' }
+      });
+    }
+
+    res.json({ success: true, message: 'Reservation successfully deleted' });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to delete reservation' });
+  }
+};
