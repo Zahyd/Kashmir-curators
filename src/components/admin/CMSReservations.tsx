@@ -126,6 +126,8 @@ export default function CMSReservations() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<HotelReservation | null>(null);
+  const [hotelSearchQuery, setHotelSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -309,6 +311,8 @@ export default function CMSReservations() {
 
   const openCreateDialog = () => {
     setActiveReservation(null);
+    setHotelSearchQuery(hotels[0]?.name || '');
+    setShowSuggestions(false);
     setFormData({
       inquiryId: '',
       hotelId: hotels[0]?.id || '',
@@ -353,6 +357,9 @@ export default function CMSReservations() {
 
   const openEditDialog = (resItem: HotelReservation) => {
     setActiveReservation(resItem);
+    const hotel = hotels.find(h => h.id === resItem.hotelId);
+    setHotelSearchQuery(hotel ? hotel.name : '');
+    setShowSuggestions(false);
     setFormData({
       inquiryId: resItem.inquiryId || '',
       hotelId: resItem.hotelId,
@@ -503,6 +510,52 @@ export default function CMSReservations() {
       fetchReservations();
     } catch (e: any) {
       toast.error(e.message || 'Failed to delete reservation');
+    }
+  };
+
+  const createCustomHotel = async (name: string) => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/hotels`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name,
+          location: 'Kashmir',
+          starRating: 4,
+          pricePerNight: 5000,
+          description: 'Custom B2B partner hotel registered in real-time.',
+          roomTypes: [{ id: 'room-0', name: 'Deluxe Room', price: 5000 }]
+        })
+      });
+      
+      if (!response.ok) throw new Error('Failed to create hotel partner');
+      const newHotel = await response.json();
+      
+      toast.success(`Hotel "${name}" successfully registered in database!`);
+      
+      // Update hotels list state locally so it's instantly available
+      const parsedNewHotel = {
+        ...newHotel,
+        roomTypes: [{ id: 'room-0', name: 'Deluxe Room', price: 5000 }]
+      };
+      setHotels(prev => [parsedNewHotel, ...prev]);
+      
+      // Set the selection
+      setFormData(prev => ({
+        ...prev,
+        hotelId: newHotel.id,
+        roomType: 'Deluxe Room',
+        contractRate: 5000,
+        commissionRate: 10,
+        totalAmount: 6250
+      }));
+      setHotelSearchQuery(name);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to register new hotel');
     }
   };
 
@@ -1115,16 +1168,67 @@ export default function CMSReservations() {
                 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Hotel Partner</label>
-                  <Select value={formData.hotelId} onValueChange={handleHotelChange}>
-                    <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
-                      <SelectValue placeholder="Select Hotel" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
-                      {hotels.map(h => (
-                        <SelectItem key={h.id} value={h.id}>{h.name} ({h.location})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <Input 
+                      value={hotelSearchQuery}
+                      onChange={(e) => {
+                        setHotelSearchQuery(e.target.value);
+                        setShowSuggestions(true);
+                      }}
+                      onFocus={() => setShowSuggestions(true)}
+                      placeholder="Search or type hotel name..."
+                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pr-10 focus:border-kashmir-gold/30"
+                    />
+                    <Building className="w-4 h-4 text-white/20 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    
+                    {showSuggestions && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setShowSuggestions(false)} 
+                        />
+                        <Card className="absolute left-0 right-0 mt-2 z-50 bg-[#0a0f12]/95 border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar backdrop-blur-xl">
+                          <div className="p-2 space-y-1">
+                            {hotels
+                              .filter(h => h.name.toLowerCase().includes(hotelSearchQuery.toLowerCase()))
+                              .map((h) => (
+                                <button
+                                  key={h.id}
+                                  type="button"
+                                  onClick={() => {
+                                    handleHotelChange(h.id);
+                                    setHotelSearchQuery(h.name);
+                                    setShowSuggestions(false);
+                                  }}
+                                  className={cn(
+                                    "w-full text-left px-4 py-2.5 text-xs rounded-xl transition-colors flex justify-between items-center",
+                                    formData.hotelId === h.id 
+                                      ? "bg-kashmir-gold/10 text-kashmir-gold font-bold" 
+                                      : "text-white/80 hover:bg-white/5"
+                                  )}
+                                >
+                                  <span>{h.name}</span>
+                                  <span className="text-[10px] text-white/30">{h.location}</span>
+                                </button>
+                              ))}
+                            
+                            {hotelSearchQuery.trim() !== '' && !hotels.some(h => h.name.toLowerCase() === hotelSearchQuery.trim().toLowerCase()) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  createCustomHotel(hotelSearchQuery.trim());
+                                  setShowSuggestions(false);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-xs rounded-xl text-kashmir-gold hover:bg-kashmir-gold/10 transition-colors font-bold flex items-center gap-2 border border-dashed border-kashmir-gold/20"
+                              >
+                                <Plus className="w-4 h-4" /> Create new hotel partner "{hotelSearchQuery.trim()}"
+                              </button>
+                            )}
+                          </div>
+                        </Card>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
