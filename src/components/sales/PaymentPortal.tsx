@@ -34,9 +34,31 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
   const [showScanner, setShowScanner] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Business Configuration
-  const businessVPA = "thekashmircurators@okaxis"; // Replace with real VPA
-  const merchantName = "The Kashmir Curators";
+  const [businessVPA, setBusinessVPA] = useState<string>("thekashmircurators@okaxis");
+  const [merchantName, setMerchantName] = useState<string>("The Kashmir Curators");
+
+  // Load configuration from database
+  React.useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/site-content`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (data.paymentSettings && data.paymentSettings.content && data.paymentSettings.content.methods) {
+          const methods = data.paymentSettings.content.methods;
+          const primaryUPI = methods.find((m: any) => m.type === 'upi' && m.isActive && m.isPrimary);
+          if (primaryUPI) {
+            setBusinessVPA(primaryUPI.identifier);
+            // Use method name or provider as payee name (e.g. "Kashmir Curators")
+            setMerchantName(primaryUPI.name || primaryUPI.provider || "The Kashmir Curators");
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load dynamic payment settings, using defaults:", err);
+      }
+    };
+    fetchPaymentSettings();
+  }, []);
 
   const generateUPILink = () => {
     const encodedName = encodeURIComponent(merchantName);

@@ -2,6 +2,29 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import prisma from '../lib/prisma';
 
+const getActiveUPIConfig = async () => {
+  let businessVPA = process.env.BUSINESS_UPI_VPA || "thekashmircurators@okaxis";
+  let merchantName = process.env.BUSINESS_UPI_MERCHANT_NAME || "The Kashmir Curators";
+
+  try {
+    const paymentSettings = await (prisma as any).siteContent.findUnique({
+      where: { sectionKey: 'paymentSettings' }
+    });
+    if (paymentSettings && paymentSettings.content && paymentSettings.content.methods) {
+      const methods = paymentSettings.content.methods;
+      const primaryUPI = methods.find((m: any) => m.type === 'upi' && m.isActive && m.isPrimary);
+      if (primaryUPI) {
+        businessVPA = primaryUPI.identifier;
+        merchantName = primaryUPI.name || primaryUPI.provider || merchantName;
+      }
+    }
+  } catch (dbErr) {
+    console.warn('Failed to load payment settings from db, using defaults:', dbErr);
+  }
+
+  return { businessVPA, merchantName };
+};
+
 export const handleRazorpayWebhook = async (req: Request, res: Response) => {
   try {
     const signature = req.headers['x-razorpay-signature'] as string;
@@ -164,8 +187,7 @@ export const sendWhatsAppPaymentRequest = async (req: Request, res: Response) =>
 
     // 2. Generate unique payment reference and save to ledger
     const paymentId = `TXN-KC-${inquiryId.substring(0, 6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
-    const businessVPA = "thekashmircurators@okaxis";
-    const merchantName = "The Kashmir Curators";
+    const { businessVPA, merchantName } = await getActiveUPIConfig();
     const encodedName = encodeURIComponent(merchantName);
     const shortId = inquiryId.includes('-') ? `KC-${inquiryId.split('-')[0].toUpperCase()}` : `KC-${inquiryId.substring(0, 8).toUpperCase()}`;
     const encodedNote = encodeURIComponent(`Booking for ${shortId}`);
@@ -264,8 +286,7 @@ export const getPaymentRequestDetails = async (req: Request, res: Response) => {
     }
 
     // 3. Re-generate upiLink and qrCodeUrl
-    const businessVPA = "thekashmircurators@okaxis";
-    const merchantName = "The Kashmir Curators";
+    const { businessVPA, merchantName } = await getActiveUPIConfig();
     const encodedName = encodeURIComponent(merchantName);
     const shortId = ledger.bookingId.includes('-') ? `KC-${ledger.bookingId.split('-')[0].toUpperCase()}` : `KC-${ledger.bookingId.substring(0, 8).toUpperCase()}`;
     const encodedNote = encodeURIComponent(`Booking for ${shortId}`);
