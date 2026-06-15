@@ -47,8 +47,8 @@ interface Booking {
     email: string;
     phone: string | null;
   };
-  entityId: string;
-  entityType: 'package' | 'hotel' | 'cab';
+  entityId?: string;
+  type: 'package' | 'hotel' | 'cab';
   itemName: string;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
@@ -182,8 +182,8 @@ export default function CMSBookings() {
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                 <div className="flex items-center gap-6">
                   <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 group-hover:bg-kashmir-gold/10 group-hover:text-kashmir-gold transition-all shrink-0">
-                    {booking.entityType === 'package' ? <Package className="w-6 h-6" /> : 
-                     booking.entityType === 'hotel' ? <Building className="w-6 h-6" /> : <Car className="w-6 h-6" />}
+                    {booking.type === 'package' ? <Package className="w-6 h-6" /> : 
+                     booking.type === 'hotel' ? <Building className="w-6 h-6" /> : <Car className="w-6 h-6" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-3 mb-1">
@@ -242,7 +242,7 @@ export default function CMSBookings() {
                     <div>
                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 block mb-2">Service Selection</label>
                       <h4 className="text-lg font-bold text-kashmir-gold">{selectedBooking.itemName}</h4>
-                      <p className="text-xs text-white/40 uppercase tracking-widest mt-1">{selectedBooking.entityType}</p>
+                      <p className="text-xs text-white/40 uppercase tracking-widest mt-1">{selectedBooking.type}</p>
                     </div>
                   </div>
                   <div className="space-y-6">
