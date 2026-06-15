@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import { API_BASE_URL } from '@/lib/api';
 import { jsPDF } from 'jspdf';
+import { cn } from '@/lib/utils';
 
 interface Hotel {
   id: string;
