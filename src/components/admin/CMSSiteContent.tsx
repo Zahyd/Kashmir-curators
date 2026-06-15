@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Plane, Compass, Coffee, Clock, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,6 +42,15 @@ const defaultContent: Record<string, Partial<SiteContent>> = {
     },
     image_url: '',
   },
+  signatureItinerary: {
+    section_key: 'signatureItinerary',
+    title: 'THE SIGNATURE ITINERARY',
+    subtitle: 'Day-by-day blueprint of our flagship 6-day Kashmir expedition.',
+    content: {
+      days: []
+    },
+    image_url: '',
+  }
 };
 
 export default function CMSSiteContent() {
@@ -58,7 +67,10 @@ export default function CMSSiteContent() {
       const response = await fetch(`${API_BASE_URL}/site-content`);
       if (response.ok) {
         const data = await response.json();
-        setContent(data as Record<string, SiteContent>);
+        setContent({
+          ...defaultContent,
+          ...data
+        } as Record<string, SiteContent>);
       } else {
         setContent(defaultContent as Record<string, SiteContent>);
       }
@@ -315,6 +327,218 @@ export default function CMSSiteContent() {
             )}
             Save Social Links
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Signature Itinerary Section */}
+      <Card className="bg-[#0a0f12]/40 bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
+        <CardHeader className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6">
+          <div>
+            <CardTitle className="text-xl font-display font-black text-white uppercase tracking-tight">Signature Itinerary Configuration</CardTitle>
+            <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1">Manage the flagship 6-day kashmir tour experience route</p>
+          </div>
+          <Button 
+            onClick={() => saveSection('signatureItinerary')} 
+            disabled={saving === 'signatureItinerary'}
+            className="w-full md:w-auto bg-white text-black hover:bg-kashmir-gold hover:text-black font-black px-6 h-12 rounded-xl transition-all duration-300 shadow-lg"
+          >
+            {saving === 'signatureItinerary' ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save Itinerary
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Itinerary Section Title</label>
+              <Input
+                value={content.signatureItinerary?.title || ''}
+                onChange={(e) => updateField('signatureItinerary', 'title', e.target.value)}
+                placeholder="Section main headline"
+                className="bg-white/5 border-white/10 rounded-xl h-12 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Itinerary Section Subtitle</label>
+              <Input
+                value={content.signatureItinerary?.subtitle || ''}
+                onChange={(e) => updateField('signatureItinerary', 'subtitle', e.target.value)}
+                placeholder="Section supporting description"
+                className="bg-white/5 border-white/10 rounded-xl h-12 text-white"
+              />
+            </div>
+          </div>
+
+          {/* Days Accordion/Editor */}
+          <div className="border-t border-white/5 pt-6 space-y-6">
+            <h4 className="text-sm font-black uppercase tracking-widest text-white/40 mb-4">Day-by-Day Blueprints</h4>
+            
+            {Array.from({ length: 6 }).map((_, idx) => {
+              const dayNum = idx + 1;
+              const daysList = (content.signatureItinerary?.content?.days as any[]) || [];
+              const dayData = daysList.find(d => d.day === dayNum) || {
+                day: dayNum,
+                title: '',
+                subtitle: '',
+                route: '',
+                duration: '',
+                image: '',
+                description: '',
+                highlights: [],
+                inclusions: [
+                  { icon: 'plane', label: '' },
+                  { icon: 'compass', label: '' },
+                  { icon: 'coffee', label: '' }
+                ]
+              };
+
+              const updateDayField = (field: string, val: any) => {
+                const newDays = [...daysList];
+                const dayIndex = newDays.findIndex(d => d.day === dayNum);
+                const updatedDay = { ...dayData, [field]: val };
+                if (dayIndex >= 0) {
+                  newDays[dayIndex] = updatedDay;
+                } else {
+                  newDays.push(updatedDay);
+                }
+                newDays.sort((a, b) => a.day - b.day);
+                
+                setContent((prev) => ({
+                  ...prev,
+                  signatureItinerary: {
+                    ...prev.signatureItinerary,
+                    content: {
+                      ...(prev.signatureItinerary?.content || {}),
+                      days: newDays
+                    }
+                  }
+                }));
+              };
+
+              return (
+                <div key={dayNum} className="p-6 rounded-3xl bg-white/[0.01] border border-white/5 space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-kashmir-gold text-black flex items-center justify-center font-display font-black text-sm">
+                      D0{dayNum}
+                    </div>
+                    <h5 className="font-bold text-white uppercase text-xs tracking-wider">Day {dayNum} Parameters</h5>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Day Title</label>
+                      <Input
+                        value={dayData.title || ''}
+                        onChange={(e) => updateDayField('title', e.target.value)}
+                        placeholder="e.g. Srinagar Arrival"
+                        className="bg-white/5 border-white/10 rounded-xl h-11 text-white text-xs"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Day Subtitle</label>
+                      <Input
+                        value={dayData.subtitle || ''}
+                        onChange={(e) => updateDayField('subtitle', e.target.value)}
+                        placeholder="e.g. VALLEY ENTRY PROTOCOL"
+                        className="bg-white/5 border-white/10 rounded-xl h-11 text-white text-xs"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Route Waypoints</label>
+                      <Input
+                        value={dayData.route || ''}
+                        onChange={(e) => updateDayField('route', e.target.value)}
+                        placeholder="e.g. Airport ➔ Houseboat"
+                        className="bg-white/5 border-white/10 rounded-xl h-11 text-white text-xs"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Distance / Duration</label>
+                      <Input
+                        value={dayData.duration || ''}
+                        onChange={(e) => updateDayField('duration', e.target.value)}
+                        placeholder="e.g. 15 km | 40 mins"
+                        className="bg-white/5 border-white/10 rounded-xl h-11 text-white text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Display Image</label>
+                      <MediaPicker
+                        value={dayData.image || ''}
+                        onChange={(url) => updateDayField('image', url)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Day Description</label>
+                      <Textarea
+                        value={dayData.description || ''}
+                        onChange={(e) => updateDayField('description', e.target.value)}
+                        placeholder="Detail the day activities..."
+                        className="bg-white/5 border-white/10 rounded-xl min-h-[96px] text-white text-xs resize-none"
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Highlights (one per line)</label>
+                      <Textarea
+                        value={(dayData.highlights || []).join('\n')}
+                        onChange={(e) => updateDayField('highlights', e.target.value.split('\n').filter(Boolean))}
+                        placeholder="Private Sunset Shikara Cruise&#10;Kahwa welcome service"
+                        className="bg-white/5 border-white/10 rounded-xl min-h-[96px] text-white text-xs resize-none"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Inclusions Row */}
+                  <div className="space-y-2 pt-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Day Inclusions</label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {Array.from({ length: 3 }).map((_, incIdx) => {
+                        const inclusion = (dayData.inclusions || [])[incIdx] || { icon: 'plane', label: '' };
+                        const updateInclusion = (key: string, val: string) => {
+                          const newInclusions = [...(dayData.inclusions || [])];
+                          newInclusions[incIdx] = { ...inclusion, [key]: val };
+                          updateDayField('inclusions', newInclusions);
+                        };
+
+                        return (
+                          <div key={incIdx} className="flex gap-2 bg-white/5 border border-white/5 p-3 rounded-2xl">
+                            <select
+                              value={inclusion.icon || 'plane'}
+                              onChange={(e) => updateInclusion('icon', e.target.value)}
+                              className="bg-[#0a0f12] border border-white/10 text-white rounded-xl text-xs px-2 py-1 focus:outline-none"
+                            >
+                              <option value="plane">Plane</option>
+                              <option value="compass">Compass</option>
+                              <option value="coffee">Coffee</option>
+                              <option value="clock">Clock</option>
+                              <option value="checkCircle">Check</option>
+                            </select>
+                            <Input
+                              value={inclusion.label || ''}
+                              onChange={(e) => updateInclusion('label', e.target.value)}
+                              placeholder="Inclusion label"
+                              className="bg-white/5 border-white/10 rounded-xl h-8 text-white text-xs flex-1"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>

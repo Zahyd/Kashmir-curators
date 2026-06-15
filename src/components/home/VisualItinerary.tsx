@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, MapPin, CheckCircle, ChevronRight, Compass, Calendar, Plane, Coffee } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
 
 interface ItineraryDay {
   day: number;
@@ -109,7 +110,44 @@ const ITINERARY_DAYS: ItineraryDay[] = [
 
 export default function VisualItinerary() {
   const [activeDay, setActiveDay] = useState(1);
-  const currentDay = ITINERARY_DAYS[activeDay - 1];
+  const [itineraryDays, setItineraryDays] = useState<ItineraryDay[]>(ITINERARY_DAYS);
+  const [sectionTitle, setSectionTitle] = useState('THE SIGNATURE ITINERARY');
+  const [sectionSubtitle, setSectionSubtitle] = useState('Day-by-day blueprint of our flagship 6-day Kashmir expedition.');
+
+  useEffect(() => {
+    const fetchItineraryData = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/site-content`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.signatureItinerary) {
+            setSectionTitle(data.signatureItinerary.title || 'THE SIGNATURE ITINERARY');
+            setSectionSubtitle(data.signatureItinerary.subtitle || 'Day-by-day blueprint of our flagship 6-day Kashmir expedition.');
+            if (data.signatureItinerary.content && Array.isArray(data.signatureItinerary.content.days) && data.signatureItinerary.content.days.length > 0) {
+              setItineraryDays(data.signatureItinerary.content.days);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[VisualItinerary] Error fetching itinerary data:', error);
+      }
+    };
+
+    fetchItineraryData();
+  }, []);
+
+  const getInclusionIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'plane': return <Plane className="w-3.5 h-3.5" />;
+      case 'compass': return <Compass className="w-3.5 h-3.5" />;
+      case 'coffee': return <Coffee className="w-3.5 h-3.5" />;
+      case 'clock': return <Clock className="w-3.5 h-3.5" />;
+      case 'checkCircle': return <CheckCircle className="w-3.5 h-3.5" />;
+      default: return <Compass className="w-3.5 h-3.5" />;
+    }
+  };
+
+  const currentDay = itineraryDays[activeDay - 1] || itineraryDays[0] || ITINERARY_DAYS[0];
 
   return (
     <section className="py-32 bg-[#05080a] relative overflow-hidden">
@@ -126,17 +164,24 @@ export default function VisualItinerary() {
               <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/60">Bespoke Experience Route</span>
             </div>
             <h2 className="font-display text-5xl md:text-7xl font-black text-white tracking-tighter uppercase mb-6">
-              THE SIGNATURE <span className="text-kashmir-gold italic">ITINERARY</span>
+              {sectionTitle.toUpperCase().includes('ITINERARY') ? (
+                <>
+                  {sectionTitle.toUpperCase().replace('ITINERARY', '')}
+                  <span className="text-kashmir-gold italic">ITINERARY</span>
+                </>
+              ) : (
+                sectionTitle
+              )}
             </h2>
             <p className="text-white/40 text-lg max-w-xl mx-auto font-medium leading-relaxed">
-              Day-by-day blueprint of our flagship 6-day Kashmir expedition.
+              {sectionSubtitle}
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             {/* Left Column: Vertical Day Selector (Lg screens) & Top row (Sm screens) */}
             <div className="lg:col-span-4 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-3 pb-4 lg:pb-0 scrollbar-none">
-              {ITINERARY_DAYS.map((dayObj) => (
+              {itineraryDays.map((dayObj) => (
                 <button
                   key={dayObj.day}
                   onClick={() => setActiveDay(dayObj.day)}
@@ -160,9 +205,9 @@ export default function VisualItinerary() {
                       "text-xs font-bold transition-all",
                       activeDay === dayObj.day ? "text-white" : "text-white/40"
                     )}>
-                      {dayObj.title.split(" & ")[0]}
+                      {dayObj.title ? dayObj.title.split(" & ")[0] : `Day ${dayObj.day}`}
                     </p>
-                    <span className="text-[9px] text-white/30 uppercase tracking-widest">{dayObj.subtitle.split(" & ")[0]}</span>
+                    <span className="text-[9px] text-white/30 uppercase tracking-widest">{dayObj.subtitle ? dayObj.subtitle.split(" & ")[0] : ''}</span>
                   </div>
                   {activeDay === dayObj.day && (
                     <ChevronRight className="hidden lg:block w-4 h-4 text-kashmir-gold ml-auto animate-bounce-horizontal" />
@@ -175,11 +220,13 @@ export default function VisualItinerary() {
             <div className="lg:col-span-8 bg-[#070b0d] border border-white/5 rounded-[3rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group">
               {/* Image Hub */}
               <div className="relative h-64 md:h-96 rounded-2xl md:rounded-[2rem] overflow-hidden mb-8">
-                <img
-                  src={currentDay.image}
-                  alt={currentDay.title}
-                  className="w-full h-full object-cover transition-transform duration-[3000ms] group-hover:scale-105"
-                />
+                {currentDay.image && (
+                  <img
+                    src={currentDay.image}
+                    alt={currentDay.title}
+                    className="w-full h-full object-cover transition-transform duration-[3000ms] group-hover:scale-105"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#070b0d] via-transparent to-transparent opacity-80" />
                 
                 {/* Float badges on image */}
@@ -209,30 +256,36 @@ export default function VisualItinerary() {
                 </p>
 
                 {/* Highlights List */}
-                <div className="space-y-2 pt-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">Luxury Highlights</p>
-                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                    {currentDay.highlights.map((highlight, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-xs text-white/70 font-semibold">
-                        <CheckCircle className="w-4 h-4 text-kashmir-gold flex-shrink-0 mt-0.5" />
-                        <span>{highlight}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {currentDay.highlights && currentDay.highlights.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">Luxury Highlights</p>
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {currentDay.highlights.map((highlight, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-xs text-white/70 font-semibold">
+                          <CheckCircle className="w-4 h-4 text-kashmir-gold flex-shrink-0 mt-0.5" />
+                          <span>{highlight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Inclusions Row */}
-                <div className="border-t border-white/5 pt-6 mt-6">
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 mb-4">Day Inclusions</p>
-                  <div className="flex flex-wrap gap-3">
-                    {currentDay.inclusions.map((inclusion, i) => (
-                      <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] font-bold text-white/60">
-                        <span className="text-kashmir-gold">{inclusion.icon}</span>
-                        <span>{inclusion.label}</span>
-                      </div>
-                    ))}
+                {currentDay.inclusions && currentDay.inclusions.length > 0 && (
+                  <div className="border-t border-white/5 pt-6 mt-6">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 mb-4">Day Inclusions</p>
+                    <div className="flex flex-wrap gap-3">
+                      {currentDay.inclusions.map((inclusion: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] font-bold text-white/60">
+                          <span className="text-kashmir-gold">
+                            {typeof inclusion.icon === 'string' ? getInclusionIcon(inclusion.icon) : inclusion.icon}
+                          </span>
+                          <span>{inclusion.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
