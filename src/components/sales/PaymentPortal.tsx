@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
 
 interface PaymentPortalProps {
   inquiry: any;
@@ -63,6 +64,43 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
       toast.success("Payment request submitted for verification");
       onBack();
     }, 1500);
+  };
+
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+
+  const handleSendWhatsApp = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error("Please enter a valid amount first");
+      return;
+    }
+    setIsSendingWhatsApp(true);
+    try {
+      const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/payments/send-whatsapp-scanner`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          inquiryId: inquiry.id,
+          phone: inquiry.phone,
+          amount: parseFloat(amount)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send WhatsApp payment request");
+      }
+
+      const resData = await response.json();
+      toast.success(`Payment request sent on WhatsApp! ID: ${resData.paymentId}`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to send payment request via WhatsApp");
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
   };
 
   return (
@@ -241,10 +279,18 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
                         <Copy className="w-4 h-4" /> Copy UPI
                       </Button>
                       <Button 
+                        onClick={handleSendWhatsApp}
+                        disabled={isSendingWhatsApp}
                         variant="ghost"
                         className="flex-1 bg-white/5 border border-white/5 text-white/60 hover:text-white rounded-xl h-12 gap-2 text-xs font-bold"
                       >
-                        <Send className="w-4 h-4" /> Share Link
+                        {isSendingWhatsApp ? (
+                          <span className="animate-pulse">Sending...</span>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 text-kashmir-gold" /> Send WhatsApp
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>

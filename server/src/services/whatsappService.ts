@@ -298,6 +298,55 @@ export class WhatsAppWorkflowEngine {
  */
 export const whatsappService = {
   
+  async sendWhatsAppText(to: string, text: string): Promise<boolean> {
+    return WhatsAppWorkflowEngine.executeWhatsAppSenderNode(to, text);
+  },
+
+  async sendWhatsAppImage(to: string, imageUrl: string, caption?: string): Promise<boolean> {
+    const accessToken = env.WHATSAPP_ACCESS_TOKEN;
+    const phoneId = env.WHATSAPP_PHONE_NUMBER_ID;
+
+    if (!accessToken || !phoneId) {
+      console.log(`\n======================================================`);
+      console.log(`📲 [WhatsApp Image Simulator] OUTBOUND RESPONSE TO: ${to}`);
+      console.log(`🖼️ Image Link: ${imageUrl}`);
+      if (caption) console.log(`💬 Caption: ${caption}`);
+      console.log(`======================================================\n`);
+      return true;
+    }
+
+    try {
+      const url = `https://graph.facebook.com/v18.0/${phoneId}/messages`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'image',
+          image: {
+            link: imageUrl,
+            ...(caption ? { caption } : {})
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `HTTP error! Status: ${response.status}`);
+      }
+
+      console.log(`[WhatsApp Service] Image message delivered successfully to Meta APIs.`);
+      return true;
+    } catch (error: any) {
+      console.error(`[WhatsApp Service] Failed Meta Image Delivery:`, error.message);
+      return false;
+    }
+  },
+
   async runPipeline(io: any, payload: any): Promise<boolean> {
     console.log('\n🌟 [n8n Automation Pipeline: START] Received incoming trigger.');
     try {

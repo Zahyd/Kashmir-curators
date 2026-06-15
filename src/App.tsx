@@ -20,6 +20,7 @@ import BlogPost from "./pages/BlogPost";
 
 import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
+import PaymentRequest from "./pages/PaymentRequest";
 import { useAntiTheft } from "./hooks/useAntiTheft";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => {
               <Route path="/sales/portal" element={<SalesPortal />} />
               <Route path="/sales" element={<SalesAuth />} />
               <Route path="/sales/" element={<SalesAuth />} />
+              <Route path="/payment-request/:paymentId" element={<PaymentRequest />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
