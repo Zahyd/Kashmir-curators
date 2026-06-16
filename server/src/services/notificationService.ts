@@ -1,15 +1,44 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 // Configure the Resend client
 const resend = new Resend(process.env.RESEND_API_KEY || 're_mock_key_123');
+
+// Configure Nodemailer transporter (Gmail SMTP)
+const transporter = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD && process.env.GMAIL_APP_PASSWORD !== 'your_16_char_app_password'
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    })
+  : null;
 
 export const notificationService = {
   /**
    * Send an automated email to a customer
    */
   async sendCustomerEmail(to: string, subject: string, html: string) {
+    // 1. Try Gmail SMTP if configured with a real App Password (recommended for direct testing)
+    if (transporter) {
+      try {
+        console.log(`[Nodemailer] Dispatching email to ${to} via Gmail SMTP...`);
+        await transporter.sendMail({
+          from: `"Kashmir Curators" <${process.env.GMAIL_USER}>`,
+          to,
+          subject,
+          html,
+        });
+        console.log('[Nodemailer] Email dispatched successfully.');
+        return true;
+      } catch (error: any) {
+        console.error('[Nodemailer] Gmail SMTP failed, falling back to Resend:', error.message || error);
+      }
+    }
+
     if (!process.env.RESEND_API_KEY) {
-      console.warn('Email not sent: RESEND_API_KEY missing in .env. Running in simulation mode.');
+      console.warn('Email not sent: RESEND_API_KEY and Gmail SMTP credentials missing in .env. Running in simulation mode.');
       console.log(`[SIMULATED EMAIL] To: ${to} | Subject: ${subject}`);
       return false;
     }
