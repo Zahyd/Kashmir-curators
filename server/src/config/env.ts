@@ -8,6 +8,7 @@ export interface EnvSchema {
   DATABASE_URL: string;
   GOOGLE_SPREADSHEET_ID: string;
   GOOGLE_CREDS_JSON?: string;
+  GOOGLE_CLIENT_ID?: string;
   GMAIL_USER?: string;
   GMAIL_PASS?: string;
   WHATSAPP_ACCESS_TOKEN?: string;
@@ -45,6 +46,7 @@ export function validateEnv(): EnvSchema {
     DATABASE_URL: getEnvString('DATABASE_URL'),
     GOOGLE_SPREADSHEET_ID: getEnvString('GOOGLE_SPREADSHEET_ID', '', false),
     GOOGLE_CREDS_JSON: getEnvString('GOOGLE_CREDS_JSON', '', false),
+    GOOGLE_CLIENT_ID: getEnvString('GOOGLE_CLIENT_ID', '', false),
     GMAIL_USER: getEnvString('GMAIL_USER', '', false),
     GMAIL_PASS: getEnvString('GMAIL_PASS', '', false),
     WHATSAPP_ACCESS_TOKEN: getEnvString('WHATSAPP_ACCESS_TOKEN', '', false),

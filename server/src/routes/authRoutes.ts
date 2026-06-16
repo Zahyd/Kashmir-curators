@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, teamLogin, teamSendOtp, teamVerifyOtp, updateProfile, googleLogin } from '../controllers/authController';
+import { register, login, getMe, teamLogin, teamSendOtp, teamVerifyOtp, updateProfile, googleLogin, googleRealtimeLogin } from '../controllers/authController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -71,6 +71,27 @@ router.post('/login', login);
  *         description: Login successful
  */
 router.post('/google-login', googleLogin);
+
+/**
+ * @swagger
+ * /api/auth/google-realtime:
+ *   post:
+ *     summary: Live Google OAuth identity token verification
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [credentialToken]
+ *             properties:
+ *               credentialToken: { type: string }
+ *     responses:
+ *       200:
+ *         description: Login successful
+ */
+router.post('/google-realtime', googleRealtimeLogin);
 
 /**
  * @swagger

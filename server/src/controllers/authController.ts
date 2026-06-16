@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import prisma from '../lib/prisma';
 import { notificationService } from '../services/notificationService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const register = async (req: Request, res: Response) => {
   const { email, password, name } = req.body;
@@ -363,6 +365,76 @@ export const googleLogin = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Google login error:', error);
     res.status(500).json({ error: 'Google login failed' });
+  }
+};
+
+export const googleRealtimeLogin = async (req: Request, res: Response) => {
+  const { credentialToken, accessToken } = req.body;
+
+  if (!credentialToken && !accessToken) {
+    return res.status(400).json({ error: 'Token is required' });
+  }
+
+  try {
+    let email = '';
+    let name = '';
+    let picture = '';
+
+    if (accessToken) {
+      // 1. Verify via Google UserInfo API (standard token flow)
+      const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch userinfo from Google');
+      }
+      const data = await response.json();
+      email = data.email;
+      name = data.name;
+      picture = data.picture || '';
+    } else {
+      // 2. Verify via google-auth-library (ID Token flow)
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credentialToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      if (!payload) throw new Error('Invalid ID token payload');
+      email = payload.email || '';
+      name = payload.name || '';
+      picture = payload.picture || '';
+    }
+
+    if (!email || !name) {
+      return res.status(400).json({ error: 'Failed to retrieve user details from Google' });
+    }
+
+    // 3. Fetch or create user in database
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          image: picture || null,
+          role: 'user'
+        }
+      });
+    }
+
+    // 4. Issue local JWT session
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, phone: user.phone || undefined, image: user.image },
+      token
+    });
+  } catch (error: any) {
+    console.error('Google auth verification failed:', error.message || error);
+    res.status(401).json({ error: 'Google authentication verification failed' });
   }
 };
 

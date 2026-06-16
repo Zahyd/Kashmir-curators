@@ -11,7 +11,7 @@ import { Logo } from '@/components/ui/Logo';
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, loginWithGoogle, signup, sendOtp, verifyOtp, isAuthenticated, isLoading, isAdmin } = useAuth();
+  const { login, loginWithGoogle, loginWithGoogleRealtime, signup, sendOtp, verifyOtp, isAuthenticated, isLoading, isAdmin } = useAuth();
   
   const [mode, setMode] = useState<'login' | 'signup'>(searchParams.get('mode') === 'signup' ? 'signup' : 'login');
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
@@ -24,6 +24,7 @@ export default function Auth() {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [selectedGoogleEmail, setSelectedGoogleEmail] = useState('');
+  const [googleClient, setGoogleClient] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -35,8 +36,51 @@ export default function Auth() {
   
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Dynamic Google Sign-In Script Loading & Initialization
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if ((window as any).google) {
+        const client = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: '124706954400-n13pas8rtqqmrg3jn64e69eq7u9c099p.apps.googleusercontent.com',
+          scope: 'email profile openid',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              setIsProcessing(true);
+              try {
+                const res = await loginWithGoogleRealtime({ accessToken: tokenResponse.access_token });
+                if (res.success) {
+                  toast.success('Successfully authenticated via Google!');
+                } else {
+                  toast.error(res.error || 'Google Authentication failed');
+                }
+              } catch (err) {
+                toast.error('Google authorization error');
+              } finally {
+                setIsProcessing(false);
+              }
+            }
+          },
+        });
+        setGoogleClient(client);
+      }
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   const handleGoogleLogin = () => {
-    setShowGoogleModal(true);
+    if (googleClient) {
+      googleClient.requestAccessToken();
+    } else {
+      toast.error('Google Client is loading. Please try again.');
+    }
   };
 
   const handleSelectGoogleAccount = async (account: { name: string; email: string }) => {
