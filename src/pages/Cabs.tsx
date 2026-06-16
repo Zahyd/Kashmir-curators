@@ -171,7 +171,8 @@ export default function Cabs() {
     return 60; // fallback standard
   };
 
-  const calculateFare = (cab: Cab) => {
+  const calculateFare = (cab: Cab | null) => {
+    if (!cab) return 0;
     const distance = getEstimatedDistance();
     let fare = cab.basePrice + (distance * cab.pricePerKm);
     
@@ -778,7 +779,7 @@ export default function Cabs() {
                 </div>
                 <div className="text-right">
                   <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Booking amount</span>
-                  <span className="font-black text-xl text-kashmir-gold">₹{calculateFare(selectedCab!).toLocaleString()}</span>
+                  <span className="font-black text-xl text-kashmir-gold">₹{calculateFare(selectedCab).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -849,7 +850,7 @@ export default function Cabs() {
                   <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex gap-3 text-white/60">
                     <AlertCircle className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
                     <p className="text-xs leading-normal">
-                      No advanced deposit is required. You can pay the total fare of <span className="text-kashmir-gold font-bold">₹{calculateFare(selectedCab!).toLocaleString()}</span> directly to the Chauffeur upon arrival in Srinagar.
+                      No advanced deposit is required. You can pay the total fare of <span className="text-kashmir-gold font-bold">₹{calculateFare(selectedCab).toLocaleString()}</span> directly to the Chauffeur upon arrival in Srinagar.
                     </p>
                   </div>
 
