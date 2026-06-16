@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, teamLogin, teamSendOtp, teamVerifyOtp, updateProfile } from '../controllers/authController';
+import { register, login, getMe, teamLogin, teamSendOtp, teamVerifyOtp, updateProfile, googleLogin } from '../controllers/authController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -48,6 +48,29 @@ router.post('/register', register);
  *         description: Login successful
  */
 router.post('/login', login);
+
+/**
+ * @swagger
+ * /api/auth/google-login:
+ *   post:
+ *     summary: Google OAuth backend sign in / signup bypass
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, name]
+ *             properties:
+ *               email: { type: string }
+ *               name: { type: string }
+ *               image: { type: string }
+ *     responses:
+ *       200:
+ *         description: Login successful
+ */
+router.post('/google-login', googleLogin);
 
 /**
  * @swagger

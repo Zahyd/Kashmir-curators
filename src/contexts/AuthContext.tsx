@@ -54,6 +54,7 @@ interface AuthContextType {
   bookings: Booking[];
   inquiries: Inquiry[];
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (name: string, email: string, image?: string) => Promise<{ success: boolean; error?: string }>;
   signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   sendOtp: (phone: string) => Promise<{ success: boolean; error?: string }>;
   verifyOtp: (phone: string, otp: string) => Promise<{ success: boolean; error?: string }>;
@@ -166,6 +167,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        setUser(data.user);
+        setToken(data.token);
+        localStorage.setItem('auth_token', data.token);
+        fetchBookings(data.token);
+        fetchInquiries(data.token);
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    }
+  };
+
+  const loginWithGoogle = async (name: string, email: string, image?: string) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/google-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, image })
       });
       
       const data = await response.json();
@@ -332,6 +357,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       bookings,
       inquiries,
       login,
+      loginWithGoogle,
       signup,
       sendOtp,
       verifyOtp,

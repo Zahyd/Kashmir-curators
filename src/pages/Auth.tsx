@@ -11,7 +11,7 @@ import { Logo } from '@/components/ui/Logo';
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, signup, sendOtp, verifyOtp, isAuthenticated, isLoading, isAdmin } = useAuth();
+  const { login, loginWithGoogle, signup, sendOtp, verifyOtp, isAuthenticated, isLoading, isAdmin } = useAuth();
   
   const [mode, setMode] = useState<'login' | 'signup'>(searchParams.get('mode') === 'signup' ? 'signup' : 'login');
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
@@ -47,15 +47,9 @@ export default function Auth() {
     await new Promise((resolve) => setTimeout(resolve, 1500));
     
     try {
-      // First try to sign in with this email
-      let result = await login(account.email, 'GoogleOAuthUserSecure2026!');
-      
-      // If the email is not registered yet, sign up first
+      const result = await loginWithGoogle(account.name, account.email);
       if (!result.success) {
-        const signupResult = await signup(account.name, account.email, 'GoogleOAuthUserSecure2026!');
-        if (!signupResult.success) {
-          throw new Error(signupResult.error || 'Failed to authenticate via Google');
-        }
+        throw new Error(result.error || 'Failed to authenticate via Google');
       }
       
       toast.success(`Signed in successfully as ${account.name}!`);

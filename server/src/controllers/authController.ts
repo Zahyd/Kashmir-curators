@@ -328,3 +328,41 @@ export const updateProfile = async (req: any, res: Response) => {
   }
 };
 
+export const googleLogin = async (req: Request, res: Response) => {
+  const { email, name, image } = req.body;
+
+  if (!email || !name) {
+    return res.status(400).json({ error: 'Email and name are required' });
+  }
+
+  try {
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      // Create user if they don't exist
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          image: image || null,
+          role: 'user'
+        }
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, phone: user.phone || undefined },
+      token
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(500).json({ error: 'Google login failed' });
+  }
+};
+
