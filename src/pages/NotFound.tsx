@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { Mountain, Home, Search, MapPin, ArrowLeft } from "lucide-react";
+import { Home, Search, MapPin, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/Logo";
 
 const NotFound = () => {
   const location = useLocation();
@@ -14,11 +15,8 @@ const NotFound = () => {
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col">
       {/* Header */}
       <div className="p-6">
-        <Link to="/" className="flex items-center gap-2">
-          <Mountain className="h-8 w-8 text-primary" />
-          <span className="font-display text-2xl font-bold">
-            Kashmir<span className="text-kashmir-gold">Alle</span>
-          </span>
+        <Link to="/" className="flex items-center group">
+          <Logo className="h-10 w-auto transition-transform duration-500 group-hover:scale-105" />
         </Link>
       </div>
 
