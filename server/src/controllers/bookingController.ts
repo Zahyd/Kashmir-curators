@@ -28,6 +28,91 @@ export const getAllBookings = async (req: Request, res: Response) => {
   }
 };
 
+const autoGenerateCabForPackageBooking = async (packageBooking: any) => {
+  try {
+    if (packageBooking.type !== 'package') return;
+
+    // Check if cab booking already exists for this package booking
+    const existingCabBooking = await prisma.booking.findFirst({
+      where: {
+        type: 'cab',
+        details: {
+          contains: `"parentPackageBookingId":"${packageBooking.id}"`
+        }
+      }
+    });
+
+    if (existingCabBooking) return;
+
+    // Create the automatically generated cab booking
+    const ref = `KC-CAB-AUTO-${Math.floor(100000 + Math.random() * 900000)}`;
+    const bookingDateStr = packageBooking.bookingDate.toISOString().split('T')[0];
+
+    // Find first active cab to pre-fill allocation details if possible, or just default to Ertiga/SUV
+    const defaultCab = await prisma.cab.findFirst({
+      where: { isActive: true },
+      orderBy: { capacity: 'desc' } // Usually Innova/SUV is default for packages
+    });
+
+    const cabDetails = {
+      pickupLocation: 'Srinagar Airport (SXR)',
+      dropLocation: 'Srinagar Hotel / Resort',
+      pickupDateTime: `${bookingDateStr}T10:00`,
+      dropDateTime: `${bookingDateStr}T18:00`,
+      tripType: 'package-automation',
+      estimatedDistance: 120,
+      paymentMethod: 'package-inclusive',
+      bookingRef: ref,
+      parentPackageBookingId: packageBooking.id,
+      cabAllocation: defaultCab ? {
+        cabId: defaultCab.id,
+        cabName: defaultCab.name,
+        cabType: defaultCab.type,
+        ownership: 'company',
+        registrationNo: '', 
+        driverName: '',     
+        driverPhone: '',    
+        pickupDateTime: `${bookingDateStr}T10:00`,
+        dropDateTime: `${bookingDateStr}T18:00`,
+        pickupLocation: 'Srinagar Airport (SXR)',
+        dropLocation: 'Srinagar Hotel / Resort',
+        allocatedDates: [bookingDateStr],
+        pricing: {
+          pricePerKm: defaultCab.pricePerKm,
+          estimatedKm: 120,
+          baseCost: defaultCab.basePrice,
+          driverAllowance: 1500,
+          fuelExpenses: 3000,
+          tollsExpenses: 500,
+          vendorPayout: 0,
+          otherExpenses: 0,
+          totalCost: 5000,
+          margin: 0,
+          marginPercent: 0
+        },
+        voucherGenerated: false,
+        whatsappSent: false
+      } : undefined
+    };
+
+    await prisma.booking.create({
+      data: {
+        userId: packageBooking.userId,
+        type: 'cab',
+        itemName: `Package Chauffeur: ${packageBooking.itemName}`,
+        bookingDate: packageBooking.bookingDate,
+        totalAmount: 0, // Package-inclusive
+        details: JSON.stringify(cabDetails),
+        status: 'confirmed'
+      }
+    });
+
+    console.log(`[Package-to-Cab Automation] Generated cab transfer for package booking ${packageBooking.id}`);
+  } catch (error: any) {
+    console.error('[Package-to-Cab Automation] Failed to generate cab booking:', error.message);
+  }
+};
+
 export const createBooking = async (req: any, res: Response) => {
   const { type, itemName, bookingDate, totalAmount, details } = req.body;
   
@@ -43,6 +128,11 @@ export const createBooking = async (req: any, res: Response) => {
         status: 'confirmed'
       }
     });
+
+    // Auto-generate cab for confirmed package booking
+    if (booking.type === 'package') {
+      await autoGenerateCabForPackageBooking(booking);
+    }
 
     // Emit real-time update
     if (req.io) {
@@ -105,6 +195,11 @@ export const updateBookingStatus = async (req: any, res: Response) => {
         }
       }
     });
+
+    // Auto-generate cab for confirmed package booking
+    if (booking.type === 'package' && booking.status === 'confirmed') {
+      await autoGenerateCabForPackageBooking(booking);
+    }
 
     const parsedBooking = {
       ...booking,

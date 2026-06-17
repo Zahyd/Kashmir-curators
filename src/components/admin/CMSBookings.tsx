@@ -55,6 +55,7 @@ interface Booking {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   bookingDate: string;
   createdAt: string;
+  details?: any;
 }
 
 export default function CMSBookings() {
@@ -273,6 +274,117 @@ export default function CMSBookings() {
                     </div>
                   </div>
                 </div>
+
+                {/* Linked Services or Cab Allocation Details */}
+                {selectedBooking.type === 'cab' && (
+                  <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
+                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Cab Allocation & Route Intelligence</h5>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-white/40 text-[10px] uppercase font-black tracking-wider">Pickup Location</p>
+                        <p className="font-semibold text-white/90">{selectedBooking.details?.pickupLocation || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <p className="text-white/40 text-[10px] uppercase font-black tracking-wider">Drop Location</p>
+                        <p className="font-semibold text-white/90">{selectedBooking.details?.dropLocation || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <p className="text-white/40 text-[10px] uppercase font-black tracking-wider">Schedule</p>
+                        <p className="font-semibold text-white/90">
+                          {selectedBooking.details?.pickupDateTime ? new Date(selectedBooking.details.pickupDateTime).toLocaleString() : 'Pending'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-white/40 text-[10px] uppercase font-black tracking-wider">Trip Category / Distance</p>
+                        <p className="font-semibold text-white/90 font-mono">
+                          {selectedBooking.details?.tripType === 'package-automation' ? 'Package Auto-Generated' : 'Custom Cab Booking'} 
+                          {selectedBooking.details?.estimatedDistance ? ` (${selectedBooking.details.estimatedDistance} KM)` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Chauffeur Allocation */}
+                    <div className="pt-4 border-t border-white/5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 mb-3">Vehicle & Driver Details</p>
+                      {selectedBooking.details?.cabAllocation ? (
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold shrink-0">
+                              <Car className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-white text-sm">{selectedBooking.details.cabAllocation.cabName} ({selectedBooking.details.cabAllocation.cabType})</p>
+                              <p className="text-xs text-white/40 mt-0.5">
+                                Driver: {selectedBooking.details.cabAllocation.driverName || 'Pending'} • Reg: {selectedBooking.details.cabAllocation.registrationNo || 'Pending'}
+                              </p>
+                            </div>
+                          </div>
+                          {selectedBooking.details.cabAllocation.driverPhone && (
+                            <a 
+                              href={`tel:${selectedBooking.details.cabAllocation.driverPhone}`} 
+                              className="text-xs text-kashmir-gold hover:underline font-bold flex items-center gap-1"
+                            >
+                              <Phone className="w-3.5 h-3.5" /> Call Driver
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 text-center">
+                          <p className="text-xs text-red-400 font-bold">No cab or driver allocated yet. Manage this from the Cabs Fleet dashboard.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Linked Package Booking info if any */}
+                    {selectedBooking.details?.parentPackageBookingId && (() => {
+                      const parentBooking = bookings.find(b => b.id === selectedBooking.details.parentPackageBookingId);
+                      return parentBooking ? (
+                        <div className="pt-4 border-t border-white/5">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 mb-2">Linked Package</p>
+                          <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                            <div>
+                              <p className="font-bold text-white text-sm">{parentBooking.itemName}</p>
+                              <p className="text-xs text-white/40 mt-0.5">Client: {parentBooking.user.name} • Status: {parentBooking.status}</p>
+                            </div>
+                            <span className="text-[10px] font-mono border border-white/10 rounded px-2 py-0.5 text-white/40 uppercase">#{parentBooking.id.slice(-6)}</span>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+
+                {selectedBooking.type === 'package' && (() => {
+                  const linkedCabBooking = bookings.find(b => b.type === 'cab' && b.details?.parentPackageBookingId === selectedBooking.id);
+                  return linkedCabBooking ? (
+                    <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
+                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Linked Cab Transfer Operations</h5>
+                      <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold shrink-0">
+                            <Car className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-white text-sm">{linkedCabBooking.itemName}</p>
+                            <p className="text-xs text-white/40 mt-0.5">
+                              {linkedCabBooking.details?.cabAllocation?.driverName ? (
+                                `Driver: ${linkedCabBooking.details.cabAllocation.driverName} • Reg: ${linkedCabBooking.details.cabAllocation.registrationNo}`
+                              ) : (
+                                'Driver & Vehicle allocation pending'
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-emerald-500/10 text-emerald-400 border-none rounded-md px-2 py-0.5 text-[8px] font-black uppercase tracking-wider">
+                            Auto-Generated
+                          </Badge>
+                          <span className="text-[10px] font-mono border border-white/10 rounded px-2 py-0.5 text-white/40 uppercase">#{linkedCabBooking.id.slice(-6)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
 
                 <div className="pt-8 border-t border-white/5 flex flex-wrap gap-4">
                   <Button 
