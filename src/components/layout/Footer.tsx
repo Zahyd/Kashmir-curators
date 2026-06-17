@@ -144,8 +144,8 @@ export default function Footer() {
                 <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:border-kashmir-gold/30 transition-colors">
                   <Mail className="h-4 w-4 text-kashmir-gold" />
                 </div>
-                <a href="mailto:liaison@thekashmircurators.com" className="text-sm font-bold text-white/50 hover:text-white transition-colors">
-                  liaison@thekashmircurators.com
+                <a href="mailto:zahidreyaz44123@gmail.com" className="text-sm font-bold text-white/50 hover:text-white transition-colors">
+                  Zahidreyaz44123@gmail.com
                 </a>
               </li>
             </ul>
