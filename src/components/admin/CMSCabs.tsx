@@ -607,30 +607,36 @@ export default function CMSCabs() {
         setDispatchOther(pricing.otherExpenses || 0);
       }
     } else {
-      // Clean slate
+      // Pre-populate from booking details if available
       setAllocatedCabId('');
       setDispatchRegNo('');
       setDispatchDriverName('');
       setDispatchDriverPhone('');
       
-      // Auto dates from booking
       const bookDateStr = booking.bookingDate ? booking.bookingDate.split('T')[0] : new Date().toISOString().split('T')[0];
-      setDispatchPickupDateTime(`${bookDateStr}T09:00`);
+      const details = booking.details;
       
-      // Default drop +1 day
-      const dropDate = new Date(bookDateStr);
-      dropDate.setDate(dropDate.getDate() + 1);
-      const dropDateStr = dropDate.toISOString().split('T')[0];
-      setDispatchDropDateTime(`${dropDateStr}T18:00`);
+      setDispatchPickupDateTime(
+        details?.pickupDateTime ? details.pickupDateTime.slice(0, 16) : `${bookDateStr}T09:00`
+      );
       
-      setDispatchPickupLoc('');
-      setDispatchDropLoc('');
-      setDispatchEstKm(100);
-      setDispatchDriverAllowance(1500);
-      setDispatchFuel(3000);
-      setDispatchTolls(500);
-      setDispatchVendorPayout(0);
-      setDispatchOther(0);
+      if (details?.dropDateTime) {
+        setDispatchDropDateTime(details.dropDateTime.slice(0, 16));
+      } else {
+        const dropDate = new Date(bookDateStr);
+        dropDate.setDate(dropDate.getDate() + 1);
+        const dropDateStr = dropDate.toISOString().split('T')[0];
+        setDispatchDropDateTime(`${dropDateStr}T18:00`);
+      }
+      
+      setDispatchPickupLoc(details?.pickupLocation || '');
+      setDispatchDropLoc(details?.dropLocation || '');
+      setDispatchEstKm(details?.estimatedDistance || details?.pricing?.estimatedKm || 100);
+      setDispatchDriverAllowance(details?.pricing?.driverAllowance || 1500);
+      setDispatchFuel(details?.pricing?.fuelExpenses || 3000);
+      setDispatchTolls(details?.pricing?.tollsExpenses || 500);
+      setDispatchVendorPayout(details?.pricing?.vendorPayout || 0);
+      setDispatchOther(details?.pricing?.otherExpenses || 0);
     }
     setAllocationDialogOpen(true);
   };
@@ -1172,6 +1178,7 @@ export default function CMSCabs() {
                       <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest py-5 pl-6">Trip Node</TableHead>
                       <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Client profile</TableHead>
                       <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Schedule</TableHead>
+                      <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Finance & Margin</TableHead>
                       <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Allocated Chauffeur</TableHead>
                       <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest text-right pr-6">Operational Actions</TableHead>
                     </TableRow>
@@ -1214,6 +1221,31 @@ export default function CMSCabs() {
                                   <span>{new Date(booking.bookingDate).toLocaleDateString()}</span>
                                 )}
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {(() => {
+                                const pricing = alloc?.pricing;
+                                const customerFare = booking.totalAmount;
+                                return (
+                                  <div className="flex flex-col">
+                                    {customerFare > 0 ? (
+                                      <span className="text-xs font-black text-white">₹{customerFare.toLocaleString()}</span>
+                                    ) : (
+                                      <span className="text-[10px] text-white/40 uppercase tracking-widest font-black">Package Incl.</span>
+                                    )}
+                                    {pricing ? (
+                                      <span className={cn(
+                                        "text-[9px] font-bold mt-0.5",
+                                        pricing.margin >= 0 ? "text-emerald-400" : "text-red-400"
+                                      )}>
+                                        Margin: ₹{Math.round(pricing.margin).toLocaleString()} ({pricing.marginPercent.toFixed(1)}%)
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] text-white/20 font-bold uppercase tracking-wider mt-0.5">Awaiting Alloc</span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell>
                               {alloc ? (
@@ -2021,29 +2053,94 @@ export default function CMSCabs() {
                         "p-6 rounded-2xl border backdrop-blur-md relative overflow-hidden space-y-4",
                         isProfitable ? "bg-emerald-500/5 border-emerald-500/10" : "bg-red-500/5 border-red-500/10"
                       )}>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-white/40">
-                            {selectedBookingForAlloc.totalAmount > 0 ? "NEGOTIATED FARE (REVENUE):" : "CALCULATED REVENUE:"}
-                          </span>
-                          <span className="font-black text-white">₹{customerFare.toLocaleString()}</span>
+                        {/* Background glowing gradients */}
+                        <div className={cn(
+                          "absolute top-0 right-0 w-32 h-32 blur-[60px] -mr-16 -mt-16",
+                          isProfitable ? "bg-emerald-500/10" : "bg-red-500/10"
+                        )} />
+
+                        {/* Title */}
+                        <div className="border-b border-white/5 pb-2">
+                          <h5 className="text-[9px] font-black uppercase tracking-widest text-kashmir-gold">Operations Profitability Analytics</h5>
                         </div>
-                        <div className="flex justify-between items-center text-xs border-b border-white/5 pb-2">
-                          <span className="font-bold text-white/40">OPERATIONAL EXPENSES:</span>
-                          <span className="font-black text-white text-xs">₹{totalCost.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2">
-                          <div className="flex flex-col">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Net Profit Margin</span>
-                            <span className={cn("text-xl font-display font-black mt-1", isProfitable ? "text-emerald-400" : "text-red-400")}>
-                              ₹{profit.toLocaleString()}
+
+                        {/* Cost & Fare Comparisons */}
+                        <div className="space-y-3 text-xs">
+                          {selectedBookingForAlloc.totalAmount > 0 && (
+                            <div className="flex justify-between items-center text-white/50 text-[10px]">
+                              <span>System Base Rate:</span>
+                              <span className="font-mono">
+                                ₹{baseCost.toLocaleString()} + ({dispatchEstKm} KM × ₹{pKm}/KM) = ₹{cabRevenue.toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-white/40">
+                              {selectedBookingForAlloc.totalAmount > 0 ? "Customer Negotiated Fare:" : "Calculated Revenue:"}
                             </span>
+                            <span className="font-black text-white text-sm">₹{customerFare.toLocaleString()}</span>
                           </div>
-                          <Badge className={cn(
-                            "border-none rounded-lg px-3 py-1 font-black text-[10px]",
-                            isProfitable ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                          )}>
-                            {profitPercent.toFixed(1)}%
-                          </Badge>
+
+                          {selectedBookingForAlloc.totalAmount > 0 && (
+                            <div className="flex justify-between items-center text-[10px] border-b border-white/5 pb-2">
+                              <span className="font-medium text-white/40">Negotiated Variance:</span>
+                              {customerFare - cabRevenue >= 0 ? (
+                                <span className="text-emerald-400 font-bold">+₹{(customerFare - cabRevenue).toLocaleString()} (Premium)</span>
+                              ) : (
+                                <span className="text-amber-400 font-bold">-₹{Math.abs(customerFare - cabRevenue).toLocaleString()} (Discounted)</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Expense Breakdown */}
+                          <div className="pt-1 space-y-1.5 border-b border-white/5 pb-3">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-white/30 block mb-1">Operational Cost Breakdown</span>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] text-white/60">
+                              <div className="flex justify-between">
+                                <span>Chauffeur Allowance:</span>
+                                <span className="font-mono">₹{dispatchDriverAllowance.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Fuel / Diesel:</span>
+                                <span className="font-mono">₹{dispatchFuel.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Tolls & Parking:</span>
+                                <span className="font-mono">₹{dispatchTolls.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Vendor Payout:</span>
+                                <span className="font-mono">₹{dispatchVendorPayout.toLocaleString()}</span>
+                              </div>
+                              {dispatchOther > 0 && (
+                                <div className="flex justify-between col-span-2">
+                                  <span>Other Misc:</span>
+                                  <span className="font-mono">₹{dispatchOther.toLocaleString()}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between col-span-2 mt-1.5 pt-1.5 border-t border-white/5 text-xs text-white/80 font-bold">
+                                <span>Total Trip Costs:</span>
+                                <span className="font-mono">₹{totalCost.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Net Margin */}
+                          <div className="flex justify-between items-center pt-2">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Net Profit Margin</span>
+                              <span className={cn("text-xl font-display font-black mt-1", isProfitable ? "text-emerald-400" : "text-red-400")}>
+                                ₹{profit.toLocaleString()}
+                              </span>
+                            </div>
+                            <Badge className={cn(
+                              "border-none rounded-lg px-3 py-1 font-black text-[10px]",
+                              isProfitable ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                            )}>
+                              {profitPercent.toFixed(1)}% Margin
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     );

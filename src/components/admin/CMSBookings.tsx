@@ -39,6 +39,7 @@ import {
 import { API_BASE_URL } from '@/lib/api';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
+import { cn } from '@/lib/utils';
 
 interface Booking {
   id: string;
@@ -364,6 +365,88 @@ export default function CMSBookings() {
                         </div>
                       )}
                     </div>
+
+                    {/* Pricing / Finance Details */}
+                    {selectedBooking.details?.cabAllocation?.pricing && (() => {
+                      const pricing = selectedBooking.details.cabAllocation.pricing;
+                      const profit = pricing.margin ?? 0;
+                      const profitPercent = pricing.marginPercent ?? 0;
+                      const isProfitable = profit >= 0;
+                      
+                      return (
+                        <div className="pt-4 border-t border-white/5 space-y-3">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Operational Financial Summary</p>
+                          <div className={cn(
+                            "p-5 rounded-2xl border backdrop-blur-md relative overflow-hidden space-y-3 text-xs",
+                            isProfitable ? "bg-emerald-500/5 border-emerald-500/10" : "bg-red-500/5 border-red-500/10"
+                          )}>
+                            <div className={cn(
+                              "absolute top-0 right-0 w-24 h-24 blur-[40px] -mr-12 -mt-12 opacity-50",
+                              isProfitable ? "bg-emerald-500/10" : "bg-red-500/10"
+                            )} />
+
+                            <div className="flex justify-between items-center text-white/50 text-[10px]">
+                              <span>System Base Rate:</span>
+                              <span className="font-mono">
+                                ₹{(pricing.baseCost || 0).toLocaleString()} + ({pricing.estimatedKm || 0} KM × ₹{pricing.pricePerKm || 0}/KM)
+                              </span>
+                            </div>
+                            
+                            <div className="flex justify-between items-center text-sm font-bold text-white border-b border-white/5 pb-2">
+                              <span>Total Revenue (Fare):</span>
+                              <span className="text-kashmir-gold">₹{(selectedBooking.totalAmount || 0).toLocaleString()}</span>
+                            </div>
+                            
+                            <div className="space-y-1.5 text-[10px] text-white/60">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-white/30 block mb-0.5">Operational Cost Breakdown</span>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                <div className="flex justify-between">
+                                  <span>Chauffeur Allowance:</span>
+                                  <span className="font-mono">₹{(pricing.driverAllowance || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Fuel / Diesel:</span>
+                                  <span className="font-mono">₹{(pricing.fuelExpenses || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Tolls & Parking:</span>
+                                  <span className="font-mono">₹{(pricing.tollsExpenses || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Vendor Payout:</span>
+                                  <span className="font-mono">₹{(pricing.vendorPayout || 0).toLocaleString()}</span>
+                                </div>
+                                {pricing.otherExpenses > 0 && (
+                                  <div className="flex justify-between col-span-2">
+                                    <span>Other Misc:</span>
+                                    <span className="font-mono">₹{(pricing.otherExpenses || 0).toLocaleString()}</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between col-span-2 mt-1.5 pt-1.5 border-t border-white/5 text-[11px] text-white/80 font-bold">
+                                  <span>Total Operational Cost:</span>
+                                  <span className="font-mono">₹{(pricing.totalCost || 0).toLocaleString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                              <div className="flex flex-col">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Net Profit Margin</span>
+                                <span className={cn("text-base font-black mt-0.5", isProfitable ? "text-emerald-400" : "text-red-400")}>
+                                  ₹{profit.toLocaleString()}
+                                </span>
+                              </div>
+                              <span className={cn(
+                                "text-[9px] font-black uppercase px-2 py-0.5 rounded-lg",
+                                isProfitable ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                              )}>
+                                {profitPercent.toFixed(1)}% Margin
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Linked Package Booking info if any */}
                     {selectedBooking.details?.parentPackageBookingId && (() => {
