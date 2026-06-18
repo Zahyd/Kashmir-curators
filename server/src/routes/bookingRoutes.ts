@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createBooking, getMyBookings, updateBookingStatus, getAllBookings } from '../controllers/bookingController';
+import { createBooking, getMyBookings, updateBookingStatus, getAllBookings, deleteBooking } from '../controllers/bookingController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -87,5 +87,6 @@ router.get('/my', authenticateToken, getMyBookings);
  *         description: Booking status updated
  */
 router.patch('/:id', authenticateToken, updateBookingStatus);
+router.delete('/:id', authenticateToken, deleteBooking);
 
 export default router;

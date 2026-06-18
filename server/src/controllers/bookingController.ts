@@ -114,17 +114,37 @@ const autoGenerateCabForPackageBooking = async (packageBooking: any) => {
 };
 
 export const createBooking = async (req: any, res: Response) => {
-  const { type, itemName, bookingDate, totalAmount, details } = req.body;
+  const { type, itemName, bookingDate, totalAmount, details, clientEmail, clientName, clientPhone } = req.body;
   
   try {
+    let targetUserId = req.user.id;
+    
+    // Check if creator is admin/ops/sales and provided client email
+    if (['admin', 'operations', 'sales'].includes(req.user.role) && clientEmail) {
+      let clientUser = await prisma.user.findUnique({
+        where: { email: clientEmail }
+      });
+      
+      if (!clientUser) {
+        clientUser = await prisma.user.create({
+          data: {
+            email: clientEmail,
+            name: clientName || 'Manual Client',
+            phone: clientPhone || ''
+          }
+        });
+      }
+      targetUserId = clientUser.id;
+    }
+
     const booking = await prisma.booking.create({
       data: {
-        userId: req.user.id,
+        userId: targetUserId,
         type,
         itemName,
         bookingDate: new Date(bookingDate),
-        totalAmount,
-        details: JSON.stringify(details),
+        totalAmount: Number(totalAmount) || 0,
+        details: typeof details === 'string' ? details : JSON.stringify(details || {}),
         status: 'confirmed'
       }
     });
@@ -137,16 +157,17 @@ export const createBooking = async (req: any, res: Response) => {
     // Emit real-time update
     if (req.io) {
       const payload = { type: 'CREATE', booking };
-      req.io.to(`user-${req.user.id}`).emit('booking-updated', payload);
+      req.io.to(`user-${targetUserId}`).emit('booking-updated', payload);
       req.io.to('admin-room').emit('new-system-event', {
         ...payload,
-        message: `New booking: ${booking.itemName} by ${req.user.name || 'User'}`
+        message: `New manual booking: ${booking.itemName} for ${clientName || clientEmail || 'User'}`
       });
     }
 
     res.status(201).json(booking);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create booking' });
+  } catch (error: any) {
+    console.error('Failed to create booking:', error);
+    res.status(500).json({ error: 'Failed to create booking: ' + error.message });
   }
 };
 
@@ -220,5 +241,19 @@ export const updateBookingStatus = async (req: any, res: Response) => {
   } catch (error) {
     console.error('Failed to update booking:', error);
     res.status(500).json({ error: 'Failed to update booking' });
+  }
+};
+
+export const deleteBooking = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const booking = await prisma.booking.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Booking deleted successfully', booking });
+  } catch (error) {
+    console.error('Failed to delete booking:', error);
+    res.status(500).json({ error: 'Failed to delete booking' });
   }
 };

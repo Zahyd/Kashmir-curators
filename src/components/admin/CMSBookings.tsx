@@ -17,7 +17,9 @@ import {
   Mail,
   Phone,
   Building,
-  Car
+  Car,
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +38,16 @@ import {
   DialogTitle, 
   DialogFooter 
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { API_BASE_URL } from '@/lib/api';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
@@ -65,8 +77,116 @@ export default function CMSBookings() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [customQuotePrice, setCustomQuotePrice] = useState<string>('');
+  
+  // Selected Booking State
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+  // Delete Booking States
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
+
+  // Creation States
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    clientName: '',
+    clientEmail: '',
+    clientPhone: '',
+    type: 'cab',
+    itemName: '',
+    bookingDate: new Date().toISOString().split('T')[0] + 'T09:00',
+    totalAmount: '',
+    pickupLocation: '',
+    dropLocation: '',
+    pickupDateTime: '',
+    dropDateTime: '',
+  });
+
+  const handleDeleteBooking = async (id: string) => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        toast.success('Booking deleted successfully');
+        fetchBookings();
+        setSelectedBooking(null);
+      } else {
+        toast.error('Failed to delete booking');
+      }
+    } catch (error) {
+      toast.error('Delete request failed');
+    }
+  };
+
+  const handleCreateBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('teamToken');
+      
+      let details: any = {};
+      if (createForm.type === 'cab') {
+        details = {
+          pickupLocation: createForm.pickupLocation,
+          dropLocation: createForm.dropLocation,
+          pickupDateTime: createForm.pickupDateTime || createForm.bookingDate,
+          dropDateTime: createForm.dropDateTime || createForm.bookingDate,
+          tripType: 'custom',
+          estimatedDistance: 100,
+          paymentMethod: 'admin-manual'
+        };
+      }
+      
+      const body = {
+        type: createForm.type,
+        itemName: createForm.itemName,
+        bookingDate: createForm.bookingDate,
+        totalAmount: Number(createForm.totalAmount) || 0,
+        clientName: createForm.clientName,
+        clientEmail: createForm.clientEmail,
+        clientPhone: createForm.clientPhone,
+        details
+      };
+
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      
+      if (response.ok) {
+        toast.success('Manual booking created successfully');
+        setCreateDialogOpen(false);
+        fetchBookings();
+        setCreateForm({
+          clientName: '',
+          clientEmail: '',
+          clientPhone: '',
+          type: 'cab',
+          itemName: '',
+          bookingDate: new Date().toISOString().split('T')[0] + 'T09:00',
+          totalAmount: '',
+          pickupLocation: '',
+          dropLocation: '',
+          pickupDateTime: '',
+          dropDateTime: '',
+        });
+      } else {
+        const errData = await response.json();
+        toast.error(errData.error || 'Failed to create booking');
+      }
+    } catch (error) {
+      toast.error('Connection failure');
+    }
+  };
 
   useEffect(() => {
     if (selectedBooking) {
@@ -161,6 +281,12 @@ export default function CMSBookings() {
           <h1 className="text-4xl font-display font-bold text-white tracking-tight">Enterprise Bookings</h1>
         </div>
         <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setCreateDialogOpen(true)}
+            className="rounded-xl bg-kashmir-gold text-black hover:bg-kashmir-gold/90 text-[10px] font-black uppercase tracking-widest px-6 h-12"
+          >
+            <Plus className="w-4 h-4 mr-2" /> New Booking
+          </Button>
           <Button variant="outline" className="rounded-xl bg-white/5 border-white/5 text-[10px] font-black uppercase tracking-widest px-6 h-12">
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
@@ -226,9 +352,23 @@ export default function CMSBookings() {
                     <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1.5">Payment State</p>
                     {getStatusBadge(booking.status)}
                   </div>
-                  <Button variant="ghost" size="icon" className="w-12 h-12 rounded-xl text-white/20 group-hover:text-white group-hover:bg-white/5 transition-all">
-                    <ChevronRight className="w-5 h-5" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="w-12 h-12 rounded-xl text-red-500/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setBookingToDelete(booking);
+                        setDeleteConfirmOpen(true);
+                      }}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="w-12 h-12 rounded-xl text-white/20 group-hover:text-white group-hover:bg-white/5 transition-all">
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -525,12 +665,213 @@ export default function CMSBookings() {
                   >
                     <XCircle className="w-4 h-4 mr-2" /> Terminate/Refund
                   </Button>
+                  <Button 
+                    onClick={() => {
+                      setBookingToDelete(selectedBooking);
+                      setDeleteConfirmOpen(true);
+                    }}
+                    className="flex-grow bg-rose-500/10 text-rose-500 hover:bg-rose-600 hover:text-white rounded-xl h-14 font-black text-[10px] uppercase tracking-widest border border-rose-500/25"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete Record
+                  </Button>
                 </div>
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Booking Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-2xl bg-[#0d1216] border-white/10 text-white rounded-[3rem] p-10 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-display font-bold text-white mb-2">New Manual Booking</DialogTitle>
+            <p className="text-white/40 text-xs uppercase tracking-widest font-black">Register a new client booking manually</p>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateBooking} className="py-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-white/40">Client Name</label>
+                <Input
+                  required
+                  placeholder="e.g. John Doe"
+                  value={createForm.clientName}
+                  onChange={(e) => setCreateForm({ ...createForm, clientName: e.target.value })}
+                  className="bg-white/5 border-white/5 rounded-xl h-12 text-sm focus:ring-kashmir-gold/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-white/40">Client Email</label>
+                <Input
+                  required
+                  type="email"
+                  placeholder="e.g. john@example.com"
+                  value={createForm.clientEmail}
+                  onChange={(e) => setCreateForm({ ...createForm, clientEmail: e.target.value })}
+                  className="bg-white/5 border-white/5 rounded-xl h-12 text-sm focus:ring-kashmir-gold/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-white/40">Client Phone (Optional)</label>
+                <Input
+                  placeholder="e.g. +91 9906XXXXXX"
+                  value={createForm.clientPhone}
+                  onChange={(e) => setCreateForm({ ...createForm, clientPhone: e.target.value })}
+                  className="bg-white/5 border-white/5 rounded-xl h-12 text-sm focus:ring-kashmir-gold/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-white/40">Booking Type</label>
+                <select
+                  value={createForm.type}
+                  onChange={(e) => setCreateForm({ ...createForm, type: e.target.value as any })}
+                  className="w-full bg-[#111820] border border-white/10 rounded-xl h-12 px-3 text-sm text-white focus:ring-kashmir-gold/20"
+                >
+                  <option value="cab">Cab Transfer</option>
+                  <option value="hotel">Hotel Stay</option>
+                  <option value="package">Holiday Package</option>
+                </select>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-white/40">Service / Item Name</label>
+                <Input
+                  required
+                  placeholder={
+                    createForm.type === 'cab' ? "e.g. Toyota Innova: Srinagar Airport Transfer" :
+                    createForm.type === 'hotel' ? "e.g. 4-Night Luxury Stay: Khyber Resort Gulmarg" :
+                    "e.g. 6 Days Kashmir Paradise Package"
+                  }
+                  value={createForm.itemName}
+                  onChange={(e) => setCreateForm({ ...createForm, itemName: e.target.value })}
+                  className="bg-white/5 border-white/5 rounded-xl h-12 text-sm focus:ring-kashmir-gold/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-white/40">Scheduled Date</label>
+                <Input
+                  required
+                  type="datetime-local"
+                  value={createForm.bookingDate}
+                  onChange={(e) => setCreateForm({ ...createForm, bookingDate: e.target.value })}
+                  className="bg-white/5 border-white/5 rounded-xl h-12 text-sm focus:ring-kashmir-gold/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-white/40">Agreed Amount (INR)</label>
+                <Input
+                  required
+                  type="number"
+                  placeholder="e.g. 15000"
+                  value={createForm.totalAmount}
+                  onChange={(e) => setCreateForm({ ...createForm, totalAmount: e.target.value })}
+                  className="bg-white/5 border-white/5 rounded-xl h-12 text-sm focus:ring-kashmir-gold/20"
+                />
+              </div>
+            </div>
+
+            {/* Cab Specific Details */}
+            {createForm.type === 'cab' && (
+              <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-kashmir-gold">Cab Route & Schedule Setup</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40">Pickup Location</label>
+                    <Input
+                      placeholder="e.g. Srinagar Airport (SXR)"
+                      value={createForm.pickupLocation}
+                      onChange={(e) => setCreateForm({ ...createForm, pickupLocation: e.target.value })}
+                      className="bg-white/5 border-white/5 rounded-xl h-10 text-xs focus:ring-kashmir-gold/20"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40">Drop Location</label>
+                    <Input
+                      placeholder="e.g. Gulmarg Resort"
+                      value={createForm.dropLocation}
+                      onChange={(e) => setCreateForm({ ...createForm, dropLocation: e.target.value })}
+                      className="bg-white/5 border-white/5 rounded-xl h-10 text-xs focus:ring-kashmir-gold/20"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40">Pickup Date & Time</label>
+                    <Input
+                      type="datetime-local"
+                      value={createForm.pickupDateTime}
+                      onChange={(e) => setCreateForm({ ...createForm, pickupDateTime: e.target.value })}
+                      className="bg-white/5 border-white/5 rounded-xl h-10 text-xs focus:ring-kashmir-gold/20"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40">Drop Date & Time</label>
+                    <Input
+                      type="datetime-local"
+                      value={createForm.dropDateTime}
+                      onChange={(e) => setCreateForm({ ...createForm, dropDateTime: e.target.value })}
+                      className="bg-white/5 border-white/5 rounded-xl h-10 text-xs focus:ring-kashmir-gold/20"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="pt-6 border-t border-white/5 flex gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+                className="flex-1 rounded-xl h-12 text-[10px] font-black uppercase tracking-widest bg-white/5 border-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 rounded-xl h-12 text-[10px] font-black uppercase tracking-widest bg-kashmir-gold text-black hover:bg-kashmir-gold/90 border-none"
+              >
+                Confirm Booking
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation AlertDialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent className="bg-[#0d1216] border-white/10 text-white rounded-[3rem] p-10 max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-display font-bold text-white">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60 text-sm mt-3">
+              This action will physically delete the booking <strong className="text-white">"{bookingToDelete?.itemName}"</strong> (Ref: #{bookingToDelete?.id.slice(-6)}) from the system database. This action is irreversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 flex gap-4">
+            <AlertDialogCancel className="flex-1 rounded-xl h-12 text-[10px] font-black uppercase tracking-widest bg-white/5 border-white/5 text-white hover:bg-white/10 hover:text-white border-none">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (bookingToDelete) {
+                  handleDeleteBooking(bookingToDelete.id);
+                  setDeleteConfirmOpen(false);
+                }
+              }}
+              className="flex-1 rounded-xl h-12 text-[10px] font-black uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 border-none"
+            >
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
