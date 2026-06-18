@@ -244,7 +244,7 @@ export default function CMSBookings() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
-        <DialogContent className="max-w-2xl bg-[#0d1216] border-white/10 text-white rounded-[3rem] p-10">
+        <DialogContent className="max-w-2xl bg-[#0d1216] border-white/10 text-white rounded-[3rem] p-10 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
           {selectedBooking && (
             <>
               <DialogHeader>
