@@ -248,7 +248,7 @@ export const deleteBooking = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const booking = await prisma.booking.delete({
-      where: { id }
+      where: { id: id as string }
     });
 
     res.json({ message: 'Booking deleted successfully', booking });
