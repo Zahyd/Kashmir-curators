@@ -171,6 +171,10 @@ export default function CMSCabs() {
   // Decommission / Delete confirmations
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  
+  // Deallocate confirmations
+  const [deallocateConfirmOpen, setDeallocateConfirmOpen] = useState(false);
+  const [bookingToDeallocate, setBookingToDeallocate] = useState<Booking | null>(null);
 
   // Operations dialogs
   const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
@@ -827,9 +831,7 @@ export default function CMSCabs() {
     }
   };
 
-  const handleDeallocate = async (booking: Booking) => {
-    if (!window.confirm('Are you sure you want to release the allocated cab for this booking?')) return;
-    
+  const confirmDeallocate = async (booking: Booking) => {
     // Details update: remove cabAllocation
     const updatedDetails = { ...booking.details };
     delete updatedDetails.cabAllocation;
@@ -868,6 +870,11 @@ export default function CMSCabs() {
     } catch (err) {
       toast.error('Deallocation connection failure');
     }
+  };
+
+  const handleDeallocate = (booking: Booking) => {
+    setBookingToDeallocate(booking);
+    setDeallocateConfirmOpen(true);
   };
 
   // WhatsApp Message Dispatcher
@@ -2543,6 +2550,28 @@ export default function CMSCabs() {
               className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
             >
               Confirm Decommission
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deallocateConfirmOpen} onOpenChange={setDeallocateConfirmOpen}>
+        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black text-red-500 flex items-center gap-2">
+              <AlertTriangle className="w-6 h-6 text-red-500" /> Release Cab Allocation?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Are you sure you want to release the allocated cab for the trip "{bookingToDeallocate?.itemName}"? This action will deallocate the chauffeur and reset the operational finances.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white/60 hover:bg-white/10 rounded-xl h-12">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => bookingToDeallocate && confirmDeallocate(bookingToDeallocate)}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
+            >
+              Release Cab
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
