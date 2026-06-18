@@ -288,10 +288,39 @@ export default function CMSCabs() {
       if (!response.ok) throw new Error('Fetch failed');
       const data = await response.json();
       
-      const sanitized = data.map((cab: any) => ({
-        ...cab,
-        features: typeof cab.features === 'string' ? JSON.parse(cab.features) : (Array.isArray(cab.features) ? cab.features : [])
-      }));
+      const sanitized = data.map((cab: any) => {
+        const features = typeof cab.features === 'string' ? JSON.parse(cab.features) : (Array.isArray(cab.features) ? cab.features : []);
+        
+        // Match mapping logic in Cabs.tsx
+        const isFortuner = cab.name.toLowerCase().includes("fortuner") || cab.id === "cab-fortuner";
+        const displayName = isFortuner ? "Force Urbania Luxury" : cab.name;
+        const displayType = isFortuner ? "Luxury Cruiser" : cab.type;
+        const displayCapacity = isFortuner ? 10 : cab.capacity;
+        
+        let imagePath = "";
+        if (isFortuner) {
+          imagePath = "/images/tourist_urbania.png";
+        } else if (cab.name.toLowerCase().includes("sedan") || cab.name.toLowerCase().includes("etios") || cab.name.toLowerCase().includes("dzire")) {
+          imagePath = "/images/tourist_sedan.png";
+        } else if (cab.name.toLowerCase().includes("ertiga")) {
+          imagePath = "/images/tourist_ertiga.png";
+        } else if (cab.name.toLowerCase().includes("crysta") || (cab.name.toLowerCase().includes("innova") && cab.name.toLowerCase().includes("luxury"))) {
+          imagePath = "/images/tourist_innova.png";
+        } else if (cab.name.toLowerCase().includes("traveller") || cab.name.toLowerCase().includes("tempo")) {
+          imagePath = "/images/tourist_tempo.png";
+        } else {
+          imagePath = cab.image || "/images/tourist_innova.png";
+        }
+
+        return {
+          ...cab,
+          name: displayName,
+          type: displayType,
+          capacity: displayCapacity,
+          image: imagePath,
+          features
+        };
+      });
       setCabs(sanitized);
     } catch (error: any) {
       console.error('[CMSCabs] Error fetching cabs:', error);
