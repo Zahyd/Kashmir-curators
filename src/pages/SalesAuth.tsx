@@ -68,6 +68,14 @@ export default function SalesAuth() {
     setIsProcessing(true);
     setError('');
 
+    // Warn if the backend (Render free tier) takes long to wake up
+    const sleepTimeoutId = setTimeout(() => {
+      toast.info('Secure server is waking up from sleep mode. This first request may take up to 60 seconds...', {
+        duration: 10000,
+        icon: '⏳'
+      });
+    }, 4000);
+
     if (!isOtpSent) {
       // Step 1: Send OTP
       const result = await teamSendOtp(employeeCode);
@@ -91,6 +99,7 @@ export default function SalesAuth() {
       // Step 2: Verify OTP
       if (!otp.trim()) {
         setError('Verification OTP is required');
+        clearTimeout(sleepTimeoutId);
         setIsProcessing(false);
         return;
       }
@@ -105,6 +114,7 @@ export default function SalesAuth() {
       }
     }
 
+    clearTimeout(sleepTimeoutId);
     setIsProcessing(false);
   };
 
