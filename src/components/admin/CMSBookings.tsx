@@ -65,6 +65,15 @@ export default function CMSBookings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [customQuotePrice, setCustomQuotePrice] = useState<string>('');
+
+  useEffect(() => {
+    if (selectedBooking) {
+      setCustomQuotePrice(selectedBooking.totalAmount ? selectedBooking.totalAmount.toString() : '');
+    } else {
+      setCustomQuotePrice('');
+    }
+  }, [selectedBooking]);
 
   useEffect(() => {
     fetchBookings();
@@ -94,16 +103,19 @@ export default function CMSBookings() {
     }
   };
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: string, amount?: number) => {
     try {
       const token = localStorage.getItem('teamToken');
+      const body: any = { status };
+      if (amount !== undefined) body.totalAmount = amount;
+
       const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
         method: 'PATCH',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ status })
+        body: JSON.stringify(body)
       });
       
       if (response.ok) {
@@ -257,10 +269,28 @@ export default function CMSBookings() {
                     </div>
                   </div>
                   <div className="space-y-6">
-                    <div className="p-6 rounded-3xl bg-white/5 border border-white/5">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 block mb-2">Financial Summary</label>
-                      <p className="text-3xl font-display font-black text-white">₹{selectedBooking.totalAmount.toLocaleString()}</p>
-                      <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-2">Gross Transaction</p>
+                    <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 block">Financial Summary</label>
+                      {selectedBooking.totalAmount > 0 ? (
+                        <>
+                          <p className="text-3xl font-display font-black text-white">₹{selectedBooking.totalAmount.toLocaleString()}</p>
+                          <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Confirmed Pricing</p>
+                        </>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-sm font-bold text-kashmir-gold uppercase tracking-wider">Awaiting Quote</p>
+                          <div className="flex gap-2 items-center">
+                            <span className="text-xs text-white/40">₹</span>
+                            <Input 
+                              type="number"
+                              placeholder="Enter Quote Price"
+                              value={customQuotePrice}
+                              onChange={(e) => setCustomQuotePrice(e.target.value)}
+                              className="h-10 bg-white/5 border-white/5 rounded-xl text-white px-3 font-bold text-sm focus:ring-kashmir-gold/20"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-4 items-center">
                       <div className="flex-1">
@@ -388,7 +418,14 @@ export default function CMSBookings() {
 
                 <div className="pt-8 border-t border-white/5 flex flex-wrap gap-4">
                   <Button 
-                    onClick={() => updateStatus(selectedBooking.id, 'confirmed')}
+                    onClick={() => {
+                      const quoteVal = selectedBooking.totalAmount > 0 ? undefined : Number(customQuotePrice);
+                      if (selectedBooking.totalAmount === 0 && !quoteVal) {
+                        toast.error('Please enter a quote price before confirming');
+                        return;
+                      }
+                      updateStatus(selectedBooking.id, 'confirmed', quoteVal);
+                    }}
                     className="flex-1 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black rounded-xl h-14 font-black text-[10px] uppercase tracking-widest border border-emerald-500/20"
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2" /> Confirm & Issue

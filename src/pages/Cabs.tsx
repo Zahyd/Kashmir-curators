@@ -93,7 +93,7 @@ const standardVehicles = [
     luggage: 2,
     pricePerKm: 14,
     basePrice: 1500,
-    image: "https://images.unsplash.com/photo-1616422285623-13ff0162193c?w=600",
+    image: "/images/tourist_sedan.png",
     features: ["Climate Control AC", "Leather Seats", "Complimentary Water", "Charging Ports"],
     availability: "Available"
   },
@@ -105,7 +105,7 @@ const standardVehicles = [
     luggage: 3,
     pricePerKm: 16,
     basePrice: 2200,
-    image: "https://images.unsplash.com/photo-1606611013016-969c19ba27ae?w=600",
+    image: "/images/tourist_ertiga.png",
     features: ["AC vents in all rows", "Ample Legroom", "Spacious Boot", "Bluetooth Audio"],
     availability: "Available"
   },
@@ -117,7 +117,7 @@ const standardVehicles = [
     luggage: 4,
     pricePerKm: 20,
     basePrice: 2800,
-    image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600",
+    image: "/images/tourist_innova.png",
     features: ["Plush Captain Chairs", "Soft Suspension", "Driver Guide", "Bottled Water"],
     availability: "Low Stock"
   },
@@ -129,9 +129,21 @@ const standardVehicles = [
     luggage: 5,
     pricePerKm: 25,
     basePrice: 3500,
-    image: "https://images.unsplash.com/photo-1606611013016-969c19ba27ae?w=800",
+    image: "/images/tourist_innova.png",
     features: ["Premium Leather Interior", "High-speed Wi-Fi", "Snack Hamper", "Dual Zone AC", "Plush Headrests"],
     availability: "High Demand"
+  },
+  {
+    id: "standard-urbania",
+    name: "Force Urbania Luxury",
+    type: "Premium Cruiser",
+    capacity: 10,
+    luggage: 6,
+    pricePerKm: 30,
+    basePrice: 4000,
+    image: "/images/tourist_urbania.png",
+    features: ["Reclining VIP Seats", "Individual AC vents", "USB charging ports", "Complimentary Refreshments", "Wide Panoramic Windows"],
+    availability: "Available"
   },
   {
     id: "standard-tempo",
@@ -141,7 +153,7 @@ const standardVehicles = [
     luggage: 8,
     pricePerKm: 35,
     basePrice: 4500,
-    image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600",
+    image: "/images/tourist_tempo.png",
     features: ["Reclining Pushback Seats", "Roof Carrier for Luggage", "LED TV & Music", "Bottled Water", "Wi-Fi"],
     availability: "Available"
   }
@@ -178,6 +190,7 @@ export default function Cabs() {
 
   // Script loading
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
+  const [specialNotes, setSpecialNotes] = useState('');
   const pickupInputRef = useRef<HTMLInputElement>(null);
   const dropInputRef = useRef<HTMLInputElement>(null);
 
@@ -305,17 +318,62 @@ export default function Cabs() {
   };
 
   // Merge database items with standard UI categories
-  const resolvedVehicles = standardVehicles.map(standard => {
-    const matchingDBCab = dbCabs.find(db => db.name.toLowerCase().includes(standard.name.split(' ')[0].toLowerCase()) || db.type.toLowerCase() === standard.type.toLowerCase());
-    if (matchingDBCab) {
-      return {
-        ...standard,
-        id: matchingDBCab.id,
-        pricePerKm: matchingDBCab.pricePerKm,
-        basePrice: matchingDBCab.basePrice,
-      };
+  const resolvedVehicles = dbCabs.length > 0 ? dbCabs.map(db => {
+    // If it is cab-fortuner or includes "fortuner", map it to Urbania!
+    const isFortuner = db.name.toLowerCase().includes("fortuner") || db.id === "cab-fortuner";
+    
+    const displayName = isFortuner ? "Force Urbania Luxury" : db.name;
+    const displayType = isFortuner ? "Luxury Cruiser" : db.type;
+    const displayCapacity = isFortuner ? 10 : db.capacity;
+    
+    const standard = standardVehicles.find(s => 
+      (isFortuner && s.id === "standard-urbania") ||
+      db.name.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()) || 
+      db.type.toLowerCase() === s.type.toLowerCase()
+    ) || {
+      features: [],
+      capacity: displayCapacity,
+      luggage: 4,
+      availability: "Available"
+    };
+
+    let imagePath = "";
+    if (isFortuner) {
+      imagePath = "/images/tourist_urbania.png";
+    } else if (db.name.toLowerCase().includes("sedan") || db.name.toLowerCase().includes("etios") || db.name.toLowerCase().includes("dzire")) {
+      imagePath = "/images/tourist_sedan.png";
+    } else if (db.name.toLowerCase().includes("ertiga")) {
+      imagePath = "/images/tourist_ertiga.png";
+    } else if (db.name.toLowerCase().includes("crysta") || (db.name.toLowerCase().includes("innova") && db.name.toLowerCase().includes("luxury"))) {
+      imagePath = "/images/tourist_innova.png";
+    } else if (db.name.toLowerCase().includes("traveller") || db.name.toLowerCase().includes("tempo")) {
+      imagePath = "/images/tourist_tempo.png";
+    } else {
+      imagePath = "/images/tourist_innova.png"; // default fallback
     }
-    return standard;
+
+    return {
+      id: db.id,
+      name: displayName,
+      type: displayType,
+      capacity: displayCapacity,
+      pricePerKm: db.pricePerKm,
+      basePrice: db.basePrice,
+      image: imagePath,
+      features: isFortuner ? ["Luxury Captain Seats", "Climate Control AC", "Ample Luggage Space", "Premium Audio System"] : (Array.isArray(db.features) ? db.features : (standard.features || [])),
+      luggage: isFortuner ? 6 : (standard.luggage || 4),
+      availability: standard.availability || "Available"
+    };
+  }) : standardVehicles.map(s => {
+    // If fallback to standardVehicles is used
+    let imagePath = s.image;
+    if (s.id === "standard-sedan") imagePath = "/images/tourist_sedan.png";
+    else if (s.id === "standard-ertiga") imagePath = "/images/tourist_ertiga.png";
+    else if (s.id === "standard-innova") imagePath = "/images/tourist_innova.png";
+    else if (s.id === "standard-crysta") imagePath = "/images/tourist_innova.png";
+    else if (s.id === "standard-urbania") imagePath = "/images/tourist_urbania.png";
+    else if (s.id === "standard-tempo") imagePath = "/images/tourist_tempo.png";
+    return { ...s, image: imagePath };
   });
 
   // Handle Checkout Initial
@@ -363,7 +421,7 @@ export default function Cabs() {
     return () => timers.forEach(t => clearTimeout(t));
   }, [isTracking]);
 
-  // Confirm booking & payment
+  // Confirm booking & payment (Quote Enquiry Flow)
   const handleConfirmPayment = async () => {
     if (!selectedCab) return;
     setCheckoutStatus('processing');
@@ -386,8 +444,9 @@ export default function Cabs() {
       dropDateTime: returnDate ? `${returnDate}T18:00` : `${bookingDate}T18:00`,
       tripType,
       estimatedDistance: routeStats.distance,
-      paymentMethod: checkoutMethod,
+      paymentMethod: 'quote-inquiry',
       bookingRef: ref,
+      specialNotes,
       cabAllocation: {
         cabId: selectedCab.id,
         cabName: selectedCab.name,
@@ -424,8 +483,8 @@ export default function Cabs() {
         booking_type: 'cab',
         item_name: tripLabel,
         booking_date: new Date(`${bookingDate}T${bookingTime}`),
-        status: checkoutMethod === 'upi' ? 'confirmed' : 'pending',
-        total_amount: totalFare,
+        status: 'pending',
+        total_amount: 0, // Quote pending
         details: bookingDetails,
       });
 
@@ -438,14 +497,14 @@ export default function Cabs() {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          message: `Customer booking created: ${tripLabel} (Fare: ₹${totalFare.toLocaleString()}).`
+          message: `Customer quote enquiry created: ${tripLabel} (${selectedCab.name}).`
         })
       });
 
       setCheckoutStatus('success');
-      toast.success('Cab Booking Confirmed!');
+      toast.success('Quote Request Submitted!');
     } catch (err) {
-      toast.error('Booking failed. Please try again.');
+      toast.error('Submission failed. Please try again.');
       setCheckoutStatus('idle');
     }
   };
@@ -752,16 +811,23 @@ export default function Cabs() {
                             </div>
                           </div>
 
-                          {/* Pricing Footer */}
-                          <div className="pt-6 border-t border-white/5 flex justify-between items-end mt-6">
-                            <div>
-                              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/20 block">Base Rate</span>
-                              <span className="text-xs font-bold text-white/40">₹{cab.pricePerKm}/km + ₹{cab.basePrice} base</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/20 block">Estimated Fare</span>
-                              <div className="text-2xl font-black text-white">₹{estimatedFare.toLocaleString()}</div>
-                            </div>
+                          {/* Choose Button */}
+                          <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-6">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Best Fare Rate Guaranteed
+                            </span>
+                            <Button 
+                              size="sm"
+                              className={cn(
+                                "h-10 rounded-xl font-black text-[9px] uppercase tracking-widest px-4 transition-all duration-300",
+                                selectedCab?.id === cab.id 
+                                  ? "bg-kashmir-gold text-black hover:bg-amber-500" 
+                                  : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10"
+                              )}
+                            >
+                              {selectedCab?.id === cab.id ? 'Selected' : 'Choose Vehicle'}
+                            </Button>
                           </div>
 
                         </div>
@@ -845,25 +911,17 @@ export default function Cabs() {
                           <span className="text-white/60">~ {Math.floor(routeStats.duration / 60)}h {routeStats.duration % 60}m</span>
                         </div>
                         <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                          <span className="text-white/20">Base Booking Fee</span>
-                          <span className="text-white/60">₹{selectedCab.basePrice.toLocaleString()}</span>
+                          <span className="text-white/20">Curation Rate</span>
+                          <span className="text-kashmir-gold font-bold">Get Best Quote</span>
                         </div>
                         <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                          <span className="text-white/20">Distance Fare</span>
-                          <span className="text-white/60">₹{(routeStats.distance * selectedCab.pricePerKm).toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                          <span className="text-white/20">Estimated Tolls & State Tax</span>
-                          <span className="text-white/60">₹350</span>
-                        </div>
-                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                          <span className="text-white/20">GST (5%)</span>
-                          <span className="text-white/60">₹{Math.round((calculateFare(selectedCab) + 350) * 0.05)}</span>
+                          <span className="text-white/20">Tolls & Fuel</span>
+                          <span className="text-emerald-400">Included in Quote</span>
                         </div>
                         
                         <div className="flex justify-between items-center pt-6 border-t border-white/5">
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Total Cost</span>
-                          <span className="text-3xl font-black text-kashmir-gold">₹{(calculateFare(selectedCab) + 350 + Math.round((calculateFare(selectedCab) + 350) * 0.05)).toLocaleString()}</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Est. Total Cost</span>
+                          <span className="text-xl font-black text-white uppercase tracking-widest">Quote Pending</span>
                         </div>
                       </div>
 
@@ -877,7 +935,7 @@ export default function Cabs() {
                         onClick={handleInitiateCheckout}
                         className="w-full h-16 rounded-2xl bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[10px] uppercase tracking-[0.25em] shadow-xl transition-all duration-300 active:scale-95 flex items-center justify-center gap-2"
                       >
-                        <span>Confirm Ride Booking</span>
+                        <span>Request Custom Quote</span>
                         <ArrowRight className="w-4 h-4" />
                       </Button>
                     </div>
@@ -1135,15 +1193,15 @@ export default function Cabs() {
           <DialogHeader className="p-8 pb-0">
             <DialogTitle className="text-2xl font-display font-black tracking-tight text-white uppercase flex items-center gap-2">
               <Shield className="w-6 h-6 text-kashmir-gold" />
-              Secure Checkout
+              Bespoke Quote Request
             </DialogTitle>
-            <p className="text-white/40 text-[10px] uppercase font-black tracking-wider mt-1">Select payment mode to confirm booking</p>
+            <p className="text-white/40 text-[10px] uppercase font-black tracking-wider mt-1">Submit travel specs to receive custom rates</p>
           </DialogHeader>
 
           {checkoutStatus === 'processing' && (
             <div className="p-8 py-20 flex flex-col items-center justify-center space-y-4">
               <Loader2 className="w-16 h-16 text-kashmir-gold animate-spin" />
-              <p className="text-xs font-black uppercase tracking-widest text-white/30 animate-pulse">Verifying Transaction Ledger...</p>
+              <p className="text-xs font-black uppercase tracking-widest text-white/30 animate-pulse">Routing quote to travel desk...</p>
             </div>
           )}
 
@@ -1153,8 +1211,8 @@ export default function Cabs() {
                 <CheckCircle className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">Booking Confirmed!</h3>
-                <p className="text-xs text-white/40 font-medium">Your chauffeur dispatch has been logged in the system.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Quote Request Submitted!</h3>
+                <p className="text-xs text-white/40 font-medium">Our travel desk will contact you with custom rates shortly.</p>
                 <div className="mt-4 p-4 bg-white/5 border border-white/5 rounded-2xl">
                   <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Confirmation code</span>
                   <p className="font-mono text-sm font-black text-kashmir-gold mt-1">{bookingRefNo}</p>
@@ -1164,7 +1222,7 @@ export default function Cabs() {
                 onClick={() => { setShowCheckout(false); setIsTracking(true); }}
                 className="w-full h-14 bg-white text-black hover:bg-kashmir-gold hover:text-black font-black rounded-xl text-[10px] uppercase tracking-widest transition-all duration-300"
               >
-                Track Live Dispatch
+                Track Live Status
               </Button>
             </div>
           )}
@@ -1175,83 +1233,41 @@ export default function Cabs() {
               {/* Checkout details */}
               <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl flex justify-between items-center">
                 <div className="min-w-0">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Chauffeur Ride</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Chauffeur Class</span>
                   <span className="font-bold text-sm text-white block truncate">{selectedCab?.name}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Total cost</span>
-                  <span className="font-black text-xl text-kashmir-gold">₹{(calculateFare(selectedCab) + 350 + Math.round((calculateFare(selectedCab) + 350) * 0.05)).toLocaleString()}</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Estimated Rate</span>
+                  <span className="font-black text-sm text-kashmir-gold uppercase tracking-wider block mt-0.5">Awaiting Quote</span>
                 </div>
               </div>
 
-              {/* Payment Methods selector */}
-              <div className="grid grid-cols-2 gap-4 p-1 bg-white/5 rounded-xl border border-white/5">
-                <button
-                  onClick={() => setCheckoutMethod('upi')}
-                  className={cn(
-                    "py-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5",
-                    checkoutMethod === 'upi' ? "bg-kashmir-gold text-black shadow-md" : "text-white/40 hover:text-white"
-                  )}
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  UPI / GPay
-                </button>
-                <button
-                  onClick={() => setCheckoutMethod('cash')}
-                  className={cn(
-                    "py-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5",
-                    checkoutMethod === 'cash' ? "bg-kashmir-gold text-black shadow-md" : "text-white/40 hover:text-white"
-                  )}
-                >
-                  <IndianRupee className="w-3.5 h-3.5" />
-                  Cash on arrival
-                </button>
+              {/* Special notes textarea */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block ml-1">Special Curation Notes (Optional)</label>
+                <textarea 
+                  value={specialNotes}
+                  onChange={(e) => setSpecialNotes(e.target.value)}
+                  placeholder="e.g. child seats, excess luggage, custom itinerary stops..."
+                  className="w-full h-24 p-4 bg-white/[0.03] border border-white/5 rounded-2xl text-xs text-white placeholder-white/20 focus:outline-none focus:border-kashmir-gold/20 resize-none font-bold"
+                />
               </div>
 
-              {checkoutMethod === 'upi' ? (
-                <div className="space-y-6 text-center animate-in fade-in duration-300">
-                  {/* UPI QR Code */}
-                  <div className="w-48 h-48 bg-white p-2 rounded-2xl mx-auto border border-white/10 flex items-center justify-center shadow-lg">
-                    <img 
-                      src={getQRImageSrc()} 
-                      alt="UPI Booking QR Code" 
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40">
-                      Scan QR Code with any UPI App to Pay
-                    </p>
-                    <p className="text-[9px] font-mono text-white/20">
-                      Merchant VPA: {upiConfig.vpa}
-                    </p>
-                  </div>
-
-                  <Button 
-                    onClick={handleConfirmPayment}
-                    className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-xl text-[10px] uppercase tracking-widest mt-4"
-                  >
-                    Confirm UPI Transaction
-                  </Button>
+              <div className="space-y-6">
+                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex gap-3 text-white/60">
+                  <AlertCircle className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
+                  <p className="text-xs leading-normal">
+                    No advanced deposit is required. Our curators will review your route and dispatch a bespoke quotation directly to your dashboard.
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-6 animate-in fade-in duration-300">
-                  <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex gap-3 text-white/60">
-                    <AlertCircle className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
-                    <p className="text-xs leading-normal">
-                      No deposit is required. You can pay the total fare of <span className="text-kashmir-gold font-bold">₹{(calculateFare(selectedCab) + 350 + Math.round((calculateFare(selectedCab) + 350) * 0.05)).toLocaleString()}</span> directly to your chauffeur upon arrival.
-                    </p>
-                  </div>
 
-                  <Button 
-                    onClick={handleConfirmPayment}
-                    className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-xl text-[10px] uppercase tracking-widest"
-                  >
-                    Confirm Dispatch Booking
-                  </Button>
-                </div>
-              )}
+                <Button 
+                  onClick={handleConfirmPayment}
+                  className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-xl text-[10px] uppercase tracking-widest"
+                >
+                  Submit Quote Request
+                </Button>
+              </div>
 
             </div>
           )}

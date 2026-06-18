@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import { useHotels, useLocations, CMSHotel } from '@/hooks/useCMSData';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import PaymentSimulator from '@/components/payment/PaymentSimulator';
 import { io } from 'socket.io-client';
 import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
 
@@ -33,7 +32,6 @@ export default function Hotels() {
   
   const [selectedHotel, setSelectedHotel] = useState<CMSHotel | null>(null);
   const [dialogHotel, setDialogHotel] = useState<CMSHotel | null>(null);
-  const [showPayment, setShowPayment] = useState(false);
   const [filters, setFilters] = useState({
     location: '',
     search: '',
@@ -124,27 +122,22 @@ export default function Hotels() {
       return;
     }
 
-    setShowPayment(true);
-  };
+    try {
+      await addBooking({
+        booking_type: 'hotel',
+        item_name: selectedHotel?.name || dialogHotel?.name || 'Hotel stay',
+        booking_date: bookingData.checkIn,
+        status: 'pending',
+        total_amount: 0, // Quote pending
+        details: { ...bookingData, nights: calculateNights() },
+      });
 
-  const handlePaymentSuccess = () => {
-    addBooking({
-      booking_type: 'hotel',
-      item_name: selectedHotel!.name,
-      booking_date: bookingData.checkIn,
-      status: 'confirmed',
-      total_amount: calculateTotal(),
-      details: { ...bookingData, nights: calculateNights() },
-    });
-
-    setShowPayment(false);
-    setSelectedHotel(null);
-    toast.success('Hotel booked successfully!');
-    navigate('/profile');
-  };
-
-  const handlePaymentFailure = () => {
-    setShowPayment(false);
+      setSelectedHotel(null);
+      toast.success('Hotel enquiry submitted successfully!');
+      navigate('/profile');
+    } catch (err) {
+      toast.error('Failed to submit enquiry. Please try again.');
+    }
   };
 
   return (
@@ -308,9 +301,8 @@ export default function Hotels() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 block mb-1">Asset Value</span>
-                      <div className="text-3xl font-black text-white">₹{hotel.pricePerNight.toLocaleString()}</div>
-                      <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">per cycle</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 block mb-1.5">Curation Rate</span>
+                      <span className="text-xs font-black text-kashmir-gold uppercase tracking-widest bg-white/5 border border-white/5 rounded-md px-2 py-1">On Request</span>
                     </div>
                   </div>
 
@@ -323,13 +315,13 @@ export default function Hotels() {
                   }}>
                     <DialogTrigger asChild>
                       <Button className="w-full h-16 rounded-2xl bg-white text-black hover:bg-kashmir-gold transition-all duration-500 font-black text-xs uppercase tracking-[0.2em] shadow-2xl">
-                        Initiate Reservation
+                        Enquire / Get Quote
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-xl bg-[#05080a] border-white/10 text-white rounded-[3rem] p-6 md:p-10">
                       <DialogHeader className="mb-10">
                         <DialogTitle className="font-display text-4xl font-black text-white uppercase leading-tight">
-                          RESERVE <span className="text-kashmir-gold italic">{dialogHotel?.name || hotel.name}</span>
+                          ENQUIRE <span className="text-kashmir-gold italic">{dialogHotel?.name || hotel.name}</span>
                         </DialogTitle>
                       </DialogHeader>
 
@@ -380,7 +372,7 @@ export default function Hotels() {
                             <SelectContent className="bg-[#0a0f12] border-white/10 text-white">
                               {(dialogHotel?.roomTypes || hotel.roomTypes).map(room => (
                                 <SelectItem key={room.id} value={room.id}>
-                                  {room.name} - ₹{room.price.toLocaleString()}/cycle
+                                  {room.name} (Custom Rate)
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -394,9 +386,12 @@ export default function Hotels() {
                               <span>{calculateNights()} Cycles</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-xl font-black text-white">Total Value</span>
-                              <span className="text-3xl font-black text-kashmir-gold">₹{calculateTotal().toLocaleString()}</span>
+                              <span className="text-sm font-bold text-white/60">Estimated Cost</span>
+                              <span className="text-xs font-black text-kashmir-gold uppercase tracking-widest">Quote Upon Request</span>
                             </div>
+                            <p className="text-[10px] text-white/30 font-medium leading-normal">
+                              Seasonal and dynamic rates apply. Our curators will contact you with the best available fare for your selected dates.
+                            </p>
                           </div>
                         )}
 
@@ -406,7 +401,7 @@ export default function Hotels() {
                           onClick={handleBooking}
                           disabled={!calculateNights()}
                         >
-                          Confirm Protocol
+                          Submit Enquiry
                         </Button>
                       </div>
                     </DialogContent>
@@ -418,17 +413,7 @@ export default function Hotels() {
         )}
       </div>
 
-      {/* Payment Simulator */}
-      {selectedHotel && (
-        <PaymentSimulator
-          isOpen={showPayment}
-          onClose={() => setShowPayment(false)}
-          amount={calculateTotal()}
-          itemName={selectedHotel.name}
-          onSuccess={handlePaymentSuccess}
-          onFailure={handlePaymentFailure}
-        />
-      )}
+      {/* Payment Simulator removed for Quote Flow */}
 
       <Footer />
       <FloatingActions />

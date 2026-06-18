@@ -758,7 +758,8 @@ export default function CMSCabs() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          details: updatedDetails
+          details: updatedDetails,
+          totalAmount: totalCost
         })
       });
 
