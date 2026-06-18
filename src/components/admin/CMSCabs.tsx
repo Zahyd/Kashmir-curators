@@ -175,6 +175,10 @@ export default function CMSCabs() {
   // Deallocate confirmations
   const [deallocateConfirmOpen, setDeallocateConfirmOpen] = useState(false);
   const [bookingToDeallocate, setBookingToDeallocate] = useState<Booking | null>(null);
+  
+  // Cancel booking confirmations
+  const [cancelBookingConfirmOpen, setCancelBookingConfirmOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
 
   // Operations dialogs
   const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
@@ -877,6 +881,48 @@ export default function CMSCabs() {
     setDeallocateConfirmOpen(true);
   };
 
+  const confirmCancelBooking = async (booking: Booking) => {
+    const token = localStorage.getItem('teamToken');
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings/${booking.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: 'cancelled'
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Booking cancelled successfully');
+        fetchOperationsData();
+        
+        // Push operations log
+        await fetch(`${API_BASE_URL}/cabs/operations/logs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            message: `Cancelled and deleted booking "${booking.itemName}" (Guest: ${booking.user.name}) from allocations.`
+          })
+        });
+      } else {
+        toast.error('Failed to cancel booking');
+      }
+    } catch (err) {
+      toast.error('Connection failure');
+    }
+  };
+
+  const handleCancelBookingClick = (booking: Booking) => {
+    setBookingToCancel(booking);
+    setCancelBookingConfirmOpen(true);
+  };
+
   // WhatsApp Message Dispatcher
   const openWhatsappPreview = (booking: Booking) => {
     const alloc = booking.details?.cabAllocation;
@@ -1277,61 +1323,82 @@ export default function CMSCabs() {
                           <TableCell className="text-right pr-6">
                             <div className="flex justify-end items-center gap-2">
                               {alloc ? (
-                                <>
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost"
-                                    onClick={() => openWhatsappPreview(booking)}
-                                    className={cn(
-                                      "h-8 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 flex items-center gap-1 border border-white/5",
-                                      alloc.whatsappSent ? "bg-green-500/10 text-green-400 hover:bg-green-500/20" : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-                                    )}
-                                  >
-                                    <Send className="w-3 h-3" />
-                                    {alloc.whatsappSent ? 'Notified' : 'Notify'}
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setSelectedBookingForVoucher(booking);
-                                      markVoucherGenerated(booking);
-                                      setVoucherDialogOpen(true);
-                                    }}
-                                    className={cn(
-                                      "h-8 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 flex items-center gap-1 border border-white/5",
-                                      alloc.voucherGenerated ? "bg-kashmir-gold/10 text-kashmir-gold hover:bg-kashmir-gold/20" : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-                                    )}
-                                  >
-                                    <Printer className="w-3 h-3" />
-                                    Voucher
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost"
-                                    onClick={() => openAllocationDialog(booking)}
-                                    className="h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/5 text-[9px] font-black"
-                                  >
-                                    Edit
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost"
-                                    onClick={() => handleDeallocate(booking)}
-                                    className="h-8 w-8 rounded-lg bg-red-500/5 hover:bg-red-500/10 text-red-400/80 hover:text-red-400 border border-red-500/10 flex items-center justify-center p-0"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button 
-                                  size="sm"
-                                  onClick={() => openAllocationDialog(booking)}
-                                  className="h-8 rounded-lg bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[9px] uppercase tracking-widest px-4 shadow-md transition-all active:scale-95"
-                                >
-                                  Allocate Vehicle
-                                </Button>
-                              )}
+                                  <>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost"
+                                      onClick={() => openWhatsappPreview(booking)}
+                                      className={cn(
+                                        "h-8 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 flex items-center gap-1 border border-white/5",
+                                        alloc.whatsappSent ? "bg-green-500/10 text-green-400 hover:bg-green-500/20" : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                                      )}
+                                    >
+                                      <Send className="w-3 h-3" />
+                                      {alloc.whatsappSent ? 'Notified' : 'Notify'}
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setSelectedBookingForVoucher(booking);
+                                        markVoucherGenerated(booking);
+                                        setVoucherDialogOpen(true);
+                                      }}
+                                      className={cn(
+                                        "h-8 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 flex items-center gap-1 border border-white/5",
+                                        alloc.voucherGenerated ? "bg-kashmir-gold/10 text-kashmir-gold hover:bg-kashmir-gold/20" : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                                      )}
+                                    >
+                                      <Printer className="w-3 h-3" />
+                                      Voucher
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost"
+                                      onClick={() => openAllocationDialog(booking)}
+                                      className="h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/5 text-[9px] font-black"
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost"
+                                      onClick={() => handleDeallocate(booking)}
+                                      title="Release vehicle allocation"
+                                      className="h-8 w-8 rounded-lg bg-amber-500/5 hover:bg-amber-500/10 text-amber-400/80 hover:text-amber-400 border border-amber-500/10 flex items-center justify-center p-0"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost"
+                                      onClick={() => handleCancelBookingClick(booking)}
+                                      title="Cancel and delete booking"
+                                      className="h-8 w-8 rounded-lg bg-red-500/5 hover:bg-red-500/10 text-red-400/80 hover:text-red-400 border border-red-500/10 flex items-center justify-center p-0"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button 
+                                      size="sm"
+                                      onClick={() => openAllocationDialog(booking)}
+                                      className="h-8 rounded-lg bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[9px] uppercase tracking-widest px-4 shadow-md transition-all active:scale-95"
+                                    >
+                                      Allocate Vehicle
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost"
+                                      onClick={() => handleCancelBookingClick(booking)}
+                                      title="Cancel and delete booking"
+                                      className="h-8 w-8 rounded-lg bg-red-500/5 hover:bg-red-500/10 text-red-400/80 hover:text-red-400 border border-red-500/10 flex items-center justify-center p-0"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </>
+                                )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -2572,6 +2639,28 @@ export default function CMSCabs() {
               className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
             >
               Release Cab
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelBookingConfirmOpen} onOpenChange={setCancelBookingConfirmOpen}>
+        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black text-red-500 flex items-center gap-2">
+              <AlertTriangle className="w-6 h-6 text-red-500" /> Cancel & Delete Booking?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Are you sure you want to cancel and delete the booking for "{bookingToCancel?.itemName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white/60 hover:bg-white/10 rounded-xl h-12">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => bookingToCancel && confirmCancelBooking(bookingToCancel)}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
+            >
+              Confirm Cancel
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
