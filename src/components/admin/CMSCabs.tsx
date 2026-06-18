@@ -689,6 +689,9 @@ export default function CMSCabs() {
     
     // Revenue calculations: Cab cost = base + (km * rate)
     const cabRevenue = baseCost + (estKm * pKm);
+    const customerFare = selectedBookingForAlloc.totalAmount > 0 
+      ? selectedBookingForAlloc.totalAmount 
+      : cabRevenue;
     
     // Total expenses
     const totalCost = Number(dispatchDriverAllowance) + 
@@ -698,8 +701,8 @@ export default function CMSCabs() {
                       Number(dispatchOther);
                       
     // Profit Margin
-    const margin = cabRevenue - totalCost;
-    const marginPercent = cabRevenue > 0 ? (margin / cabRevenue) * 100 : 0;
+    const margin = customerFare - totalCost;
+    const marginPercent = customerFare > 0 ? (margin / customerFare) * 100 : 0;
     
     // Generate allocated dates array
     const allocDates: string[] = [];
@@ -759,7 +762,7 @@ export default function CMSCabs() {
         },
         body: JSON.stringify({
           details: updatedDetails,
-          totalAmount: totalCost
+          totalAmount: customerFare
         })
       });
 
@@ -1976,9 +1979,12 @@ export default function CMSCabs() {
                     const pKm = cab.pricePerKm || 0;
                     const baseCost = cab.basePrice || 0;
                     const cabRevenue = baseCost + (dispatchEstKm * pKm);
+                    const customerFare = selectedBookingForAlloc.totalAmount > 0 
+                      ? selectedBookingForAlloc.totalAmount 
+                      : cabRevenue;
                     const totalCost = dispatchDriverAllowance + dispatchFuel + dispatchTolls + dispatchVendorPayout + dispatchOther;
-                    const profit = cabRevenue - totalCost;
-                    const profitPercent = cabRevenue > 0 ? (profit / cabRevenue) * 100 : 0;
+                    const profit = customerFare - totalCost;
+                    const profitPercent = customerFare > 0 ? (profit / customerFare) * 100 : 0;
                     const isProfitable = profit >= 0;
 
                     return (
@@ -1987,8 +1993,10 @@ export default function CMSCabs() {
                         isProfitable ? "bg-emerald-500/5 border-emerald-500/10" : "bg-red-500/5 border-red-500/10"
                       )}>
                         <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-white/40">CALCULATED REVENUE:</span>
-                          <span className="font-black text-white">₹{cabRevenue.toLocaleString()}</span>
+                          <span className="font-bold text-white/40">
+                            {selectedBookingForAlloc.totalAmount > 0 ? "NEGOTIATED FARE (REVENUE):" : "CALCULATED REVENUE:"}
+                          </span>
+                          <span className="font-black text-white">₹{customerFare.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center text-xs border-b border-white/5 pb-2">
                           <span className="font-bold text-white/40">OPERATIONAL EXPENSES:</span>

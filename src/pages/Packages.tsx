@@ -25,7 +25,7 @@ export default function Packages() {
   const [filters, setFilters] = useState({
     destination: searchParams.get('destination') || '',
     search: '',
-    budget: [0, 60000],
+    budget: [0, 1000000],
     duration: '',
     rating: '',
     sortBy: 'popularity',
@@ -99,7 +99,7 @@ export default function Packages() {
     setFilters({
       destination: '',
       search: '',
-      budget: [0, 60000],
+      budget: [0, 1000000],
       duration: '',
       rating: '',
       sortBy: 'popularity',
@@ -127,23 +127,7 @@ export default function Packages() {
         </Select>
       </div>
 
-      {/* Budget */}
-      <div className="space-y-6">
-        <div className="flex justify-between items-end px-2">
-          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Budget Range</label>
-          <span className="text-xs font-black text-kashmir-gold">
-            ₹{filters.budget[0].toLocaleString()} - ₹{filters.budget[1].toLocaleString()}
-          </span>
-        </div>
-        <Slider
-          value={filters.budget}
-          onValueChange={(value) => setFilters(prev => ({ ...prev, budget: value as [number, number] }))}
-          min={0}
-          max={100000}
-          step={5000}
-          className="py-4"
-        />
-      </div>
+      {/* Budget is hidden to prevent confusion with Quote-based pricing */}
 
       {/* Duration */}
       <div className="space-y-3">
@@ -267,8 +251,6 @@ export default function Packages() {
                 </SelectTrigger>
                 <SelectContent className="bg-[#0a0f12] border-white/10 text-white rounded-2xl p-2">
                   <SelectItem value="popularity" className="rounded-xl">Most Popular</SelectItem>
-                  <SelectItem value="price-low" className="rounded-xl">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high" className="rounded-xl">Price: High to Low</SelectItem>
                   <SelectItem value="rating" className="rounded-xl">Highest Rated</SelectItem>
                 </SelectContent>
               </Select>
@@ -340,7 +322,7 @@ export default function Packages() {
                         {/* Status Badges */}
                         <div className="absolute top-6 left-6 flex flex-col gap-3">
                           <div className="px-4 py-2 bg-black/60 backdrop-blur-md border border-white/10 text-kashmir-gold text-[9px] font-black uppercase tracking-[0.2em] rounded-full">
-                            {Math.round((1 - pkg.price / pkg.originalPrice) * 100)}% Private Credit
+                            Private Collection
                           </div>
                         </div>
 
@@ -371,13 +353,10 @@ export default function Packages() {
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 block mb-2">Portfolio Value</span>
-                            <div className="flex items-baseline gap-3">
-                              <span className="text-3xl font-black text-white">₹{pkg.price.toLocaleString()}</span>
-                              <span className="text-xs font-medium text-white/20 line-through">₹{pkg.originalPrice.toLocaleString()}</span>
-                            </div>
+                            <span className="text-2xl font-black text-kashmir-gold uppercase tracking-wider">On Request</span>
                           </div>
-                          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-kashmir-gold group-hover:text-black transition-all duration-500">
-                            <ArrowRight className="w-6 h-6" />
+                          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-kashmir-gold group-hover:text-black transition-all duration-500 font-bold text-xs">
+                            Quote
                           </div>
                         </div>
                       </div>

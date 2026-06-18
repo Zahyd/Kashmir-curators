@@ -65,7 +65,7 @@ export default function FeaturedPackages() {
                     <div className="absolute top-5 left-5 px-4 py-2 bg-kashmir-gold rounded-xl shadow-2xl flex items-center gap-2">
                       <Sparkles className="w-3.5 h-3.5 text-black" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-black">
-                        -{Math.round((1 - pkg.price / pkg.originalPrice) * 100)}% ELITE
+                        ELITE EXCLUSIVE
                       </span>
                     </div>
 
@@ -97,14 +97,11 @@ export default function FeaturedPackages() {
                     <div className="flex items-center justify-between border-t border-white/5 pt-6">
                       <div>
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 mb-1">Estate Value</p>
-                        <div className="flex items-baseline gap-3">
-                          <span className="text-2xl font-black text-white italic">₹{pkg.price.toLocaleString()}</span>
-                          <span className="text-[10px] font-bold text-white/20 line-through">₹{pkg.originalPrice.toLocaleString()}</span>
-                        </div>
+                        <span className="text-xl font-black text-kashmir-gold uppercase tracking-wider">On Request</span>
                       </div>
                       
-                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-kashmir-gold group-hover:text-black transition-all duration-500">
-                        <ArrowRight className="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
+                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-kashmir-gold group-hover:text-black transition-all duration-500 font-bold text-xs">
+                        Quote
                       </div>
                     </div>
                   </div>

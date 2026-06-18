@@ -169,6 +169,16 @@ export default function Cabs() {
   const [checkoutMethod, setCheckoutMethod] = useState<'upi' | 'cash'>('upi');
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'processing' | 'success'>('idle');
   const [bookingRefNo, setBookingRefNo] = useState('');
+
+  // Uber Bidding States
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [driverOffers, setDriverOffers] = useState<any[]>([]);
+  const [selectedOffer, setSelectedOffer] = useState<any>(null);
+  const [isNegotiatingMap, setIsNegotiatingMap] = useState<Record<string, boolean>>({});
+  const [counterValues, setCounterValues] = useState<Record<string, string>>({});
+  const [isDriverResponding, setIsDriverResponding] = useState<Record<string, boolean>>({});
+  const [finalAgreedFare, setFinalAgreedFare] = useState<number>(0);
+  const [allocatedDriver, setAllocatedDriver] = useState<any>(null);
   
   // Tracking timeline console state
   const [isTracking, setIsTracking] = useState(false);
@@ -376,10 +386,10 @@ export default function Cabs() {
     return { ...s, image: imagePath };
   });
 
-  // Handle Checkout Initial
-  const handleInitiateCheckout = () => {
+  // Start Uber-style Broadcast and matching simulation
+  const handleStartBroadcast = () => {
     if (!isAuthenticated) {
-      toast.error('Please login to book a cab');
+      toast.error('Please login to request a ride');
       navigate('/auth?redirect=/cabs');
       return;
     }
@@ -399,11 +409,176 @@ export default function Cabs() {
       toast.error('Please select date');
       return;
     }
-    if (!selectedCab) {
-      toast.error('Please choose a vehicle');
-      return;
-    }
 
+    setIsBroadcasting(true);
+    setDriverOffers([]);
+    setSelectedOffer(null);
+    setTrackingStep(0);
+
+    // Simulate bids arriving in real-time
+    const timers = [
+      setTimeout(() => {
+        const cab = resolvedVehicles.find(v => v.name.toLowerCase().includes('ertiga')) || resolvedVehicles[1] || resolvedVehicles[0];
+        const fare = calculateFare(cab);
+        setDriverOffers(prev => [...prev, {
+          id: 'driver-shabir',
+          driverName: 'Shabir Ahmad',
+          driverPhone: '+919906771122',
+          driverRating: 4.8,
+          driverTours: 89,
+          vehicleName: cab.name,
+          vehicleType: cab.type,
+          vehicleImage: cab.image,
+          capacity: cab.capacity,
+          luggage: cab.luggage,
+          features: cab.features,
+          initialBid: Math.round(fare * 0.95),
+          currentBid: Math.round(fare * 0.95),
+          status: 'received',
+          registrationNo: 'JK-01-AB-7700',
+          cabObject: cab
+        }]);
+      }, 1200),
+
+      setTimeout(() => {
+        const cab = resolvedVehicles.find(v => v.name.toLowerCase().includes('sedan')) || resolvedVehicles[0];
+        const fare = calculateFare(cab);
+        setDriverOffers(prev => [...prev, {
+          id: 'driver-farooq',
+          driverName: 'Farooq Shah',
+          driverPhone: '+919906334455',
+          driverRating: 4.7,
+          driverTours: 76,
+          vehicleName: cab.name,
+          vehicleType: cab.type,
+          vehicleImage: cab.image,
+          capacity: cab.capacity,
+          luggage: cab.luggage,
+          features: cab.features,
+          initialBid: Math.round(fare * 0.9),
+          currentBid: Math.round(fare * 0.9),
+          status: 'received',
+          registrationNo: 'JK-01-AB-1122',
+          cabObject: cab
+        }]);
+      }, 2400),
+
+      setTimeout(() => {
+        const cab = resolvedVehicles.find(v => v.name.toLowerCase().includes('crysta') || v.name.toLowerCase().includes('innova')) || resolvedVehicles[2] || resolvedVehicles[0];
+        const fare = calculateFare(cab);
+        setDriverOffers(prev => [...prev, {
+          id: 'driver-mushtaq',
+          driverName: 'Mushtaq Ahmad',
+          driverPhone: '+919906112233',
+          driverRating: 4.95,
+          driverTours: 142,
+          vehicleName: cab.name,
+          vehicleType: cab.type,
+          vehicleImage: cab.image,
+          capacity: cab.capacity,
+          luggage: cab.luggage,
+          features: cab.features,
+          initialBid: Math.round(fare * 1.05),
+          currentBid: Math.round(fare * 1.05),
+          status: 'received',
+          registrationNo: 'JK-01-AB-8899',
+          cabObject: cab
+        }]);
+      }, 3800),
+
+      setTimeout(() => {
+        const cab = resolvedVehicles.find(v => v.name.toLowerCase().includes('urbania') || v.name.toLowerCase().includes('tempo') || v.name.toLowerCase().includes('traveller')) || resolvedVehicles[4] || resolvedVehicles[0];
+        const fare = calculateFare(cab);
+        setDriverOffers(prev => [...prev, {
+          id: 'driver-bashir',
+          driverName: 'Bashir Lone',
+          driverPhone: '+919906556677',
+          driverRating: 4.9,
+          driverTours: 210,
+          vehicleName: cab.name,
+          vehicleType: cab.type,
+          vehicleImage: cab.image,
+          capacity: cab.capacity,
+          luggage: cab.luggage,
+          features: cab.features,
+          initialBid: Math.round(fare * 1.1),
+          currentBid: Math.round(fare * 1.1),
+          status: 'received',
+          registrationNo: 'JK-01-AB-5566',
+          cabObject: cab
+        }]);
+      }, 5200)
+    ];
+
+    return () => timers.forEach(t => clearTimeout(t));
+  };
+
+  const handleNegotiatePrice = (offerId: string) => {
+    setIsNegotiatingMap(prev => ({ ...prev, [offerId]: true }));
+    const offer = driverOffers.find(o => o.id === offerId);
+    if (offer) {
+      setCounterValues(prev => ({ ...prev, [offerId]: Math.round(offer.currentBid * 0.9).toString() }));
+    }
+  };
+
+  const handleSendCounter = (offerId: string) => {
+    const counterVal = parseInt(counterValues[offerId]);
+    const offer = driverOffers.find(o => o.id === offerId);
+    if (!offer || isNaN(counterVal)) return;
+
+    setIsDriverResponding(prev => ({ ...prev, [offerId]: true }));
+
+    setTimeout(() => {
+      setIsDriverResponding(prev => ({ ...prev, [offerId]: false }));
+
+      const initialBid = offer.initialBid;
+      const currentBid = offer.currentBid;
+      const ratio = counterVal / currentBid;
+
+      setDriverOffers(prev => prev.map(o => {
+        if (o.id !== offerId) return o;
+
+        let status: any = o.status;
+        let bid = o.currentBid;
+        let msg = '';
+
+        if (ratio >= 0.85) {
+          status = 'accepted';
+          bid = counterVal;
+          msg = `Deal! I accept ₹${counterVal.toLocaleString()}. Let's proceed!`;
+          toast.success(`${o.driverName} accepted your offer of ₹${counterVal.toLocaleString()}!`);
+        } else if (ratio >= 0.7) {
+          status = 'countered';
+          const midpoint = Math.round((currentBid + counterVal) / 2);
+          bid = midpoint;
+          msg = `I can compromise at ₹${midpoint.toLocaleString()}. Fuel costs are high, but this is the best I can do.`;
+        } else {
+          status = 'rejected';
+          msg = `Sorry, ₹${counterVal.toLocaleString()} is too low for this route. Chauffeur won't be able to cover toll and fuel expenses. Best offer is ₹${Math.round(initialBid * 0.95).toLocaleString()}.`;
+        }
+
+        return {
+          ...o,
+          status,
+          currentBid: bid,
+          driverMessage: msg
+        };
+      }));
+    }, 2000);
+  };
+
+  const handleAcceptOffer = (offer: any) => {
+    setSelectedOffer(offer);
+    setSelectedCab(offer.cabObject);
+    setFinalAgreedFare(offer.currentBid);
+    setAllocatedDriver({
+      driverName: offer.driverName,
+      driverPhone: offer.driverPhone,
+      registrationNo: offer.registrationNo,
+      driverRating: offer.driverRating,
+      driverTours: offer.driverTours,
+      currentBid: offer.currentBid,
+    });
     setCheckoutStatus('idle');
     setShowCheckout(true);
   };
@@ -421,9 +596,9 @@ export default function Cabs() {
     return () => timers.forEach(t => clearTimeout(t));
   }, [isTracking]);
 
-  // Confirm booking & payment (Quote Enquiry Flow)
+  // Confirm booking & payment (Negotiated Fare Flow)
   const handleConfirmPayment = async () => {
-    if (!selectedCab) return;
+    if (!selectedCab || !allocatedDriver) return;
     setCheckoutStatus('processing');
     
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -435,7 +610,7 @@ export default function Cabs() {
       ? `Airport transfer: ${pickupInput || 'Srinagar Airport'} ➔ ${dropInput || 'Srinagar Airport'}`
       : `Sightseeing Route: ${pickupInput} ➔ ${dropInput}${returnDate ? ' (Roundtrip)' : ''}`;
 
-    const totalFare = calculateFare(selectedCab);
+    const totalFare = finalAgreedFare;
 
     const bookingDetails = {
       pickupLocation: tripType === 'airport' && airportDirection === 'arrival' ? 'Srinagar Airport (SXR)' : pickupInput,
@@ -444,7 +619,7 @@ export default function Cabs() {
       dropDateTime: returnDate ? `${returnDate}T18:00` : `${bookingDate}T18:00`,
       tripType,
       estimatedDistance: routeStats.distance,
-      paymentMethod: 'quote-inquiry',
+      paymentMethod: 'negotiated-bidding',
       bookingRef: ref,
       specialNotes,
       cabAllocation: {
@@ -452,9 +627,9 @@ export default function Cabs() {
         cabName: selectedCab.name,
         cabType: selectedCab.type,
         ownership: 'company',
-        registrationNo: 'JK-01-AB-7700',
-        driverName: 'Shabir Ahmad',
-        driverPhone: '+919906771122',
+        registrationNo: allocatedDriver.registrationNo,
+        driverName: allocatedDriver.driverName,
+        driverPhone: allocatedDriver.driverPhone,
         pickupDateTime: `${bookingDate}T${bookingTime}`,
         dropDateTime: returnDate ? `${returnDate}T18:00` : `${bookingDate}T18:00`,
         pickupLocation: pickupInput,
@@ -483,8 +658,8 @@ export default function Cabs() {
         booking_type: 'cab',
         item_name: tripLabel,
         booking_date: new Date(`${bookingDate}T${bookingTime}`),
-        status: 'pending',
-        total_amount: 0, // Quote pending
+        status: 'confirmed', // immediately active since negotiated!
+        total_amount: totalFare,
         details: bookingDetails,
       });
 
@@ -497,14 +672,14 @@ export default function Cabs() {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          message: `Customer quote enquiry created: ${tripLabel} (${selectedCab.name}).`
+          message: `Customer ride negotiation finalized at ₹${totalFare.toLocaleString()} with ${allocatedDriver.driverName} (${selectedCab.name}).`
         })
       });
 
       setCheckoutStatus('success');
-      toast.success('Quote Request Submitted!');
+      toast.success('Ride Booked Successfully!');
     } catch (err) {
-      toast.error('Submission failed. Please try again.');
+      toast.error('Booking failed. Please try again.');
       setCheckoutStatus('idle');
     }
   };
@@ -734,108 +909,280 @@ export default function Cabs() {
                   </Tabs>
                 </div>
 
-                {/* Premium Vehicles Cards */}
-                <div className="space-y-8">
-                  <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
-                    <div className="w-8 h-[1px] bg-white/10" />
-                    <span>Select Chauffeur Class</span>
-                  </div>
+                {/* Uber-Style Live Bids Dashboard or Standard Fleet */}
+                {!isBroadcasting ? (
+                  <div className="space-y-8 animate-in fade-in duration-500">
+                    <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
+                      <div className="w-8 h-[1px] bg-white/10" />
+                      <span>Select Chauffeur Class Fleet</span>
+                    </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {resolvedVehicles.map((cab) => {
-                      const estimatedFare = calculateFare(cab);
-                      return (
-                        <div
-                          key={cab.id}
-                          onClick={() => setSelectedCab(cab)}
-                          className={cn(
-                            "bg-white/[0.01] border rounded-[2.5rem] p-6 cursor-pointer transition-all duration-500 group relative overflow-hidden flex flex-col justify-between",
-                            selectedCab?.id === cab.id 
-                              ? "border-kashmir-gold/50 bg-kashmir-gold/[0.02] shadow-[0_0_50px_-12px_rgba(212,175,55,0.08)]" 
-                              : "border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
-                          )}
-                        >
-                          <div className="space-y-5">
-                            {/* Card Image */}
-                            <div className="relative h-44 overflow-hidden rounded-2xl border border-white/5">
-                              <img
-                                src={cab.image}
-                                alt={cab.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[750ms]"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                              <Badge className="absolute top-4 right-4 bg-black/60 text-white border-none font-bold uppercase text-[8px] tracking-widest px-2.5 py-1 backdrop-blur-md">
-                                {cab.type}
-                              </Badge>
-                              {/* Stock status indicator */}
-                              <Badge className={cn(
-                                "absolute bottom-4 left-4 border-none font-bold uppercase text-[8px] tracking-widest px-2.5 py-1 backdrop-blur-md",
-                                cab.availability === "Available" ? "bg-emerald-500/20 text-emerald-400" :
-                                cab.availability === "Low Stock" ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
-                              )}>
-                                {cab.availability}
-                              </Badge>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {resolvedVehicles.map((cab) => {
+                        const estimatedFare = calculateFare(cab);
+                        return (
+                          <div
+                            key={cab.id}
+                            onClick={() => setSelectedCab(cab)}
+                            className={cn(
+                              "bg-white/[0.01] border rounded-[2.5rem] p-6 cursor-pointer transition-all duration-500 group relative overflow-hidden flex flex-col justify-between",
+                              selectedCab?.id === cab.id 
+                                ? "border-kashmir-gold/50 bg-kashmir-gold/[0.02] shadow-[0_0_50px_-12px_rgba(212,175,55,0.08)]" 
+                                : "border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
+                            )}
+                          >
+                            <div className="space-y-5">
+                              {/* Card Image with custom backdrop glow */}
+                              <div className="relative h-44 overflow-hidden rounded-2xl border border-white/5 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.06)_0%,transparent_70%)] flex items-center justify-center p-2">
+                                <img
+                                  src={cab.image || ''}
+                                  alt={cab.name}
+                                  className="max-w-full max-h-full object-contain transition-all duration-[750ms] group-hover:scale-105 group-hover:drop-shadow-[0_20px_35px_rgba(212,175,55,0.25)] drop-shadow-[0_12px_20px_rgba(212,175,55,0.15)]"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
+                                <Badge className="absolute top-4 right-4 bg-black/60 text-white border-none font-bold uppercase text-[8px] tracking-widest px-2.5 py-1 backdrop-blur-md">
+                                  {cab.type}
+                                </Badge>
+                                {/* Stock status indicator */}
+                                <Badge className={cn(
+                                  "absolute bottom-4 left-4 border-none font-bold uppercase text-[8px] tracking-widest px-2.5 py-1 backdrop-blur-md",
+                                  cab.availability === "Available" ? "bg-emerald-500/20 text-emerald-400" :
+                                  cab.availability === "Low Stock" ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
+                                )}>
+                                  {cab.availability}
+                                </Badge>
+                              </div>
+
+                              {/* Details header */}
+                              <div>
+                                <div className="flex justify-between items-start gap-2">
+                                  <h4 className="font-display text-2xl font-black text-white group-hover:text-kashmir-gold transition-colors truncate">{cab.name}</h4>
+                                  {selectedCab?.id === cab.id && (
+                                    <div className="w-6 h-6 rounded-full bg-kashmir-gold flex items-center justify-center shadow-lg shadow-kashmir-gold/20 shrink-0">
+                                      <Check className="h-3.5 w-3.5 text-black stroke-[3px]" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Specs */}
+                                <div className="flex items-center gap-4 mt-3">
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
+                                    <Users className="h-3.5 w-3.5 text-kashmir-gold" /> 
+                                    <span>{cab.capacity} Seats</span>
+                                  </p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
+                                    <Sliders className="h-3.5 w-3.5 text-kashmir-gold" />
+                                    <span>{cab.luggage} Bags</span>
+                                  </p>
+                                </div>
+
+                                {/* Amenities list */}
+                                <div className="flex flex-wrap gap-1.5 mt-4">
+                                  {cab.features.map((feature: string) => (
+                                    <span key={feature} className="text-[8px] font-black uppercase tracking-widest px-2.5 py-1 bg-white/5 rounded-md text-white/40 border border-white/5">
+                                      {feature}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
 
-                            {/* Details header */}
-                            <div>
-                              <div className="flex justify-between items-start gap-2">
-                                <h4 className="font-display text-2xl font-black text-white group-hover:text-kashmir-gold transition-colors truncate">{cab.name}</h4>
-                                {selectedCab?.id === cab.id && (
-                                  <div className="w-6 h-6 rounded-full bg-kashmir-gold flex items-center justify-center shadow-lg shadow-kashmir-gold/20 shrink-0">
-                                    <Check className="h-3.5 w-3.5 text-black stroke-[3px]" />
+                            {/* Choose Button */}
+                            <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-6">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Best Fare Rate Guaranteed
+                              </span>
+                              <Button 
+                                size="sm"
+                                className={cn(
+                                  "h-10 rounded-xl font-black text-[9px] uppercase tracking-widest px-4 transition-all duration-300",
+                                  selectedCab?.id === cab.id 
+                                    ? "bg-kashmir-gold text-black hover:bg-amber-500" 
+                                    : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10"
+                                )}
+                              >
+                                {selectedCab?.id === cab.id ? 'Selected' : 'Choose Vehicle'}
+                              </Button>
+                            </div>
+
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-8 animate-in fade-in duration-500">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                      <div>
+                        <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/25 font-black px-4 py-1.5 rounded-full text-[9px] uppercase tracking-[0.2em] mb-2 animate-pulse">
+                          Live Dispatch Radar
+                        </Badge>
+                        <h3 className="text-2xl font-display font-black text-white">Incoming Driver Offers</h3>
+                        <p className="text-xs text-white/40 mt-1 font-semibold">We found active chauffeur guides near your pickup location.</p>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => setIsBroadcasting(false)}
+                        className="text-white/40 hover:text-white text-xs font-black uppercase tracking-wider h-10 px-4 rounded-xl border border-white/5 bg-white/5"
+                      >
+                        Reset Search
+                      </Button>
+                    </div>
+
+                    {driverOffers.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-20 bg-white/[0.01] border border-white/5 rounded-[2.5rem] space-y-6">
+                        <div className="relative w-24 h-24 flex items-center justify-center">
+                          <div className="absolute inset-0 rounded-full border border-kashmir-gold/20 animate-ping" />
+                          <div className="absolute w-16 h-16 rounded-full border border-kashmir-gold/40 animate-pulse" />
+                          <div className="w-8 h-8 rounded-full bg-kashmir-gold/20 flex items-center justify-center border border-kashmir-gold/40">
+                            <Car className="w-4 h-4 text-kashmir-gold animate-bounce" />
+                          </div>
+                        </div>
+                        <div className="text-center space-y-2">
+                          <p className="text-xs font-black uppercase tracking-[0.2em] text-white/70">Pinging Chauffeur Grid...</p>
+                          <p className="text-[10px] text-white/30 max-w-xs leading-normal font-semibold">Broadcasting your route details to verified local drivers within 5km.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-6">
+                        {driverOffers.map((offer) => {
+                          const isNegotiating = isNegotiatingMap[offer.id];
+                          const isResponding = isDriverResponding[offer.id];
+                          
+                          return (
+                            <div 
+                              key={offer.id}
+                              className={cn(
+                                "p-6 rounded-[2.5rem] bg-white/[0.01] border transition-all duration-500 flex flex-col justify-between gap-6 relative overflow-hidden",
+                                offer.status === 'accepted' ? "border-emerald-500/30 bg-emerald-500/[0.01]" : "border-white/5 hover:border-white/10"
+                              )}
+                            >
+                              <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-bold text-white/40 shrink-0 text-lg relative">
+                                    {offer.driverName.split(' ').map((n: string) => n[0]).join('')}
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#05080a]" />
                                   </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-bold text-white text-lg">{offer.driverName}</h4>
+                                      <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-none font-bold uppercase text-[7px] tracking-wider px-2 py-0.5">
+                                        ★ {offer.driverRating}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-xs text-white/40 mt-0.5">{offer.driverTours} tours completed</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-kashmir-gold mt-1.5 font-bold">{offer.vehicleName} ({offer.vehicleType})</p>
+                                  </div>
+                                </div>
+
+                                <div className="relative w-40 h-24 rounded-2xl bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.06)_0%,transparent_70%)] flex items-center justify-center p-2 border border-white/5 shrink-0 self-center md:self-auto">
+                                  <img 
+                                    src={offer.vehicleImage} 
+                                    alt={offer.vehicleName} 
+                                    className="max-w-full max-h-full object-contain drop-shadow-[0_8px_15px_rgba(212,175,55,0.15)]"
+                                  />
+                                </div>
+
+                                <div className="text-right self-stretch md:self-auto flex md:flex-col justify-between md:justify-center items-center md:items-end border-t md:border-t-0 border-white/5 pt-4 md:pt-0">
+                                  <div>
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20 block">Driver Offer</span>
+                                    <span className={cn(
+                                      "text-2xl font-black italic block mt-0.5",
+                                      offer.status === 'accepted' ? "text-emerald-400" : "text-white"
+                                    )}>
+                                      ₹{offer.currentBid.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  {offer.status === 'countered' && (
+                                    <Badge className="bg-amber-500/10 text-amber-400 border-none text-[8px] font-black uppercase tracking-wider mt-1">
+                                      Counter Offer
+                                    </Badge>
+                                  )}
+                                  {offer.status === 'accepted' && (
+                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-none text-[8px] font-black uppercase tracking-wider mt-1">
+                                      Fare Agreed
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+
+                              {offer.driverMessage && (
+                                <div className={cn(
+                                  "p-4 rounded-2xl text-xs font-semibold leading-relaxed",
+                                  offer.status === 'accepted' ? "bg-emerald-500/5 text-emerald-400 border border-emerald-500/10" :
+                                  offer.status === 'rejected' ? "bg-red-500/5 text-red-400 border border-red-500/10" :
+                                  "bg-white/5 text-amber-400 border border-white/5"
+                                )}>
+                                  {offer.driverMessage}
+                                </div>
+                              )}
+
+                              <div className="flex gap-4 border-t border-white/5 pt-4">
+                                {offer.status !== 'accepted' && (
+                                  <>
+                                    <Button
+                                      onClick={() => handleAcceptOffer(offer)}
+                                      disabled={isResponding}
+                                      className="flex-1 h-12 rounded-xl bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[9px] uppercase tracking-widest transition-all duration-300"
+                                    >
+                                      Accept Ride (₹{offer.currentBid})
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleNegotiatePrice(offer.id)}
+                                      disabled={isResponding || isNegotiating}
+                                      variant="outline"
+                                      className="flex-1 h-12 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10 font-black text-[9px] uppercase tracking-widest transition-all"
+                                    >
+                                      Negotiate Fare
+                                    </Button>
+                                  </>
+                                )}
+                                {offer.status === 'accepted' && (
+                                  <Button
+                                    onClick={() => handleAcceptOffer(offer)}
+                                    className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-black text-[9px] uppercase tracking-widest transition-all duration-300 shadow-lg"
+                                  >
+                                    Confirm booking at negotiated price
+                                  </Button>
                                 )}
                               </div>
 
-                              {/* Specs */}
-                              <div className="flex items-center gap-4 mt-3">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
-                                  <Users className="h-3.5 w-3.5 text-kashmir-gold" /> 
-                                  <span>{cab.capacity} Seats</span>
-                                </p>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
-                                  <Sliders className="h-3.5 w-3.5 text-kashmir-gold" />
-                                  <span>{cab.luggage} Bags</span>
-                                </p>
-                              </div>
-
-                              {/* Amenities list */}
-                              <div className="flex flex-wrap gap-1.5 mt-4">
-                                {cab.features.map((feature: string) => (
-                                  <span key={feature} className="text-[8px] font-black uppercase tracking-widest px-2.5 py-1 bg-white/5 rounded-md text-white/40 border border-white/5">
-                                    {feature}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Choose Button */}
-                          <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-6">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
-                              <Sparkles className="w-3.5 h-3.5" />
-                              Best Fare Rate Guaranteed
-                            </span>
-                            <Button 
-                              size="sm"
-                              className={cn(
-                                "h-10 rounded-xl font-black text-[9px] uppercase tracking-widest px-4 transition-all duration-300",
-                                selectedCab?.id === cab.id 
-                                  ? "bg-kashmir-gold text-black hover:bg-amber-500" 
-                                  : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10"
+                              {isNegotiating && offer.status !== 'accepted' && (
+                                <div className="mt-4 p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4 animate-in slide-in-from-top-3 duration-300">
+                                  <div className="flex items-center justify-between">
+                                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40">Enter Counter Offer (₹)</label>
+                                    <span className="text-[9px] font-bold text-white/30">Recommended counter: ₹{Math.round(offer.currentBid * 0.9)}</span>
+                                  </div>
+                                  <div className="flex gap-3">
+                                    <Input
+                                      type="number"
+                                      value={counterValues[offer.id] || ''}
+                                      onChange={(e) => setCounterValues(prev => ({ ...prev, [offer.id]: e.target.value }))}
+                                      className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold px-4 focus:ring-kashmir-gold/20"
+                                      disabled={isResponding}
+                                    />
+                                    <Button
+                                      onClick={() => handleSendCounter(offer.id)}
+                                      disabled={isResponding || !counterValues[offer.id]}
+                                      className="h-12 rounded-xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[9px] uppercase tracking-widest px-6"
+                                    >
+                                      {isResponding ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                      ) : (
+                                        'Send Counter'
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
                               )}
-                            >
-                              {selectedCab?.id === cab.id ? 'Selected' : 'Choose Vehicle'}
-                            </Button>
-                          </div>
-
-                        </div>
-                      );
-                    })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
-
+                )}
               </div>
 
               {/* Live Summary Sidebar */}
@@ -848,101 +1195,116 @@ export default function Cabs() {
                     Trip Manifest
                   </h3>
 
-                  {selectedCab ? (
-                    <div className="space-y-8 animate-in fade-in duration-500">
-                      
-                      {/* Vehicle Card Header */}
-                      <div className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
-                        <div className="w-12 h-12 rounded-xl bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20 shrink-0">
-                          <Car className="h-6 w-6 text-kashmir-gold" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-black text-white text-base truncate">{selectedCab.name}</p>
-                          <p className="text-[9px] font-black uppercase tracking-widest text-white/40">{selectedCab.type}</p>
-                        </div>
-                      </div>
+                  {!isBroadcasting ? (
+                    pickupInput || dropInput ? (
+                      <div className="space-y-8 animate-in fade-in duration-500">
+                        {/* Route specs */}
+                        <div className="space-y-6">
+                          <div className="flex items-start gap-4">
+                            <MapPin className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Pickup Location</p>
+                              <p className="font-bold text-white capitalize text-xs">
+                                {tripType === 'airport' && airportDirection === 'arrival' ? 'Srinagar Airport (SXR)' : (pickupInput || 'Not specified')}
+                              </p>
+                            </div>
+                          </div>
 
-                      {/* Route specs */}
-                      <div className="space-y-6">
-                        <div className="flex items-start gap-4">
-                          <MapPin className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
+                          <div className="flex items-start gap-4">
+                            <MapPin className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Drop Destination</p>
+                              <p className="font-bold text-white capitalize text-xs">
+                                {tripType === 'airport' && airportDirection === 'departure' ? 'Srinagar Airport (SXR)' : (dropInput || 'Not specified')}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-4">
+                            <Calendar className="h-5 w-5 text-kashmir-gold mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Departure Schedule</p>
+                              <p className="font-bold text-white text-xs">
+                                {bookingDate ? new Date(bookingDate).toLocaleDateString('en-IN', { 
+                                  day: 'numeric', 
+                                  month: 'short', 
+                                  year: 'numeric' 
+                                }) : 'Select Date'}
+                                {bookingTime && ` at ${bookingTime}`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Route Stats */}
+                        <div className="border-t border-white/5 pt-6 space-y-4">
+                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
+                            <span className="text-white/20">Estimated Distance</span>
+                            <span className="text-white/60">{routeStats.distance} KM</span>
+                          </div>
+                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
+                            <span className="text-white/20">Estimated Duration</span>
+                            <span className="text-white/60">~ {Math.floor(routeStats.duration / 60)}h {routeStats.duration % 60}m</span>
+                          </div>
+                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
+                            <span className="text-white/20">Tolls & Fuel</span>
+                            <span className="text-emerald-400">Included in Quote</span>
+                          </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-kashmir-gold/5 border border-kashmir-gold/10 flex gap-3 items-start text-left">
+                          <Sparkles className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Pickup Location</p>
-                            <p className="font-bold text-white capitalize text-xs">
-                              {tripType === 'airport' && airportDirection === 'arrival' ? 'Srinagar Airport (SXR)' : (pickupInput || 'Not specified')}
+                            <h5 className="text-[10px] font-black text-white uppercase tracking-wider mb-1">Uber-style Booking</h5>
+                            <p className="text-[9px] text-white/50 leading-relaxed font-semibold">
+                              Broadcast your request to active chauffeur guides in Srinagar. You can negotiate and agree on the fare before locking it in.
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-4">
-                          <MapPin className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Drop Destination</p>
-                            <p className="font-bold text-white capitalize text-xs">
-                              {tripType === 'airport' && airportDirection === 'departure' ? 'Srinagar Airport (SXR)' : (dropInput || 'Not specified')}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-4">
-                          <Calendar className="h-5 w-5 text-kashmir-gold mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Departure Schedule</p>
-                            <p className="font-bold text-white text-xs">
-                              {bookingDate ? new Date(bookingDate).toLocaleDateString('en-IN', { 
-                                day: 'numeric', 
-                                month: 'short', 
-                                year: 'numeric' 
-                              }) : 'Select Date'}
-                              {bookingTime && ` at ${bookingTime}`}
-                            </p>
-                          </div>
-                        </div>
+                        <Button
+                          onClick={handleStartBroadcast}
+                          className="w-full h-16 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.25em] shadow-xl transition-all duration-300 active:scale-95 flex items-center justify-center gap-2"
+                        >
+                          <span>Broadcast Ride Request</span>
+                          <Send className="w-4 h-4" />
+                        </Button>
                       </div>
-
-                      {/* Fare Breakdown */}
-                      <div className="border-t border-white/5 pt-6 space-y-4">
-                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                          <span className="text-white/20">Estimated Distance</span>
-                          <span className="text-white/60">{routeStats.distance} KM</span>
-                        </div>
-                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                          <span className="text-white/20">Estimated Duration</span>
-                          <span className="text-white/60">~ {Math.floor(routeStats.duration / 60)}h {routeStats.duration % 60}m</span>
-                        </div>
-                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                          <span className="text-white/20">Curation Rate</span>
-                          <span className="text-kashmir-gold font-bold">Get Best Quote</span>
-                        </div>
-                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                          <span className="text-white/20">Tolls & Fuel</span>
-                          <span className="text-emerald-400">Included in Quote</span>
-                        </div>
-                        
-                        <div className="flex justify-between items-center pt-6 border-t border-white/5">
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Est. Total Cost</span>
-                          <span className="text-xl font-black text-white uppercase tracking-widest">Quote Pending</span>
-                        </div>
+                    ) : (
+                      <div className="text-center py-20 opacity-30">
+                        <Car className="w-12 h-12 mx-auto text-white mb-4 animate-pulse" />
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em]">Enter route to search available cabs</p>
                       </div>
-
-                      {/* ETA Display */}
-                      <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between text-xs font-bold">
-                        <span className="text-white/40 flex items-center gap-1.5"><Clock className="w-4 h-4 text-kashmir-gold" /> Estimated Travel Time</span>
-                        <span className="text-white">~ {Math.floor(routeStats.duration / 60)} Hours</span>
-                      </div>
-
-                      <Button
-                        onClick={handleInitiateCheckout}
-                        className="w-full h-16 rounded-2xl bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[10px] uppercase tracking-[0.25em] shadow-xl transition-all duration-300 active:scale-95 flex items-center justify-center gap-2"
-                      >
-                        <span>Request Custom Quote</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    )
                   ) : (
-                    <div className="text-center py-20 opacity-30">
-                      <Car className="w-12 h-12 mx-auto text-white mb-4 animate-pulse" />
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em]">Select vehicle to compute manifest</p>
+                    /* Broadcasting Sidebar State */
+                    <div className="space-y-8 animate-in fade-in duration-500">
+                      <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-12 h-12 rounded-full border-2 border-kashmir-gold border-t-transparent animate-spin flex items-center justify-center" />
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wider text-kashmir-gold animate-pulse">Broadcast Active</p>
+                          <p className="text-[10px] text-white/40 mt-1">Review driver offers on the dashboard.</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 text-xs">
+                        <div className="flex justify-between border-b border-white/5 pb-2">
+                          <span className="text-white/30">Route</span>
+                          <span className="font-bold text-white capitalize">{pickupInput.split(',')[0]} ➔ {dropInput.split(',')[0]}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/5 pb-2">
+                          <span className="text-white/30">Distance</span>
+                          <span className="font-bold text-white">{routeStats.distance} KM</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/5 pb-2">
+                          <span className="text-white/30">Schedule</span>
+                          <span className="font-bold text-white">{bookingDate} @ {bookingTime}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-white/40 leading-relaxed font-semibold">
+                        Driver offers will appear in real-time. You can select your preferred chauffeur guides and accept their offers, or choose "Negotiate" to counter-propose a different rate.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1094,7 +1456,7 @@ export default function Cabs() {
                     </div>
                     <div>
                       <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 1 ? "text-white" : "text-white/30")}>Chauffeur Assigned</p>
-                      <p className="text-[9px] text-white/40 mt-0.5">{trackingStep >= 1 ? 'Shabir Ahmad assigned' : 'Locating nearest driver...'}</p>
+                      <p className="text-[9px] text-white/40 mt-0.5">{trackingStep >= 1 ? `${allocatedDriver?.driverName || 'Shabir Ahmad'} assigned` : 'Locating nearest driver...'}</p>
                     </div>
                   </div>
 
@@ -1135,13 +1497,13 @@ export default function Cabs() {
                   
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 shrink-0 font-bold text-lg">
-                      SA
+                      {(allocatedDriver?.driverName || 'Shabir Ahmad').split(' ').map((n: string) => n[0]).join('')}
                     </div>
                     <div>
-                      <h4 className="font-bold text-white text-base">Shabir Ahmad</h4>
+                      <h4 className="font-bold text-white text-base">{allocatedDriver?.driverName || 'Shabir Ahmad'}</h4>
                       <p className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5 mt-1">
                         <Star className="h-3 w-3 text-kashmir-gold fill-kashmir-gold" />
-                        <span>4.9 Rating (124 Tours)</span>
+                        <span>{allocatedDriver?.driverRating || 4.8} Rating ({allocatedDriver?.driverTours || 89} Tours)</span>
                       </p>
                     </div>
                   </div>
@@ -1153,23 +1515,27 @@ export default function Cabs() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/40">License Plate</span>
-                      <span className="font-mono font-bold text-kashmir-gold uppercase">JK-01-AB-7700</span>
+                      <span className="font-mono font-bold text-kashmir-gold uppercase">{allocatedDriver?.registrationNo || 'JK-01-AB-7700'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/40">Driver Phone</span>
-                      <span className="font-bold text-white">+91 9906 771122</span>
+                      <span className="font-bold text-white">{allocatedDriver?.driverPhone || '+91 9906 771122'}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-white/5 pt-3">
+                      <span className="text-white/40 font-bold">Negotiated Fare</span>
+                      <span className="font-bold text-emerald-400">₹{(finalAgreedFare || 0).toLocaleString()}</span>
                     </div>
                   </div>
 
                   <div className="pt-4 border-t border-white/5 flex gap-3">
                     <a 
-                      href={`https://wa.me/919906771122?text=Hi%20Shabir,%20I%20am%20the%20guest%20for%20the%20booking%20${bookingRefNo}.`}
+                      href={`https://wa.me/${(allocatedDriver?.driverPhone || '+919906771122').replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(allocatedDriver?.driverName || 'Shabir')},%20I%20am%20the%20guest%20for%20the%20booking%20${bookingRefNo}.`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 h-12 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg transition-all"
                     >
                       <MessageSquare className="w-4 h-4" />
-                      <span>WhatsApp Driver</span>
+                      <span>WhatsApp Chauffeur</span>
                     </a>
                   </div>
                 </Card>
@@ -1193,15 +1559,15 @@ export default function Cabs() {
           <DialogHeader className="p-8 pb-0">
             <DialogTitle className="text-2xl font-display font-black tracking-tight text-white uppercase flex items-center gap-2">
               <Shield className="w-6 h-6 text-kashmir-gold" />
-              Bespoke Quote Request
+              Confirm Negotiated Ride
             </DialogTitle>
-            <p className="text-white/40 text-[10px] uppercase font-black tracking-wider mt-1">Submit travel specs to receive custom rates</p>
+            <p className="text-white/40 text-[10px] uppercase font-black tracking-wider mt-1">Review finalized ride and driver details</p>
           </DialogHeader>
 
           {checkoutStatus === 'processing' && (
             <div className="p-8 py-20 flex flex-col items-center justify-center space-y-4">
               <Loader2 className="w-16 h-16 text-kashmir-gold animate-spin" />
-              <p className="text-xs font-black uppercase tracking-widest text-white/30 animate-pulse">Routing quote to travel desk...</p>
+              <p className="text-xs font-black uppercase tracking-widest text-white/30 animate-pulse">Confirming ride with chauffeur...</p>
             </div>
           )}
 
@@ -1211,8 +1577,8 @@ export default function Cabs() {
                 <CheckCircle className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">Quote Request Submitted!</h3>
-                <p className="text-xs text-white/40 font-medium">Our travel desk will contact you with custom rates shortly.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Ride Booked Successfully!</h3>
+                <p className="text-xs text-white/40 font-medium">Your chauffeur is confirmed at the negotiated price.</p>
                 <div className="mt-4 p-4 bg-white/5 border border-white/5 rounded-2xl">
                   <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Confirmation code</span>
                   <p className="font-mono text-sm font-black text-kashmir-gold mt-1">{bookingRefNo}</p>
@@ -1233,12 +1599,13 @@ export default function Cabs() {
               {/* Checkout details */}
               <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl flex justify-between items-center">
                 <div className="min-w-0">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Chauffeur Class</span>
-                  <span className="font-bold text-sm text-white block truncate">{selectedCab?.name}</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Chauffeur Guide</span>
+                  <span className="font-bold text-sm text-white block truncate">{allocatedDriver?.driverName}</span>
+                  <span className="text-[9px] text-white/40 block mt-0.5">{selectedCab?.name}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Estimated Rate</span>
-                  <span className="font-black text-sm text-kashmir-gold uppercase tracking-wider block mt-0.5">Awaiting Quote</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Agreed Fare</span>
+                  <span className="font-black text-xl text-kashmir-gold block mt-0.5">₹{(finalAgreedFare || 0).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -1257,7 +1624,7 @@ export default function Cabs() {
                 <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex gap-3 text-white/60">
                   <AlertCircle className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
                   <p className="text-xs leading-normal">
-                    No advanced deposit is required. Our curators will review your route and dispatch a bespoke quotation directly to your dashboard.
+                    This booking has been pre-negotiated and will be confirmed immediately at ₹{(finalAgreedFare || 0).toLocaleString()} total cost.
                   </p>
                 </div>
 
@@ -1265,7 +1632,7 @@ export default function Cabs() {
                   onClick={handleConfirmPayment}
                   className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-xl text-[10px] uppercase tracking-widest"
                 >
-                  Submit Quote Request
+                  Confirm & Book Chauffeur
                 </Button>
               </div>
 

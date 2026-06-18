@@ -104,7 +104,7 @@ export default function PackageDetail() {
 
   const handleBooking = async () => {
     if (!isAuthenticated) {
-      toast.error('Please login to book');
+      toast.error('Please login to request a quote');
       navigate('/auth?redirect=/packages/' + id);
       return;
     }
@@ -114,26 +114,24 @@ export default function PackageDetail() {
       return;
     }
 
-    setShowPayment(true);
-  };
+    setIsBooking(true);
+    try {
+      await addBooking({
+        booking_type: 'package',
+        item_name: pkg.name,
+        booking_date: bookingData.date,
+        status: 'pending',
+        total_amount: 0, // Quote-based
+        details: bookingData,
+      });
 
-  const handlePaymentSuccess = () => {
-    addBooking({
-      booking_type: 'package',
-      item_name: pkg.name,
-      booking_date: bookingData.date,
-      status: 'confirmed',
-      total_amount: calculateTotal(),
-      details: bookingData,
-    });
-
-    setShowPayment(false);
-    toast.success('Package booked successfully!');
-    navigate('/profile');
-  };
-
-  const handlePaymentFailure = () => {
-    setShowPayment(false);
+      toast.success('Bespoke quote request submitted successfully!');
+      navigate('/profile');
+    } catch (err) {
+      toast.error('Failed to submit quote request. Please try again.');
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   return (
@@ -347,12 +345,9 @@ export default function PackageDetail() {
           <div className="lg:col-span-1">
             <div className="bg-card rounded-2xl p-6 shadow-sm sticky top-24">
               <div className="mb-6">
-                <span className="text-muted-foreground line-through">
-                  ₹{pkg.originalPrice.toLocaleString()}
-                </span>
-                <div className="text-3xl font-bold text-primary">
-                  ₹{pkg.price.toLocaleString()}
-                  <span className="text-base font-normal text-muted-foreground"> /person</span>
+                <span className="text-xs font-black text-white/40 uppercase tracking-widest block mb-1">Estate Value</span>
+                <div className="text-3xl font-black text-kashmir-gold uppercase tracking-wider">
+                  On Request
                 </div>
               </div>
 
@@ -394,9 +389,9 @@ export default function PackageDetail() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="budget">Budget (Included)</SelectItem>
-                      <SelectItem value="standard">Standard (+₹3,000/person)</SelectItem>
-                      <SelectItem value="luxury">Luxury (+₹8,000/person)</SelectItem>
+                      <SelectItem value="budget">Budget Category</SelectItem>
+                      <SelectItem value="standard">Standard Upgrade</SelectItem>
+                      <SelectItem value="luxury">Luxury Upgrade</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -410,9 +405,9 @@ export default function PackageDetail() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sedan">Sedan (Included)</SelectItem>
-                      <SelectItem value="suv">SUV (+₹1,500)</SelectItem>
-                      <SelectItem value="premium">Premium (+₹3,000)</SelectItem>
+                      <SelectItem value="sedan">Sedan Chauffeur</SelectItem>
+                      <SelectItem value="suv">SUV Upgrade</SelectItem>
+                      <SelectItem value="premium">Premium Cruiser Upgrade</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -421,24 +416,20 @@ export default function PackageDetail() {
               {/* Price Breakdown */}
               <div className="border-t pt-4 mb-6 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Base Price ({bookingData.travelers} persons)</span>
-                  <span>₹{(pkg.price * parseInt(bookingData.travelers)).toLocaleString()}</span>
+                  <span className="text-muted-foreground">Travelers Count</span>
+                  <span className="font-bold text-white">{bookingData.travelers} Persons</span>
                 </div>
-                {bookingData.hotelCategory !== 'budget' && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Hotel Upgrade</span>
-                    <span>₹{(hotelPrices[bookingData.hotelCategory as keyof typeof hotelPrices] * parseInt(bookingData.travelers)).toLocaleString()}</span>
-                  </div>
-                )}
-                {bookingData.cabType !== 'sedan' && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cab Upgrade</span>
-                    <span>₹{cabPrices[bookingData.cabType as keyof typeof cabPrices].toLocaleString()}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Hotel Plan</span>
+                  <span className="font-bold text-white capitalize">{bookingData.hotelCategory}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Chauffeur Transport</span>
+                  <span className="font-bold text-white capitalize">{bookingData.cabType}</span>
+                </div>
                 <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                  <span>Total</span>
-                  <span className="text-primary">₹{calculateTotal().toLocaleString()}</span>
+                  <span>Total Cost</span>
+                  <span className="text-kashmir-gold">Quote Pending</span>
                 </div>
               </div>
 
@@ -452,10 +443,10 @@ export default function PackageDetail() {
                 {isBooking ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Processing...
+                    Submitting...
                   </>
                 ) : (
-                  'Book This Package'
+                  'Request Custom Quote'
                 )}
               </Button>
 
