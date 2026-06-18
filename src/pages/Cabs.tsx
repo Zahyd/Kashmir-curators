@@ -933,13 +933,13 @@ export default function Cabs() {
                           >
                             <div className="space-y-5">
                               {/* Card Image with custom backdrop glow */}
-                              <div className="relative h-44 overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-transparent via-transparent to-black/40 flex items-center justify-center p-2">
+                              <div className="relative h-44 overflow-hidden rounded-2xl border border-white/5 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.12)_0%,transparent_75%)] flex items-center justify-center p-2">
                                 {/* Floor shadow ellipse */}
-                                <div className="absolute bottom-2 w-3/4 h-6 bg-black/60 blur-[12px] rounded-[100%]" />
+                                <div className="absolute bottom-4 w-4/5 h-6 bg-black/60 blur-[14px] rounded-[100%]" />
                                 <img
                                   src={cab.image || ''}
                                   alt={cab.name}
-                                  className="relative max-w-full max-h-full object-contain transition-all duration-[750ms] group-hover:scale-105 group-hover:-translate-y-2 drop-shadow-2xl"
+                                  className="relative max-w-full max-h-full object-contain transition-all duration-[750ms] group-hover:scale-105 group-hover:-translate-y-2 drop-shadow-[0_15px_20px_rgba(0,0,0,0.5)] group-hover:drop-shadow-[0_20px_25px_rgba(212,175,55,0.15)]"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
                                 <Badge className="absolute top-4 right-4 bg-black/60 text-white border-none font-bold uppercase text-[8px] tracking-widest px-2.5 py-1 backdrop-blur-md">
@@ -1078,13 +1078,13 @@ export default function Cabs() {
                                   </div>
                                 </div>
 
-                                <div className="relative w-40 h-24 rounded-2xl bg-gradient-to-b from-transparent via-transparent to-black/40 flex items-center justify-center p-2 border border-white/5 shrink-0 self-center md:self-auto">
+                                <div className="relative w-40 h-24 rounded-2xl bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.12)_0%,transparent_75%)] flex items-center justify-center p-2 border border-white/5 shrink-0 self-center md:self-auto">
                                   {/* Floor shadow ellipse */}
-                                  <div className="absolute bottom-1 w-3/4 h-4 bg-black/60 blur-[8px] rounded-[100%]" />
+                                  <div className="absolute bottom-2 w-4/5 h-4 bg-black/60 blur-[10px] rounded-[100%]" />
                                   <img 
                                     src={offer.vehicleImage} 
                                     alt={offer.vehicleName} 
-                                    className="relative max-w-full max-h-full object-contain drop-shadow-2xl"
+                                    className="relative max-w-full max-h-full object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)]"
                                   />
                                 </div>
 
