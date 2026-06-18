@@ -204,6 +204,162 @@ export default function Cabs() {
   const pickupInputRef = useRef<HTMLInputElement>(null);
   const dropInputRef = useRef<HTMLInputElement>(null);
 
+  // Leaflet map and geocoding states
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lon: number; name: string } | null>(null);
+  const [dropCoords, setDropCoords] = useState<{ lat: number; lon: number; name: string } | null>(null);
+  const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
+  const [dropSuggestions, setDropSuggestions] = useState<any[]>([]);
+  const [searchingPickup, setSearchingPickup] = useState(false);
+  const [searchingDrop, setSearchingDrop] = useState(false);
+  const [detectingGps, setDetectingGps] = useState(false);
+
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const pickupMarkerRef = useRef<any>(null);
+  const dropMarkerRef = useRef<any>(null);
+  const polylineRef = useRef<any>(null);
+
+  // Dynamic Leaflet CSS and JS Script loader
+  useEffect(() => {
+    if ((window as any).L) {
+      setLeafletLoaded(true);
+      return;
+    }
+
+    const cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(cssLink);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.async = true;
+    script.onload = () => {
+      setLeafletLoaded(true);
+    };
+    document.head.appendChild(script);
+  }, []);
+
+  // Helper functions for GPS distance calculation
+  const deg2rad = (deg: number) => deg * (Math.PI / 180);
+  const getHaversineDistance = (c1: { lat: number; lon: number }, c2: { lat: number; lon: number }) => {
+    const R = 6371; // Earth radius in km
+    const dLat = deg2rad(c2.lat - c1.lat);
+    const dLon = deg2rad(c2.lon - c1.lon);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(c1.lat)) * Math.cos(deg2rad(c2.lat)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Search autocomplete handler for Nominatim OpenStreetMap API
+  const searchLocations = async (query: string, type: 'pickup' | 'drop') => {
+    if (!query || query.length < 3) {
+      if (type === 'pickup') setPickupSuggestions([]);
+      else setDropSuggestions([]);
+      return;
+    }
+
+    if (type === 'pickup') setSearchingPickup(true);
+    else setSearchingDrop(true);
+
+    try {
+      // Bounding box constraint for J&K: [minLon, minLat, maxLon, maxLat]
+      const viewbox = '73.5,32.0,76.5,35.0';
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', Jammu and Kashmir')}&format=json&addressdetails=1&limit=5&viewbox=${viewbox}&bounded=1`;
+      
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      if (res.ok) {
+        const data = await res.json();
+        const formatted = data.map((item: any) => {
+          // Extract a shorter and cleaner display name
+          const parts = item.display_name.split(',');
+          const name = parts.slice(0, 3).join(',').trim();
+          return {
+            name,
+            fullName: item.display_name,
+            lat: parseFloat(item.lat),
+            lon: parseFloat(item.lon)
+          };
+        });
+        
+        if (type === 'pickup') setPickupSuggestions(formatted);
+        else setDropSuggestions(formatted);
+      }
+    } catch (err) {
+      console.error('Nominatim search error:', err);
+    } finally {
+      if (type === 'pickup') setSearchingPickup(false);
+      else setSearchingDrop(false);
+    }
+  };
+
+  // Debounce effect for real-time geocoding search
+  useEffect(() => {
+    if (pickupInput && pickupInput !== (pickupCoords?.name || '')) {
+      const delay = setTimeout(() => searchLocations(pickupInput, 'pickup'), 450);
+      return () => {
+        clearTimeout(delay);
+      };
+    } else {
+      setPickupSuggestions([]);
+    }
+  }, [pickupInput]);
+
+  useEffect(() => {
+    if (dropInput && dropInput !== (dropCoords?.name || '')) {
+      const delay = setTimeout(() => searchLocations(dropInput, 'drop'), 450);
+      return () => {
+        clearTimeout(delay);
+      };
+    } else {
+      setDropSuggestions([]);
+    }
+  }, [dropInput]);
+
+  // Geolocation detector
+  const handleDetectGps = () => {
+    if (!navigator.geolocation) {
+      toast.error('GPS Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`);
+          if (res.ok) {
+            const data = await res.json();
+            const addressParts = data.display_name.split(',');
+            const cleanName = addressParts.slice(0, 3).join(',').trim();
+            setPickupInput(cleanName);
+            setPickupCoords({ lat, lon, name: cleanName });
+            toast.success('Current location detected via GPS');
+          } else {
+            setPickupInput(`GPS Coordinate (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+            setPickupCoords({ lat, lon, name: 'Current Location' });
+          }
+        } catch {
+          setPickupInput(`GPS Coordinate (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+          setPickupCoords({ lat, lon, name: 'Current Location' });
+        } finally {
+          setDetectingGps(false);
+        }
+      },
+      () => {
+        toast.error('Unable to fetch GPS location. Please enter manually.');
+        setDetectingGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
   // VPA Config
   const [upiConfig, setUpiConfig] = useState({
     vpa: 'thekashmircurators@okaxis',
@@ -255,6 +411,102 @@ export default function Cabs() {
     });
   }, [googleMapsLoaded, tripType]);
 
+  // Initialize Leaflet map
+  useEffect(() => {
+    if (!leafletLoaded || !mapRef.current || mapInstanceRef.current) return;
+
+    const L = (window as any).L;
+    const map = L.map(mapRef.current, {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([34.0837, 74.7973], 12); // Centered on Srinagar
+
+    // Premium dark-themed tile layer matching brand aesthetic
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20
+    }).addTo(map);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [leafletLoaded]);
+
+  // Update Leaflet map markers and polyline route
+  useEffect(() => {
+    if (!leafletLoaded || !mapInstanceRef.current) return;
+
+    const L = (window as any).L;
+    const map = mapInstanceRef.current;
+
+    // Remove existing layers
+    if (pickupMarkerRef.current) {
+      map.removeLayer(pickupMarkerRef.current);
+      pickupMarkerRef.current = null;
+    }
+    if (dropMarkerRef.current) {
+      map.removeLayer(dropMarkerRef.current);
+      dropMarkerRef.current = null;
+    }
+    if (polylineRef.current) {
+      map.removeLayer(polylineRef.current);
+      polylineRef.current = null;
+    }
+
+    const markers: any[] = [];
+
+    // Add Pickup Pin
+    if (pickupCoords) {
+      const pickupIcon = L.divIcon({
+        html: `<div class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow-lg"><div class="w-2 h-2 rounded-full bg-white animate-pulse"></div></div>`,
+        className: 'custom-pin-pickup',
+        iconSize: [24, 24]
+      });
+
+      pickupMarkerRef.current = L.marker([pickupCoords.lat, pickupCoords.lon], { icon: pickupIcon })
+        .addTo(map)
+        .bindPopup(`<b>Pickup Location:</b><br/>${pickupCoords.name}`)
+        .openPopup();
+
+      markers.push([pickupCoords.lat, pickupCoords.lon]);
+    }
+
+    // Add Drop Pin
+    if (dropCoords) {
+      const dropIcon = L.divIcon({
+        html: `<div class="w-6 h-6 rounded-full bg-red-500 border-2 border-white flex items-center justify-center shadow-lg"><div class="w-2 h-2 rounded-full bg-white"></div></div>`,
+        className: 'custom-pin-drop',
+        iconSize: [24, 24]
+      });
+
+      dropMarkerRef.current = L.marker([dropCoords.lat, dropCoords.lon], { icon: dropIcon })
+        .addTo(map)
+        .bindPopup(`<b>Drop Destination:</b><br/>${dropCoords.name}`);
+
+      markers.push([dropCoords.lat, dropCoords.lon]);
+    }
+
+    // Paint Route Polyline
+    if (markers.length === 2) {
+      polylineRef.current = L.polyline(markers, {
+        color: '#d4af37', // Kashmir Gold
+        weight: 4,
+        opacity: 0.8,
+        dashArray: '10, 10'
+      }).addTo(map);
+
+      map.fitBounds(L.latLngBounds(markers), { padding: [50, 50] });
+    } else if (markers.length === 1) {
+      map.setView(markers[0], 14);
+    }
+  }, [leafletLoaded, pickupCoords, dropCoords]);
+
   // Fetch Page Configurations
   useEffect(() => {
     const fetchSettings = async () => {
@@ -285,8 +537,34 @@ export default function Cabs() {
     fetchSettings();
   }, []);
 
+  // Airport coords auto-setter
+  useEffect(() => {
+    const airportCoords = { lat: 33.9930, lon: 74.7744, name: 'Srinagar Airport (SXR)' };
+    if (tripType === 'airport') {
+      if (airportDirection === 'arrival') {
+        setPickupCoords(airportCoords);
+        setPickupInput('Srinagar Airport (SXR)');
+      } else {
+        setDropCoords(airportCoords);
+        setDropInput('Srinagar Airport (SXR)');
+      }
+    }
+  }, [tripType, airportDirection]);
+
   // Predefined or dynamic distance calculation
   const getRouteStats = () => {
+    // If we have dynamic geocoded coordinates, calculate actual distance via Haversine
+    if (pickupCoords && dropCoords) {
+      const geodeticDist = getHaversineDistance(pickupCoords, dropCoords);
+      // Average 1.35x driving/route factor for actual winding road distance in J&K
+      const drivingDist = Math.round(geodeticDist * 1.35);
+      const drivingDuration = Math.round(drivingDist * 2.2); // ~2.2 mins per km on average
+      return { 
+        distance: Math.max(5, drivingDist), 
+        duration: Math.max(10, drivingDuration) 
+      };
+    }
+
     const pLoc = (tripType === 'airport' && airportDirection === 'arrival' ? 'Srinagar Airport (SXR)' : pickupInput).trim().toLowerCase();
     const dLoc = (tripType === 'airport' && airportDirection === 'departure' ? 'Srinagar Airport (SXR)' : dropInput).trim().toLowerCase();
     
@@ -764,33 +1042,58 @@ export default function Cabs() {
                             </div>
                           ) : (
                             <>
-                              <Input
-                                ref={pickupInputRef}
-                                className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-white px-6 font-bold focus:border-kashmir-gold/45 text-sm"
-                                value={pickupInput}
-                                onChange={(e) => {
-                                  setPickupInput(e.target.value);
-                                  setShowPickupSuggestions(true);
-                                }}
-                                onFocus={() => setShowPickupSuggestions(true)}
-                                onBlur={() => setTimeout(() => setShowPickupSuggestions(false), 200)}
-                                placeholder="Type pickup location / hotel..."
-                              />
-                              {showPickupSuggestions && !googleMapsLoaded && (
-                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216] border border-white/10 rounded-2xl mt-2 max-h-60 overflow-y-auto shadow-2xl p-2 space-y-1">
-                                  {popularLocations.map((loc, i) => (
+                              <div className="relative">
+                                <Input
+                                  ref={pickupInputRef}
+                                  className="h-14 bg-white/[0.03] border border-white/5 rounded-2xl text-white pl-6 pr-12 font-bold focus:border-kashmir-gold/45 text-sm"
+                                  value={pickupInput}
+                                  onChange={(e) => {
+                                    setPickupInput(e.target.value);
+                                    setShowPickupSuggestions(true);
+                                  }}
+                                  onFocus={() => setShowPickupSuggestions(true)}
+                                  onBlur={() => setTimeout(() => setShowPickupSuggestions(false), 250)}
+                                  placeholder="Type pickup location / hotel..."
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleDetectGps}
+                                  className="absolute right-3 top-[50%] -translate-y-[50%] p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-kashmir-gold transition-all"
+                                  title="Detect GPS Location"
+                                >
+                                  {detectingGps ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Navigation className="w-4 h-4 rotate-45" />
+                                  )}
+                                </button>
+                              </div>
+                              {showPickupSuggestions && pickupSuggestions.length > 0 && (
+                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216]/95 border border-white/10 rounded-2xl mt-2 max-h-60 overflow-y-auto shadow-2xl p-2 space-y-1 backdrop-blur-md">
+                                  {pickupSuggestions.map((loc, i) => (
                                     <button
                                       key={i}
+                                      type="button"
                                       onClick={() => {
                                         setPickupInput(loc.name);
+                                        setPickupCoords({ lat: loc.lat, lon: loc.lon, name: loc.name });
                                         setShowPickupSuggestions(false);
                                       }}
                                       className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-xs font-bold text-white/80 transition-colors flex items-center gap-2"
                                     >
-                                      <MapPin className="w-3.5 h-3.5 text-kashmir-gold" />
-                                      {loc.name}
+                                      <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                                      <div className="flex flex-col min-w-0 text-left">
+                                        <span className="truncate font-bold">{loc.name}</span>
+                                        <span className="text-[8px] text-white/30 truncate font-normal">{loc.fullName}</span>
+                                      </div>
                                     </button>
                                   ))}
+                                </div>
+                              )}
+                              {showPickupSuggestions && searchingPickup && (
+                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216]/95 border border-white/10 rounded-2xl mt-2 p-4 shadow-2xl flex items-center justify-center gap-2 backdrop-blur-md">
+                                  <Loader2 className="w-4 h-4 text-kashmir-gold animate-spin" />
+                                  <span className="text-[10px] uppercase font-black tracking-wider text-white/40">Searching...</span>
                                 </div>
                               )}
                             </>
@@ -817,24 +1120,35 @@ export default function Cabs() {
                                   setShowDropSuggestions(true);
                                 }}
                                 onFocus={() => setShowDropSuggestions(true)}
-                                onBlur={() => setTimeout(() => setShowDropSuggestions(false), 200)}
+                                onBlur={() => setTimeout(() => setShowDropSuggestions(false), 250)}
                                 placeholder="Type drop-off location / hotel..."
                               />
-                              {showDropSuggestions && !googleMapsLoaded && (
-                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216] border border-white/10 rounded-2xl mt-2 max-h-60 overflow-y-auto shadow-2xl p-2 space-y-1">
-                                  {popularLocations.map((loc, i) => (
+                              {showDropSuggestions && dropSuggestions.length > 0 && (
+                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216]/95 border border-white/10 rounded-2xl mt-2 max-h-60 overflow-y-auto shadow-2xl p-2 space-y-1 backdrop-blur-md">
+                                  {dropSuggestions.map((loc, i) => (
                                     <button
                                       key={i}
+                                      type="button"
                                       onClick={() => {
                                         setDropInput(loc.name);
+                                        setDropCoords({ lat: loc.lat, lon: loc.lon, name: loc.name });
                                         setShowDropSuggestions(false);
                                       }}
                                       className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-xs font-bold text-white/80 transition-colors flex items-center gap-2"
                                     >
-                                      <MapPin className="w-3.5 h-3.5 text-kashmir-gold" />
-                                      {loc.name}
+                                      <MapPin className="w-3.5 h-3.5 text-red-500" />
+                                      <div className="flex flex-col min-w-0 text-left">
+                                        <span className="truncate font-bold">{loc.name}</span>
+                                        <span className="text-[8px] text-white/30 truncate font-normal">{loc.fullName}</span>
+                                      </div>
                                     </button>
                                   ))}
+                                </div>
+                              )}
+                              {showDropSuggestions && searchingDrop && (
+                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216]/95 border border-white/10 rounded-2xl mt-2 p-4 shadow-2xl flex items-center justify-center gap-2 backdrop-blur-md">
+                                  <Loader2 className="w-4 h-4 text-kashmir-gold animate-spin" />
+                                  <span className="text-[10px] uppercase font-black tracking-wider text-white/40">Searching...</span>
                                 </div>
                               )}
                             </>
@@ -901,6 +1215,29 @@ export default function Cabs() {
                               min={bookingDate || new Date().toISOString().split('T')[0]}
                               className="h-14 bg-white/[0.03] border border-white/5 rounded-2xl text-white px-6 font-bold focus:border-kashmir-gold/45"
                             />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Interactive Map */}
+                      <div className="relative w-full h-80 rounded-[2rem] overflow-hidden border border-white/5 bg-[#0a0f12]/30 shadow-inner group mt-4">
+                        {/* Leaflet Map Div */}
+                        <div ref={mapRef} className="w-full h-full z-10" />
+                        
+                        {!leafletLoaded && (
+                          <div className="absolute inset-0 bg-[#0a0f12]/95 flex flex-col items-center justify-center gap-3 z-20">
+                            <Loader2 className="w-8 h-8 text-kashmir-gold animate-spin" />
+                            <p className="text-[10px] uppercase tracking-[0.25em] font-black text-white/30">Initializing Secure GPS Mapping...</p>
+                          </div>
+                        )}
+                        
+                        {leafletLoaded && !pickupCoords && !dropCoords && (
+                          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6 bg-black/50 backdrop-blur-[1px] z-20 transition-all duration-500">
+                            <div className="bg-[#0a0f12]/95 border border-white/5 p-6 rounded-3xl flex flex-col items-center gap-2.5 max-w-xs text-center shadow-2xl pointer-events-auto">
+                              <MapPin className="w-6 h-6 text-kashmir-gold animate-bounce" />
+                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">Interactive GPS Routing</span>
+                              <span className="text-[9px] font-bold text-white/40 leading-relaxed">Enter locations or use the GPS button to plot your chauffeur route.</span>
+                            </div>
                           </div>
                         )}
                       </div>
