@@ -671,6 +671,10 @@ export default function Cabs() {
       navigate('/auth?redirect=/cabs');
       return;
     }
+    if (!selectedCab) {
+      toast.error('Please select a vehicle class from the fleet first');
+      return;
+    }
     if (tripType === 'airport' && airportDirection === 'arrival' && !dropInput) {
       toast.error('Please input Hotel / Drop-off location');
       return;
@@ -693,99 +697,73 @@ export default function Cabs() {
     setSelectedOffer(null);
     setTrackingStep(0);
 
-    // Simulate bids arriving in real-time
+    // Simulate bids arriving in real-time for the selected cab type
     const timers = [
       setTimeout(() => {
-        const cab = resolvedVehicles.find(v => v.name.toLowerCase().includes('ertiga')) || resolvedVehicles[1] || resolvedVehicles[0];
-        const fare = calculateFare(cab);
+        const fare = calculateFare(selectedCab);
         setDriverOffers(prev => [...prev, {
-          id: 'driver-shabir',
-          driverName: 'Shabir Ahmad',
+          id: 'driver-offer-1',
+          driverName: 'Verified Chauffeur #104',
           driverPhone: '+919906771122',
-          driverRating: 4.8,
-          driverTours: 89,
-          vehicleName: cab.name,
-          vehicleType: cab.type,
-          vehicleImage: cab.image,
-          capacity: cab.capacity,
-          luggage: cab.luggage,
-          features: cab.features,
+          driverRating: 4.85,
+          driverTours: 124,
+          vehicleName: selectedCab.name,
+          vehicleType: selectedCab.type,
+          vehicleImage: selectedCab.image,
+          capacity: selectedCab.capacity,
+          luggage: selectedCab.luggage,
+          features: selectedCab.features,
           initialBid: Math.round(fare * 0.95),
           currentBid: Math.round(fare * 0.95),
           status: 'received',
           registrationNo: 'JK-01-AB-7700',
-          cabObject: cab
+          cabObject: selectedCab
         }]);
       }, 1200),
 
       setTimeout(() => {
-        const cab = resolvedVehicles.find(v => v.name.toLowerCase().includes('sedan')) || resolvedVehicles[0];
-        const fare = calculateFare(cab);
+        const fare = calculateFare(selectedCab);
         setDriverOffers(prev => [...prev, {
-          id: 'driver-farooq',
-          driverName: 'Farooq Shah',
+          id: 'driver-offer-2',
+          driverName: 'Verified Chauffeur #208',
           driverPhone: '+919906334455',
-          driverRating: 4.7,
-          driverTours: 76,
-          vehicleName: cab.name,
-          vehicleType: cab.type,
-          vehicleImage: cab.image,
-          capacity: cab.capacity,
-          luggage: cab.luggage,
-          features: cab.features,
-          initialBid: Math.round(fare * 0.9),
-          currentBid: Math.round(fare * 0.9),
-          status: 'received',
-          registrationNo: 'JK-01-AB-1122',
-          cabObject: cab
-        }]);
-      }, 2400),
-
-      setTimeout(() => {
-        const cab = resolvedVehicles.find(v => v.name.toLowerCase().includes('crysta') || v.name.toLowerCase().includes('innova')) || resolvedVehicles[2] || resolvedVehicles[0];
-        const fare = calculateFare(cab);
-        setDriverOffers(prev => [...prev, {
-          id: 'driver-mushtaq',
-          driverName: 'Mushtaq Ahmad',
-          driverPhone: '+919906112233',
-          driverRating: 4.95,
-          driverTours: 142,
-          vehicleName: cab.name,
-          vehicleType: cab.type,
-          vehicleImage: cab.image,
-          capacity: cab.capacity,
-          luggage: cab.luggage,
-          features: cab.features,
+          driverRating: 4.92,
+          driverTours: 215,
+          vehicleName: selectedCab.name,
+          vehicleType: selectedCab.type,
+          vehicleImage: selectedCab.image,
+          capacity: selectedCab.capacity,
+          luggage: selectedCab.luggage,
+          features: selectedCab.features,
           initialBid: Math.round(fare * 1.05),
           currentBid: Math.round(fare * 1.05),
           status: 'received',
-          registrationNo: 'JK-01-AB-8899',
-          cabObject: cab
+          registrationNo: 'JK-01-AB-1122',
+          cabObject: selectedCab
         }]);
-      }, 3800),
+      }, 2800),
 
       setTimeout(() => {
-        const cab = resolvedVehicles.find(v => v.name.toLowerCase().includes('urbania') || v.name.toLowerCase().includes('tempo') || v.name.toLowerCase().includes('traveller')) || resolvedVehicles[4] || resolvedVehicles[0];
-        const fare = calculateFare(cab);
+        const fare = calculateFare(selectedCab);
         setDriverOffers(prev => [...prev, {
-          id: 'driver-bashir',
-          driverName: 'Bashir Lone',
-          driverPhone: '+919906556677',
-          driverRating: 4.9,
-          driverTours: 210,
-          vehicleName: cab.name,
-          vehicleType: cab.type,
-          vehicleImage: cab.image,
-          capacity: cab.capacity,
-          luggage: cab.luggage,
-          features: cab.features,
-          initialBid: Math.round(fare * 1.1),
-          currentBid: Math.round(fare * 1.1),
+          id: 'driver-offer-3',
+          driverName: 'Verified Chauffeur #312',
+          driverPhone: '+919906112233',
+          driverRating: 4.78,
+          driverTours: 98,
+          vehicleName: selectedCab.name,
+          vehicleType: selectedCab.type,
+          vehicleImage: selectedCab.image,
+          capacity: selectedCab.capacity,
+          luggage: selectedCab.luggage,
+          features: selectedCab.features,
+          initialBid: Math.round(fare * 1.0),
+          currentBid: Math.round(fare * 1.0),
           status: 'received',
-          registrationNo: 'JK-01-AB-5566',
-          cabObject: cab
+          registrationNo: 'JK-01-AB-8899',
+          cabObject: selectedCab
         }]);
-      }, 5200)
+      }, 4400)
     ];
 
     return () => timers.forEach(t => clearTimeout(t));
@@ -1393,29 +1371,39 @@ export default function Cabs() {
                             <div 
                               key={offer.id}
                               className={cn(
-                                "p-6 rounded-[2.5rem] bg-white/[0.01] border transition-all duration-500 flex flex-col justify-between gap-6 relative overflow-hidden",
-                                offer.status === 'accepted' ? "border-emerald-500/30 bg-emerald-500/[0.01]" : "border-white/5 hover:border-white/10"
+                                "p-8 rounded-[2.5rem] bg-gradient-to-br from-[#0c1215]/90 to-[#070b0d]/90 border transition-all duration-500 flex flex-col justify-between gap-6 relative overflow-hidden backdrop-blur-3xl shadow-2xl",
+                                offer.status === 'accepted' ? "border-emerald-500/25 bg-emerald-500/[0.02]" : "border-white/5 hover:border-kashmir-gold/25"
                               )}
                             >
-                              <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-bold text-white/40 shrink-0 text-lg relative">
-                                    {offer.driverName.split(' ').map((n: string) => n[0]).join('')}
-                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#05080a]" />
+                              <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/[0.01] blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+
+                              <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center relative z-10">
+                                <div className="flex items-center gap-5">
+                                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-kashmir-gold/10 to-amber-600/10 border border-kashmir-gold/20 flex items-center justify-center font-display font-black text-kashmir-gold shrink-0 text-xl shadow-inner relative">
+                                    <Shield className="w-6 h-6 text-kashmir-gold" />
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#05080a] rounded-full flex items-center justify-center">
+                                      <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full relative flex items-center justify-center">
+                                        <div className="absolute w-4 h-4 rounded-full bg-emerald-500/30 animate-ping" />
+                                      </div>
+                                    </div>
                                   </div>
                                   <div>
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="font-bold text-white text-lg">{offer.driverName}</h4>
-                                      <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-none font-bold uppercase text-[7px] tracking-wider px-2 py-0.5">
+                                    <div className="flex items-center gap-2.5">
+                                      <h4 className="font-display font-black text-white text-lg tracking-tight">{offer.driverName}</h4>
+                                      <span className="flex items-center gap-1 text-[9px] font-bold text-kashmir-gold bg-kashmir-gold/5 px-2 py-0.5 rounded-full border border-kashmir-gold/10">
                                         ★ {offer.driverRating}
-                                      </Badge>
+                                      </span>
                                     </div>
-                                    <p className="text-xs text-white/40 mt-0.5">{offer.driverTours} tours completed</p>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-kashmir-gold mt-1.5 font-bold">{offer.vehicleName} ({offer.vehicleType})</p>
+                                    <div className="flex items-center gap-3 mt-1.5 text-xs text-white/40 font-medium">
+                                      <span>{offer.driverTours} rides completed</span>
+                                      <div className="w-1 h-1 rounded-full bg-white/20" />
+                                      <span className="text-[10px] font-black uppercase tracking-wider text-kashmir-gold">{offer.registrationNo}</span>
+                                    </div>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-white/30 mt-2">Vehicle: {offer.vehicleName} ({offer.vehicleType})</p>
                                   </div>
                                 </div>
 
-                                <div className="relative w-40 h-24 rounded-2xl bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.12)_0%,transparent_75%)] flex items-center justify-center p-2 border border-white/5 shrink-0 self-center md:self-auto">
+                                <div className="relative w-44 h-24 rounded-2xl bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.1)_0%,transparent_75%)] flex items-center justify-center p-3 border border-white/5 shrink-0 self-center md:self-auto shadow-inner">
                                   {/* Floor shadow ellipse */}
                                   <div className="absolute bottom-2 w-4/5 h-4 bg-black/60 blur-[10px] rounded-[100%]" />
                                   <img 
@@ -1427,22 +1415,27 @@ export default function Cabs() {
 
                                 <div className="text-right self-stretch md:self-auto flex md:flex-col justify-between md:justify-center items-center md:items-end border-t md:border-t-0 border-white/5 pt-4 md:pt-0">
                                   <div>
-                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20 block">Driver Offer</span>
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block mb-0.5">Estimated Fare</span>
                                     <span className={cn(
-                                      "text-2xl font-black italic block mt-0.5",
+                                      "text-3xl font-black tracking-tighter block",
                                       offer.status === 'accepted' ? "text-emerald-400" : "text-white"
                                     )}>
                                       ₹{offer.currentBid.toLocaleString()}
                                     </span>
                                   </div>
                                   {offer.status === 'countered' && (
-                                    <Badge className="bg-amber-500/10 text-amber-400 border-none text-[8px] font-black uppercase tracking-wider mt-1">
+                                    <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
                                       Counter Offer
                                     </Badge>
                                   )}
                                   {offer.status === 'accepted' && (
-                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-none text-[8px] font-black uppercase tracking-wider mt-1">
-                                      Fare Agreed
+                                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
+                                      Fare Confirmed
+                                    </Badge>
+                                  )}
+                                  {offer.status === 'rejected' && (
+                                    <Badge className="bg-red-500/10 text-red-400 border border-red-500/20 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
+                                      Fare Rejected
                                     </Badge>
                                   )}
                                 </div>
@@ -1450,7 +1443,7 @@ export default function Cabs() {
 
                               {offer.driverMessage && (
                                 <div className={cn(
-                                  "p-4 rounded-2xl text-xs font-semibold leading-relaxed",
+                                  "p-4 rounded-2xl text-xs font-semibold leading-relaxed relative z-10",
                                   offer.status === 'accepted' ? "bg-emerald-500/5 text-emerald-400 border border-emerald-500/10" :
                                   offer.status === 'rejected' ? "bg-red-500/5 text-red-400 border border-red-500/10" :
                                   "bg-white/5 text-amber-400 border border-white/5"
@@ -1459,13 +1452,13 @@ export default function Cabs() {
                                 </div>
                               )}
 
-                              <div className="flex gap-4 border-t border-white/5 pt-4">
+                              <div className="flex gap-4 border-t border-white/5 pt-4 relative z-10">
                                 {offer.status !== 'accepted' && (
                                   <>
                                     <Button
                                       onClick={() => handleAcceptOffer(offer)}
                                       disabled={isResponding}
-                                      className="flex-1 h-12 rounded-xl bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[9px] uppercase tracking-widest transition-all duration-300"
+                                      className="flex-1 h-14 rounded-2xl bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-lg"
                                     >
                                       Accept Ride (₹{offer.currentBid})
                                     </Button>
@@ -1473,7 +1466,7 @@ export default function Cabs() {
                                       onClick={() => handleNegotiatePrice(offer.id)}
                                       disabled={isResponding || isNegotiating}
                                       variant="outline"
-                                      className="flex-1 h-12 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10 font-black text-[9px] uppercase tracking-widest transition-all"
+                                      className="flex-1 h-14 rounded-2xl border-white/10 bg-white/5 text-white hover:bg-white/10 font-black text-[10px] uppercase tracking-widest transition-all"
                                     >
                                       Negotiate Fare
                                     </Button>
@@ -1482,7 +1475,7 @@ export default function Cabs() {
                                 {offer.status === 'accepted' && (
                                   <Button
                                     onClick={() => handleAcceptOffer(offer)}
-                                    className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-black text-[9px] uppercase tracking-widest transition-all duration-300 shadow-lg"
+                                    className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-black font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-lg shadow-emerald-500/10 animate-bounce"
                                   >
                                     Confirm booking at negotiated price
                                   </Button>
