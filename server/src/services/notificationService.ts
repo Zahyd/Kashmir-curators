@@ -135,5 +135,72 @@ export const notificationService = {
       </div>
     `;
     await this.sendCustomerEmail(inquiry.email, subject, html);
+  },
+
+  /**
+   * Send B2B Reservation Request Email to Hotel Partner
+   */
+  async sendHotelReservationRequest(reservation: any, publicUrl: string) {
+    const to = reservation.hotel.contactEmail || 'operations@kashmircurators.com';
+    const subject = `URGENT: Booking Confirmation Request - Guest: ${reservation.guestName}`;
+    const checkInDate = new Date(reservation.checkIn).toLocaleDateString('en-US', { dateStyle: 'long' });
+    const checkOutDate = new Date(reservation.checkOut).toLocaleDateString('en-US', { dateStyle: 'long' });
+    
+    const html = `
+      <div style="font-family: sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; padding: 25px; border-radius: 16px;">
+        <div style="text-align: center; border-bottom: 2px solid #b5852a; padding-bottom: 15px; margin-bottom: 25px;">
+          <h2 style="color: #b5852a; margin: 0; font-size: 24px; letter-spacing: 1px;">KASHMIR CURATORS</h2>
+          <span style="font-size: 9px; font-weight: 900; color: #64748b; letter-spacing: 3px; text-transform: uppercase;">Luxury Reservation Engine</span>
+        </div>
+        <p>Dear Reservations Desk at <strong>${reservation.hotel.name}</strong>,</p>
+        <p>Please review and confirm the following guest reservation details:</p>
+        
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #64748b; font-size: 13px; width: 40%;">Guest Name:</td>
+              <td style="padding: 6px 0; color: #0f172a; font-size: 14px; font-weight: bold;">${reservation.guestName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #64748b; font-size: 13px;">Check-In Date:</td>
+              <td style="padding: 6px 0; color: #0f172a; font-size: 14px;">${checkInDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #64748b; font-size: 13px;">Check-Out Date:</td>
+              <td style="padding: 6px 0; color: #0f172a; font-size: 14px;">${checkOutDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #64748b; font-size: 13px;">Room Type:</td>
+              <td style="padding: 6px 0; color: #0f172a; font-size: 14px;">${reservation.roomType}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #64748b; font-size: 13px;">Number of Rooms:</td>
+              <td style="padding: 6px 0; color: #0f172a; font-size: 14px;">${reservation.roomsCount} Room(s)</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #64748b; font-size: 13px;">Meal Plan:</td>
+              <td style="padding: 6px 0; color: #0f172a; font-size: 14px; font-weight: bold; color: #b5852a;">${reservation.mealPlan}</td>
+            </tr>
+            ${reservation.specialRequests ? `
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #64748b; font-size: 13px; vertical-align: top;">Special Requests:</td>
+              <td style="padding: 6px 0; color: #334155; font-size: 13px; font-style: italic;">"${reservation.specialRequests}"</td>
+            </tr>
+            ` : ''}
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${publicUrl}" style="background-color: #b5852a; color: white; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block; box-shadow: 0 4px 10px rgba(181,133,42,0.25); font-size: 14px;">Review & Acknowledge Booking</a>
+        </div>
+        
+        <p style="font-size: 11px; color: #94a3b8; margin-top: 25px;">Note: This email contains a secure, private confirmation link generated dynamically for your property. Clicking allows you to instantly confirm room availability or reject this request.</p>
+        
+        <div style="border-top: 1px solid #e2e8f0; margin-top: 35px; padding-top: 20px; font-size: 11px; text-align: center; color: #94a3b8;">
+          Kashmir Curators Operations Desk &copy; 2026. All rights reserved.
+        </div>
+      </div>
+    `;
+    return await this.sendCustomerEmail(to, subject, html);
   }
 };

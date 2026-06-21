@@ -1,6 +1,7 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { notificationService } from '../services/notificationService';
 
 // Helper to compute nights between check-in and check-out
 const calculateNights = (checkInStr: string, checkOutStr: string): number => {
@@ -434,6 +435,23 @@ export const simulateSendQuote = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    // Send actual email if channel is email
+    if (channel === 'email') {
+      const referer = req.headers.referer || req.headers.origin || 'https://kashmir-connect-main.vercel.app';
+      let cleanOrigin = 'https://kashmir-connect-main.vercel.app';
+      try {
+        const urlObj = new URL(referer);
+        cleanOrigin = urlObj.origin;
+      } catch (e) {
+        if (referer.startsWith('http')) {
+          cleanOrigin = referer;
+        }
+      }
+      const publicUrl = `${cleanOrigin}/hotel/confirm/${existing.id}`;
+      console.log(`[Hotel Automation] Dispatching actual request email for reservation ${existing.id} to URL: ${publicUrl}`);
+      await notificationService.sendHotelReservationRequest(updated, publicUrl);
+    }
+
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
         type: 'UPDATE',
@@ -448,6 +466,7 @@ export const simulateSendQuote = async (req: AuthRequest, res: Response) => {
       reservation: updated
     });
   } catch (error: any) {
+    console.error('[ReservationsController] Send request error:', error);
     res.status(500).json({ error: 'Failed to dispatch quote' });
   }
 };
@@ -474,5 +493,141 @@ export const deleteReservation = async (req: AuthRequest, res: Response) => {
     res.json({ success: true, message: 'Reservation successfully deleted' });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete reservation' });
+  }
+};
+
+// Retrieve reservation details for secure public web confirmations
+export const getPublicReservation = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const reservation = await p.hotelReservation.findUnique({
+      where: { id: req.params.id },
+      include: { hotel: true }
+    });
+
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation details not found' });
+    }
+
+    // Return only non-sensitive particulars for public viewing
+    res.json({
+      id: reservation.id,
+      hotelName: reservation.hotel.name,
+      hotelLocation: reservation.hotel.location,
+      guestName: reservation.guestName,
+      checkIn: reservation.checkIn,
+      checkOut: reservation.checkOut,
+      roomType: reservation.roomType,
+      roomsCount: reservation.roomsCount,
+      mealPlan: reservation.mealPlan,
+      specialRequests: reservation.specialRequests,
+      status: reservation.status
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] Public fetch error:', error);
+    res.status(500).json({ error: 'Failed to retrieve reservation details' });
+  }
+};
+
+// Public confirm endpoint called from hotel confirmation landing page
+export const confirmPublicReservation = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+    const { bookingReference } = req.body;
+
+    const existing = await p.hotelReservation.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+
+    let history = [];
+    try {
+      history = JSON.parse(existing.auditLogs || '[]');
+    } catch (e) {
+      history = [];
+    }
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Confirmed by Hotel Partner',
+      user: 'Hotel Partner via Web Link',
+      details: `Reservation confirmed directly by hotel. Reference code: ${bookingReference || 'N/A'}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id },
+      data: {
+        status: 'Confirmed',
+        bookingReference: bookingReference || existing.bookingReference,
+        auditLogs: JSON.stringify(history)
+      },
+      include: {
+        hotel: true,
+        inquiry: true
+      }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'UPDATE',
+        message: `Hotel Reservation CONFIRMED by Hotel: ${updated.hotel.name} for ${updated.guestName}`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json({ success: true, message: 'Reservation confirmed successfully', reservation: updated });
+  } catch (error: any) {
+    console.error('[ReservationsController] Public confirm error:', error);
+    res.status(500).json({ error: 'Failed to confirm reservation' });
+  }
+};
+
+// Public reject endpoint called from hotel confirmation landing page
+export const rejectPublicReservation = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const existing = await p.hotelReservation.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+
+    let history = [];
+    try {
+      history = JSON.parse(existing.auditLogs || '[]');
+    } catch (e) {
+      history = [];
+    }
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Declined by Hotel Partner',
+      user: 'Hotel Partner via Web Link',
+      details: `Reservation declined by hotel. Reason: ${reason || 'Not specified'}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id },
+      data: {
+        status: 'Rejected',
+        auditLogs: JSON.stringify(history)
+      },
+      include: {
+        hotel: true,
+        inquiry: true
+      }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'UPDATE',
+        message: `Hotel Reservation DECLINED by Hotel: ${updated.hotel.name} for ${updated.guestName}`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json({ success: true, message: 'Reservation declined successfully', reservation: updated });
+  } catch (error: any) {
+    console.error('[ReservationsController] Public decline error:', error);
+    res.status(500).json({ error: 'Failed to decline reservation' });
   }
 };

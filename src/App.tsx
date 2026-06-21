@@ -17,6 +17,7 @@ import TripPlanner from "./pages/TripPlanner";
 import NotFound from "./pages/NotFound";
 import BlogList from "./pages/BlogList";
 import BlogPost from "./pages/BlogPost";
+import HotelConfirm from "./pages/HotelConfirm";
 
 import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
@@ -53,6 +54,7 @@ const App = () => {
               <Route path="/sales" element={<SalesAuth />} />
               <Route path="/sales/" element={<SalesAuth />} />
               <Route path="/payment-request/:paymentId" element={<PaymentRequest />} />
+              <Route path="/hotel/confirm/:reservationId" element={<HotelConfirm />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
