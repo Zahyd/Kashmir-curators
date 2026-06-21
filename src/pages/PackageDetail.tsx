@@ -197,7 +197,7 @@ export default function PackageDetail() {
       <Navbar />
 
       {/* Back Button */}
-      <div className="container mx-auto px-4 pt-28">
+      <div className="container mx-auto px-4 pt-28 relative z-10">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 text-white/60 hover:text-white hover:bg-white/5 rounded-xl px-4 py-2">
           <ArrowLeft className="h-4 w-4 mr-2 text-kashmir-gold" />
           Back
@@ -277,16 +277,20 @@ export default function PackageDetail() {
               )}
 
               {/* Highlights */}
-              <div className="border-t border-white/5 pt-6">
-                <h3 className="font-display text-lg font-bold text-white mb-3 uppercase tracking-wider">Highlights</h3>
-                <div className="flex flex-wrap gap-2">
-                  {pkg.highlights.map((highlight, i) => (
-                    <span key={i} className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-white/80 hover:bg-white/10 transition-colors">
-                      {highlight}
-                    </span>
-                  ))}
+              {pkg.highlights && pkg.highlights.filter(h => h && h.trim() !== "").length > 0 && (
+                <div className="border-t border-white/5 pt-6">
+                  <h3 className="font-display text-lg font-bold text-white mb-3 uppercase tracking-wider">Highlights</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {pkg.highlights
+                      .filter(h => h && h.trim() !== "")
+                      .map((highlight, i) => (
+                        <span key={i} className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-white/80 hover:bg-white/10 transition-colors">
+                          {highlight}
+                        </span>
+                      ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Certified Local Curator Section */}
               {curator && (

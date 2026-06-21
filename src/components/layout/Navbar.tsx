@@ -40,11 +40,11 @@ export default function Navbar() {
 
   return (
     <nav className={cn(
-      "fixed top-0 left-0 right-0 z-50 transition-all duration-700 px-6 py-4 md:px-12",
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-700 px-6 py-4 md:px-12 pointer-events-none",
       scrolled ? "md:py-4" : "md:py-8"
     )}>
       <div className={cn(
-        "container mx-auto px-6 rounded-full transition-all duration-700 border border-white/5",
+        "container mx-auto px-6 rounded-full transition-all duration-700 border border-white/5 pointer-events-auto",
         scrolled ? "bg-black/60 backdrop-blur-3xl shadow-2xl py-3" : "bg-transparent py-4 border-transparent"
       )}>
         <div className="flex items-center justify-between">
