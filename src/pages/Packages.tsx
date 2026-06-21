@@ -355,9 +355,6 @@ export default function Packages() {
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 block mb-2">Portfolio Value</span>
                             <span className="text-2xl font-black text-kashmir-gold uppercase tracking-wider">On Request</span>
                           </div>
-                          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-kashmir-gold group-hover:text-black transition-all duration-500 font-bold text-xs">
-                            Quote
-                          </div>
                         </div>
                       </div>
                     </div>
