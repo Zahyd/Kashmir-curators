@@ -72,11 +72,24 @@ export default function PackageDetail() {
     fetchCurators();
   }, []);
 
-  const curator = curators.find(c => {
-    if (id === 'pkg-royal-kashmir' && c.id === 'curator-priya') return true;
-    if (id === 'pkg-winter-wonder' && c.id === 'curator-faheem') return true;
-    return false;
-  }) || curators[0];
+  const curator = useMemo(() => {
+    if (!pkg || curators.length === 0) return null;
+    const dest = pkg.destination.toLowerCase();
+    
+    // 1. Match destination keywords with curator's role/bio
+    const matched = curators.find(c => {
+      const role = c.role.toLowerCase();
+      const bio = c.bio.toLowerCase();
+      const keywords = dest.split(/[\s\-\,]+/g).filter(k => k.length > 2);
+      return keywords.some(kw => role.includes(kw) || bio.includes(kw));
+    });
+    
+    if (matched) return matched;
+    
+    // 2. Hash package ID to assign different curators stably
+    const hash = pkg.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return curators[hash % curators.length];
+  }, [pkg, curators]);
 
   if (isLoading) {
     return (
