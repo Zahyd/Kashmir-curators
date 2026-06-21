@@ -28,41 +28,7 @@ interface ReviewSectionProps {
   totalReviews: number;
 }
 
-// Mock reviews data as fallback
-const mockReviews: Review[] = [
-  {
-    id: 'rev-m1',
-    userName: 'Priya Sharma',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
-    rating: 5,
-    date: '2026-04-15',
-    text: 'Absolutely magical experience! The itinerary was perfectly planned and our guide was knowledgeable. The houseboat stay was the highlight of our trip. Highly recommend!',
-    helpful: 24,
-    tripType: 'Family Trip',
-    isVerified: true,
-  },
-  {
-    id: 'rev-m2',
-    userName: 'Rahul Verma',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-    rating: 5,
-    date: '2026-03-28',
-    text: 'Kashmir truly is paradise on Earth. The package included everything we needed. Great value for money and excellent customer service throughout.',
-    helpful: 18,
-    tripType: 'Honeymoon',
-    isVerified: true,
-  },
-  {
-    id: 'rev-m3',
-    userName: 'Ananya Patel',
-    rating: 4,
-    date: '2026-02-10',
-    text: 'Beautiful destinations and well-organized tour. The only small issue was the hotel in Pahalgam could have been better. Everything else was perfect!',
-    helpful: 12,
-    tripType: 'Solo Travel',
-    isVerified: false,
-  }
-];
+// No mock reviews, real-time reviews only
 
 export default function ReviewSection({ packageId, packageName, averageRating, totalReviews }: ReviewSectionProps) {
   const { isAuthenticated, user } = useAuth();
@@ -83,14 +49,13 @@ export default function ReviewSection({ packageId, packageName, averageRating, t
         const res = await fetch(`${API_BASE_URL}/packages/${packageId}/reviews`);
         if (res.ok) {
           const data = await res.json();
-          // Merge real reviews with mock data as fallbacks if database is newly seeded
-          setReviews(data.length > 0 ? data : mockReviews);
+          setReviews(data || []);
         } else {
-          setReviews(mockReviews);
+          setReviews([]);
         }
       } catch (err) {
         console.error('Failed to fetch reviews:', err);
-        setReviews(mockReviews);
+        setReviews([]);
       } finally {
         setIsLoading(false);
       }
@@ -160,15 +125,15 @@ export default function ReviewSection({ packageId, packageName, averageRating, t
   };
 
   return (
-    <div className="bg-card rounded-2xl p-6 shadow-sm">
-      <div className="flex items-start justify-between mb-6">
+    <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 backdrop-blur-xl text-white">
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h3 className="font-display text-xl font-semibold mb-1">Reviews & Ratings</h3>
-          <p className="text-muted-foreground text-sm">{reviews.length} reviews</p>
+          <h3 className="font-display text-2xl font-bold mb-1 text-white">Reviews & Ratings</h3>
+          <p className="text-white/40 text-sm font-medium">{reviews.length} reviews</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="gold">Write a Review</Button>
+            <Button variant="gold" className="rounded-xl px-6 h-12 font-bold uppercase tracking-wider text-[10px] hover:scale-105 active:scale-95 transition-all">Write a Review</Button>
           </DialogTrigger>
           <DialogContent className="bg-[#0a0f12] text-white border-white/10">
             <DialogHeader>
@@ -250,7 +215,7 @@ export default function ReviewSection({ packageId, packageName, averageRating, t
               />
             ))}
           </div>
-          <p className="text-sm text-muted-foreground">{reviews.length} reviews</p>
+          <p className="text-sm text-white/40 font-medium">{reviews.length} reviews</p>
         </div>
 
         <div className="flex-1 space-y-2">
@@ -263,7 +228,7 @@ export default function ReviewSection({ packageId, packageName, averageRating, t
                   style={{ width: `${percentage}%` }}
                 />
               </div>
-              <span className="text-sm text-muted-foreground w-12">{percentage}%</span>
+              <span className="text-sm text-white/40 w-12 font-semibold">{percentage}%</span>
             </div>
           ))}
         </div>
@@ -271,73 +236,81 @@ export default function ReviewSection({ packageId, packageName, averageRating, t
 
       {/* Reviews List */}
       <div className="space-y-6">
-        {reviews.map((review) => (
-          <div key={review.id} className="pb-6 border-b border-white/5 last:border-0 last:pb-0">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                {review.avatar || review.userAvatar ? (
-                  <img src={review.avatar || review.userAvatar} alt={review.userName} className="w-full h-full object-cover" />
-                ) : (
-                  <User className="h-5 w-5 text-white/40" />
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-semibold text-white">{review.userName}</h4>
-                      {review.isVerified && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-kashmir-gold bg-kashmir-gold/10 px-2 py-0.5 rounded-full border border-kashmir-gold/20 shadow-[0_0_10px_rgba(212,175,55,0.15)]">
-                          <Crown className="w-2.5 h-2.5" /> Verified Luxury Traveler
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={cn(
-                              "h-3.5 w-3.5",
-                              star <= review.rating
-                                ? "fill-kashmir-gold text-kashmir-gold"
-                                : "text-white/20"
-                            )}
-                          />
-                        ))}
-                      </div>
-                      {review.tripType && (
-                        <span className="text-[10px] px-2 py-0.5 bg-white/5 text-white/40 rounded-full font-medium">
-                          {review.tripType}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(review.date).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </span>
-                </div>
-                <p className="text-white/70 text-sm mt-3 leading-relaxed">{review.text}</p>
-                <button
-                  onClick={() => handleLike(review.id)}
-                  className={cn(
-                    "flex items-center gap-2 mt-3 text-xs transition-colors",
-                    likedReviews.includes(review.id)
-                      ? "text-kashmir-gold"
-                      : "text-white/30 hover:text-white/60"
+        {reviews.length === 0 ? (
+          <div className="text-center py-16 bg-white/[0.01] border border-white/5 rounded-[2rem] flex flex-col items-center justify-center p-6">
+            <Star className="h-10 w-10 text-white/10 mb-4" />
+            <h4 className="font-display font-bold text-white text-lg mb-2">No Reviews Yet</h4>
+            <p className="text-white/40 text-sm max-w-sm mb-6">Be the first to share your luxury travel experience with other explorers.</p>
+          </div>
+        ) : (
+          reviews.map((review) => (
+            <div key={review.id} className="pb-6 border-b border-white/5 last:border-0 last:pb-0">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                  {review.avatar || review.userAvatar ? (
+                    <img src={review.avatar || review.userAvatar} alt={review.userName} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="h-5 w-5 text-white/40" />
                   )}
-                >
-                  <ThumbsUp className={cn("h-3.5 w-3.5", likedReviews.includes(review.id) && "fill-current")} />
-                  <span>Helpful ({review.helpful})</span>
-                </button>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold text-white">{review.userName}</h4>
+                        {review.isVerified && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-kashmir-gold bg-kashmir-gold/10 px-2 py-0.5 rounded-full border border-kashmir-gold/20 shadow-[0_0_10px_rgba(212,175,55,0.15)]">
+                            <Crown className="w-2.5 h-2.5" /> Verified Luxury Traveler
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                star <= review.rating
+                                  ? "fill-kashmir-gold text-kashmir-gold"
+                                  : "text-white/20"
+                              )}
+                            />
+                          ))}
+                        </div>
+                        {review.tripType && (
+                          <span className="text-[10px] px-2 py-0.5 bg-white/5 text-white/40 rounded-full font-medium">
+                            {review.tripType}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-white/30">
+                      {new Date(review.date).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-white/70 text-sm mt-3 leading-relaxed">{review.text}</p>
+                  <button
+                    onClick={() => handleLike(review.id)}
+                    className={cn(
+                      "flex items-center gap-2 mt-3 text-xs transition-colors",
+                      likedReviews.includes(review.id)
+                        ? "text-kashmir-gold"
+                        : "text-white/30 hover:text-white/60"
+                    )}
+                  >
+                    <ThumbsUp className={cn("h-3.5 w-3.5", likedReviews.includes(review.id) && "fill-current")} />
+                    <span>Helpful ({review.helpful})</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
