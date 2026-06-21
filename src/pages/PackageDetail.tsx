@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Star, Clock, MapPin, Check, X, ChevronLeft, ChevronRight, Calendar, Users, Building, Car, Loader2, ArrowLeft, ZoomIn, Crown, ShieldCheck } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
@@ -100,6 +100,17 @@ export default function PackageDetail() {
     const hotelExtra = hotelPrices[bookingData.hotelCategory as keyof typeof hotelPrices] * travelers;
     const cabExtra = cabPrices[bookingData.cabType as keyof typeof cabPrices];
     return base + hotelExtra + cabExtra;
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPayment(false);
+    toast.success("Payment completed successfully!");
+    handleBooking();
+  };
+
+  const handlePaymentFailure = (error: string) => {
+    setShowPayment(false);
+    toast.error(`Payment failed: ${error}`);
   };
 
   const handleBooking = async () => {
