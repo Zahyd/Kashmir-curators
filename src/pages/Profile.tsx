@@ -17,6 +17,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { API_BASE_URL } from '@/lib/api';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 const typeIcons = {
   package: Package,
@@ -440,6 +442,45 @@ export default function Profile() {
     setCardExpiry('');
     setCardCvc('');
     setCardName('');
+  };
+
+  const downloadInvoiceAsPdf = async (invoice: any) => {
+    const invoiceElement = document.getElementById(`invoice-panel-${invoice.id}`);
+    if (!invoiceElement) {
+      toast.error("Invoice panel element not found.");
+      return;
+    }
+
+    toast.loading("Generating premium PDF invoice...");
+    try {
+      // Temporarily hide actions for snapshot
+      const actions = invoiceElement.querySelector('.invoice-actions');
+      if (actions) actions.classList.add('hidden');
+
+      const canvas = await html2canvas(invoiceElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#0d1317'
+      });
+
+      if (actions) actions.classList.remove('hidden');
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width / 2, canvas.height / 2]
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`Invoice_${invoice.itemName.replace(/\s+/g, '_')}_${invoice.id.substring(0, 8).toUpperCase()}.pdf`);
+      toast.dismiss();
+      toast.success("Invoice PDF downloaded successfully!");
+    } catch (err) {
+      toast.dismiss();
+      console.error(err);
+      toast.error("Failed to generate PDF invoice.");
+    }
   };
 
   const activeAdvisory = KASHMIR_LOCATIONS.find(loc => loc.id === selectedLoc) || KASHMIR_LOCATIONS[0];
@@ -869,39 +910,47 @@ export default function Profile() {
                     <div className="space-y-4 text-left">
                       <h3 className="text-lg font-bold text-white/80">Pending Installment Plans</h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {[
-                          { id: 'inst-1', name: '25% Advance Booking Deposit', amount: 25000, due: 'Paid', status: 'paid' },
-                          { id: 'inst-2', name: '50% Hotel Block Booking', amount: 50000, due: 'Due in 5 Days', status: 'pending' },
-                          { id: 'inst-3', name: '25% Balance on Arrival', amount: 25000, due: 'Due on Arrival', status: 'pending' }
-                        ].map((installment) => {
-                          const isPaid = paidInstallments[installment.id] || installment.status === 'paid';
-                          return (
-                            <div key={installment.id} className="bg-[#0c1216]/65 border border-white/10 rounded-2xl p-5 flex flex-col justify-between min-h-[160px]">
-                              <div>
-                                <Badge className={cn("text-[8px] font-black uppercase px-2 py-0.5 tracking-wider mb-3.5",
-                                  isPaid ? "bg-green-500/20 text-green-400 border-green-500/20" : "bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/20"
-                                )}>
-                                  {isPaid ? 'Paid' : 'Unpaid'}
-                                </Badge>
-                                <h4 className="font-bold text-xs text-white leading-normal">{installment.name}</h4>
-                                <p className="text-[10px] text-white/40 mt-1">{installment.due}</p>
+                        {(() => {
+                          const totalActiveBookingAmount = bookings
+                            .filter(b => b.status === 'confirmed' || b.status === 'pending')
+                            .reduce((sum, b) => sum + b.totalAmount, 0);
+
+                          const installmentPlans = [
+                            { id: 'inst-1', name: '25% Advance Booking Deposit', amount: Math.round(totalActiveBookingAmount * 0.25), due: 'Paid', status: 'paid' },
+                            { id: 'inst-2', name: '50% Hotel Block Booking', amount: Math.round(totalActiveBookingAmount * 0.50), due: 'Due in 5 Days', status: 'pending' },
+                            { id: 'inst-3', name: '25% Balance on Arrival', amount: Math.round(totalActiveBookingAmount * 0.25), due: 'Due on Arrival', status: 'pending' }
+                          ];
+
+                          return installmentPlans.map((installment) => {
+                            const isPaid = paidInstallments[installment.id] || installment.status === 'paid' || installment.amount === 0;
+                            return (
+                              <div key={installment.id} className="bg-[#0c1216]/65 border border-white/10 rounded-2xl p-5 flex flex-col justify-between min-h-[160px]">
+                                <div>
+                                  <Badge className={cn("text-[8px] font-black uppercase px-2 py-0.5 tracking-wider mb-3.5",
+                                    isPaid ? "bg-green-500/20 text-green-400 border-green-500/20" : "bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/20"
+                                  )}>
+                                    {isPaid ? 'Paid' : 'Unpaid'}
+                                  </Badge>
+                                  <h4 className="font-bold text-xs text-white leading-normal">{installment.name}</h4>
+                                  <p className="text-[10px] text-white/40 mt-1">{installment.due}</p>
+                                </div>
+                                <div className="flex justify-between items-center mt-4">
+                                  <span className="text-sm font-black text-kashmir-gold">₹{installment.amount.toLocaleString()}</span>
+                                  {!isPaid && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="gold" 
+                                      onClick={() => setSelectedInstallment(installment)}
+                                      className="h-8 rounded-lg text-[10px] font-bold text-black px-3.5"
+                                    >
+                                      Pay Now
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex justify-between items-center mt-4">
-                                <span className="text-sm font-black text-kashmir-gold">₹{installment.amount.toLocaleString()}</span>
-                                {!isPaid && (
-                                  <Button 
-                                    size="sm" 
-                                    variant="gold" 
-                                    onClick={() => setSelectedInstallment(installment)}
-                                    className="h-8 rounded-lg text-[10px] font-bold text-black px-3.5"
-                                  >
-                                    Pay Now
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   )}
@@ -1558,7 +1607,7 @@ export default function Profile() {
       {/* Invoice Details Dialog */}
       <Dialog open={!!activeInvoice} onOpenChange={(open) => !open && setActiveInvoice(null)}>
         {activeInvoice && (
-          <DialogContent className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 md:p-8 max-w-lg">
+          <DialogContent id={`invoice-panel-${activeInvoice.id}`} className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 md:p-8 max-w-lg">
             <DialogHeader className="text-left border-b border-white/5 pb-4">
               <DialogTitle className="font-display text-2xl flex items-center justify-between text-kashmir-gold">
                 <span className="flex items-center gap-2">
@@ -1638,22 +1687,32 @@ export default function Profile() {
                 </table>
               </div>
 
-              {/* Verified Stamp */}
-              <div className="pt-2 flex justify-between items-center text-xs">
+              {/* Verified Stamp & Actions */}
+              <div className="pt-2 flex justify-between items-center text-xs invoice-actions">
                 <div className="flex items-center gap-2 text-green-400">
                   <ShieldCheck className="w-5 h-5 animate-pulse" />
                   <span className="font-extrabold uppercase tracking-wider text-[10px]">Payment Authenticated</span>
                 </div>
-                <Button 
-                  onClick={() => {
-                    window.print();
-                  }}
-                  variant="outline" 
-                  size="sm" 
-                  className="rounded-xl border-white/10 hover:bg-white/5 text-[10px] font-bold uppercase tracking-wider px-3 h-8"
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> Print Invoice
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => {
+                      window.print();
+                    }}
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-xl border-white/10 hover:bg-white/5 text-[10px] font-bold uppercase tracking-wider px-3 h-8"
+                  >
+                    Print
+                  </Button>
+                  <Button 
+                    onClick={() => downloadInvoiceAsPdf(activeInvoice)}
+                    variant="gold" 
+                    size="sm" 
+                    className="rounded-xl text-black font-bold uppercase tracking-wider px-3 h-8 flex items-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" /> PDF
+                  </Button>
+                </div>
               </div>
             </div>
 
