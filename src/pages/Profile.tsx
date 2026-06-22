@@ -105,6 +105,7 @@ export default function Profile() {
 
   // Slips/Vouchers display
   const [activeSlip, setActiveSlip] = useState<{ type: 'hotel' | 'flight' | 'cab', booking: any } | null>(null);
+  const [activeInvoice, setActiveInvoice] = useState<any | null>(null);
   const [showDriverTracking, setShowDriverTracking] = useState(false);
   const [trackingProgress, setTrackingProgress] = useState(0);
 
@@ -940,9 +941,7 @@ export default function Profile() {
                                     variant="ghost" 
                                     size="sm" 
                                     onClick={() => {
-                                      toast.success(`Opening Invoice for ${b.itemName}`, {
-                                        description: `Ref ID: ${b.id.substring(0, 8).toUpperCase()}`
-                                      });
+                                      setActiveInvoice(b);
                                     }}
                                     className="text-white/60 hover:text-kashmir-gold hover:bg-white/5 rounded-lg"
                                   >
@@ -1556,6 +1555,121 @@ export default function Profile() {
         )}
       </Dialog>
 
+      {/* Invoice Details Dialog */}
+      <Dialog open={!!activeInvoice} onOpenChange={(open) => !open && setActiveInvoice(null)}>
+        {activeInvoice && (
+          <DialogContent className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 md:p-8 max-w-lg">
+            <DialogHeader className="text-left border-b border-white/5 pb-4">
+              <DialogTitle className="font-display text-2xl flex items-center justify-between text-kashmir-gold">
+                <span className="flex items-center gap-2">
+                  <FileText className="w-6 h-6" /> Invoice Summary
+                </span>
+                <Badge className={cn("font-bold text-[9px] uppercase px-2 py-0.5 tracking-wider shadow-sm",
+                  activeInvoice.status === 'cancelled' ? 'bg-red-500/20 text-red-400 border-red-500/20' : 'bg-green-500/20 text-green-400 border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.1)]'
+                )}>
+                  {activeInvoice.status === 'cancelled' ? 'REFUNDED' : 'PAID'}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="py-6 text-left space-y-6">
+              {/* Header Info */}
+              <div className="flex justify-between items-start text-xs border-b border-white/5 pb-4">
+                <div>
+                  <h4 className="font-display text-sm font-bold text-white mb-1">KASHMIR CURATORS</h4>
+                  <p className="text-white/40">Luxury Travel Agency</p>
+                  <p className="text-white/40">Srinagar, Jammu & Kashmir</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black uppercase text-kashmir-gold tracking-widest mb-1">Invoice Number</p>
+                  <p className="font-mono font-bold text-white">INV-2026-{activeInvoice.id.toUpperCase().substring(0, 8)}</p>
+                  <p className="text-[10px] text-white/40 mt-2">Date: {new Date(activeInvoice.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Bill To */}
+              <div className="text-xs">
+                <p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-1">Billed To</p>
+                <p className="font-bold text-white">{user?.name}</p>
+                <p className="text-white/50">{user?.email}</p>
+                {user?.phone && <p className="text-white/50">{user.phone}</p>}
+              </div>
+
+              {/* Item Details Table */}
+              <div className="bg-black/35 rounded-2xl border border-white/5 overflow-hidden">
+                <table className="w-full text-xs text-left">
+                  <thead>
+                    <tr className="bg-white/5 text-[9px] font-black uppercase text-white/40 tracking-wider">
+                      <th className="p-3.5">Service Details</th>
+                      <th className="p-3.5 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-white/80">
+                    <tr>
+                      <td className="p-3.5">
+                        <p className="font-bold text-white">{activeInvoice.itemName}</p>
+                        <p className="text-[10px] text-white/40 mt-0.5">
+                          {activeInvoice.type === 'hotel' ? 'Premium Estate Stay' : activeInvoice.type === 'cab' ? 'Private Luxury Chauffeur Transit' : 'Bespoke Curated Tour Package'}
+                        </p>
+                      </td>
+                      <td className="p-3.5 text-right font-semibold">
+                        ₹{(activeInvoice.totalAmount * 0.9).toLocaleString()}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3.5 text-white/50">Curator Fee (5%)</td>
+                      <td className="p-3.5 text-right text-white/50">
+                        ₹{(activeInvoice.totalAmount * 0.05).toLocaleString()}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3.5 text-white/50">Local SGST/CGST (5%)</td>
+                      <td className="p-3.5 text-right text-white/50">
+                        ₹{(activeInvoice.totalAmount * 0.05).toLocaleString()}
+                      </td>
+                    </tr>
+                    <tr className="bg-white/5 font-bold text-white text-sm">
+                      <td className="p-3.5 text-kashmir-gold">Total Paid</td>
+                      <td className="p-3.5 text-right text-kashmir-gold">
+                        ₹{activeInvoice.totalAmount.toLocaleString()}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Verified Stamp */}
+              <div className="pt-2 flex justify-between items-center text-xs">
+                <div className="flex items-center gap-2 text-green-400">
+                  <ShieldCheck className="w-5 h-5 animate-pulse" />
+                  <span className="font-extrabold uppercase tracking-wider text-[10px]">Payment Authenticated</span>
+                </div>
+                <Button 
+                  onClick={() => {
+                    window.print();
+                  }}
+                  variant="outline" 
+                  size="sm" 
+                  className="rounded-xl border-white/10 hover:bg-white/5 text-[10px] font-bold uppercase tracking-wider px-3 h-8"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> Print Invoice
+                </Button>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveInvoice(null)} 
+                className="w-full rounded-xl border-white/10 hover:bg-white/5 font-bold h-11"
+              >
+                Close Invoice
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+
       {/* Chauffeur GPS Live Tracking Modal */}
       <Dialog open={showDriverTracking} onOpenChange={setShowDriverTracking}>
         <DialogContent className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 max-w-md">
@@ -2060,6 +2174,25 @@ function BookingTicket({ booking, onCancel, cancellingId, onShowSlip }: { bookin
       {/* Right side - Actions */}
       <div className="bg-white/[0.02] p-6 md:w-56 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-dashed border-white/15">
         
+        {(booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'completed') && (
+          <Button 
+            onClick={() => {
+              if (booking.type === 'hotel') {
+                onShowSlip({ type: 'hotel', booking });
+              } else if (booking.type === 'cab') {
+                onShowSlip({ type: 'cab', booking });
+              } else {
+                onShowSlip({ type: 'hotel', booking }); // Default to hotel stay voucher
+              }
+            }}
+            variant="gold"
+            className="w-full mb-3 rounded-xl text-black font-bold text-xs h-10 shadow-lg shadow-kashmir-gold/15 flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {booking.type === 'hotel' ? 'Preview Voucher' : booking.type === 'cab' ? 'Preview Details' : 'Preview Voucher'}
+          </Button>
+        )}
+
         {(booking.status === 'confirmed' || booking.status === 'pending') && (
           <Dialog>
             <DialogTrigger asChild>
