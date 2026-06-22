@@ -23,6 +23,7 @@ interface Profile {
   email: string;
   role: string;
   phone?: string;
+  uploadedDocuments?: string;
 }
 
 interface Inquiry {
@@ -65,6 +66,8 @@ interface AuthContextType {
   refreshBookings: () => Promise<void>;
   refreshInquiries: () => Promise<void>;
   sendSupportRequest: (message: string) => void;
+  updateProfile: (profileData: { name?: string; phone?: string; uploadedDocuments?: string }) => Promise<{ success: boolean; error?: string }>;
+  updateInquiry: (inquiryId: string, inquiryData: { feedback?: string }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -372,6 +375,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateProfile = async (profileData: { name?: string; phone?: string; uploadedDocuments?: string }) => {
+    if (!token) return { success: false, error: 'No token' };
+    try {
+      const response = await fetch(`${API_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileData)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setUser(data.user);
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    }
+  };
+
+  const updateInquiry = async (inquiryId: string, inquiryData: { feedback?: string }) => {
+    if (!token) return { success: false, error: 'No token' };
+    try {
+      const response = await fetch(`${API_URL}/inquiries/${inquiryId}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(inquiryData)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        fetchInquiries(token);
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -393,6 +442,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshBookings,
       refreshInquiries,
       sendSupportRequest,
+      updateProfile,
+      updateInquiry,
     }}>
       {children}
     </AuthContext.Provider>

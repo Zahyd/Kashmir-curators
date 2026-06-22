@@ -22,6 +22,7 @@ model User {
   bookings          Booking[]
   inquiries         Inquiry[]
   hotelReservations HotelReservation[] @relation("UserReservations")
+  uploadedDocuments String?            // JSON string of uploaded documents
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -144,6 +145,7 @@ model Inquiry {
   quoteData         String?            // JSON string of days/pricing
   proposalUrl       String?            // URL to uploaded PDF
   flightDetails     String?            // JSON string of flight preferences / enquiry details
+  feedback          String?            // Client comments / modification requests
   hotelReservations HotelReservation[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt

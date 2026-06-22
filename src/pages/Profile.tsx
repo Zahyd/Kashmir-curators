@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  User, Package, Building, Car, Calendar, Clock, MapPin, AlertCircle, 
+  User as UserIcon, Package, Building, Car, Calendar, Clock, MapPin, AlertCircle, 
   Loader2, Compass, LayoutDashboard, CreditCard, Settings, LogOut, 
   Ticket, Sparkles, Map, CloudSun, Phone, MessageSquare, Download, 
   FileText, Crown, Gift, ExternalLink, ShieldCheck, Star, Send, 
-  Paperclip, UserCheck, Check, Copy, ChevronRight, Share2, Plane
+  Paperclip, UserCheck, Check, Copy, ChevronRight, Share2, Plane, Trash2, Upload, Lock
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -18,25 +18,26 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { API_BASE_URL } from '@/lib/api';
 
-const statusColors = {
-  confirmed: 'bg-green-500/10 text-green-400 border-green-500/20',
-  pending: 'bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/20',
-  cancelled: 'bg-destructive/10 text-destructive border-destructive/20',
-  completed: 'bg-muted text-muted-foreground border-muted-foreground/20',
-};
-
 const typeIcons = {
   package: Package,
   hotel: Building,
   cab: Car,
 };
 
-type TabId = 'overview' | 'trips' | 'itineraries' | 'payments' | 'support' | 'rewards' | 'settings';
+type TabId = 'overview' | 'trips' | 'itineraries' | 'payments' | 'documents' | 'support' | 'rewards' | 'settings';
 
 interface ChatMessage {
   sender: 'user' | 'concierge';
   text: string;
   time: string;
+}
+
+interface UploadedDoc {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  uploadedAt: string;
 }
 
 const KASHMIR_LOCATIONS = [
@@ -80,7 +81,7 @@ const KASHMIR_LOCATIONS = [
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading, bookings, inquiries, cancelBooking, logout, sendSupportRequest } = useAuth();
+  const { user, token, isAuthenticated, isLoading, bookings, inquiries, cancelBooking, logout, sendSupportRequest, updateProfile, updateInquiry } = useAuth();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [conciergeMsg, setConciergeMsg] = useState('');
@@ -104,13 +105,39 @@ export default function Profile() {
 
   // Slips/Vouchers display
   const [activeSlip, setActiveSlip] = useState<{ type: 'hotel' | 'flight' | 'cab', booking: any } | null>(null);
+  const [showDriverTracking, setShowDriverTracking] = useState(false);
+  const [trackingProgress, setTrackingProgress] = useState(0);
+
+  // Rewards claiming
   const [claimedVouchers, setClaimedVouchers] = useState<Record<string, string>>({});
   const [viewingVoucher, setViewingVoucher] = useState<{ id: string, name: string, code: string } | null>(null);
 
-  // Notification Preferences
+  // Settings
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
   const [notifySMS, setNotifySMS] = useState(true);
   const [notifyBiometrics, setNotifyBiometrics] = useState(false);
+
+  // Interactive Itinerary State
+  const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
+  const [itineraryDays, setItineraryDays] = useState<any[]>([]);
+  const [selectedItineraryDay, setSelectedItineraryDay] = useState(1);
+  const [clientFeedback, setClientFeedback] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  // Document Vault State
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedDocType, setSelectedDocType] = useState<'Aadhaar Card' | 'Passport' | 'Flight Ticket' | 'Other'>('Aadhaar Card');
+
+  // Installment Payment state
+  const [selectedInstallment, setSelectedInstallment] = useState<{ id: string, name: string, amount: number, due: string, status: string } | null>(null);
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [isPayingInstallment, setIsPayingInstallment] = useState(false);
+  const [paymentMilestone, setPaymentMilestone] = useState('');
+  const [paidInstallments, setPaidInstallments] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -129,6 +156,24 @@ export default function Profile() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isConciergeTyping]);
+
+  // Handle Driver Tracking animation loop
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showDriverTracking) {
+      setTrackingProgress(0);
+      const interval = setInterval(() => {
+        setTrackingProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            return 100;
+          }
+          return prev + 1;
+        });
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [showDriverTracking]);
 
   const activeBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
   const pastBookings = bookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
@@ -156,6 +201,9 @@ export default function Profile() {
     nextTier = 'Maxed';
   }
 
+  // Parse uploaded documents
+  const uploadedDocs: UploadedDoc[] = user?.uploadedDocuments ? JSON.parse(user.uploadedDocuments) : [];
+
   if (isLoading || !isAuthenticated) {
     return null;
   }
@@ -176,10 +224,125 @@ export default function Profile() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingProfile(true);
-    // Simulate API update
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const res = await updateProfile({
+      name: editName,
+      phone: editPhone
+    });
     setIsSavingProfile(false);
-    toast.success('Profile details updated successfully!');
+    if (res.success) {
+      toast.success('Profile details updated successfully!');
+    } else {
+      toast.error(res.error || 'Failed to save changes.');
+    }
+  };
+
+  // Document Uploading
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setIsUploadingDoc(true);
+    toast.loading(`Uploading ${selectedDocType}...`);
+    try {
+      const res = await fetch(`${API_BASE_URL}/media/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      toast.dismiss();
+      if (res.ok) {
+        const media = await res.json();
+        const newDoc: UploadedDoc = {
+          id: media.id,
+          name: file.name,
+          url: media.url,
+          type: selectedDocType,
+          uploadedAt: new Date().toLocaleDateString()
+        };
+        const updatedDocs = [...uploadedDocs, newDoc];
+        
+        const updateRes = await updateProfile({
+          uploadedDocuments: JSON.stringify(updatedDocs)
+        });
+
+        if (updateRes.success) {
+          toast.success(`${selectedDocType} uploaded and verified successfully!`);
+        } else {
+          toast.error('Failed to update profile documents.');
+        }
+      } else {
+        const err = await res.json();
+        toast.error(err.error || 'Upload failed.');
+      }
+    } catch (err) {
+      toast.dismiss();
+      toast.error('Network error uploading document.');
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
+
+  const handleDocDelete = async (docId: string, docName: string) => {
+    toast.loading(`Deleting ${docName}...`);
+    const updatedDocs = uploadedDocs.filter(d => d.id !== docId);
+
+    try {
+      await fetch(`${API_BASE_URL}/media/${docId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const updateRes = await updateProfile({
+        uploadedDocuments: JSON.stringify(updatedDocs)
+      });
+
+      toast.dismiss();
+      if (updateRes.success) {
+        toast.success('Document deleted successfully.');
+      } else {
+        toast.error('Failed to update profile.');
+      }
+    } catch (err) {
+      toast.dismiss();
+      toast.error('Network error deleting document.');
+    }
+  };
+
+  // Inquiry/Itinerary feedback submission
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientFeedback.trim()) return;
+
+    setIsSubmittingFeedback(true);
+    toast.loading('Submitting your feedback to curator...');
+    
+    const res = await updateInquiry(selectedInquiry.id, {
+      feedback: clientFeedback
+    });
+
+    setIsSubmittingFeedback(false);
+    toast.dismiss();
+    
+    if (res.success) {
+      // Simulate socket alert to curators
+      sendSupportRequest(`Proposal Itinerary feedback updated: "${clientFeedback}"`);
+      
+      // Update selected inquiry state locally
+      setSelectedInquiry((prev: any) => ({
+        ...prev,
+        feedback: clientFeedback
+      }));
+      toast.success('Feedback submitted! Your Travel Curator will revise the proposal shortly.');
+      setClientFeedback('');
+    } else {
+      toast.error(res.error || 'Failed to submit feedback.');
+    }
   };
 
   // Concierge Chat Submit
@@ -195,9 +358,8 @@ export default function Profile() {
 
     setChatMessages(prev => [...prev, userMsg]);
     setConciergeMsg('');
-    sendSupportRequest(textToSend); // Pass to actual backend context if connected
+    sendSupportRequest(textToSend); // Real-time notification socket trigger
 
-    // Trigger simulated curator reply
     setIsConciergeTyping(true);
     setTimeout(() => {
       setIsConciergeTyping(false);
@@ -225,7 +387,6 @@ export default function Profile() {
   // Claim loyalty voucher
   const handleClaimVoucher = (voucherId: string, voucherName: string) => {
     if (claimedVouchers[voucherId]) {
-      // Already claimed, view code
       setViewingVoucher({
         id: voucherId,
         name: voucherName,
@@ -248,11 +409,42 @@ export default function Profile() {
     toast.success(`${voucherName} claimed successfully!`);
   };
 
+  // Installment pay simulator
+  const handlePayInstallment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cardNumber.length < 16) {
+      toast.error('Please enter a valid card number');
+      return;
+    }
+
+    setIsPayingInstallment(true);
+    setPaymentMilestone('Connecting secure gateway...');
+    await new Promise(r => setTimeout(r, 1200));
+    setPaymentMilestone('Verifying OTP authentication...');
+    await new Promise(r => setTimeout(r, 1200));
+    setPaymentMilestone('Payment Successful!');
+    await new Promise(r => setTimeout(r, 800));
+
+    if (selectedInstallment) {
+      setPaidInstallments(prev => ({
+        ...prev,
+        [selectedInstallment.id]: true
+      }));
+      toast.success(`${selectedInstallment.name} Paid Successfully! Receipt sent via email.`);
+    }
+    
+    setIsPayingInstallment(false);
+    setSelectedInstallment(null);
+    setCardNumber('');
+    setCardExpiry('');
+    setCardCvc('');
+    setCardName('');
+  };
+
   const activeAdvisory = KASHMIR_LOCATIONS.find(loc => loc.id === selectedLoc) || KASHMIR_LOCATIONS[0];
 
   return (
     <div className="min-h-screen bg-[#05080a] text-white flex flex-col font-sans selection:bg-kashmir-gold/30 selection:text-white">
-      {/* Inline styles for custom premium elements */}
       <style>{`
         .scrollbar-none::-webkit-scrollbar { display: none; }
         .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
@@ -357,6 +549,7 @@ export default function Profile() {
                   <SidebarButton icon={Package} label="My Bookings" active={activeTab === 'trips'} onClick={() => setActiveTab('trips')} badge={activeBookings.length} />
                   <SidebarButton icon={Compass} label="Custom Proposals" active={activeTab === 'itineraries'} onClick={() => setActiveTab('itineraries')} />
                   <SidebarButton icon={CreditCard} label="Payments & Invoices" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
+                  <SidebarButton icon={FileText} label="Document Vault" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} badge={uploadedDocs.length} />
                   <SidebarButton icon={MessageSquare} label="Luxury Concierge" active={activeTab === 'support'} onClick={() => setActiveTab('support')} />
                   <SidebarButton icon={Gift} label="Elite Rewards" active={activeTab === 'rewards'} onClick={() => setActiveTab('rewards')} className="text-kashmir-gold" />
                   
@@ -374,6 +567,7 @@ export default function Profile() {
               <MobileTabButton icon={Package} label="Bookings" active={activeTab === 'trips'} onClick={() => setActiveTab('trips')} badge={activeBookings.length} />
               <MobileTabButton icon={Compass} label="Proposals" active={activeTab === 'itineraries'} onClick={() => setActiveTab('itineraries')} />
               <MobileTabButton icon={CreditCard} label="Payments" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
+              <MobileTabButton icon={FileText} label="Vault" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} badge={uploadedDocs.length} />
               <MobileTabButton icon={MessageSquare} label="Concierge" active={activeTab === 'support'} onClick={() => setActiveTab('support')} />
               <MobileTabButton icon={Gift} label="Rewards" active={activeTab === 'rewards'} onClick={() => setActiveTab('rewards')} className="text-kashmir-gold" />
               <MobileTabButton icon={Settings} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -521,7 +715,7 @@ export default function Profile() {
                     <div className="pt-4">
                       <div className="flex items-center justify-between mb-6">
                         <h3 className="font-display text-2xl font-bold">Upcoming Trips</h3>
-                        <Button variant="ghost" onClick={() => setActiveTab('trips')} className="text-kashmir-gold hover:text-kashmir-gold hover:bg-kashmir-gold/10">View All</Button>
+                        <Button variant="gold" onClick={() => setActiveTab('trips')} className="bg-kashmir-gold text-black hover:bg-kashmir-gold/80 font-bold h-9 text-xs rounded-xl shadow-lg">View All</Button>
                       </div>
                       <div className="grid gap-6">
                         {activeBookings.slice(0, 2).map((booking) => (
@@ -587,12 +781,12 @@ export default function Profile() {
                 </div>
               )}
 
-              {/* 3. CUSTOM PROPOSALS TAB */}
+              {/* 3. CUSTOM PROPOSALS TAB (Interactive Itinerary & Feedback loop) */}
               {activeTab === 'itineraries' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="flex items-center justify-between">
                     <h2 className="font-display text-3xl font-bold">Custom Proposals</h2>
-                    <Button variant="gold" onClick={() => navigate('/planner')} className="font-bold text-black shadow-lg shadow-kashmir-gold/15">
+                    <Button variant="gold" onClick={() => navigate('/planner')} className="font-bold text-black shadow-lg shadow-kashmir-gold/15 rounded-xl h-10">
                       <Sparkles className="w-4 h-4 mr-2" /> Request New
                     </Button>
                   </div>
@@ -611,11 +805,11 @@ export default function Profile() {
                           <div className="flex justify-between items-start mb-4 relative z-10">
                             <Badge variant="outline" className="bg-white/5 text-white/80 border-white/10 font-mono">#{prop.id.slice(-4).toUpperCase()}</Badge>
                             <Badge className={cn("font-bold uppercase tracking-wider text-[9px] px-2 py-0.5", 
-                              prop.status === 'Ready for Review' ? "bg-green-500/20 text-green-400 border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : 
+                              prop.status === 'Ready for Review' || prop.status === 'Quote Sent' ? "bg-green-500/20 text-green-400 border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : 
                               prop.status === 'New' ? "bg-blue-500/20 text-blue-400 border-blue-500/20" :
                               "bg-kashmir-gold/20 text-kashmir-gold border-kashmir-gold/20"
                             )}>
-                              {prop.status}
+                              {prop.status === 'Quote Sent' ? 'Ready for Review' : prop.status}
                             </Badge>
                           </div>
                           
@@ -624,18 +818,33 @@ export default function Profile() {
                             <MapPin className="w-4 h-4 text-kashmir-gold" /> 
                             {prop.destination.charAt(0).toUpperCase() + prop.destination.slice(1)}
                           </p>
+
+                          {prop.feedback && (
+                            <div className="bg-kashmir-gold/5 border border-kashmir-gold/20 p-3.5 rounded-2xl mb-5 text-left text-xs text-white/80 relative">
+                              <p className="text-[9px] font-black uppercase text-kashmir-gold tracking-widest mb-1.5">Revision Request Sent</p>
+                              <p className="italic">"{prop.feedback}"</p>
+                            </div>
+                          )}
                           
                           <div className="flex items-center justify-between pt-4 border-t border-white/5 relative z-10">
                             <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">Requested {new Date(prop.createdAt).toLocaleDateString()}</span>
                             
-                            {prop.proposalUrl ? (
+                            {prop.quoteData ? (
                               <Button 
                                 variant="gold" 
                                 size="sm" 
-                                onClick={() => window.open(prop.proposalUrl, '_blank')}
+                                onClick={() => {
+                                  setSelectedInquiry(prop);
+                                  try {
+                                    setItineraryDays(JSON.parse(prop.quoteData || '[]'));
+                                  } catch (e) {
+                                    setItineraryDays([]);
+                                  }
+                                  setSelectedItineraryDay(1);
+                                }}
                                 className="rounded-lg shadow-[0_0_15px_rgba(212,175,55,0.2)] text-black font-bold h-9"
                               >
-                                <Download className="w-4 h-4 mr-2" /> View Proposal
+                                <Compass className="w-4 h-4 mr-2" /> View Itinerary
                               </Button>
                             ) : (
                               <Button variant="outline" size="sm" disabled className="bg-white/5 border-white/5 text-white/30 rounded-lg h-9">
@@ -652,66 +861,216 @@ export default function Profile() {
 
               {/* 4. PAYMENTS & INVOICES TAB */}
               {activeTab === 'payments' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <h2 className="font-display text-3xl font-bold mb-6 text-left">Payments & Invoices</h2>
                   
-                  <div className="bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-white/5 border-b border-white/10">
-                            <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Date</th>
-                            <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Description</th>
-                            <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Amount</th>
-                            <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Status</th>
-                            <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase text-right">Invoice</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                          {bookings.map(b => (
-                            <tr key={b.id} className="hover:bg-white/5 transition-colors">
-                              <td className="p-5 text-sm text-white/70">
-                                {new Date(b.createdAt).toLocaleDateString()}
-                              </td>
-                              <td className="p-5 font-semibold text-white text-left">{b.itemName}</td>
-                              <td className="p-5 font-black text-kashmir-gold">₹{b.totalAmount.toLocaleString()}</td>
-                              <td className="p-5">
-                                <span className={cn("px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", 
-                                  b.status === 'confirmed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
-                                  b.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-white/10 text-white/60 border border-white/5'
+                  {activeBookings.length > 0 && (
+                    <div className="space-y-4 text-left">
+                      <h3 className="text-lg font-bold text-white/80">Pending Installment Plans</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {[
+                          { id: 'inst-1', name: '25% Advance Booking Deposit', amount: 25000, due: 'Paid', status: 'paid' },
+                          { id: 'inst-2', name: '50% Hotel Block Booking', amount: 50000, due: 'Due in 5 Days', status: 'pending' },
+                          { id: 'inst-3', name: '25% Balance on Arrival', amount: 25000, due: 'Due on Arrival', status: 'pending' }
+                        ].map((installment) => {
+                          const isPaid = paidInstallments[installment.id] || installment.status === 'paid';
+                          return (
+                            <div key={installment.id} className="bg-[#0c1216]/65 border border-white/10 rounded-2xl p-5 flex flex-col justify-between min-h-[160px]">
+                              <div>
+                                <Badge className={cn("text-[8px] font-black uppercase px-2 py-0.5 tracking-wider mb-3.5",
+                                  isPaid ? "bg-green-500/20 text-green-400 border-green-500/20" : "bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/20"
                                 )}>
-                                  {b.status === 'cancelled' ? 'Refunded' : 'Paid'}
-                                </span>
-                              </td>
-                              <td className="p-5 text-right">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => {
-                                    toast.success(`Opening Invoice for ${b.itemName}`, {
-                                      description: `Ref ID: ${b.id.substring(0, 8).toUpperCase()}`
-                                    });
-                                  }}
-                                  className="text-white/60 hover:text-kashmir-gold hover:bg-white/5 rounded-lg"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                </Button>
-                              </td>
+                                  {isPaid ? 'Paid' : 'Unpaid'}
+                                </Badge>
+                                <h4 className="font-bold text-xs text-white leading-normal">{installment.name}</h4>
+                                <p className="text-[10px] text-white/40 mt-1">{installment.due}</p>
+                              </div>
+                              <div className="flex justify-between items-center mt-4">
+                                <span className="text-sm font-black text-kashmir-gold">₹{installment.amount.toLocaleString()}</span>
+                                {!isPaid && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="gold" 
+                                    onClick={() => setSelectedInstallment(installment)}
+                                    className="h-8 rounded-lg text-[10px] font-bold text-black px-3.5"
+                                  >
+                                    Pay Now
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4 text-left">
+                    <h3 className="text-lg font-bold text-white/80">Transaction History</h3>
+                    <div className="bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-white/5 border-b border-white/10">
+                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Date</th>
+                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Description</th>
+                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Amount</th>
+                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Status</th>
+                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase text-right">Invoice</th>
                             </tr>
-                          ))}
-                          {bookings.length === 0 && (
-                            <tr>
-                              <td colSpan={5} className="p-12 text-center text-white/40 font-medium">No transactions found.</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {bookings.map(b => (
+                              <tr key={b.id} className="hover:bg-white/5 transition-colors">
+                                <td className="p-5 text-sm text-white/70">
+                                  {new Date(b.createdAt).toLocaleDateString()}
+                                </td>
+                                <td className="p-5 font-semibold text-white text-left">{b.itemName}</td>
+                                <td className="p-5 font-black text-kashmir-gold">₹{b.totalAmount.toLocaleString()}</td>
+                                <td className="p-5">
+                                  <span className={cn("px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", 
+                                    b.status === 'confirmed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
+                                    b.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-white/10 text-white/60 border border-white/5'
+                                  )}>
+                                    {b.status === 'cancelled' ? 'Refunded' : 'Paid'}
+                                  </span>
+                                </td>
+                                <td className="p-5 text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => {
+                                      toast.success(`Opening Invoice for ${b.itemName}`, {
+                                        description: `Ref ID: ${b.id.substring(0, 8).toUpperCase()}`
+                                      });
+                                    }}
+                                    className="text-white/60 hover:text-kashmir-gold hover:bg-white/5 rounded-lg"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                            {bookings.length === 0 && (
+                              <tr>
+                                <td colSpan={5} className="p-12 text-center text-white/40 font-medium">No transactions found.</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* 5. LUXURY CONCIERGE TAB */}
+              {/* 5. DOCUMENT VAULT TAB */}
+              {activeTab === 'documents' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="font-display text-3xl font-bold">Document Vault</h2>
+                      <p className="text-white/50 text-xs mt-1">Upload and store ID cards, travel permits, and flight bookings for hotel verification.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Upload Card */}
+                    <div className="bg-[#0c1216] border border-white/10 rounded-3xl p-6 flex flex-col justify-between min-h-[220px]">
+                      <div>
+                        <h4 className="font-bold text-sm text-white mb-2 flex items-center gap-2">
+                          <Upload className="w-4 h-4 text-kashmir-gold" /> Upload New File
+                        </h4>
+                        <p className="text-[10px] text-white/45 mb-4">Supported formats: JPG, PNG, PDF (Max 5MB)</p>
+                        
+                        <label className="text-xs font-semibold text-white/50 block mb-2 uppercase">Document Type</label>
+                        <select 
+                          value={selectedDocType}
+                          onChange={(e) => setSelectedDocType(e.target.value as any)}
+                          className="w-full bg-black/40 border border-white/10 rounded-xl h-10 px-3 text-xs text-white outline-none focus:border-kashmir-gold"
+                        >
+                          <option value="Aadhaar Card">Aadhaar Card</option>
+                          <option value="Passport">Passport</option>
+                          <option value="Flight Ticket">Flight Ticket</option>
+                          <option value="Other">Other Document</option>
+                        </select>
+                      </div>
+
+                      <div className="mt-6">
+                        <input 
+                          type="file" 
+                          ref={fileInputRef}
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                        <Button 
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingDoc}
+                          variant="gold"
+                          className="w-full rounded-xl text-black font-bold h-11"
+                        >
+                          {isUploadingDoc ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" /> Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4 mr-2" /> Select & Upload
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Files List */}
+                    <div className="lg:col-span-2 bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+                      <div className="space-y-4">
+                        <h4 className="font-bold text-sm text-white border-b border-white/5 pb-2">Stored Documents</h4>
+                        {uploadedDocs.length === 0 ? (
+                          <div className="py-12 text-center text-white/30 text-xs flex flex-col items-center gap-3">
+                            <Lock className="w-8 h-8 opacity-30" />
+                            <span>Your vault is secure and empty. Upload documents to block stays.</span>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/5 pr-1">
+                            {uploadedDocs.map((doc) => (
+                              <div key={doc.id} className="bg-black/30 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-kashmir-gold/30 transition-all group">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-kashmir-gold shrink-0">
+                                    <FileText className="w-5 h-5" />
+                                  </div>
+                                  <div className="min-w-0 text-left">
+                                    <h5 className="text-xs font-bold text-white truncate">{doc.name}</h5>
+                                    <p className="text-[9px] text-white/40 mt-0.5">{doc.type} • {doc.uploadedAt}</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                  <a 
+                                    href={doc.url} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="p-2 text-white/40 hover:text-kashmir-gold hover:bg-white/5 rounded-lg"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                  <button
+                                    onClick={() => handleDocDelete(doc.id, doc.name)}
+                                    className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. LUXURY CONCIERGE TAB */}
               {activeTab === 'support' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="text-left">
@@ -845,7 +1204,7 @@ export default function Profile() {
                 </div>
               )}
 
-              {/* 6. REWARDS TAB */}
+              {/* 7. REWARDS TAB */}
               {activeTab === 'rewards' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 text-left">
@@ -924,7 +1283,7 @@ export default function Profile() {
                 </div>
               )}
 
-              {/* 7. ACCOUNT SETTINGS TAB */}
+              {/* 8. ACCOUNT SETTINGS TAB */}
               {activeTab === 'settings' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <h2 className="font-display text-3xl font-bold mb-6 text-left">Account Settings</h2>
@@ -1159,13 +1518,20 @@ export default function Profile() {
                       <span className="text-green-400 font-extrabold uppercase text-xs">Driver Mapped</span>
                     </div>
                   </div>
+
+                  <Button 
+                    onClick={() => setShowDriverTracking(true)}
+                    variant="gold"
+                    className="w-full rounded-xl text-black font-bold h-10 text-xs shadow-md mt-2"
+                  >
+                    <MapPin className="w-3.5 h-3.5 mr-2 animate-bounce" /> Track Chauffeur Live
+                  </Button>
                 </div>
               )}
 
               {/* Mock Barcode for Luxury Ticket Theme */}
               <div className="pt-4 border-t border-white/5 flex flex-col items-center">
                 <div className="w-full h-12 bg-white flex items-center justify-center p-2 rounded-lg opacity-85">
-                  {/* CSS-based Barcode */}
                   <div className="w-full h-full flex justify-between">
                     {[1,2,4,1,2,3,1,2,4,2,1,3,2,1,4,1,2,3,1,4,2,1,3,1,2,4].map((width, idx) => (
                       <div key={idx} className="bg-black h-full" style={{ width: `${width * 2}px` }} />
@@ -1188,6 +1554,72 @@ export default function Profile() {
             </DialogFooter>
           </DialogContent>
         )}
+      </Dialog>
+
+      {/* Chauffeur GPS Live Tracking Modal */}
+      <Dialog open={showDriverTracking} onOpenChange={setShowDriverTracking}>
+        <DialogContent className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 max-w-md">
+          <DialogHeader className="text-left border-b border-white/5 pb-4">
+            <DialogTitle className="font-display text-xl flex items-center gap-3 text-kashmir-gold">
+              <Map className="w-6 h-6 animate-pulse" /> Live Chauffeur Tracker
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-6 space-y-5 text-center">
+            {/* Mock Map Container using animated SVG */}
+            <div className="w-full h-64 bg-black/45 rounded-2xl border border-white/5 relative overflow-hidden flex items-center justify-center">
+              {/* Map grid lines */}
+              <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px]" />
+              
+              {/* Animated Road Lines */}
+              <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 50 180 Q 150 50 250 180 T 350 50" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" strokeLinecap="round" />
+                <path d="M 50 180 Q 150 50 250 180 T 350 50" fill="none" stroke="#D4AF37" strokeWidth="2" strokeDasharray="6,6" strokeLinecap="round" />
+                
+                {/* Hub Pin */}
+                <circle cx="50" cy="180" r="6" fill="#ef4444" />
+                {/* Destination Airport Pin */}
+                <circle cx="350" cy="50" r="6" fill="#22c55e" className="animate-ping" />
+                
+                {/* Car Marker animating along the path */}
+                <circle 
+                  cx={50 + (trackingProgress/100) * 300} 
+                  cy={180 - Math.sin((trackingProgress/100) * Math.PI) * 100} 
+                  r="9" 
+                  fill="#D4AF37" 
+                  className="shadow-2xl"
+                />
+              </svg>
+
+              {/* Status HUD Overlays */}
+              <div className="absolute top-4 left-4 bg-black/80 border border-white/10 px-3 py-1.5 rounded-xl text-left text-[10px]">
+                <p className="text-white/40 uppercase font-black tracking-widest">Driver Route</p>
+                <p className="font-bold text-white">Srinagar Hub &rarr; Airport</p>
+              </div>
+
+              <div className="absolute bottom-4 right-4 bg-black/80 border border-white/10 px-3 py-1.5 rounded-xl text-right text-[10px]">
+                <p className="text-white/40 uppercase font-black tracking-widest">Eta Pick Up</p>
+                <p className="font-bold text-kashmir-gold">{Math.max(0, 15 - Math.floor(trackingProgress / 7))} Mins</p>
+              </div>
+            </div>
+
+            <div className="text-left bg-white/[0.02] border border-white/5 p-4 rounded-xl text-xs space-y-1">
+              <p className="text-[10px] font-black uppercase text-kashmir-gold tracking-widest">Current Chauffeur Status</p>
+              <p className="font-bold text-white">Hilal Ahmad • Toyota Innova Crysta (JK-01-X-7721)</p>
+              <p className="text-white/50">Driver has dispatched from the terminal. Approaching arrival gate pick-up zone.</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDriverTracking(false)} 
+              className="w-full rounded-xl border-white/10 hover:bg-white/5 font-bold"
+            >
+              Close Tracker
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* Claimed Voucher Dialog */}
@@ -1238,6 +1670,202 @@ export default function Profile() {
                 className="w-full rounded-xl text-black font-bold h-11 shadow-lg shadow-kashmir-gold/10"
               >
                 Done
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+
+      {/* Pay Installment Dialog */}
+      <Dialog open={!!selectedInstallment} onOpenChange={(open) => !open && setSelectedInstallment(null)}>
+        {selectedInstallment && (
+          <DialogContent className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 md:p-8 max-w-md">
+            <DialogHeader className="text-left border-b border-white/5 pb-4">
+              <DialogTitle className="font-display text-xl text-white flex items-center gap-3">
+                <CreditCard className="w-5 h-5 text-kashmir-gold" /> Authorize Installment
+              </DialogTitle>
+            </DialogHeader>
+
+            <form onSubmit={handlePayInstallment} className="py-4 space-y-4 text-left">
+              <div className="p-4 bg-black/40 border border-white/5 rounded-2xl flex justify-between items-center mb-2">
+                <div>
+                  <h4 className="text-xs font-bold text-white">{selectedInstallment.name}</h4>
+                  <p className="text-[10px] text-white/40 mt-0.5">{selectedInstallment.due}</p>
+                </div>
+                <span className="text-lg font-black text-kashmir-gold">₹{selectedInstallment.amount.toLocaleString()}</span>
+              </div>
+
+              {isPayingInstallment ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-4 text-center">
+                  <Loader2 className="w-8 h-8 text-kashmir-gold animate-spin" />
+                  <p className="text-sm font-semibold text-white/80 animate-pulse">{paymentMilestone}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider block mb-1.5">Cardholder Name</label>
+                    <Input 
+                      value={cardName} 
+                      onChange={(e) => setCardName(e.target.value)} 
+                      required
+                      placeholder="e.g. Zahid Reyaz"
+                      className="bg-black/40 border-white/10 h-11 rounded-xl text-white focus-visible:ring-kashmir-gold text-xs pl-4" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider block mb-1.5">16-Digit Card Number</label>
+                    <Input 
+                      value={cardNumber} 
+                      onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').substring(0, 16))} 
+                      required
+                      placeholder="•••• •••• •••• ••••"
+                      className="bg-black/40 border-white/10 h-11 rounded-xl text-white focus-visible:ring-kashmir-gold text-xs pl-4 font-mono" 
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider block mb-1.5">Expiry Date</label>
+                      <Input 
+                        value={cardExpiry} 
+                        onChange={(e) => setCardExpiry(e.target.value.substring(0, 5))} 
+                        required
+                        placeholder="MM/YY"
+                        className="bg-black/40 border-white/10 h-11 rounded-xl text-white focus-visible:ring-kashmir-gold text-xs pl-4" 
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider block mb-1.5">Security Code (CVC)</label>
+                      <Input 
+                        value={cardCvc} 
+                        onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 3))} 
+                        required
+                        type="password"
+                        placeholder="•••"
+                        className="bg-black/40 border-white/10 h-11 rounded-xl text-white focus-visible:ring-kashmir-gold text-xs pl-4" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <Button 
+                      type="submit"
+                      variant="gold"
+                      className="w-full rounded-xl text-black font-bold h-11 shadow-lg shadow-kashmir-gold/15"
+                    >
+                      Authorize Payment
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </form>
+          </DialogContent>
+        )}
+      </Dialog>
+
+      {/* Interactive Proposal Day-by-Day Itinerary Viewer Dialog */}
+      <Dialog open={!!selectedInquiry} onOpenChange={(open) => !open && setSelectedInquiry(null)}>
+        {selectedInquiry && (
+          <DialogContent className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 md:p-8 max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/5">
+            <DialogHeader className="text-left border-b border-white/5 pb-4">
+              <DialogTitle className="font-display text-2xl text-white flex items-center justify-between">
+                <span>Custom Proposal Itinerary</span>
+                <Badge variant="outline" className="text-kashmir-gold border-kashmir-gold/30">
+                  {selectedInquiry.duration} Days in {selectedInquiry.destination}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 py-6 text-left">
+              {/* Left Column: Day Tracker Selector */}
+              <div className="lg:border-r border-white/5 lg:pr-6 space-y-3 max-h-[350px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/5">
+                <p className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-3">Daily Route Map</p>
+                {itineraryDays.map((d: any) => (
+                  <button
+                    key={d.day}
+                    type="button"
+                    onClick={() => setSelectedItineraryDay(d.day)}
+                    className={cn(
+                      "w-full p-3.5 rounded-xl border text-left transition-all duration-300 flex items-center justify-between",
+                      selectedItineraryDay === d.day
+                        ? "bg-kashmir-gold/15 border-kashmir-gold/45 text-kashmir-gold shadow-md"
+                        : "bg-white/[0.02] border-white/5 text-white/60 hover:bg-white/5 hover:text-white"
+                    )}
+                  >
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-wider">Day {d.day}</p>
+                      <h4 className="text-xs font-bold truncate max-w-[160px] mt-0.5">{d.title}</h4>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                  </button>
+                ))}
+              </div>
+
+              {/* Middle Column: Active Day Details Card */}
+              <div className="lg:col-span-2 space-y-6 flex flex-col justify-between">
+                {(() => {
+                  const activeDay = itineraryDays.find(d => d.day === selectedItineraryDay);
+                  if (!activeDay) return <div className="text-white/40 text-xs py-8">No day plan details loaded.</div>;
+                  return (
+                    <div className="space-y-5 animate-in fade-in duration-300">
+                      <div>
+                        <Badge className="bg-kashmir-gold/10 text-kashmir-gold border border-kashmir-gold/20 font-bold text-[9px] uppercase px-2 py-0.5 tracking-wider mb-2">
+                          Day {activeDay.day} Plan
+                        </Badge>
+                        <h3 className="font-display text-2xl font-black text-white">{activeDay.title}</h3>
+                        <p className="text-xs text-white/65 mt-2 leading-relaxed whitespace-pre-wrap">{activeDay.activities || 'Relax and enjoy the luxury service of Kashmir Curators.'}</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                        <div className="bg-black/30 border border-white/5 p-4 rounded-2xl">
+                          <h4 className="text-[9px] font-black uppercase text-kashmir-gold tracking-widest mb-1.5 flex items-center gap-1.5">
+                            <Building className="w-3 h-3" /> Accommodation
+                          </h4>
+                          <p className="text-xs font-bold text-white truncate">{activeDay.hotelName || 'Bespoke Curated Stay'}</p>
+                          <p className="text-[10px] text-white/40 mt-0.5">{activeDay.roomType || 'Deluxe Room'} • {activeDay.mealPlan || 'MAP (MAP (Breakfast + Dinner))'}</p>
+                        </div>
+
+                        <div className="bg-black/30 border border-white/5 p-4 rounded-2xl">
+                          <h4 className="text-[9px] font-black uppercase text-kashmir-gold tracking-widest mb-1.5 flex items-center gap-1.5">
+                            <Car className="w-3 h-3" /> Chauffeur Transport
+                          </h4>
+                          <p className="text-xs font-bold text-white truncate">{activeDay.transport || 'Private Luxury Sedan'}</p>
+                          <p className="text-[10px] text-white/40 mt-0.5">Professional Driver Included</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Proposal Feedback loop */}
+                <div className="border-t border-white/5 pt-6 mt-6">
+                  <h4 className="text-xs font-bold text-white/80 mb-3 text-left">Request Modification (Feedback Loop)</h4>
+                  <form onSubmit={handleFeedbackSubmit} className="flex gap-2">
+                    <Input
+                      value={clientFeedback}
+                      onChange={(e) => setClientFeedback(e.target.value)}
+                      placeholder="e.g. Can we change Pahalgam hotel to a luxury cottage stay?..."
+                      className="bg-black/40 border-white/10 rounded-xl h-11 text-xs focus-visible:ring-kashmir-gold text-white flex-1 pl-4"
+                    />
+                    <Button 
+                      type="submit"
+                      disabled={isSubmittingFeedback || !clientFeedback.trim()}
+                      variant="gold"
+                      className="rounded-xl text-black font-bold h-11 shrink-0 px-6"
+                    >
+                      {isSubmittingFeedback ? 'Submitting...' : 'Send Request'}
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="border-t border-white/5 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedInquiry(null)} 
+                className="w-full rounded-xl border-white/10 hover:bg-white/5 font-bold h-11 text-xs"
+              >
+                Close Itinerary
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1312,7 +1940,7 @@ function BookingTicket({ booking, onCancel, cancellingId, onShowSlip }: { bookin
           <Icon className="w-8 h-8 text-kashmir-gold" />
         </div>
         <Badge className={cn('px-3 py-1 font-bold uppercase tracking-wider text-[10px]', 
-          booking.status === 'confirmed' ? 'bg-green-500/20 text-green-400 border-green-500/20' : 
+          booking.status === 'confirmed' ? 'bg-green-500/20 text-green-400 border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.1)]' : 
           booking.status === 'cancelled' ? 'bg-red-500/20 text-red-400 border-red-500/20' : 
           booking.status === 'completed' ? 'bg-white/15 text-white/50 border-white/10' :
           'bg-kashmir-gold/20 text-kashmir-gold border-kashmir-gold/20'

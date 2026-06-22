@@ -73,7 +73,14 @@ export const getMe = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+    res.json({ 
+      id: user.id, 
+      email: user.email, 
+      name: user.name, 
+      role: user.role,
+      phone: user.phone,
+      uploadedDocuments: user.uploadedDocuments
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user profile' });
   }
@@ -283,7 +290,7 @@ export const teamLogin = async (req: Request, res: Response) => {
 };
 
 export const updateProfile = async (req: any, res: Response) => {
-  const { name, email, phone, image, password } = req.body;
+  const { name, email, phone, image, password, uploadedDocuments } = req.body;
   const userId = req.user.id;
 
   try {
@@ -304,6 +311,7 @@ export const updateProfile = async (req: any, res: Response) => {
     if (email) dataToUpdate.email = email;
     if (phone !== undefined) dataToUpdate.phone = phone;
     if (image !== undefined) dataToUpdate.image = image;
+    if (uploadedDocuments !== undefined) dataToUpdate.uploadedDocuments = uploadedDocuments ? String(uploadedDocuments) : null;
     if (password) {
       dataToUpdate.password = await bcrypt.hash(password, 10);
     }
@@ -316,12 +324,14 @@ export const updateProfile = async (req: any, res: Response) => {
     res.json({
       success: true,
       user: {
+        id: updatedUser.id,
         code: updatedUser.employeeCode,
         name: updatedUser.name,
         email: updatedUser.email,
         phone: updatedUser.phone,
         role: updatedUser.role,
-        image: updatedUser.image
+        image: updatedUser.image,
+        uploadedDocuments: updatedUser.uploadedDocuments
       }
     });
   } catch (error: any) {

@@ -102,6 +102,7 @@ export const updateInquiry = async (req: Request, res: Response) => {
       quoteData, 
       proposalUrl,
       flightDetails,
+      feedback,
       customerName,
       email,
       phone,
@@ -120,6 +121,7 @@ export const updateInquiry = async (req: Request, res: Response) => {
     if (quoteData !== undefined) data.quoteData = quoteData ? (typeof quoteData === 'string' ? quoteData : JSON.stringify(quoteData)) : null;
     if (proposalUrl !== undefined) data.proposalUrl = proposalUrl ? String(proposalUrl) : null;
     if (flightDetails !== undefined) data.flightDetails = flightDetails ? String(flightDetails) : null;
+    if (feedback !== undefined) data.feedback = feedback ? String(feedback) : null;
     
     // Also allow updating basic info if needed
     if (customerName !== undefined) data.customerName = String(customerName);
