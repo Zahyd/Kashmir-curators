@@ -262,6 +262,8 @@ async function main() {
   }
 
   // 7. Curators (Native Local Guides)
+  await prisma.curator.deleteMany({ where: { id: "curator-priya" } });
+
   const curators = [
     {
       id: "curator-faheem",
@@ -273,17 +275,6 @@ async function main() {
       languages: "English, Hindi, Kashmiri",
       phone: "+919103798448",
       rating: 4.9
-    },
-    {
-      id: "curator-priya",
-      name: "Priya Koul",
-      role: "Srinagar Heritage & Houseboat Curator",
-      licenseNo: "JKT-2024-912",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200",
-      bio: "Specializing in the rich artistic history of Dal Lake houseboats and Mughal gardens. Priya ensures our guest experiences capture the authentic soul of royal Kashmiri craft.",
-      languages: "English, Hindi, Kashmiri, Dogri",
-      phone: "+919103798448",
-      rating: 5.0
     },
     {
       id: "curator-zahoor",
@@ -347,6 +338,8 @@ async function main() {
   }
 
   // 9. Trip-Verified Package Reviews
+  await prisma.packageReview.deleteMany({ where: { id: "rev-1" } });
+
   const reviews = [
     {
       id: "rev-1",
@@ -354,7 +347,7 @@ async function main() {
       userName: "Rohan & Sneha Malhotra",
       userAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100",
       rating: 5,
-      text: "We booked our honeymoon through Kashmir Curators, and it was absolute perfection. Our private curator Priya Koul arranged a sunset wazwan dinner on Nigeen lake that we will cherish forever. Fully verified luxury experience!",
+      text: "We booked our honeymoon through Kashmir Curators, and it was absolute perfection. Our private curator Mir Faheem arranged a sunset wazwan dinner on Nigeen lake that we will cherish forever. Fully verified luxury experience!",
       tripType: "Honeymoon",
       isVerified: true
     },

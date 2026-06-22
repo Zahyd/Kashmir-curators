@@ -110,6 +110,35 @@ export default function PackageDetail() {
     );
   }
 
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/packages');
+    }
+  };
+
+  const highlights = useMemo(() => {
+    return Array.isArray(pkg?.highlights) ? pkg.highlights.filter(Boolean) : [];
+  }, [pkg]);
+
+  const inclusions = useMemo(() => {
+    return Array.isArray(pkg?.inclusions) ? pkg.inclusions.filter(Boolean) : [];
+  }, [pkg]);
+
+  const exclusions = useMemo(() => {
+    return Array.isArray(pkg?.exclusions) ? pkg.exclusions.filter(Boolean) : [];
+  }, [pkg]);
+
+  const itinerary = useMemo(() => {
+    return Array.isArray(pkg?.itinerary) ? pkg.itinerary.filter(Boolean) : [];
+  }, [pkg]);
+
+  const images = useMemo(() => {
+    if (!pkg) return [];
+    return [pkg.image];
+  }, [pkg]);
+
   if (!pkg) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -122,8 +151,6 @@ export default function PackageDetail() {
       </div>
     );
   }
-
-  const images = [pkg.image, ...pkg.highlights.map(() => pkg.image)];
 
   const hotelPrices = { budget: 0, standard: 3000, luxury: 8000 };
   const cabPrices = { sedan: 0, suv: 1500, premium: 3000 };
@@ -211,7 +238,7 @@ export default function PackageDetail() {
 
       {/* Back Button */}
       <div className="container mx-auto px-4 pt-28 relative z-10">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 text-white/60 hover:text-white hover:bg-white/5 rounded-xl px-4 py-2">
+        <Button variant="ghost" onClick={handleBack} className="mb-4 text-white/60 hover:text-white hover:bg-white/5 rounded-xl px-4 py-2">
           <ArrowLeft className="h-4 w-4 mr-2 text-kashmir-gold" />
           Back
         </Button>
@@ -223,42 +250,57 @@ export default function PackageDetail() {
           <div className="lg:col-span-2 space-y-8">
             {/* Image Gallery */}
             <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden backdrop-blur-xl p-3">
-              <div className="relative aspect-video cursor-pointer group rounded-2xl overflow-hidden" onClick={() => setLightboxOpen(true)}>
+              <div 
+                className={cn(
+                  "relative aspect-video rounded-2xl overflow-hidden",
+                  images.length > 1 && "cursor-pointer group"
+                )}
+                onClick={images.length > 1 ? () => setLightboxOpen(true) : undefined}
+              >
                 <img
                   src={images[activeImage]}
                   alt={pkg.name}
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                  className={cn(
+                    "w-full h-full object-cover",
+                    images.length > 1 && "transition-transform duration-1000 group-hover:scale-105"
+                  )}
                 />
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                  <ZoomIn className="h-10 w-10 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                {images.length > 1 && (
+                  <>
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                      <ZoomIn className="h-10 w-10 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveImage(prev => (prev - 1 + images.length) % images.length); }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 border border-white/10 text-white rounded-full hover:bg-black/60 transition-colors"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveImage(prev => (prev + 1) % images.length); }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 border border-white/10 text-white rounded-full hover:bg-black/60 transition-colors"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {images.length > 1 && (
+                <div className="flex gap-2 p-4 overflow-x-auto">
+                  {images.slice(0, 5).map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveImage(i)}
+                      className={cn(
+                        "w-20 h-16 rounded-xl overflow-hidden shrink-0 border-2 transition-all duration-300",
+                        i === activeImage ? "border-kashmir-gold scale-95" : "border-transparent opacity-60 hover:opacity-100"
+                      )}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setActiveImage(prev => (prev - 1 + images.length) % images.length); }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 border border-white/10 text-white rounded-full hover:bg-black/60 transition-colors"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setActiveImage(prev => (prev + 1) % images.length); }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 border border-white/10 text-white rounded-full hover:bg-black/60 transition-colors"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex gap-2 p-4 overflow-x-auto">
-                {images.slice(0, 5).map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveImage(i)}
-                    className={cn(
-                      "w-20 h-16 rounded-xl overflow-hidden shrink-0 border-2 transition-all duration-300",
-                      i === activeImage ? "border-kashmir-gold scale-95" : "border-transparent opacity-60 hover:opacity-100"
-                    )}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
+              )}
             </div>
 
             {/* Package Info */}
@@ -585,30 +627,34 @@ export default function PackageDetail() {
               alt={pkg.name}
               className="w-full h-auto max-h-[80vh] object-contain rounded-2xl"
             />
-            <button
-              onClick={() => setActiveImage(prev => (prev - 1 + images.length) % images.length)}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 border border-white/10 text-white rounded-full hover:bg-black/60 transition-colors"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <button
-              onClick={() => setActiveImage(prev => (prev + 1) % images.length)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 border border-white/10 text-white rounded-full hover:bg-black/60 transition-colors"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-              {images.slice(0, 5).map((_, i) => (
+            {images.length > 1 && (
+              <>
                 <button
-                  key={i}
-                  onClick={() => setActiveImage(i)}
-                  className={cn(
-                    "w-2 h-2 rounded-full transition-colors",
-                    i === activeImage ? "bg-kashmir-gold" : "bg-white/20"
-                  )}
-                />
-              ))}
-            </div>
+                  onClick={() => setActiveImage(prev => (prev - 1 + images.length) % images.length)}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 border border-white/10 text-white rounded-full hover:bg-black/60 transition-colors"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={() => setActiveImage(prev => (prev + 1) % images.length)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 border border-white/10 text-white rounded-full hover:bg-black/60 transition-colors"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  {images.slice(0, 5).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveImage(i)}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-colors",
+                        i === activeImage ? "bg-kashmir-gold" : "bg-white/20"
+                      )}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -126,29 +126,35 @@ export default function CMSReservations() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<HotelReservation | null>(null);
-  const [hotelSearchQuery, setHotelSearchQuery] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  interface HotelStay {
+    hotelId: string;
+    hotelSearchQuery: string;
+    showSuggestions: boolean;
+    checkIn: string;
+    checkOut: string;
+    roomType: string;
+    roomsCount: number;
+    mealPlan: string;
+    status: string;
+    contractRate: number;
+    seasonalPricing: number;
+    commissionRate: number;
+    totalAmount: number;
+    holdUntil: string;
+  }
+
+  const [hotelStays, setHotelStays] = useState<HotelStay[]>([]);
+  const [createdReservations, setCreatedReservations] = useState<any[]>([]);
+  const [showShareScreen, setShowShareScreen] = useState(false);
   
   // Form State
   const [formData, setFormData] = useState({
     inquiryId: '',
-    hotelId: '',
     guestName: '',
     guestEmail: '',
     guestPhone: '',
-    checkIn: '',
-    checkOut: '',
-    roomType: '',
-    roomsCount: 1,
-    mealPlan: 'CP',
     specialRequests: '',
-    status: 'Pending',
-    paymentStatus: 'Unpaid',
-    contractRate: 0,
-    seasonalPricing: 0,
-    commissionRate: 0,
-    totalAmount: 0,
-    holdUntil: ''
+    paymentStatus: 'Unpaid'
   });
 
   // Clock for countdown refresh
@@ -241,29 +247,39 @@ export default function CMSReservations() {
 
   // Form Calculations (mirroring backend logic)
   const calculateFormFields = () => {
-    if (!formData.checkIn || !formData.checkOut) return { profit: 0, dues: 0, nights: 1 };
-    
-    const checkInDate = new Date(formData.checkIn);
-    const checkOutDate = new Date(formData.checkOut);
-    const diffTime = checkOutDate.getTime() - checkInDate.getTime();
-    const nights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-    
-    const rooms = Number(formData.roomsCount) || 1;
-    const cRate = Number(formData.contractRate) || 0;
-    const sPrice = Number(formData.seasonalPricing) || 0;
-    const commRate = Number(formData.commissionRate) || 0;
-    const grossTotal = Number(formData.totalAmount) || 0;
+    let totalNights = 0;
+    let totalDues = 0;
+    let totalProfit = 0;
 
-    const netCost = (cRate + sPrice) * rooms * nights;
-    let profit = grossTotal - netCost;
-    if (commRate > 0) {
-      profit = grossTotal * (commRate / 100);
-    }
-    
+    hotelStays.forEach(stay => {
+      if (!stay.checkIn || !stay.checkOut) return;
+
+      const checkInDate = new Date(stay.checkIn);
+      const checkOutDate = new Date(stay.checkOut);
+      const diffTime = checkOutDate.getTime() - checkInDate.getTime();
+      const nights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+      const rooms = Number(stay.roomsCount) || 1;
+      const cRate = Number(stay.contractRate) || 0;
+      const sPrice = Number(stay.seasonalPricing) || 0;
+      const commRate = Number(stay.commissionRate) || 0;
+      const grossTotal = Number(stay.totalAmount) || 0;
+
+      const netCost = (cRate + sPrice) * rooms * nights;
+      let profit = grossTotal - netCost;
+      if (commRate > 0) {
+        profit = grossTotal * (commRate / 100);
+      }
+
+      totalNights += nights;
+      totalDues += netCost;
+      totalProfit += profit;
+    });
+
     return {
-      profit: Math.round(profit),
-      dues: Math.round(netCost),
-      nights
+      nights: totalNights || 1,
+      dues: Math.round(totalDues),
+      profit: Math.round(totalProfit)
     };
   };
 
@@ -285,11 +301,10 @@ export default function CMSReservations() {
     }
   };
 
-  const handleHotelChange = (hId: string) => {
+  const handleHotelChange = (hId: string, index: number) => {
     const hotel = hotels.find(h => h.id === hId);
     if (hotel) {
-      // Decode commission if possible
-      let defaultComm = 0;
+      let defaultComm = 10;
       if (hotel.commissionStructure) {
         const parsedComm = parseFloat(hotel.commissionStructure);
         if (!isNaN(parsedComm)) defaultComm = parsedComm;
@@ -298,43 +313,32 @@ export default function CMSReservations() {
       const defaultRoomType = hotel.roomTypes?.[0]?.name || '';
       const defaultPrice = hotel.roomTypes?.[0]?.price || hotel.pricePerNight || 0;
 
-      setFormData(prev => ({
-        ...prev,
+      setHotelStays(prev => prev.map((stay, idx) => idx === index ? {
+        ...stay,
         hotelId: hId,
+        hotelSearchQuery: hotel.name,
         roomType: defaultRoomType,
         contractRate: defaultPrice,
         commissionRate: defaultComm,
-        totalAmount: Math.round(defaultPrice * prev.roomsCount * 1.2) // default gross recommendation
-      }));
+        totalAmount: Math.round(defaultPrice * stay.roomsCount * 1.25)
+      } : stay));
     }
   };
 
   const openCreateDialog = () => {
     setActiveReservation(null);
-    setHotelSearchQuery(hotels[0]?.name || '');
-    setShowSuggestions(false);
+    setCreatedReservations([]);
+    setShowShareScreen(false);
+    
     setFormData({
       inquiryId: '',
-      hotelId: hotels[0]?.id || '',
       guestName: '',
       guestEmail: '',
       guestPhone: '',
-      checkIn: new Date().toISOString().split('T')[0],
-      checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      roomType: '',
-      roomsCount: 1,
-      mealPlan: 'CP',
       specialRequests: '',
-      status: 'Pending',
-      paymentStatus: 'Unpaid',
-      contractRate: 0,
-      seasonalPricing: 0,
-      commissionRate: 10,
-      totalAmount: 0,
-      holdUntil: ''
+      paymentStatus: 'Unpaid'
     });
     
-    // Trigger defaults if hotels available
     if (hotels.length > 0) {
       const hotel = hotels[0];
       let defaultComm = 10;
@@ -342,14 +346,45 @@ export default function CMSReservations() {
         const parsedComm = parseFloat(hotel.commissionStructure);
         if (!isNaN(parsedComm)) defaultComm = parsedComm;
       }
-      setFormData(prev => ({
-        ...prev,
-        hotelId: hotel.id,
-        roomType: hotel.roomTypes?.[0]?.name || '',
-        contractRate: hotel.roomTypes?.[0]?.price || hotel.pricePerNight || 0,
-        commissionRate: defaultComm,
-        totalAmount: Math.round((hotel.roomTypes?.[0]?.price || hotel.pricePerNight || 0) * 1.25)
-      }));
+      
+      const defaultPrice = hotel.roomTypes?.[0]?.price || hotel.pricePerNight || 0;
+      setHotelStays([
+        {
+          hotelId: hotel.id,
+          hotelSearchQuery: hotel.name,
+          showSuggestions: false,
+          checkIn: new Date().toISOString().split('T')[0],
+          checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          roomType: hotel.roomTypes?.[0]?.name || '',
+          roomsCount: 1,
+          mealPlan: 'CP',
+          status: 'Pending',
+          contractRate: defaultPrice,
+          seasonalPricing: 0,
+          commissionRate: defaultComm,
+          totalAmount: Math.round(defaultPrice * 1.25),
+          holdUntil: ''
+        }
+      ]);
+    } else {
+      setHotelStays([
+        {
+          hotelId: '',
+          hotelSearchQuery: '',
+          showSuggestions: false,
+          checkIn: new Date().toISOString().split('T')[0],
+          checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          roomType: '',
+          roomsCount: 1,
+          mealPlan: 'CP',
+          status: 'Pending',
+          contractRate: 0,
+          seasonalPricing: 0,
+          commissionRate: 10,
+          totalAmount: 0,
+          holdUntil: ''
+        }
+      ]);
     }
 
     setFormOpen(true);
@@ -357,69 +392,149 @@ export default function CMSReservations() {
 
   const openEditDialog = (resItem: HotelReservation) => {
     setActiveReservation(resItem);
+    setCreatedReservations([]);
+    setShowShareScreen(false);
     const hotel = hotels.find(h => h.id === resItem.hotelId);
-    setHotelSearchQuery(hotel ? hotel.name : '');
-    setShowSuggestions(false);
+    
     setFormData({
       inquiryId: resItem.inquiryId || '',
-      hotelId: resItem.hotelId,
       guestName: resItem.guestName,
       guestEmail: resItem.guestEmail || '',
       guestPhone: resItem.guestPhone || '',
-      checkIn: new Date(resItem.checkIn).toISOString().split('T')[0],
-      checkOut: new Date(resItem.checkOut).toISOString().split('T')[0],
-      roomType: resItem.roomType,
-      roomsCount: resItem.roomsCount,
-      mealPlan: resItem.mealPlan,
       specialRequests: resItem.specialRequests || '',
-      status: resItem.status,
-      paymentStatus: resItem.paymentStatus,
-      contractRate: resItem.contractRate,
-      seasonalPricing: Number(resItem.seasonalPricing) || 0,
-      commissionRate: resItem.commissionRate,
-      totalAmount: resItem.totalAmount,
-      holdUntil: resItem.holdUntil ? new Date(resItem.holdUntil).toISOString().substring(0, 16) : ''
+      paymentStatus: resItem.paymentStatus
     });
+    
+    setHotelStays([
+      {
+        hotelId: resItem.hotelId,
+        hotelSearchQuery: hotel ? hotel.name : '',
+        showSuggestions: false,
+        checkIn: new Date(resItem.checkIn).toISOString().split('T')[0],
+        checkOut: new Date(resItem.checkOut).toISOString().split('T')[0],
+        roomType: resItem.roomType,
+        roomsCount: resItem.roomsCount,
+        mealPlan: resItem.mealPlan,
+        status: resItem.status,
+        contractRate: resItem.contractRate,
+        seasonalPricing: Number(resItem.seasonalPricing) || 0,
+        commissionRate: resItem.commissionRate,
+        totalAmount: resItem.totalAmount,
+        holdUntil: resItem.holdUntil ? new Date(resItem.holdUntil).toISOString().substring(0, 16) : ''
+      }
+    ]);
+    
     setFormOpen(true);
   };
 
   const handleSaveReservation = async () => {
-    if (!formData.hotelId || !formData.guestName || !formData.checkIn || !formData.checkOut || !formData.roomType) {
-      toast.error('Required fields: Hotel, Guest Name, Room Type, and Check-In/Out dates.');
+    if (!formData.guestName) {
+      toast.error('Required field: Guest Name.');
+      return;
+    }
+    
+    const isInvalid = hotelStays.some(stay => !stay.hotelId || !stay.checkIn || !stay.checkOut || !stay.roomType);
+    if (isInvalid) {
+      toast.error('Required fields for each stay: Hotel, Room Type, and Check-In/Out dates.');
       return;
     }
 
     setSaving(true);
     const token = localStorage.getItem('teamToken');
-    const method = activeReservation ? 'PATCH' : 'POST';
-    const url = activeReservation 
-      ? `${API_BASE_URL}/reservations/${activeReservation.id}` 
-      : `${API_BASE_URL}/reservations`;
-
-    // Convert holdUntil to ISO string if provided
-    const payload = {
-      ...formData,
-      holdUntil: formData.holdUntil ? new Date(formData.holdUntil).toISOString() : null
-    };
 
     try {
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
+      if (activeReservation) {
+        // Edit mode (PATCH single reservation)
+        const stay = hotelStays[0];
+        const payload = {
+          inquiryId: formData.inquiryId || null,
+          guestName: formData.guestName,
+          guestEmail: formData.guestEmail || null,
+          guestPhone: formData.guestPhone || null,
+          specialRequests: formData.specialRequests || null,
+          paymentStatus: formData.paymentStatus,
+          
+          hotelId: stay.hotelId,
+          checkIn: new Date(stay.checkIn).toISOString(),
+          checkOut: new Date(stay.checkOut).toISOString(),
+          roomType: stay.roomType,
+          roomsCount: Number(stay.roomsCount),
+          mealPlan: stay.mealPlan,
+          status: stay.status,
+          contractRate: Number(stay.contractRate),
+          seasonalPricing: Number(stay.seasonalPricing),
+          commissionRate: Number(stay.commissionRate),
+          totalAmount: Number(stay.totalAmount),
+          holdUntil: stay.holdUntil ? new Date(stay.holdUntil).toISOString() : null
+        };
+        
+        const response = await fetch(`${API_BASE_URL}/reservations/${activeReservation.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save reservation');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to save reservation');
+        }
+
+        toast.success('Reservation updated successfully');
+        setFormOpen(false);
+        fetchReservations();
+      } else {
+        // Create mode (POST one or more reservations)
+        const createdList: any[] = [];
+        
+        for (const stay of hotelStays) {
+          const payload = {
+            inquiryId: formData.inquiryId || null,
+            guestName: formData.guestName,
+            guestEmail: formData.guestEmail || null,
+            guestPhone: formData.guestPhone || null,
+            specialRequests: formData.specialRequests || null,
+            paymentStatus: formData.paymentStatus,
+            
+            hotelId: stay.hotelId,
+            checkIn: new Date(stay.checkIn).toISOString(),
+            checkOut: new Date(stay.checkOut).toISOString(),
+            roomType: stay.roomType,
+            roomsCount: Number(stay.roomsCount),
+            mealPlan: stay.mealPlan,
+            status: stay.status,
+            contractRate: Number(stay.contractRate),
+            seasonalPricing: Number(stay.seasonalPricing),
+            commissionRate: Number(stay.commissionRate),
+            totalAmount: Number(stay.totalAmount),
+            holdUntil: stay.holdUntil ? new Date(stay.holdUntil).toISOString() : null
+          };
+          
+          const response = await fetch(`${API_BASE_URL}/reservations`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create reservation');
+          }
+          
+          const resObj = await response.json();
+          createdList.push(resObj);
+        }
+        
+        toast.success(`Initialized ${createdList.length} B2B reservation(s) successfully`);
+        setCreatedReservations(createdList);
+        setShowShareScreen(true);
+        fetchReservations();
       }
-
-      toast.success(activeReservation ? 'Reservation updated successfully' : 'B2B Reservation successfully initialized');
-      setFormOpen(false);
-      fetchReservations();
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || 'Operation failed');
@@ -427,6 +542,8 @@ export default function CMSReservations() {
       setSaving(false);
     }
   };
+
+
 
   const handleSimulateQuoteSend = async (id: string, channel: 'email' | 'whatsapp') => {
     setSendingChannel({ id, channel });
@@ -513,7 +630,7 @@ export default function CMSReservations() {
     }
   };
 
-  const createCustomHotel = async (name: string) => {
+  const createCustomHotel = async (name: string, index: number) => {
     try {
       const token = localStorage.getItem('teamToken');
       const response = await fetch(`${API_BASE_URL}/hotels`, {
@@ -544,19 +661,84 @@ export default function CMSReservations() {
       };
       setHotels(prev => [parsedNewHotel, ...prev]);
       
-      // Set the selection
-      setFormData(prev => ({
-        ...prev,
+      // Set the selection for the correct stay index
+      setHotelStays(prev => prev.map((stay, idx) => idx === index ? {
+        ...stay,
         hotelId: newHotel.id,
+        hotelSearchQuery: name,
         roomType: 'Deluxe Room',
         contractRate: 5000,
         commissionRate: 10,
         totalAmount: 6250
-      }));
-      setHotelSearchQuery(name);
+      } : stay));
     } catch (err: any) {
       toast.error(err.message || 'Failed to register new hotel');
     }
+  };
+
+  const updateStay = (index: number, fields: Partial<HotelStay>) => {
+    setHotelStays(prev => prev.map((stay, idx) => idx === index ? { ...stay, ...fields } : stay));
+  };
+
+  const addStay = () => {
+    const defaultHotel = hotels[0];
+    let defaultComm = 10;
+    if (defaultHotel?.commissionStructure) {
+      const parsedComm = parseFloat(defaultHotel.commissionStructure);
+      if (!isNaN(parsedComm)) defaultComm = parsedComm;
+    }
+    const defaultPrice = defaultHotel?.roomTypes?.[0]?.price || defaultHotel?.pricePerNight || 0;
+    
+    setHotelStays(prev => [
+      ...prev,
+      {
+        hotelId: defaultHotel?.id || '',
+        hotelSearchQuery: defaultHotel?.name || '',
+        showSuggestions: false,
+        checkIn: new Date().toISOString().split('T')[0],
+        checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        roomType: defaultHotel?.roomTypes?.[0]?.name || '',
+        roomsCount: 1,
+        mealPlan: 'CP',
+        status: 'Pending',
+        contractRate: defaultPrice,
+        seasonalPricing: 0,
+        commissionRate: defaultComm,
+        totalAmount: Math.round(defaultPrice * 1.25),
+        holdUntil: ''
+      }
+    ]);
+  };
+
+  const removeStay = (index: number) => {
+    if (hotelStays.length > 1) {
+      setHotelStays(prev => prev.filter((_, idx) => idx !== index));
+    }
+  };
+
+  const formatWhatsAppMessage = (res: any, hotelName: string) => {
+    const checkInStr = new Date(res.checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const checkOutStr = new Date(res.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const publicLink = `${window.location.origin}/hotel/confirm/${res.id}`;
+    
+    return `*KASHMIR CURATORS - B2B RESERVATION REQUEST*
+
+Dear Reservations Team at *${hotelName}*,
+
+We would like to request confirmation for the following B2B stay:
+• *Guest Name*: ${res.guestName}
+• *Check-in*: ${checkInStr}
+• *Check-out*: ${checkOutStr}
+• *Room Type*: ${res.roomType}
+• *Rooms Count*: ${res.roomsCount}
+• *Meal Plan*: ${res.mealPlan}
+${res.specialRequests ? `• *Special Requests*: ${res.specialRequests}\n` : ''}
+Please click the secure link below to confirm or decline this booking instantly:
+${publicLink}
+
+Thank you,
+Operations Desk
+Kashmir Curators`;
   };
 
   const formatCountdown = (holdUntilStr?: string | null) => {
@@ -1036,12 +1218,18 @@ export default function CMSReservations() {
                               )}
                             </Button>
                             <Button
-                              onClick={() => handleSimulateQuoteSend(item.id, 'whatsapp')}
+                              onClick={async () => {
+                                const hotel = hotels.find(h => h.id === item.hotelId);
+                                const message = formatWhatsAppMessage(item, hotel?.name || 'Hotel');
+                                await handleSimulateQuoteSend(item.id, 'whatsapp');
+                                const whatsappUrl = `https://api.whatsapp.com/send?phone=${hotel?.contactPhone || ''}&text=${encodeURIComponent(message)}`;
+                                window.open(whatsappUrl, '_blank');
+                              }}
                               disabled={sendingChannel !== null}
                               size="icon"
                               variant="outline"
                               className="w-9 h-9 rounded-xl border-white/5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white"
-                              title="Simulate Send WhatsApp Quote"
+                              title="Send WhatsApp Quote"
                             >
                               {sendingChannel?.id === item.id && sendingChannel?.channel === 'whatsapp' ? (
                                 <Loader2 className="w-4 h-4 text-white animate-spin" />
@@ -1110,388 +1298,514 @@ export default function CMSReservations() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
-            {/* Left Column: Basic Details */}
-            <div className="space-y-6">
-              <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-kashmir-gold/60 mb-2">Guest & Lead parameters</h3>
+          {showShareScreen ? (
+            <div className="space-y-6 py-6 text-center">
+              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+              </div>
+              <h3 className="text-2xl font-display font-black text-white">Booking Request Created Successfully!</h3>
+              <p className="text-white/50 text-sm max-w-lg mx-auto leading-relaxed">
+                We have created the reservations in the Kashmir Curators database. You can now share confirmation vouchers or booking links directly with the respective hotel reservation desks.
+              </p>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Link Trip Inquiry (Optional)</label>
-                  <Select value={formData.inquiryId} onValueChange={handleInquiryChange}>
-                    <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
-                      <SelectValue placeholder="Select Inquiry to Link" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl max-h-56">
-                      <SelectItem value="none">No Linked Inquiry</SelectItem>
-                      {inquiries.map(inq => (
-                        <SelectItem key={inq.id} value={inq.id}>{inq.customerName} ({inq.destination})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-4 max-h-[40vh] overflow-y-auto custom-scrollbar pr-2 mt-8">
+                {createdReservations.map((res: any, idx: number) => {
+                  const hotel = hotels.find(h => h.id === res.hotelId);
+                  const hotelName = hotel ? hotel.name : res.hotel?.name || 'Hotel Stay';
+                  const contactPhone = hotel ? hotel.contactPhone : '';
+                  const checkInStr = new Date(res.checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                  const checkOutStr = new Date(res.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Guest Full Name</label>
-                  <Input 
-                    value={formData.guestName}
-                    onChange={(e) => setFormData({...formData, guestName: e.target.value})}
-                    placeholder="E.g. Rajesh Kumar"
-                    className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Guest Email</label>
-                    <Input 
-                      value={formData.guestEmail}
-                      onChange={(e) => setFormData({...formData, guestEmail: e.target.value})}
-                      placeholder="rajesh@example.com"
-                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Guest Phone</label>
-                    <Input 
-                      value={formData.guestPhone}
-                      onChange={(e) => setFormData({...formData, guestPhone: e.target.value})}
-                      placeholder="+91 9876543210"
-                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs"
-                    />
-                  </div>
-                </div>
+                  return (
+                    <div key={res.id || idx} className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
+                      <div>
+                        <h4 className="font-bold text-white text-base">{hotelName}</h4>
+                        <p className="text-xs text-kashmir-gold/60 mt-1 uppercase font-bold">
+                          {res.roomType} • {res.roomsCount} Room(s) • {res.mealPlan}
+                        </p>
+                        <p className="text-xs text-white/40 mt-1 font-medium">
+                          {checkInStr} → {checkOutStr} • Guest: {res.guestName}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 w-full md:w-auto">
+                        <Button
+                          onClick={async () => {
+                            const message = formatWhatsAppMessage(res, hotelName);
+                            await handleSimulateQuoteSend(res.id, 'whatsapp');
+                            const whatsappUrl = `https://api.whatsapp.com/send?phone=${contactPhone || ''}&text=${encodeURIComponent(message)}`;
+                            window.open(whatsappUrl, '_blank');
+                          }}
+                          className="flex-1 md:flex-none rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-bold uppercase tracking-wider text-[10px] h-10 px-4 flex items-center justify-center gap-2 border-none"
+                        >
+                          <MessageSquare className="w-4 h-4" /> Share WhatsApp
+                        </Button>
+                        <Button
+                          onClick={() => handleSimulateQuoteSend(res.id, 'email')}
+                          className="flex-1 md:flex-none rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold uppercase tracking-wider text-[10px] h-10 px-4 flex items-center justify-center gap-2 border-none"
+                        >
+                          <Mail className="w-4 h-4" /> Send Email
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-blue-400 mb-2">Dates & Accommodations</h3>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Hotel Partner</label>
-                  <div className="relative">
-                    <Input 
-                      value={hotelSearchQuery}
-                      onChange={(e) => {
-                        setHotelSearchQuery(e.target.value);
-                        setShowSuggestions(true);
-                      }}
-                      onFocus={() => setShowSuggestions(true)}
-                      placeholder="Search or type hotel name..."
-                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pr-10 focus:border-kashmir-gold/30"
-                    />
-                    <Building className="w-4 h-4 text-white/20 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    
-                    {showSuggestions && (
-                      <>
-                        <div 
-                          className="fixed inset-0 z-40" 
-                          onClick={() => setShowSuggestions(false)} 
-                        />
-                        <Card className="absolute left-0 right-0 mt-2 z-50 bg-[#0a0f12]/95 border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar backdrop-blur-xl">
-                          <div className="p-2 space-y-1">
-                            {hotels
-                              .filter(h => h.name.toLowerCase().includes(hotelSearchQuery.toLowerCase()))
-                              .map((h) => (
-                                <button
-                                  key={h.id}
-                                  type="button"
-                                  onClick={() => {
-                                    handleHotelChange(h.id);
-                                    setHotelSearchQuery(h.name);
-                                    setShowSuggestions(false);
-                                  }}
-                                  className={cn(
-                                    "w-full text-left px-4 py-2.5 text-xs rounded-xl transition-colors flex justify-between items-center",
-                                    formData.hotelId === h.id 
-                                      ? "bg-kashmir-gold/10 text-kashmir-gold font-bold" 
-                                      : "text-white/80 hover:bg-white/5"
-                                  )}
-                                >
-                                  <span>{h.name}</span>
-                                  <span className="text-[10px] text-white/30">{h.location}</span>
-                                </button>
-                              ))}
-                            
-                            {hotelSearchQuery.trim() !== '' && !hotels.some(h => h.name.toLowerCase() === hotelSearchQuery.trim().toLowerCase()) && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  createCustomHotel(hotelSearchQuery.trim());
-                                  setShowSuggestions(false);
-                                }}
-                                className="w-full text-left px-4 py-2.5 text-xs rounded-xl text-kashmir-gold hover:bg-kashmir-gold/10 transition-colors font-bold flex items-center gap-2 border border-dashed border-kashmir-gold/20"
-                              >
-                                <Plus className="w-4 h-4" /> Create new hotel partner "{hotelSearchQuery.trim()}"
-                              </button>
-                            )}
-                          </div>
-                        </Card>
-                      </>
-                    )}
-                  </div>
-                </div>
+              <div className="pt-8 border-t border-white/5 mt-8 flex justify-end">
+                <Button
+                  onClick={() => {
+                    setFormOpen(false);
+                    setShowShareScreen(false);
+                  }}
+                  className="rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-xs px-6 h-12"
+                >
+                  Done & Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+                {/* Left Column: Basic Details */}
+                <div className="space-y-6">
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-kashmir-gold/60 mb-2">Guest & Lead parameters</h3>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Check-in Date</label>
-                    <Input 
-                      type="date"
-                      value={formData.checkIn}
-                      onChange={(e) => setFormData({...formData, checkIn: e.target.value})}
-                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Check-out Date</label>
-                    <Input 
-                      type="date"
-                      value={formData.checkOut}
-                      onChange={(e) => setFormData({...formData, checkOut: e.target.value})}
-                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Room Type</label>
-                    {/* Pre-filled from hotel room types if available */}
-                    {hotels.find(h => h.id === formData.hotelId)?.roomTypes?.length ? (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Link Trip Inquiry (Optional)</label>
                       <Select 
-                        value={formData.roomType} 
-                        onValueChange={(val) => {
-                          const h = hotels.find(ht => ht.id === formData.hotelId);
-                          const rType = h?.roomTypes?.find((r: any) => r.name === val);
-                          setFormData(prev => ({
-                            ...prev,
-                            roomType: val,
-                            contractRate: rType ? rType.price : prev.contractRate
-                          }));
-                        }}
+                        value={formData.inquiryId || "none"} 
+                        onValueChange={(val) => handleInquiryChange(val === "none" ? "" : val)}
                       >
-                        <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs">
-                          <SelectValue placeholder="Select Room Type" />
+                        <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
+                          <SelectValue placeholder="Select Inquiry to Link" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
-                          {hotels.find(h => h.id === formData.hotelId)?.roomTypes?.map((r: any) => (
-                            <SelectItem key={r.id || r.name} value={r.name}>{r.name} (₹{r.price.toLocaleString()})</SelectItem>
+                        <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl max-h-56">
+                          <SelectItem value="none">No Linked Inquiry</SelectItem>
+                          {inquiries.map(inq => (
+                            <SelectItem key={inq.id} value={inq.id}>{inq.customerName} ({inq.destination})</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    ) : (
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Guest Full Name</label>
                       <Input 
-                        value={formData.roomType}
-                        onChange={(e) => setFormData({...formData, roomType: e.target.value})}
-                        placeholder="Luxury Room"
+                        value={formData.guestName}
+                        onChange={(e) => setFormData({...formData, guestName: e.target.value})}
+                        placeholder="E.g. Rajesh Kumar"
                         className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
                       />
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Meal Plan</label>
-                    <Select value={formData.mealPlan} onValueChange={(val) => setFormData({...formData, mealPlan: val})}>
-                      <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
-                        <SelectValue placeholder="Meal Plan" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
-                        <SelectItem value="EP">EP (Room Only)</SelectItem>
-                        <SelectItem value="CP">CP (Room + Breakfast)</SelectItem>
-                        <SelectItem value="MAP">MAP (Room + Breakfast + Dinner)</SelectItem>
-                        <SelectItem value="AP">AP (Room + All Meals)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Guest Email</label>
+                        <Input 
+                          value={formData.guestEmail}
+                          onChange={(e) => setFormData({...formData, guestEmail: e.target.value})}
+                          placeholder="rajesh@example.com"
+                          className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Guest Phone</label>
+                        <Input 
+                          value={formData.guestPhone}
+                          onChange={(e) => setFormData({...formData, guestPhone: e.target.value})}
+                          placeholder="+91 9876543210"
+                          className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Rooms Count</label>
-                    <Input 
-                      type="number"
-                      value={formData.roomsCount}
-                      onChange={(e) => setFormData({...formData, roomsCount: parseInt(e.target.value) || 1})}
-                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
-                    />
+                {/* Right Column: Financial Breakdown & Timeline */}
+                <div className="space-y-6">
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400 mb-2">Consolidated Calculations</h3>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Payment Status</label>
+                      <Select value={formData.paymentStatus} onValueChange={(val) => setFormData({...formData, paymentStatus: val})}>
+                        <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
+                          <SelectValue placeholder="Payment status" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+                          <SelectItem value="Unpaid">Unpaid</SelectItem>
+                          <SelectItem value="Partially Paid">Partially Paid</SelectItem>
+                          <SelectItem value="Paid">Paid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Auto summary calculation card */}
+                    <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl space-y-2 mt-4">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-white/40">Duration Nights:</span>
+                        <span className="font-bold text-white">{calculatedForm.nights} Nights</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-white/40">Hotel Net Dues:</span>
+                        <span className="font-bold text-rose-400">₹{calculatedForm.dues.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs pt-2 border-t border-white/5">
+                        <span className="text-emerald-400 font-bold uppercase tracking-widest text-[9px]">Operational Profit Margin:</span>
+                        <span className="font-bold text-emerald-400">₹{calculatedForm.profit.toLocaleString()}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Reservation Status</label>
-                    <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val})}>
-                      <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
-                        <SelectValue placeholder="Select Status" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Sent">Sent</SelectItem>
-                        <SelectItem value="Confirmed">Confirmed</SelectItem>
-                        <SelectItem value="Hold">Hold</SelectItem>
-                        <SelectItem value="Rejected">Rejected</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-1">Special requests & notes</h3>
+                    <Textarea 
+                      value={formData.specialRequests}
+                      onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
+                      placeholder="E.g., Honey moon decor, extra bed request, vegetarian meals only."
+                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl min-h-[90px] text-xs text-white/70"
+                    />
                   </div>
                 </div>
+              </div>
 
-                {formData.status === 'Hold' && (
-                  <div className="space-y-2 animate-in fade-in duration-300">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-amber-400 ml-1">Hold Until Timer</label>
-                    <Input 
-                      type="datetime-local"
-                      value={formData.holdUntil}
-                      onChange={(e) => setFormData({...formData, holdUntil: e.target.value})}
-                      className="bg-[#0a0f12]/80 border-amber-500/20 focus:border-amber-400 rounded-xl h-11 text-amber-300"
-                    />
+              {/* Repeating Stays List */}
+              <div className="mt-8 space-y-8 border-t border-white/5 pt-8">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-display font-bold text-white flex items-center gap-2">
+                    <Building className="w-5 h-5 text-kashmir-gold" />
+                    Configure Hotel Stay(s)
+                  </h3>
+                  {!activeReservation && (
+                    <Button 
+                      type="button"
+                      onClick={addStay}
+                      className="bg-white/5 hover:bg-white/10 text-kashmir-gold border border-white/10 rounded-xl h-10 px-4 text-xs font-bold"
+                    >
+                      <Plus className="w-4 h-4 mr-2" /> Add Another Hotel Stay
+                    </Button>
+                  )}
+                </div>
+
+                {hotelStays.map((stay, index) => {
+                  const selectedHotel = hotels.find(h => h.id === stay.hotelId);
+                  const roomTypes = selectedHotel?.roomTypes || [];
+
+                  return (
+                    <Card key={index} className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-6 relative">
+                      <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                        <span className="text-xs font-black uppercase tracking-[0.2em] text-kashmir-gold">
+                          Stay #{index + 1} details
+                        </span>
+                        {hotelStays.length > 1 && !activeReservation && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => removeStay(index)}
+                            className="text-red-400 hover:text-red-300 h-8 px-2 flex items-center gap-1.5"
+                          >
+                            <Trash2 className="w-4 h-4" /> Remove Stay
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Left: Hotel & Room Particulars */}
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Hotel Partner</label>
+                            <div className="relative">
+                              <Input 
+                                value={stay.hotelSearchQuery}
+                                onChange={(e) => {
+                                  updateStay(index, { hotelSearchQuery: e.target.value, showSuggestions: true });
+                                }}
+                                onFocus={() => updateStay(index, { showSuggestions: true })}
+                                placeholder="Search or type hotel name..."
+                                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pr-10 focus:border-kashmir-gold/30"
+                              />
+                              <Building className="w-4 h-4 text-white/20 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              
+                              {stay.showSuggestions && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-40" 
+                                    onClick={() => updateStay(index, { showSuggestions: false })} 
+                                  />
+                                  <Card className="absolute left-0 right-0 mt-2 z-50 bg-[#0a0f12]/95 border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar backdrop-blur-xl">
+                                    <div className="p-2 space-y-1">
+                                      {hotels
+                                        .filter(h => h.name.toLowerCase().includes(stay.hotelSearchQuery.toLowerCase()))
+                                        .map((h) => (
+                                          <button
+                                            key={h.id}
+                                            type="button"
+                                            onClick={() => {
+                                              handleHotelChange(h.id, index);
+                                              updateStay(index, { showSuggestions: false });
+                                            }}
+                                            className={cn(
+                                              "w-full text-left px-4 py-2.5 text-xs rounded-xl transition-colors flex justify-between items-center",
+                                              stay.hotelId === h.id 
+                                                ? "bg-kashmir-gold/10 text-kashmir-gold font-bold" 
+                                                : "text-white/80 hover:bg-white/5"
+                                            )}
+                                          >
+                                            <span>{h.name}</span>
+                                            <span className="text-[10px] text-white/30">{h.location}</span>
+                                          </button>
+                                        ))}
+                                      
+                                      {stay.hotelSearchQuery.trim() !== '' && !hotels.some(h => h.name.toLowerCase() === stay.hotelSearchQuery.trim().toLowerCase()) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            createCustomHotel(stay.hotelSearchQuery.trim(), index);
+                                            updateStay(index, { showSuggestions: false });
+                                          }}
+                                          className="w-full text-left px-4 py-2.5 text-xs rounded-xl text-kashmir-gold hover:bg-kashmir-gold/10 transition-colors font-bold flex items-center gap-2 border border-dashed border-kashmir-gold/20"
+                                        >
+                                          <Plus className="w-4 h-4" /> Create new hotel partner "{stay.hotelSearchQuery.trim()}"
+                                        </button>
+                                      )}
+                                    </div>
+                                  </Card>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Check-in Date</label>
+                              <Input 
+                                type="date"
+                                value={stay.checkIn}
+                                onChange={(e) => updateStay(index, { checkIn: e.target.value })}
+                                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Check-out Date</label>
+                              <Input 
+                                type="date"
+                                value={stay.checkOut}
+                                onChange={(e) => updateStay(index, { checkOut: e.target.value })}
+                                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Room Type</label>
+                              {roomTypes.length > 0 ? (
+                                <Select 
+                                  value={stay.roomType} 
+                                  onValueChange={(val) => {
+                                    const rType = roomTypes.find((r: any) => r.name === val);
+                                    updateStay(index, {
+                                      roomType: val,
+                                      contractRate: rType ? rType.price : stay.contractRate,
+                                      totalAmount: rType ? Math.round(rType.price * stay.roomsCount * 1.25) : stay.totalAmount
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs">
+                                    <SelectValue placeholder="Select Room Type" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+                                    {roomTypes.map((r: any) => (
+                                      <SelectItem key={r.id || r.name} value={r.name}>{r.name} (₹{r.price.toLocaleString()})</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Input 
+                                  value={stay.roomType}
+                                  onChange={(e) => updateStay(index, { roomType: e.target.value })}
+                                  placeholder="Luxury Room"
+                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                                />
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Meal Plan</label>
+                              <Select value={stay.mealPlan} onValueChange={(val) => updateStay(index, { mealPlan: val })}>
+                                <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
+                                  <SelectValue placeholder="Meal Plan" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+                                  <SelectItem value="EP">EP (Room Only)</SelectItem>
+                                  <SelectItem value="CP">CP (Room + Breakfast)</SelectItem>
+                                  <SelectItem value="MAP">MAP (Room + Breakfast + Dinner)</SelectItem>
+                                  <SelectItem value="AP">AP (Room + All Meals)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Rooms Count</label>
+                              <Input 
+                                type="number"
+                                value={stay.roomsCount}
+                                onChange={(e) => {
+                                  const count = parseInt(e.target.value) || 1;
+                                  updateStay(index, {
+                                    roomsCount: count,
+                                    totalAmount: Math.round(stay.contractRate * count * 1.25)
+                                  });
+                                }}
+                                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Stay Status</label>
+                              <Select value={stay.status} onValueChange={(val) => updateStay(index, { status: val })}>
+                                <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
+                                  <SelectValue placeholder="Select Status" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+                                  <SelectItem value="Pending">Pending</SelectItem>
+                                  <SelectItem value="Sent">Sent</SelectItem>
+                                  <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                  <SelectItem value="Hold">Hold</SelectItem>
+                                  <SelectItem value="Rejected">Rejected</SelectItem>
+                                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          {stay.status === 'Hold' && (
+                            <div className="space-y-2 animate-in fade-in duration-300">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-amber-400 ml-1">Hold Until Timer</label>
+                              <Input 
+                                type="datetime-local"
+                                value={stay.holdUntil}
+                                onChange={(e) => updateStay(index, { holdUntil: e.target.value })}
+                                className="bg-[#0a0f12]/80 border-amber-500/20 focus:border-amber-400 rounded-xl h-11 text-amber-300"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right: Stay Financial Parameters */}
+                        <div className="space-y-4">
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Stay Financial parameters</h4>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Contract rate / night</label>
+                              <div className="relative">
+                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">₹</div>
+                                <Input 
+                                  type="number"
+                                  value={stay.contractRate === 0 ? '' : stay.contractRate}
+                                  onChange={(e) => updateStay(index, { contractRate: parseFloat(e.target.value) || 0 })}
+                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Seasonal markup</label>
+                              <div className="relative">
+                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">₹</div>
+                                <Input 
+                                  type="number"
+                                  value={stay.seasonalPricing === 0 ? '' : stay.seasonalPricing}
+                                  onChange={(e) => updateStay(index, { seasonalPricing: parseFloat(e.target.value) || 0 })}
+                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Gross Total Amount</label>
+                              <div className="relative">
+                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">₹</div>
+                                <Input 
+                                  type="number"
+                                  value={stay.totalAmount === 0 ? '' : stay.totalAmount}
+                                  onChange={(e) => updateStay(index, { totalAmount: parseFloat(e.target.value) || 0 })}
+                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8 font-bold"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Commission rate (%)</label>
+                              <div className="relative">
+                                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">%</div>
+                                <Input 
+                                  type="number"
+                                  value={stay.commissionRate === 0 ? '' : stay.commissionRate}
+                                  onChange={(e) => updateStay(index, { commissionRate: parseFloat(e.target.value) || 0 })}
+                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pr-8"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Historical timeline logs (Only show when editing) */}
+              {activeReservation && activeReservation.auditLogs && (
+                <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
+                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/30 pl-1">Lifecycle Audit logs trail</h3>
+                  <div className="space-y-4 pl-4 border-l border-white/5 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                    {JSON.parse(activeReservation.auditLogs || '[]').map((log: any, idx: number) => (
+                      <div key={idx} className="relative text-xs">
+                        <div className="absolute left-[-21px] top-1.5 w-2.5 h-2.5 rounded-full bg-kashmir-gold border border-[#0a0f12]" />
+                        <p className="font-bold text-white/80">{log.action}</p>
+                        <p className="text-[10px] text-white/40 mt-0.5">
+                          {new Date(log.timestamp).toLocaleString()} • Operator: {log.user}
+                        </p>
+                        {log.details && <p className="text-[10px] text-white/30 mt-1 italic">{log.details}</p>}
+                      </div>
+                    ))}
                   </div>
+                </div>
+              )}
+
+              <DialogFooter className="mt-8 gap-3 border-t border-white/5 pt-6">
+                {activeReservation && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setFormOpen(false);
+                      openDeleteDialog(activeReservation);
+                    }}
+                    className="bg-red-500/20 hover:bg-red-500 border border-red-500/30 text-red-400 hover:text-black font-bold uppercase tracking-widest px-6 h-12 rounded-xl transition-all mr-auto"
+                  >
+                    Delete
+                  </Button>
                 )}
-              </div>
-            </div>
-
-            {/* Right Column: Financial Breakdown & Timeline */}
-            <div className="space-y-6">
-              <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400 mb-2">B2B Financial parameters</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Contract rate / night</label>
-                    <div className="relative group/input">
-                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">₹</div>
-                      <Input 
-                        type="number"
-                        value={formData.contractRate === 0 ? '' : formData.contractRate}
-                        onChange={(e) => setFormData({...formData, contractRate: parseFloat(e.target.value) || 0})}
-                        className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Seasonal pricing markup</label>
-                    <div className="relative group/input">
-                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">₹</div>
-                      <Input 
-                        type="number"
-                        value={formData.seasonalPricing === 0 ? '' : formData.seasonalPricing}
-                        onChange={(e) => setFormData({...formData, seasonalPricing: parseFloat(e.target.value) || 0})}
-                        className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Gross Total Amount</label>
-                    <div className="relative group/input">
-                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">₹</div>
-                      <Input 
-                        type="number"
-                        value={formData.totalAmount === 0 ? '' : formData.totalAmount}
-                        onChange={(e) => setFormData({...formData, totalAmount: parseFloat(e.target.value) || 0})}
-                        className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8 font-bold"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Commission rate (%)</label>
-                    <div className="relative group/input">
-                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">%</div>
-                      <Input 
-                        type="number"
-                        value={formData.commissionRate === 0 ? '' : formData.commissionRate}
-                        onChange={(e) => setFormData({...formData, commissionRate: parseFloat(e.target.value) || 0})}
-                        className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pr-8"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Payment Status</label>
-                  <Select value={formData.paymentStatus} onValueChange={(val) => setFormData({...formData, paymentStatus: val})}>
-                    <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
-                      <SelectValue placeholder="Payment status" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
-                      <SelectItem value="Unpaid">Unpaid</SelectItem>
-                      <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                      <SelectItem value="Paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Auto summary calculation card */}
-                <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl space-y-2 mt-4">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-white/40">Duration Nights:</span>
-                    <span className="font-bold text-white">{calculatedForm.nights} Nights</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-white/40">Hotel Net Dues:</span>
-                    <span className="font-bold text-rose-400">₹{calculatedForm.dues.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs pt-2 border-t border-white/5">
-                    <span className="text-emerald-400 font-bold uppercase tracking-widest text-[9px]">Operational Profit Margin:</span>
-                    <span className="font-bold text-emerald-400">₹{calculatedForm.profit.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-1">Special requests & notes</h3>
-                <Textarea 
-                  value={formData.specialRequests}
-                  onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
-                  placeholder="E.g., Honey moon decor, extra bed request, vegetarian meals only."
-                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl min-h-[90px] text-xs text-white/70"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Historical timeline logs (Only show when editing) */}
-          {activeReservation && activeReservation.auditLogs && (
-            <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/30 pl-1">Lifecycle Audit logs trail</h3>
-              <div className="space-y-4 pl-4 border-l border-white/5 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                {JSON.parse(activeReservation.auditLogs || '[]').map((log: any, idx: number) => (
-                  <div key={idx} className="relative text-xs">
-                    <div className="absolute left-[-21px] top-1.5 w-2.5 h-2.5 rounded-full bg-kashmir-gold border border-[#0a0f12]" />
-                    <p className="font-bold text-white/80">{log.action}</p>
-                    <p className="text-[10px] text-white/40 mt-0.5">
-                      {new Date(log.timestamp).toLocaleString()} • Operator: {log.user}
-                    </p>
-                    {log.details && <p className="text-[10px] text-white/30 mt-1 italic">{log.details}</p>}
-                  </div>
-                ))}
-              </div>
-            </div>
+                <Button variant="ghost" onClick={() => setFormOpen(false)} className="rounded-xl border border-white/5 h-12 text-white/40 hover:text-white hover:bg-white/5">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSaveReservation} 
+                  disabled={saving}
+                  className="bg-kashmir-gold hover:bg-amber-500 text-black font-bold uppercase tracking-widest px-6 h-12 rounded-xl transition-all flex items-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : 'Save Reservation'}
+                </Button>
+              </DialogFooter>
+            </>
           )}
-
-          <DialogFooter className="mt-8 gap-3 border-t border-white/5 pt-6">
-            {activeReservation && (
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  setFormOpen(false);
-                  openDeleteDialog(activeReservation);
-                }}
-                className="bg-red-500/20 hover:bg-red-500 border border-red-500/30 text-red-400 hover:text-black font-bold uppercase tracking-widest px-6 h-12 rounded-xl transition-all mr-auto"
-              >
-                Delete
-              </Button>
-            )}
-            <Button variant="ghost" onClick={() => setFormOpen(false)} className="rounded-xl border border-white/5 h-12 text-white/40 hover:text-white hover:bg-white/5">
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveReservation} 
-              disabled={saving}
-              className="bg-kashmir-gold hover:bg-amber-500 text-black font-bold uppercase tracking-widest px-6 h-12 rounded-xl transition-all flex items-center gap-2"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : 'Save Reservation'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
