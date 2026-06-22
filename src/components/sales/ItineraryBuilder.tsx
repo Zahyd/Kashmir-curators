@@ -32,7 +32,8 @@ import {
   TrendingUp,
   AlertCircle,
   Activity,
-  Upload
+  Upload,
+  Plane
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1030,6 +1031,28 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                   <p className="text-base font-bold text-white/80 mb-1">{inquiry.phone}</p>
                   <p className="text-xs text-white/20 font-medium">{inquiry.email}</p>
                 </div>
+
+                {inquiry.flightDetails && (() => {
+                  try {
+                    const flight = JSON.parse(inquiry.flightDetails);
+                    if (!flight || !flight.includeFlights) return null;
+                    return (
+                      <div className="p-6 bg-blue-500/5 rounded-3xl border border-blue-500/10 text-left animate-in fade-in duration-500">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-3 flex items-center gap-2">
+                          <Plane className="w-4 h-4 text-blue-400 animate-pulse" /> Flight Request
+                        </p>
+                        <div className="space-y-2.5 text-xs">
+                          <p className="font-bold text-white/90 uppercase">{flight.origin} &rarr; {flight.destination}</p>
+                          <p className="text-white/40">{flight.tripType === 'roundtrip' ? 'Round Trip' : 'One Way'} • <span className="capitalize">{flight.cabinClass ? flight.cabinClass.replace('_', ' ') : 'Economy'}</span></p>
+                          <p className="text-white/40">Timing: <span className="capitalize">{flight.departureTimePref}</span></p>
+                          {flight.directOnly && <p className="text-kashmir-gold font-bold text-[9px] uppercase tracking-wider">Direct Flights Only</p>}
+                        </div>
+                      </div>
+                    );
+                  } catch (e) {
+                    return null;
+                  }
+                })()}
               </div>
 
               <div className="mt-10 p-6 rounded-3xl bg-kashmir-gold/5 border border-kashmir-gold/10">

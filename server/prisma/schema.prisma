@@ -143,6 +143,7 @@ model Inquiry {
   sentiment         String?            // Cold, Warm, Hot, Ready to Book
   quoteData         String?            // JSON string of days/pricing
   proposalUrl       String?            // URL to uploaded PDF
+  flightDetails     String?            // JSON string of flight preferences / enquiry details
   hotelReservations HotelReservation[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt

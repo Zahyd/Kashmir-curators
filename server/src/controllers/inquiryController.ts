@@ -27,7 +27,7 @@ export const getInquiries = async (req: Request, res: Response) => {
 };
 
 export const createInquiry = async (req: Request, res: Response) => {
-  const { customerName, email, phone, destination, duration, travelers, budget, accommodation, userId } = req.body;
+  const { customerName, email, phone, destination, duration, travelers, budget, accommodation, userId, flightDetails } = req.body;
   
   try {
     const p = prisma as any;
@@ -42,6 +42,7 @@ export const createInquiry = async (req: Request, res: Response) => {
         travelers: travelers ? String(travelers) : '2',
         budget: budget || 'Flexible',
         accommodation: accommodation || 'Premium Hotel',
+        flightDetails: flightDetails || null,
         status: 'New'
       }
     });
@@ -100,6 +101,7 @@ export const updateInquiry = async (req: Request, res: Response) => {
       sentiment, 
       quoteData, 
       proposalUrl,
+      flightDetails,
       customerName,
       email,
       phone,
@@ -117,6 +119,7 @@ export const updateInquiry = async (req: Request, res: Response) => {
     if (sentiment !== undefined) data.sentiment = sentiment ? String(sentiment) : null;
     if (quoteData !== undefined) data.quoteData = quoteData ? (typeof quoteData === 'string' ? quoteData : JSON.stringify(quoteData)) : null;
     if (proposalUrl !== undefined) data.proposalUrl = proposalUrl ? String(proposalUrl) : null;
+    if (flightDetails !== undefined) data.flightDetails = flightDetails ? String(flightDetails) : null;
     
     // Also allow updating basic info if needed
     if (customerName !== undefined) data.customerName = String(customerName);

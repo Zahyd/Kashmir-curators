@@ -23,7 +23,8 @@ import {
   Users,
   PlusCircle,
   Sparkles,
-  UserPlus
+  UserPlus,
+  Plane
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -727,6 +728,37 @@ export default function CMSInquiries() {
                       </div>
                     </div>
                   </div>
+
+                  {selectedInquiry.flightDetails && (() => {
+                    try {
+                      const flight = JSON.parse(selectedInquiry.flightDetails);
+                      if (!flight || !flight.includeFlights) return null;
+                      return (
+                        <div className="space-y-6 p-8 rounded-[2rem] bg-blue-500/[0.02] border border-blue-500/10 mt-6 animate-in fade-in duration-500 text-left">
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 flex items-center gap-3">
+                            <Plane className="w-4 h-4 text-blue-400 animate-pulse" />
+                            Requested Flight Enquiry
+                          </h4>
+                          <div className="space-y-4 text-sm">
+                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white/25">Route</span>
+                              <span className="font-bold text-white uppercase">{flight.originCity || flight.origin} ({flight.origin}) &rarr; {flight.destinationCity || flight.destination} ({flight.destination})</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white/25">Trip Class</span>
+                              <span className="font-bold text-white capitalize">{flight.tripType === 'roundtrip' ? 'Round Trip' : 'One Way'} • {flight.cabinClass ? flight.cabinClass.replace('_', ' ') : 'Economy'}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-1">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white/25">Timing / Direct</span>
+                              <span className="font-bold text-white capitalize">Departure: {flight.departureTimePref} • {flight.directOnly ? 'Direct Only' : 'Layovers OK'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    } catch (e) {
+                      return null;
+                    }
+                  })()}
                 </div>
               </div>
 
