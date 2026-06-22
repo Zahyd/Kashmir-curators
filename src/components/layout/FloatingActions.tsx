@@ -41,13 +41,13 @@ export default function FloatingActions() {
     {
       icon: <MessageCircle className="h-5 w-5" />,
       label: 'WhatsApp',
-      href: 'https://wa.me/911234567890?text=Hi! I am interested in Kashmir packages.',
+      href: 'https://wa.me/919103798448?text=Hi! I am interested in Kashmir packages.',
       color: 'bg-[#25D366] hover:bg-[#20ba5a] text-white shadow-[0_0_15px_rgba(37,211,102,0.3)] hover:shadow-[0_0_25px_rgba(37,211,102,0.5)]',
     },
     {
       icon: <Phone className="h-5 w-5" />,
       label: 'Call Now',
-      href: 'tel:+911234567890',
+      href: 'tel:+919103798448',
       color: 'bg-kashmir-lake hover:bg-kashmir-lake/90',
     },
   ];
