@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { API_BASE_URL } from '@/lib/api';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface UserAccount {
   id: string;
@@ -39,11 +40,116 @@ interface UserAccount {
   };
 }
 
+function AgentCard({ agent, onVerify }: { agent: any, onVerify: (id: string, status: 'APPROVED' | 'REJECTED', comm: number) => void }) {
+  const [commInput, setCommInput] = useState(agent.commissionPct || 0);
+  
+  return (
+    <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/5 hover:bg-white/[0.08] hover:border-kashmir-gold/20 transition-all duration-500 group relative overflow-hidden flex flex-col justify-between">
+      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <Briefcase className="w-16 h-16 text-kashmir-gold" />
+      </div>
+      
+      <div>
+        <div className="flex items-center gap-5 mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-kashmir-gold/20 to-transparent border border-kashmir-gold/20 flex items-center justify-center text-kashmir-gold font-bold text-xl uppercase shadow-inner">
+            {agent.companyName ? agent.companyName.charAt(0) : 'A'}
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 className="font-bold text-white text-base group-hover:text-kashmir-gold transition-colors">{agent.companyName}</h3>
+              <Badge className={cn(
+                "text-[9px] font-black uppercase tracking-wider",
+                agent.status === 'APPROVED' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                agent.status === 'REJECTED' ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+              )}>
+                {agent.status}
+              </Badge>
+            </div>
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/20">
+              Code: {agent.agentCode}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4 mb-8 text-left">
+          <p className="text-xs text-white/50 flex items-center gap-3">
+            <User className="w-4.5 h-4.5 text-kashmir-gold" /> {agent.user?.name || 'Contact N/A'}
+          </p>
+          <p className="text-xs text-white/50 flex items-center gap-3">
+            <Mail className="w-4.5 h-4.5 text-kashmir-gold" /> {agent.user?.email || 'N/A'}
+          </p>
+          <p className="text-xs text-white/50 flex items-center gap-3">
+            <Phone className="w-4.5 h-4.5 text-kashmir-gold" /> {agent.user?.phone || 'No Contact'}
+          </p>
+          <p className="text-xs text-white/50 flex items-center gap-3">
+            <FileText className="w-4.5 h-4.5 text-kashmir-gold" /> License: {agent.licenseNumber || 'N/A'}
+          </p>
+        </div>
+
+        <div className="space-y-2 mb-8 text-left">
+          <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1">Commission Override (%)</label>
+          <div className="relative">
+            <input
+              type="number"
+              value={commInput}
+              onChange={(e) => setCommInput(parseFloat(e.target.value) || 0)}
+              className="w-full bg-black/40 border border-white/10 rounded-xl h-10 px-3 text-xs text-white focus:outline-none focus:border-kashmir-gold/50"
+            />
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 text-xs font-bold">%</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-3 mt-4">
+        {agent.status === 'PENDING' ? (
+          <>
+            <Button
+              onClick={() => onVerify(agent.id, 'APPROVED', commInput)}
+              className="flex-1 bg-kashmir-gold text-black hover:bg-amber-500 text-[10px] font-black uppercase tracking-widest h-10 rounded-xl transition-all"
+            >
+              Approve
+            </Button>
+            <Button
+              onClick={() => onVerify(agent.id, 'REJECTED', commInput)}
+              variant="destructive"
+              className="flex-1 bg-red-500/20 hover:bg-red-500 border border-red-500/30 text-red-400 hover:text-black text-[10px] font-black uppercase tracking-widest h-10 rounded-xl transition-all"
+            >
+              Reject
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              onClick={() => onVerify(agent.id, 'APPROVED', commInput)}
+              className="flex-1 bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest h-10 rounded-xl transition-all"
+            >
+              Update Commission
+            </Button>
+            <Button
+              onClick={() => onVerify(agent.id, agent.status === 'APPROVED' ? 'REJECTED' : 'APPROVED', commInput)}
+              className={cn(
+                "flex-1 text-[10px] font-black uppercase tracking-widest h-10 rounded-xl transition-all border",
+                agent.status === 'APPROVED' 
+                  ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-black"
+                  : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-black"
+              )}
+            >
+              {agent.status === 'APPROVED' ? 'Suspend' : 'Activate'}
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CMSUsers() {
   const [users, setUsers] = useState<UserAccount[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'clients' | 'team'>('clients');
+  const [activeTab, setActiveTab] = useState<'clients' | 'team' | 'agents'>('clients');
   const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -61,7 +167,46 @@ export default function CMSUsers() {
 
   useEffect(() => {
     fetchUsers();
+    fetchAgents();
   }, []);
+
+  const fetchAgents = async () => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/agents`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setAgents(data || []);
+    } catch (error) {
+      console.error('Failed to fetch agents:', error);
+    }
+  };
+
+  const handleVerifyAgent = async (agentId: string, status: 'APPROVED' | 'REJECTED', commissionPct: number) => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/agents/${agentId}/verify`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status, commissionPct })
+      });
+      if (response.ok) {
+        toast.success(`Agent registration ${status.toLowerCase()} successfully`);
+        fetchAgents();
+        fetchUsers();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to update agent verification status');
+      }
+    } catch (error) {
+      console.error('verify agent error:', error);
+      toast.error('Network error during verification');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -161,6 +306,14 @@ export default function CMSUsers() {
   const teamAccounts = users.filter(u => u.role !== 'user');
 
   const getFilteredAccounts = () => {
+    if (activeTab === 'agents') {
+      return agents.filter(a => 
+        (a.companyName && a.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (a.agentCode && a.agentCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (a.user?.name && a.user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (a.user?.email && a.user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
     const list = activeTab === 'clients' ? clientAccounts : teamAccounts;
     return list.filter(u => 
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -261,6 +414,16 @@ export default function CMSUsers() {
             >
               Team Directory ({teamAccounts.length})
             </button>
+            <button
+              onClick={() => { setActiveTab('agents'); setSearchTerm(''); }}
+              className={`flex-1 md:flex-initial px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                activeTab === 'agents' 
+                  ? 'bg-kashmir-gold text-black shadow-lg shadow-kashmir-gold/10' 
+                  : 'text-white/40 hover:text-white'
+              }`}
+            >
+              B2B Agents ({agents.length})
+            </button>
           </div>
 
           {/* Search Box */}
@@ -270,6 +433,8 @@ export default function CMSUsers() {
               placeholder={
                 activeTab === 'clients' 
                   ? "Search by traveler name, email..." 
+                  : activeTab === 'agents'
+                  ? "Search agents by company, code..."
                   : "Search team members by name, code..."
               }
               value={searchTerm}
@@ -290,9 +455,15 @@ export default function CMSUsers() {
             <Sparkles className="w-10 h-10 text-white/10 mx-auto mb-4" />
             <p className="text-white/30 text-xs font-black uppercase tracking-widest">No profiles found matching search criteria</p>
           </div>
-        ) : (
+        ) : activeTab === 'agents' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {getFilteredAccounts().map((u) => (
+              <AgentCard key={u.id} agent={u} onVerify={handleVerifyAgent} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {getFilteredAccounts().map((u: any) => (
               <div 
                 key={u.id} 
                 className="p-8 rounded-[2.5rem] bg-white/5 border border-white/5 hover:bg-white/[0.08] hover:border-kashmir-gold/20 transition-all duration-500 group relative overflow-hidden flex flex-col justify-between"

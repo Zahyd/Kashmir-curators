@@ -30,6 +30,8 @@ interface RoomType {
   id: string;
   name: string;
   price: number;
+  allotment?: number;
+  blackoutDates?: string[];
 }
 
 interface Hotel {
@@ -213,7 +215,16 @@ export default function CMSHotels() {
     });
     setAmenitiesInput(hotel.amenities?.join('\n') || '');
     setRoomTypesInput(
-      hotel.roomTypes?.map((r) => `${r.name}:${r.price}`).join('\n') || ''
+      hotel.roomTypes?.map((r) => {
+        const parts = [r.name, r.price];
+        if (r.allotment !== undefined) {
+          parts.push(r.allotment);
+          if (r.blackoutDates && r.blackoutDates.length > 0) {
+            parts.push(r.blackoutDates.join(','));
+          }
+        }
+        return parts.join(':');
+      }).join('\n') || ''
     );
     setDialogTab('basic');
     setDialogOpen(true);
@@ -236,8 +247,19 @@ export default function CMSHotels() {
       .split('\n')
       .filter(Boolean)
       .map((line, idx) => {
-        const [name, price] = line.split(':');
-        return { id: `room-${idx}`, name: (name || '').trim(), price: Number(price) || 0 };
+        const parts = line.split(':');
+        const name = (parts[0] || '').trim();
+        const price = Number(parts[1]) || 0;
+        const allotment = parts[2] ? (parseInt(parts[2]) || 5) : 5;
+        const blackoutStr = parts[3] || '';
+        const blackoutDates = blackoutStr ? blackoutStr.split(',').map(d => d.trim()).filter(Boolean) : [];
+        return { 
+          id: `room-${idx}`, 
+          name, 
+          price,
+          allotment,
+          blackoutDates
+        };
       });
 
     const dataToSave = {
@@ -687,12 +709,12 @@ export default function CMSHotels() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Inventory (Name:Price)</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Inventory (Name:Price:Allotment:Blackouts)</label>
                     <Textarea
                       className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] text-xs resize-none"
                       value={roomTypesInput}
                       onChange={(e) => setRoomTypesInput(e.target.value)}
-                      placeholder="Deluxe:5000&#10;Suite:9000"
+                      placeholder="Deluxe:5000:5:2026-06-25,2026-07-01_2026-07-05&#10;Suite:9000:3"
                     />
                   </div>
                 </div>

@@ -151,6 +151,7 @@ export default function CMSCabs() {
   const [currentView, setCurrentView] = useState<'registry' | 'operations'>('operations');
   const [cabs, setCabs] = useState<Cab[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [operationsData, setOperationsData] = useState<OperationsData>({
     manualBlockings: [],
     cabsMetadata: {},
@@ -349,6 +350,7 @@ export default function CMSCabs() {
       const data = await response.json();
       setOperationsData(data.operationsData);
       setBookings(data.bookings || []);
+      setDrivers(data.drivers || []);
     } catch (error: any) {
       console.error('[CMSCabs] Error fetching operations data:', error);
       toast.error('Failed to load fleet command center data');
@@ -1961,6 +1963,34 @@ export default function CMSCabs() {
                         </option>
                       );
                     })}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Registered Chauffeur (Optional)</label>
+                  <select
+                    className="w-full bg-[#0a0f12]/80 border border-white/10 rounded-xl h-12 text-xs px-3 text-white focus:outline-none focus:border-kashmir-gold/50"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val !== 'custom') {
+                        const drv = drivers.find(d => d.id === val);
+                        if (drv) {
+                          setDispatchDriverName(drv.name || '');
+                          setDispatchDriverPhone(drv.phone || '');
+                          if (drv.driverProfile?.vehicleRegNo) {
+                            setDispatchRegNo(drv.driverProfile.vehicleRegNo);
+                          }
+                        }
+                      }
+                    }}
+                    defaultValue="custom"
+                  >
+                    <option value="custom" className="bg-[#0a0f12] text-white">-- Manual / Custom Driver --</option>
+                    {drivers.map(drv => (
+                      <option key={drv.id} value={drv.id} className="bg-[#0a0f12] text-white">
+                        {drv.name} ({drv.phone || 'No Phone'}) {drv.driverProfile?.vehicleRegNo ? `- ${drv.driverProfile.vehicleRegNo}` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

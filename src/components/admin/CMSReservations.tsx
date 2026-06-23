@@ -98,6 +98,65 @@ interface HotelReservation {
   hasConflict?: boolean;
 }
 
+const hasBlackoutOverlap = (checkIn: string, checkOut: string, blackoutRules: string[] | undefined) => {
+  if (!checkIn || !checkOut || !blackoutRules || blackoutRules.length === 0) return false;
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
+  
+  for (const rule of blackoutRules) {
+    if (!rule) continue;
+    if (rule.includes('_') || rule.includes('~')) {
+      const separator = rule.includes('_') ? '_' : '~';
+      const [rStartStr, rEndStr] = rule.split(separator);
+      const rStart = new Date(rStartStr.trim());
+      const rEnd = new Date(rEndStr.trim());
+      if (start < rEnd && end > rStart) {
+        return true;
+      }
+    } else {
+      const bDate = new Date(rule.trim());
+      if (start <= bDate && end > bDate) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+const getAllotmentStatus = (
+  reservations: any[],
+  hotelId: string,
+  roomTypeName: string,
+  checkIn: string,
+  checkOut: string,
+  requestedRooms: number,
+  allotmentLimit: number,
+  currentReservationId?: string
+) => {
+  if (!hotelId || !roomTypeName || !checkIn || !checkOut) return { exceeded: false, bookedCount: 0, remaining: allotmentLimit };
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
+  
+  const overlappingReservations = reservations.filter(res => {
+    if (res.hotelId !== hotelId) return false;
+    if (res.roomType !== roomTypeName) return false;
+    if (res.status === 'Cancelled' || res.status === 'Rejected') return false;
+    if (currentReservationId && res.id === currentReservationId) return false;
+    
+    const rStart = new Date(res.checkIn);
+    const rEnd = new Date(res.checkOut);
+    return rStart < end && rEnd > start;
+  });
+  
+  const bookedCount = overlappingReservations.reduce((sum, res) => sum + (res.roomsCount || 1), 0);
+  const totalWanted = bookedCount + requestedRooms;
+  return {
+    exceeded: totalWanted > allotmentLimit,
+    bookedCount,
+    remaining: Math.max(0, allotmentLimit - bookedCount)
+  };
+};
+
 export default function CMSReservations() {
   const { systemEvents } = useTeamAuth();
   
@@ -438,6 +497,36 @@ export default function CMSReservations() {
       toast.error('Required fields for each stay: Hotel, Room Type, and Check-In/Out dates.');
       return;
     }
+    
+    // Validate allotments and blackout dates
+    for (let i = 0; i < hotelStays.length; i++) {
+      const stay = hotelStays[i];
+      const hotel = hotels.find(h => h.id === stay.hotelId);
+      const roomTypeObj = hotel?.roomTypes?.find((r: any) => r.name === stay.roomType);
+      if (roomTypeObj) {
+        const isBlackedOut = hasBlackoutOverlap(stay.checkIn, stay.checkOut, roomTypeObj.blackoutDates);
+        if (isBlackedOut) {
+          toast.error(`Stay #${i + 1}: Selected dates fall into a blackout period for ${stay.roomType}.`);
+          return;
+        }
+        
+        const allotmentLimit = roomTypeObj.allotment !== undefined ? roomTypeObj.allotment : 5;
+        const allotmentInfo = getAllotmentStatus(
+          reservations,
+          stay.hotelId,
+          stay.roomType,
+          stay.checkIn,
+          stay.checkOut,
+          stay.roomsCount,
+          allotmentLimit,
+          activeReservation?.id
+        );
+        if (allotmentInfo.exceeded) {
+          toast.error(`Stay #${i + 1}: Allotment limit exceeded for ${stay.roomType}. Max available: ${allotmentInfo.remaining} rooms.`);
+          return;
+        }
+      }
+    }
 
     setSaving(true);
     const token = localStorage.getItem('teamToken');
@@ -677,7 +766,63 @@ export default function CMSReservations() {
   };
 
   const updateStay = (index: number, fields: Partial<HotelStay>) => {
-    setHotelStays(prev => prev.map((stay, idx) => idx === index ? { ...stay, ...fields } : stay));
+    setHotelStays(prev => prev.map((stay, idx) => {
+      if (idx !== index) return stay;
+      
+      const updated = { ...stay, ...fields };
+      const hotel = hotels.find(h => h.id === updated.hotelId);
+      
+      // Auto recalculate contract rate and seasonal pricing when dates, roomType, or hotelId changes
+      if (hotel && updated.roomType && updated.checkIn) {
+        // Find room type
+        const roomType = hotel.roomTypes?.find((r: any) => r.name === updated.roomType);
+        const basePrice = roomType ? roomType.price : hotel.pricePerNight || 0;
+        let seasonalPrice = 0;
+        
+        // Parse seasonalPricing rules from hotel
+        if (hotel.seasonalPricing) {
+          try {
+            const rules = typeof hotel.seasonalPricing === 'string'
+              ? JSON.parse(hotel.seasonalPricing)
+              : hotel.seasonalPricing;
+            if (Array.isArray(rules)) {
+              const checkDate = new Date(updated.checkIn);
+              const mmdd = `${(checkDate.getMonth() + 1).toString().padStart(2, '0')}-${checkDate.getDate().toString().padStart(2, '0')}`;
+              for (const rule of rules) {
+                if (rule.start && rule.end && rule.markup) {
+                  if (mmdd >= rule.start && mmdd <= rule.end) {
+                    const markup = parseFloat(rule.markup) || 1.0;
+                    seasonalPrice = Math.round(basePrice * (markup - 1.0));
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Failed parsing seasonal pricing:', e);
+          }
+        }
+        
+        // Only update pricing if the field wasn't explicitly overridden in the input
+        if (fields.contractRate === undefined) {
+          updated.contractRate = basePrice;
+        }
+        if (fields.seasonalPricing === undefined) {
+          updated.seasonalPricing = seasonalPrice;
+        }
+        
+        // Recalculate gross total amount if totalAmount wasn't explicitly changed
+        if (fields.totalAmount === undefined) {
+          const checkInDate = new Date(updated.checkIn);
+          const checkOutDate = new Date(updated.checkOut);
+          const nights = Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))) || 1;
+          const subtotal = (updated.contractRate + updated.seasonalPricing) * updated.roomsCount * nights;
+          updated.totalAmount = Math.round(subtotal * 1.25);
+        }
+      }
+      
+      return updated;
+    }));
   };
 
   const addStay = () => {
@@ -1755,6 +1900,49 @@ Kashmir Curators`;
                             </div>
                           </div>
                         </div>
+
+                        {/* Warnings Section */}
+                        {(() => {
+                          const roomTypeObj = roomTypes.find((r: any) => r.name === stay.roomType);
+                          if (!roomTypeObj) return null;
+                          const isBlackedOut = hasBlackoutOverlap(stay.checkIn, stay.checkOut, roomTypeObj.blackoutDates);
+                          const allotmentLimit = roomTypeObj.allotment !== undefined ? roomTypeObj.allotment : 5;
+                          const allotmentInfo = getAllotmentStatus(
+                            reservations,
+                            stay.hotelId,
+                            stay.roomType,
+                            stay.checkIn,
+                            stay.checkOut,
+                            stay.roomsCount,
+                            allotmentLimit,
+                            activeReservation?.id
+                          );
+                          
+                          if (!isBlackedOut && !allotmentInfo.exceeded) return null;
+                          
+                          return (
+                            <div className="col-span-full mt-4 p-4 rounded-2xl bg-red-950/20 border border-red-500/20 text-red-200 text-xs space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                              {isBlackedOut && (
+                                <div className="flex items-start gap-2">
+                                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="font-bold text-red-400">Blackout Period Conflict</p>
+                                    <p className="text-red-300/80">The selected stay dates overlap with the hotel's registered blackout dates for this room category.</p>
+                                  </div>
+                                </div>
+                              )}
+                              {allotmentInfo.exceeded && (
+                                <div className="flex items-start gap-2">
+                                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="font-bold text-amber-400">Allotment Cap Exceeded</p>
+                                    <p className="text-red-300/80">Requested {stay.roomsCount} rooms, but only {allotmentInfo.remaining} rooms are available (Allotment limit: {allotmentLimit}, already booked: {allotmentInfo.bookedCount}).</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </Card>
                   );

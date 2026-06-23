@@ -261,6 +261,134 @@ async function main() {
     });
   }
 
+  // 6.5. B2B Travel Agents, Suppliers & Drivers
+  const b2bAgents = [
+    {
+      email: "agent001@travelworld.com",
+      name: "Elite Travel Partners",
+      role: "agent",
+      phone: "+919999911111",
+      companyName: "Travel World B2B",
+      agentCode: "AGT-WORLD-001",
+      commissionPct: 10.0,
+      status: "APPROVED"
+    }
+  ];
+
+  for (const ag of b2bAgents) {
+    const user = await prisma.user.upsert({
+      where: { email: ag.email },
+      update: { role: ag.role, phone: ag.phone },
+      create: {
+        email: ag.email,
+        name: ag.name,
+        role: ag.role,
+        phone: ag.phone
+      }
+    });
+
+    await prisma.agentProfile.upsert({
+      where: { userId: user.id },
+      update: {
+        companyName: ag.companyName,
+        agentCode: ag.agentCode,
+        commissionPct: ag.commissionPct,
+        status: ag.status
+      },
+      create: {
+        userId: user.id,
+        companyName: ag.companyName,
+        agentCode: ag.agentCode,
+        commissionPct: ag.commissionPct,
+        status: ag.status
+      }
+    });
+  }
+
+  const drivers = [
+    {
+      email: "hilal@kashmirconnect.com",
+      name: "Hilal Ahmad",
+      role: "driver",
+      phone: "+919103798448",
+      licenseNumber: "DL-JK01202500078",
+      vehicleRegNo: "JK-01-X-7721",
+      status: "AVAILABLE"
+    }
+  ];
+
+  for (const dr of drivers) {
+    const user = await prisma.user.upsert({
+      where: { email: dr.email },
+      update: { role: dr.role, phone: dr.phone },
+      create: {
+        email: dr.email,
+        name: dr.name,
+        role: dr.role,
+        phone: dr.phone
+      }
+    });
+
+    await prisma.driverProfile.upsert({
+      where: { userId: user.id },
+      update: {
+        licenseNumber: dr.licenseNumber,
+        vehicleRegNo: dr.vehicleRegNo,
+        status: dr.status
+      },
+      create: {
+        userId: user.id,
+        licenseNumber: dr.licenseNumber,
+        vehicleRegNo: dr.vehicleRegNo,
+        status: dr.status
+      }
+    });
+  }
+
+  const suppliers = [
+    {
+      email: "manager@khyberresort.com",
+      name: "Khyber Hotel Manager",
+      role: "supplier",
+      phone: "+919999900001",
+      companyName: "The Khyber Himalayan Resort",
+      contactPerson: "Adil Bhat",
+      type: "HOTEL"
+    }
+  ];
+
+  for (const sup of suppliers) {
+    const user = await prisma.user.upsert({
+      where: { email: sup.email },
+      update: { role: sup.role, phone: sup.phone },
+      create: {
+        email: sup.email,
+        name: sup.name,
+        role: sup.role,
+        phone: sup.phone
+      }
+    });
+
+    await prisma.supplier.upsert({
+      where: { userId: user.id },
+      update: {
+        companyName: sup.companyName,
+        contactPerson: sup.contactPerson,
+        email: sup.email,
+        phone: sup.phone,
+        type: sup.type
+      },
+      create: {
+        userId: user.id,
+        companyName: sup.companyName,
+        contactPerson: sup.contactPerson,
+        email: sup.email,
+        phone: sup.phone,
+        type: sup.type
+      }
+    });
+  }
+
   // 7. Curators (Native Local Guides)
   await prisma.curator.deleteMany({ where: { id: "curator-priya" } });
 

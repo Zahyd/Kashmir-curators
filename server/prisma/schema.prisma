@@ -15,14 +15,18 @@ model User {
   image             String?
   password          String?
   phone             String?
-  role              String             @default("user") // user, admin, sales, marketing, operations
+  role              String             @default("user") // user, admin, sales, operations, finance, agent, supplier, driver
   employeeCode      String?            @unique
   isOnline          Boolean            @default(false)
   leadCapacity      Int                @default(5)
   bookings          Booking[]
   inquiries         Inquiry[]
+  agentInquiries    Inquiry[]          @relation("AgentInquiries")
   hotelReservations HotelReservation[] @relation("UserReservations")
   uploadedDocuments String?            // JSON string of uploaded documents
+  agentProfile      AgentProfile?
+  driverProfile     DriverProfile?
+  supplierProfile   Supplier?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -120,6 +124,7 @@ model Booking {
   itemName     String
   bookingDate  DateTime
   status       String   @default("pending") // pending, confirmed, cancelled
+  stage        String   @default("DRAFT") // DRAFT, SUPPLIER_REQUESTED, CONFIRMED, VOUCHERED, EXECUTED, COMPLETED, CANCELLED
   totalAmount  Float
   details      String   // JSON string
   createdAt    DateTime @default(now())
@@ -139,6 +144,7 @@ model Inquiry {
   budget            String
   accommodation     String
   status            String             @default("New") // New, Pending Curation, Ready for Review, Booked, Lost
+  leadStage         String             @default("NEW_LEAD") // NEW_LEAD, FOLLOW_UP, QUOTE_SENT, NEGOTIATION, PAYMENT_PENDING, CONFIRMED, COMPLETED, CANCELLED
   assignedTo        String?            // Sales team user code
   priority          String?            // Low, Medium, High
   sentiment         String?            // Cold, Warm, Hot, Ready to Book
@@ -146,6 +152,10 @@ model Inquiry {
   proposalUrl       String?            // URL to uploaded PDF
   flightDetails     String?            // JSON string of flight preferences / enquiry details
   feedback          String?            // Client comments / modification requests
+  netPrice          Float              @default(0.0)
+  agentMarkup       Float              @default(0.0)
+  agentId           String?
+  agent             User?              @relation("AgentInquiries", fields: [agentId], references: [id])
   hotelReservations HotelReservation[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -320,4 +330,43 @@ model HotelReservation {
   auditLogs        String?   // JSON string of updates/actions
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+}
+
+model AgentProfile {
+  id             String   @id @default(uuid())
+  companyName    String
+  licenseNumber  String?
+  agentCode      String   @unique
+  commissionPct  Float    @default(0.0)
+  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DriverProfile {
+  id             String   @id @default(uuid())
+  licenseNumber  String
+  vehicleRegNo   String
+  status         String   @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Supplier {
+  id             String   @id @default(uuid())
+  companyName    String
+  contactPerson  String
+  email          String
+  phone          String
+  type           String   // HOTEL, TRANSPORT, GUIDE
+  userId         String?  @unique
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   String   // JSON string of changes
+  createdAt DateTime @default(now())
 }

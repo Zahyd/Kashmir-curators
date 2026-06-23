@@ -50,6 +50,7 @@ import CMSUsers from '@/components/admin/CMSUsers';
 import CMSRevenue from '@/components/admin/CMSRevenue';
 import SelectionRequired from '@/components/sales/SelectionRequired';
 import { API_BASE_URL } from '@/lib/api';
+import { LeadBoard } from '@/components/sales/LeadBoard';
 
 
 // Reminders will be dynamic in future iterations
@@ -60,6 +61,7 @@ export default function SalesPortal() {
   const { teamUser, isTeamAuthenticated, isTeamLoading, teamLogout, systemEvents } = useTeamAuth();
   const [activeTab, setActiveTab] = useState<'live-leads' | 'my-inquiries' | 'performance' | 'work-log' | 'builder' | 'payments' | 'vault' | 'clients'>('live-leads');
   const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [leadSearch, setLeadSearch] = useState('');
@@ -149,6 +151,31 @@ export default function SalesPortal() {
       }
     } catch (error) {
       console.error('Failed to fetch sales stats:', error);
+    }
+  };
+
+  const handleStageChange = async (inquiryId: string, newStage: string) => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/crm/leads/${inquiryId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ leadStage: newStage })
+      });
+      if (response.ok) {
+        toast.success(`Lead stage updated to ${newStage.replace('_', ' ')}`);
+        fetchInquiries();
+        fetchSalesStats();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to update lead stage');
+      }
+    } catch (error) {
+      console.error('Error updating stage:', error);
+      toast.error('Network error updating lead stage');
     }
   };
 
@@ -507,7 +534,29 @@ export default function SalesPortal() {
                     <h1 className="text-5xl font-display font-bold text-white mb-3 tracking-tight">Active Command</h1>
                     <p className="text-white/40 text-base max-w-xl">Review leads, curate itineraries, and accelerate conversions.</p>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                      <button
+                        onClick={() => setViewMode('kanban')}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5",
+                          viewMode === 'kanban' ? "bg-white/5 text-white border border-white/5" : "text-white/40 hover:text-white"
+                        )}
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5 text-kashmir-gold" />
+                        Board
+                      </button>
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5",
+                          viewMode === 'list' ? "bg-white/5 text-white border border-white/5" : "text-white/40 hover:text-white"
+                        )}
+                      >
+                        <List className="w-3.5 h-3.5 text-blue-400" />
+                        List
+                      </button>
+                    </div>
                     <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3">
                       <div className="text-right">
                         <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Active Pipeline</p>
@@ -538,8 +587,15 @@ export default function SalesPortal() {
                   </div>
                 </div>
 
-                {/* Inquiry Cards Grid - 2-Column Responsive Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {viewMode === 'kanban' ? (
+                  <LeadBoard 
+                    inquiries={myInquiries} 
+                    onStatusChange={handleStageChange} 
+                    onEditLead={(inq) => openBuilder(inq)} 
+                  />
+                ) : (
+                  /* Inquiry Cards Grid - 2-Column Responsive Layout */
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {myInquiries.length > 0 ? (
                   myInquiries.map((inq, index) => {
                     const displayId = formatId(inq.id);
@@ -678,17 +734,18 @@ export default function SalesPortal() {
                       </Card>
                     );
                   })
-                ) : (
-                  <div className="col-span-full py-32 flex flex-col items-center justify-center bg-white/[0.02] border-2 border-dashed border-white/5 rounded-[4rem] animate-in fade-in zoom-in duration-1000">
-                    <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/5">
-                      <Search className="w-10 h-10 text-white/10" />
+                  ) : (
+                    <div className="col-span-full py-32 flex flex-col items-center justify-center bg-white/[0.02] border-2 border-dashed border-white/5 rounded-[4rem] animate-in fade-in zoom-in duration-1000">
+                      <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/5">
+                        <Search className="w-10 h-10 text-white/10" />
+                      </div>
+                      <h3 className="text-2xl font-display font-bold text-white/40">No Assigned Inquiries</h3>
+                      <p className="text-white/20 text-base mt-2 max-w-xs text-center">Your lead pipeline is currently clear. Take this time to optimize your existing proposals.</p>
                     </div>
-                    <h3 className="text-2xl font-display font-bold text-white/40">No Assigned Inquiries</h3>
-                    <p className="text-white/20 text-base mt-2 max-w-xs text-center">Your lead pipeline is currently clear. Take this time to optimize your existing proposals.</p>
+                  )}
                   </div>
                 )}
               </div>
-            </div>
 
             {/* Right Column: Action Center */}
             <div className="xl:col-span-1 space-y-10">

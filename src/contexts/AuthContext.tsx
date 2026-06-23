@@ -52,6 +52,12 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isAdmin: boolean;
+  isSales: boolean;
+  isOperations: boolean;
+  isFinance: boolean;
+  isAgent: boolean;
+  isSupplier: boolean;
+  isDriver: boolean;
   bookings: Booking[];
   inquiries: Inquiry[];
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -428,6 +434,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isLoading,
       isAdmin: user?.role === 'admin',
+      isSales: user?.role === 'sales',
+      isOperations: user?.role === 'operations',
+      isFinance: user?.role === 'finance',
+      isAgent: user?.role === 'agent',
+      isSupplier: user?.role === 'supplier',
+      isDriver: user?.role === 'driver',
       bookings,
       inquiries,
       login,

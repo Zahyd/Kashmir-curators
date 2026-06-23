@@ -191,9 +191,19 @@ export const getOperationsData = async (req: Request, res: Response) => {
       };
     });
 
+    const drivers = await prisma.user.findMany({
+      where: {
+        role: { in: ['driver', 'DRIVER'] }
+      },
+      include: {
+        driverProfile: true
+      }
+    });
+
     res.json({
       operationsData: data,
-      bookings: parsedBookings
+      bookings: parsedBookings,
+      drivers
     });
   } catch (error) {
     console.error('Failed to fetch operations data:', error);

@@ -483,6 +483,45 @@ export default function Profile() {
     }
   };
 
+  const downloadVoucherAsPdf = async (slipType: string, booking: any) => {
+    const slipElement = document.getElementById(`slip-panel-${booking.id}`);
+    if (!slipElement) {
+      toast.error("Voucher panel element not found.");
+      return;
+    }
+
+    toast.loading(`Generating premium PDF ${slipType}...`);
+    try {
+      // Temporarily hide actions for snapshot
+      const actions = slipElement.querySelector('.slip-actions');
+      if (actions) actions.classList.add('hidden');
+
+      const canvas = await html2canvas(slipElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#0d1317'
+      });
+
+      if (actions) actions.classList.remove('hidden');
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width / 2, canvas.height / 2]
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`${slipType.replace(/\s+/g, '_')}_${booking.itemName.replace(/\s+/g, '_')}_${booking.id.substring(0, 8).toUpperCase()}.pdf`);
+      toast.dismiss();
+      toast.success("Voucher PDF downloaded successfully!");
+    } catch (err) {
+      toast.dismiss();
+      console.error(err);
+      toast.error("Failed to generate PDF voucher.");
+    }
+  };
+
   const activeAdvisory = KASHMIR_LOCATIONS.find(loc => loc.id === selectedLoc) || KASHMIR_LOCATIONS[0];
 
   return (
@@ -1436,7 +1475,7 @@ export default function Profile() {
       {/* Slips Details Dialog */}
       <Dialog open={!!activeSlip} onOpenChange={(open) => !open && setActiveSlip(null)}>
         {activeSlip && (
-          <DialogContent className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 md:p-8 max-w-lg">
+          <DialogContent id={`slip-panel-${activeSlip.booking.id}`} className="rounded-3xl bg-[#0d1317] text-white border-white/10 shadow-2xl p-6 md:p-8 max-w-lg">
             <DialogHeader className="text-left border-b border-white/5 pb-4">
               <DialogTitle className="font-display text-2xl flex items-center gap-3 text-kashmir-gold">
                 {activeSlip.type === 'hotel' && <Building className="w-6 h-6" />}
@@ -1452,130 +1491,166 @@ export default function Profile() {
             <div className="py-6 text-left space-y-5">
               
               {/* Slip A: Hotel Stay */}
-              {activeSlip.type === 'hotel' && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-black/35 rounded-2xl border border-white/5 text-center">
-                    <p className="text-[10px] font-black uppercase text-kashmir-gold tracking-widest mb-1">Estate Reference</p>
-                    <p className="font-mono text-base font-bold text-white">{activeSlip.booking.id.toUpperCase().substring(0, 12)}</p>
+              {activeSlip.type === 'hotel' && (() => {
+                const details = activeSlip.booking.details || {};
+                const roomCategory = details.roomType || details.roomCategory || details.category || 'Super Deluxe Peak View';
+                const mealPlan = details.mealPlan || 'MAP (Breakfast + Dinner)';
+                const guests = details.guests || details.paxCount || details.adults ? `${details.guests || details.paxCount || details.adults} Adults` : '2 Adults';
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-black/35 rounded-2xl border border-white/5 text-center">
+                      <p className="text-[10px] font-black uppercase text-kashmir-gold tracking-widest mb-1">Estate Reference</p>
+                      <p className="font-mono text-base font-bold text-white">{activeSlip.booking.id.toUpperCase().substring(0, 12)}</p>
+                    </div>
+                    
+                    <div className="space-y-3.5 text-sm">
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">Hotel / Houseboat</span>
+                        <span className="font-bold text-white text-right">{activeSlip.booking.itemName}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">Room Category</span>
+                        <span className="font-semibold text-white">{roomCategory}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">Check-In Date</span>
+                        <span className="font-semibold text-white">
+                          {new Date(activeSlip.booking.bookingDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">Meal Plan</span>
+                        <span className="font-semibold text-white">{mealPlan}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">Guests</span>
+                        <span className="font-semibold text-white">{guests}</span>
+                      </div>
+                      <div className="flex justify-between pb-2">
+                        <span className="text-white/40">Curation Status</span>
+                        <span className="text-green-400 font-extrabold uppercase text-xs">Vouchers Issued</span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="space-y-3.5 text-sm">
-                    <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-white/40">Hotel / Houseboat</span>
-                      <span className="font-bold text-white text-right">{activeSlip.booking.itemName}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-white/40">Room Category</span>
-                      <span className="font-semibold text-white">Super Deluxe Peak View</span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-white/40">Check-In Date</span>
-                      <span className="font-semibold text-white">
-                        {new Date(activeSlip.booking.bookingDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-white/40">Guests</span>
-                      <span className="font-semibold text-white">2 Adults</span>
-                    </div>
-                    <div className="flex justify-between pb-2">
-                      <span className="text-white/40">Curation Status</span>
-                      <span className="text-green-400 font-extrabold uppercase text-xs">Vouchers Issued</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Slip B: Flight Tickets */}
-              {activeSlip.type === 'flight' && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-black/35 rounded-2xl border border-white/5 flex items-center justify-between">
-                    <div className="text-left">
-                      <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Airline Carrier</p>
-                      <h4 className="text-lg font-bold text-white">Vistara Airways</h4>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Flight No</p>
-                      <h4 className="text-lg font-mono font-bold text-kashmir-gold">UK-721</h4>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between px-2 text-center py-2">
-                    <div className="text-left">
-                      <h3 className="text-3xl font-display font-black text-white">DEL</h3>
-                      <p className="text-xs text-white/40">New Delhi</p>
-                    </div>
-                    <div className="flex-1 flex flex-col items-center px-4 relative">
-                      <p className="text-[9px] font-mono text-kashmir-gold mb-1">Direct</p>
-                      <div className="w-full h-[1px] bg-white/20 relative">
-                        <div className="w-1.5 h-1.5 bg-kashmir-gold rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              {activeSlip.type === 'flight' && (() => {
+                const details = activeSlip.booking.details || {};
+                const flightNo = details.flightNo || 'UK-721';
+                const airline = details.airline || 'Vistara Airways';
+                const departure = details.departure || 'DEL';
+                const destination = details.destination || 'SXR';
+                const boardingTime = details.boardingTime || '09:10 AM';
+                const seatGate = details.seatGate || '12A / T3';
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-black/35 rounded-2xl border border-white/5 flex items-center justify-between">
+                      <div className="text-left">
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Airline Carrier</p>
+                        <h4 className="text-lg font-bold text-white">{airline}</h4>
                       </div>
-                      <p className="text-[9px] text-white/20 mt-1">1h 35m</p>
+                      <div className="text-right">
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Flight No</p>
+                        <h4 className="text-lg font-mono font-bold text-kashmir-gold">{flightNo}</h4>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <h3 className="text-3xl font-display font-black text-white">SXR</h3>
-                      <p className="text-xs text-white/40">Srinagar</p>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-2.5 p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-xs">
-                    <div>
-                      <p className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5">Date</p>
-                      <p className="font-bold text-white">{new Date(activeSlip.booking.bookingDate).toLocaleDateString()}</p>
+                    <div className="flex items-center justify-between px-2 text-center py-2">
+                      <div className="text-left">
+                        <h3 className="text-3xl font-display font-black text-white">{departure}</h3>
+                        <p className="text-xs text-white/40">Departure Terminal</p>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center px-4 relative">
+                        <p className="text-[9px] font-mono text-kashmir-gold mb-1">Direct</p>
+                        <div className="w-full h-[1px] bg-white/20 relative">
+                          <div className="w-1.5 h-1.5 bg-kashmir-gold rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        </div>
+                        <p className="text-[9px] text-white/20 mt-1">Scheduled Transit</p>
+                      </div>
+                      <div className="text-right">
+                        <h3 className="text-3xl font-display font-black text-white">{destination}</h3>
+                        <p className="text-xs text-white/40">Srinagar (SXR)</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5">Boarding</p>
-                      <p className="font-bold text-white">09:10 AM</p>
-                    </div>
-                    <div>
-                      <p className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5">Seat / Gate</p>
-                      <p className="font-bold text-kashmir-gold">12A / T3</p>
+
+                    <div className="grid grid-cols-3 gap-2.5 p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-xs">
+                      <div>
+                        <p className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5">Date</p>
+                        <p className="font-bold text-white">{new Date(activeSlip.booking.bookingDate).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5">Boarding</p>
+                        <p className="font-bold text-white">{boardingTime}</p>
+                      </div>
+                      <div>
+                        <p className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5">Seat / Gate</p>
+                        <p className="font-bold text-kashmir-gold">{seatGate}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Slip C: Driver Chauffeur */}
-              {activeSlip.type === 'cab' && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
-                    <div className="w-14 h-14 bg-kashmir-gold/10 border border-kashmir-gold/20 rounded-xl flex items-center justify-center text-kashmir-gold text-lg font-black shrink-0">
-                      HA
+              {activeSlip.type === 'cab' && (() => {
+                const details = activeSlip.booking.details || {};
+                const cabAllocation = details.cabAllocation || {};
+                const driverName = cabAllocation.driverName || details.driverName || 'Hilal Ahmad';
+                const driverPhone = cabAllocation.driverPhone || details.driverPhone || '+91 91037 98448';
+                const vehicleName = cabAllocation.cabName || details.cabName || details.vehicleType || 'Toyota Innova Crysta';
+                const registrationNo = cabAllocation.registrationNo || details.registrationNo || details.vehicleRegNo || 'JK-01-X-7721';
+                const pickupLocation = details.pickupLocation || 'Srinagar Airport (SXR)';
+                const dropLocation = details.dropLocation || 'Srinagar Hotel / Resort';
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                      <div className="w-14 h-14 bg-kashmir-gold/10 border border-kashmir-gold/20 rounded-xl flex items-center justify-center text-kashmir-gold text-lg font-black shrink-0">
+                        {driverName.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="text-left">
+                        <h4 className="font-bold text-white">{driverName}</h4>
+                        <p className="text-xs text-white/40">{driverPhone} • Languages: English, Hindi, Kashmiri</p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <h4 className="font-bold text-white">Hilal Ahmad</h4>
-                      <p className="text-xs text-white/40">+91 91037 98448 • Languages: English, Hindi, Kashmiri</p>
-                    </div>
-                  </div>
 
-                  <div className="space-y-3.5 text-sm">
-                    <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-white/40">Assigned Vehicle</span>
-                      <span className="font-bold text-white">Toyota Innova Crysta</span>
+                    <div className="space-y-3.5 text-sm">
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">Assigned Vehicle</span>
+                        <span className="font-bold text-white">{vehicleName}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">License Plate</span>
+                        <span className="font-mono font-bold text-kashmir-gold">{registrationNo}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">Pickup Location</span>
+                        <span className="font-semibold text-white">{pickupLocation}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/40">Drop Location</span>
+                        <span className="font-semibold text-white">{dropLocation}</span>
+                      </div>
+                      <div className="flex justify-between pb-2">
+                        <span className="text-white/40">Driver Status</span>
+                        <span className="text-green-400 font-extrabold uppercase text-xs">Driver Mapped</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-white/40">License Plate</span>
-                      <span className="font-mono font-bold text-kashmir-gold">JK-01-X-7721</span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-white/40">Pickup Location</span>
-                      <span className="font-semibold text-white">Srinagar Airport (SXR)</span>
-                    </div>
-                    <div className="flex justify-between pb-2">
-                      <span className="text-white/40">Driver Status</span>
-                      <span className="text-green-400 font-extrabold uppercase text-xs">Driver Mapped</span>
-                    </div>
-                  </div>
 
-                  <Button 
-                    onClick={() => setShowDriverTracking(true)}
-                    variant="gold"
-                    className="w-full rounded-xl text-black font-bold h-10 text-xs shadow-md mt-2"
-                  >
-                    <MapPin className="w-3.5 h-3.5 mr-2 animate-bounce" /> Track Chauffeur Live
-                  </Button>
-                </div>
-              )}
+                    <Button 
+                      onClick={() => setShowDriverTracking(true)}
+                      variant="gold"
+                      className="w-full rounded-xl text-black font-bold h-10 text-xs shadow-md mt-2"
+                    >
+                      <MapPin className="w-3.5 h-3.5 mr-2 animate-bounce" /> Track Chauffeur Live
+                    </Button>
+                  </div>
+                );
+              })()}
 
               {/* Mock Barcode for Luxury Ticket Theme */}
               <div className="pt-4 border-t border-white/5 flex flex-col items-center">
@@ -1589,17 +1664,28 @@ export default function Profile() {
                 <p className="text-[9px] font-mono text-white/30 tracking-widest mt-2 uppercase">Verified Kashmir Curators Protocol</p>
               </div>
 
-            </div>
+              {/* Actions footer */}
+              <div className="pt-4 flex justify-between items-center gap-2 border-t border-white/5 slip-actions">
+                <Button 
+                  onClick={() => downloadVoucherAsPdf(
+                    activeSlip.type === 'hotel' ? 'Stay Voucher' : activeSlip.type === 'flight' ? 'Boarding Pass' : 'Driver Dispatch Slip', 
+                    activeSlip.booking
+                  )}
+                  variant="gold" 
+                  className="flex-1 rounded-xl text-black font-bold uppercase tracking-wider h-10 flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" /> Download PDF
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setActiveSlip(null)} 
+                  className="rounded-xl border-white/10 hover:bg-white/5 font-bold h-10 px-4"
+                >
+                  Close
+                </Button>
+              </div>
 
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setActiveSlip(null)} 
-                className="w-full rounded-xl border-white/10 hover:bg-white/5 font-bold"
-              >
-                Close Slip
-              </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         )}
       </Dialog>
