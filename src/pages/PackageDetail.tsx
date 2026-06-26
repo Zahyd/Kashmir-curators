@@ -97,6 +97,27 @@ export default function PackageDetail() {
     return curators[hash % curators.length] || null;
   }, [pkg, curators]);
 
+  const highlights = useMemo(() => {
+    return Array.isArray(pkg?.highlights) ? pkg.highlights.filter(Boolean) : [];
+  }, [pkg]);
+
+  const inclusions = useMemo(() => {
+    return Array.isArray(pkg?.inclusions) ? pkg.inclusions.filter(Boolean) : [];
+  }, [pkg]);
+
+  const exclusions = useMemo(() => {
+    return Array.isArray(pkg?.exclusions) ? pkg.exclusions.filter(Boolean) : [];
+  }, [pkg]);
+
+  const itinerary = useMemo(() => {
+    return Array.isArray(pkg?.itinerary) ? pkg.itinerary.filter(Boolean) : [];
+  }, [pkg]);
+
+  const images = useMemo(() => {
+    if (!pkg) return [];
+    return [pkg.image];
+  }, [pkg]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#05080a] text-white">
@@ -123,27 +144,6 @@ export default function PackageDetail() {
       navigate('/packages');
     }
   };
-
-  const highlights = useMemo(() => {
-    return Array.isArray(pkg?.highlights) ? pkg.highlights.filter(Boolean) : [];
-  }, [pkg]);
-
-  const inclusions = useMemo(() => {
-    return Array.isArray(pkg?.inclusions) ? pkg.inclusions.filter(Boolean) : [];
-  }, [pkg]);
-
-  const exclusions = useMemo(() => {
-    return Array.isArray(pkg?.exclusions) ? pkg.exclusions.filter(Boolean) : [];
-  }, [pkg]);
-
-  const itinerary = useMemo(() => {
-    return Array.isArray(pkg?.itinerary) ? pkg.itinerary.filter(Boolean) : [];
-  }, [pkg]);
-
-  const images = useMemo(() => {
-    if (!pkg) return [];
-    return [pkg.image];
-  }, [pkg]);
 
   if (!pkg) {
     return (
