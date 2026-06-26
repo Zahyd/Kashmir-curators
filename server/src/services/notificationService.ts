@@ -82,6 +82,30 @@ export const notificationService = {
     if (data && data.userId) {
       io.to(`user-${data.userId}`).emit(`${type.toLowerCase()}-updated`, { type, data });
     }
+
+    // Broadcast to everyone for live social proof / curation updates
+    if (type === 'CREATE' && data) {
+      if (data.entityType === 'inquiry') {
+        io.emit('new-live-curation', {
+          id: data.id,
+          message: `Expedition to ${data.destination || 'Kashmir'} curated`,
+          details: `${data.travelers || '2'} Travelers • for ${data.customerName || 'Explorer'}`,
+          createdAt: data.createdAt || new Date()
+        });
+      } else if (data.entityType === 'booking') {
+        let travelers = '2';
+        try {
+          const detailsParsed = data.details ? (typeof data.details === 'string' ? JSON.parse(data.details) : data.details) : {};
+          travelers = detailsParsed.travelers || '2';
+        } catch (e) {}
+        io.emit('new-live-curation', {
+          id: data.id,
+          message: `${data.type === 'package' ? 'Luxury package' : data.type === 'hotel' ? 'Premium hotel' : 'Chauffeur cab'} secured: ${data.itemName}`,
+          details: `${travelers} Guests from ${data.user?.name || 'Explorer'}`,
+          createdAt: data.createdAt || new Date()
+        });
+      }
+    }
   },
 
   /**

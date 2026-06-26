@@ -162,6 +162,19 @@ export const createBooking = async (req: any, res: Response) => {
         ...payload,
         message: `New manual booking: ${booking.itemName} for ${clientName || clientEmail || 'User'}`
       });
+      
+      // Emit to everyone for live social proof / curation updates
+      let travelers = '2';
+      try {
+        const detailsParsed = typeof details === 'string' ? JSON.parse(details) : (details || {});
+        travelers = detailsParsed.travelers || '2';
+      } catch (e) {}
+      req.io.emit('new-live-curation', {
+        id: booking.id,
+        message: `${booking.type === 'package' ? 'Luxury package' : booking.type === 'hotel' ? 'Premium hotel' : 'Chauffeur cab'} secured: ${booking.itemName}`,
+        details: `${travelers} Guests from ${clientName || 'Explorer'}`,
+        createdAt: booking.createdAt
+      });
     }
 
     res.status(201).json(booking);
@@ -235,6 +248,21 @@ export const updateBookingStatus = async (req: any, res: Response) => {
         ...payload,
         message: `Booking ${booking.itemName} (Ref: ${booking.id.slice(0,8)}) updated`
       });
+
+      // Emit to everyone for live social proof if confirmed
+      if (booking.status === 'confirmed') {
+        let travelers = '2';
+        try {
+          const detailsParsed = booking.details ? JSON.parse(booking.details) : {};
+          travelers = detailsParsed.travelers || '2';
+        } catch (e) {}
+        req.io.emit('new-live-curation', {
+          id: booking.id,
+          message: `${booking.type === 'package' ? 'Luxury package' : booking.type === 'hotel' ? 'Premium hotel' : 'Chauffeur cab'} secured: ${booking.itemName}`,
+          details: `${travelers} Guests from ${booking.user?.name || 'Explorer'}`,
+          createdAt: booking.createdAt
+        });
+      }
     }
 
     res.json(parsedBooking);
@@ -255,5 +283,59 @@ export const deleteBooking = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Failed to delete booking:', error);
     res.status(500).json({ error: 'Failed to delete booking' });
+  }
+};
+
+export const getRecentBookings = async (req: Request, res: Response) => {
+  try {
+    const bookings = await prisma.booking.findMany({
+      where: { status: 'confirmed' },
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+
+    const inquiries = await prisma.inquiry.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const formattedBookings = bookings.map(b => {
+      let travelers = '2';
+      try {
+        const detailsParsed = b.details ? JSON.parse(b.details) : {};
+        travelers = detailsParsed.travelers || '2';
+      } catch (e) {}
+      return {
+        id: b.id,
+        message: `${b.type === 'package' ? 'Luxury package' : b.type === 'hotel' ? 'Premium hotel' : 'Chauffeur cab'} secured: ${b.itemName}`,
+        details: `${travelers} Guests from ${b.user?.name || 'Explorer'}`,
+        createdAt: b.createdAt
+      };
+    });
+
+    const formattedInquiries = inquiries.map(i => {
+      return {
+        id: i.id,
+        message: `Expedition to ${i.destination} curated`,
+        details: `${i.travelers} Travelers • for ${i.customerName}`,
+        createdAt: i.createdAt
+      };
+    });
+
+    const combined = [...formattedBookings, ...formattedInquiries]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 5);
+
+    res.json(combined);
+  } catch (error) {
+    console.error('Failed to fetch recent bookings:', error);
+    res.status(500).json({ error: 'Failed to fetch recent bookings' });
   }
 };
