@@ -989,7 +989,7 @@ export default function Cabs() {
                   <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/[0.01] blur-[80px] -mr-32 -mt-32" />
                   
                   <Tabs value={tripType} onValueChange={(val) => { setTripType(val); setPickupInput(''); setDropInput(''); }}>
-                    <TabsList className="grid grid-cols-3 mb-10 bg-white/5 p-1 rounded-2xl h-auto border border-white/5">
+                    <TabsList className="grid grid-cols-1 sm:grid-cols-3 mb-10 bg-white/5 p-1 rounded-2xl h-auto border border-white/5 gap-1 sm:gap-0">
                       <TabsTrigger value="airport" className="gap-2.5 py-4 rounded-xl data-[state=active]:bg-kashmir-gold data-[state=active]:text-black transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
                         <Plane className="h-4 w-4" />
                         <span>Airport Transfer</span>
