@@ -14,6 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as UICalendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useCabs } from '@/hooks/useCMSData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -197,6 +200,23 @@ export default function Cabs() {
   const [bookingDate, setBookingDate] = useState('');
   const [bookingTime, setBookingTime] = useState('09:00');
   const [returnDate, setReturnDate] = useState('');
+
+  const parseDateString = (dateStr: string) => {
+    if (!dateStr) return undefined;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const formatDateToString = (date: Date | undefined) => {
+    if (!date) return '';
+    return format(date, "yyyy-MM-dd");
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return "Select Date";
+    const date = parseDateString(dateStr);
+    return date ? format(date, "dd MMM yyyy") : "Select Date";
+  };
 
   // Script loading
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
@@ -1162,13 +1182,40 @@ export default function Cabs() {
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
                             <Calendar className="h-3 w-3 text-kashmir-gold" /> Trip Date
                           </label>
-                          <Input
-                            type="date"
-                            value={bookingDate}
-                            onChange={(e) => setBookingDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                            className="h-14 bg-white/[0.03] border border-white/5 rounded-2xl text-white px-6 font-bold focus:border-kashmir-gold/45"
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full h-14 bg-white/[0.03] border-white/5 rounded-2xl text-left font-bold text-white px-6 justify-between hover:bg-white/[0.08] hover:text-white transition-all",
+                                  !bookingDate && "text-white/40"
+                                )}
+                              >
+                                <span>{formatDisplayDate(bookingDate)}</span>
+                                <Calendar className="h-4 w-4 text-white/40" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 bg-[#0a0f12]/95 border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
+                              <UICalendar
+                                mode="single"
+                                selected={parseDateString(bookingDate)}
+                                onSelect={(date) => {
+                                  const dateStr = formatDateToString(date);
+                                  setBookingDate(dateStr);
+                                  const retDate = parseDateString(returnDate);
+                                  if (retDate && date && retDate < date) {
+                                    setReturnDate('');
+                                  }
+                                }}
+                                disabled={(date) => {
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  return date < today;
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
@@ -1186,13 +1233,34 @@ export default function Cabs() {
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
                               <Calendar className="h-3 w-3 text-purple-400" /> Return Date (Optional)
                             </label>
-                            <Input
-                              type="date"
-                              value={returnDate}
-                              onChange={(e) => setReturnDate(e.target.value)}
-                              min={bookingDate || new Date().toISOString().split('T')[0]}
-                              className="h-14 bg-white/[0.03] border border-white/5 rounded-2xl text-white px-6 font-bold focus:border-kashmir-gold/45"
-                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full h-14 bg-white/[0.03] border-white/5 rounded-2xl text-left font-bold text-white px-6 justify-between hover:bg-white/[0.08] hover:text-white transition-all",
+                                    !returnDate && "text-white/40"
+                                  )}
+                                >
+                                  <span>{formatDisplayDate(returnDate)}</span>
+                                  <Calendar className="h-4 w-4 text-white/40" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0 bg-[#0a0f12]/95 border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
+                                <UICalendar
+                                  mode="single"
+                                  selected={parseDateString(returnDate)}
+                                  onSelect={(date) => setReturnDate(formatDateToString(date))}
+                                  disabled={(date) => {
+                                    const bookingD = bookingDate ? parseDateString(bookingDate) : undefined;
+                                    const minDate = bookingD || new Date();
+                                    minDate.setHours(0, 0, 0, 0);
+                                    return date < minDate;
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                           </div>
                         )}
                       </div>

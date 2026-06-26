@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, MapPin, Search, Wifi, UtensilsCrossed, Dumbbell, Sparkles, Calendar, Users } from 'lucide-react';
+import { Star, MapPin, Search, Wifi, UtensilsCrossed, Dumbbell, Sparkles, Calendar as CalendarIcon, Users } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import FloatingActions from '@/components/layout/FloatingActions';
@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useHotels, useLocations, CMSHotel } from '@/hooks/useCMSData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,6 +47,23 @@ export default function Hotels() {
     guests: '2',
     roomType: '',
   });
+
+  const parseDateString = (dateStr: string) => {
+    if (!dateStr) return undefined;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const formatDateToString = (date: Date | undefined) => {
+    if (!date) return '';
+    return format(date, "yyyy-MM-dd");
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return "Select Date";
+    const date = parseDateString(dateStr);
+    return date ? format(date, "dd MMM yyyy") : "Select Date";
+  };
 
   // Dynamic Hotels Hero states
   const [heroTitle, setHeroTitle] = useState('Luxury Stays in Kashmir');
@@ -329,23 +349,74 @@ export default function Hotels() {
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-3">
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4">Check-in</label>
-                            <Input
-                              type="date"
-                              value={bookingData.checkIn}
-                              onChange={(e) => setBookingData(prev => ({ ...prev, checkIn: e.target.value }))}
-                              min={new Date().toISOString().split('T')[0]}
-                              className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-white px-6 font-bold"
-                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full h-14 bg-white/[0.03] border-white/5 rounded-2xl text-left font-bold text-white px-6 justify-between hover:bg-white/[0.08] hover:text-white transition-all",
+                                    !bookingData.checkIn && "text-white/40"
+                                  )}
+                                >
+                                  <span>{formatDisplayDate(bookingData.checkIn)}</span>
+                                  <CalendarIcon className="h-4 w-4 text-white/40" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0 bg-[#0a0f12]/95 border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={parseDateString(bookingData.checkIn)}
+                                  onSelect={(date) => {
+                                    const dateStr = formatDateToString(date);
+                                    setBookingData(prev => {
+                                      const updated = { ...prev, checkIn: dateStr };
+                                      const checkOutDate = parseDateString(prev.checkOut);
+                                      if (checkOutDate && date && checkOutDate < date) {
+                                        updated.checkOut = '';
+                                      }
+                                      return updated;
+                                    });
+                                  }}
+                                  disabled={(date) => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    return date < today;
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                           </div>
                           <div className="space-y-3">
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4">Check-out</label>
-                            <Input
-                              type="date"
-                              value={bookingData.checkOut}
-                              onChange={(e) => setBookingData(prev => ({ ...prev, checkOut: e.target.value }))}
-                              min={bookingData.checkIn || new Date().toISOString().split('T')[0]}
-                              className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-white px-6 font-bold"
-                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full h-14 bg-white/[0.03] border-white/5 rounded-2xl text-left font-bold text-white px-6 justify-between hover:bg-white/[0.08] hover:text-white transition-all",
+                                    !bookingData.checkOut && "text-white/40"
+                                  )}
+                                >
+                                  <span>{formatDisplayDate(bookingData.checkOut)}</span>
+                                  <CalendarIcon className="h-4 w-4 text-white/40" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0 bg-[#0a0f12]/95 border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={parseDateString(bookingData.checkOut)}
+                                  onSelect={(date) => setBookingData(prev => ({ ...prev, checkOut: formatDateToString(date) }))}
+                                  disabled={(date) => {
+                                    const checkInDate = bookingData.checkIn ? parseDateString(bookingData.checkIn) : undefined;
+                                    const minDate = checkInDate || new Date();
+                                    minDate.setHours(0, 0, 0, 0);
+                                    return date < minDate;
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                           </div>
                         </div>
 
