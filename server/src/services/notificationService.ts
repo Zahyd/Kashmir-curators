@@ -12,6 +12,9 @@ const transporter = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD && 
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD,
       },
+      tls: {
+        rejectUnauthorized: false
+      }
     })
   : null;
 
