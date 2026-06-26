@@ -40,12 +40,15 @@ export default function PackageDetail() {
   const recommendations = useMemo(() => {
     if (!pkg || !allPackages) return [];
     return allPackages
-      .filter((p) => p.id !== pkg.id)
+      .filter((p) => p && p.id !== pkg.id)
       .map((p) => {
         let score = 0;
-        if (p.destination.toLowerCase().includes(pkg.destination.toLowerCase()) || 
-            pkg.destination.toLowerCase().includes(p.destination.toLowerCase())) {
-          score += 2;
+        const pDest = (p.destination || '').toLowerCase();
+        const pkgDest = (pkg.destination || '').toLowerCase();
+        if (pDest && pkgDest) {
+          if (pDest.includes(pkgDest) || pkgDest.includes(pDest)) {
+            score += 2;
+          }
         }
         if (p.rating >= 4.8) {
           score += 1;
@@ -74,12 +77,14 @@ export default function PackageDetail() {
 
   const curator = useMemo(() => {
     if (!pkg || curators.length === 0) return null;
-    const dest = pkg.destination.toLowerCase();
+    const dest = (pkg.destination || '').toLowerCase();
+    if (!dest) return curators[0] || null;
     
     // 1. Match destination keywords with curator's role/bio
     const matched = curators.find(c => {
-      const role = c.role.toLowerCase();
-      const bio = c.bio.toLowerCase();
+      if (!c) return false;
+      const role = (c.role || '').toLowerCase();
+      const bio = (c.bio || '').toLowerCase();
       const keywords = dest.split(/[\s\-\,]+/g).filter(k => k.length > 2);
       return keywords.some(kw => role.includes(kw) || bio.includes(kw));
     });
@@ -87,8 +92,9 @@ export default function PackageDetail() {
     if (matched) return matched;
     
     // 2. Hash package ID to assign different curators stably
-    const hash = pkg.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return curators[hash % curators.length];
+    const pkgId = pkg.id || '';
+    const hash = pkgId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return curators[hash % curators.length] || null;
   }, [pkg, curators]);
 
   if (isLoading) {
@@ -332,17 +338,15 @@ export default function PackageDetail() {
               )}
 
               {/* Highlights */}
-              {pkg.highlights && pkg.highlights.filter(h => h && h.trim() !== "").length > 0 && (
+              {highlights.length > 0 && (
                 <div className="border-t border-white/5 pt-6">
                   <h3 className="font-display text-lg font-bold text-white mb-3 uppercase tracking-wider">Highlights</h3>
                   <div className="flex flex-wrap gap-2">
-                    {pkg.highlights
-                      .filter(h => h && h.trim() !== "")
-                      .map((highlight, i) => (
-                        <span key={i} className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-white/80 hover:bg-white/10 transition-colors">
-                          {highlight}
-                        </span>
-                      ))}
+                    {highlights.map((highlight, i) => (
+                      <span key={i} className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-white/80 hover:bg-white/10 transition-colors">
+                        {highlight}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
@@ -370,11 +374,11 @@ export default function PackageDetail() {
               )}
 
               {/* Itinerary */}
-              {pkg.itinerary && pkg.itinerary.length > 0 && (
+              {itinerary.length > 0 && (
                 <div className="border-t border-white/5 pt-8">
                   <h3 className="font-display text-xl font-bold text-white mb-6 uppercase tracking-wider">Day-wise Itinerary</h3>
                   <div className="relative border-l border-white/5 pl-8 ml-6 space-y-8 my-8">
-                    {pkg.itinerary.map((day: any) => (
+                    {itinerary.map((day: any) => (
                       <div key={day.day} className="relative group">
                         {/* Timeline dot */}
                         <div className="absolute -left-[44px] top-0 w-8 h-8 rounded-xl bg-[#05080a] border border-kashmir-gold/30 flex items-center justify-center font-display font-black text-kashmir-gold text-xs shadow-[0_0_10px_rgba(212,175,55,0.15)] group-hover:border-kashmir-gold transition-all">
@@ -383,7 +387,7 @@ export default function PackageDetail() {
                         <div>
                           <h4 className="font-display text-lg font-bold text-white mb-2">{day.title}</h4>
                           <p className="text-white/50 text-sm leading-relaxed mb-3">{day.description}</p>
-                          {day.activities && (
+                          {day.activities && Array.isArray(day.activities) && day.activities.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {day.activities.map((activity: string, i: number) => (
                                 <span key={i} className="text-[10px] px-3 py-1 bg-kashmir-gold/10 border border-kashmir-gold/20 text-kashmir-gold rounded-full font-bold uppercase tracking-wider">
@@ -401,32 +405,36 @@ export default function PackageDetail() {
 
               {/* Inclusions/Exclusions */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-white/5 pt-8">
-                <div>
-                  <h3 className="font-display text-lg font-bold text-[#4ade80] mb-4 uppercase tracking-wider flex items-center gap-2">
-                    <Check className="h-5 w-5 text-[#4ade80]" /> Inclusions
-                  </h3>
-                  <ul className="space-y-3">
-                    {pkg.inclusions.map((item, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-white/70">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80] mt-2 shrink-0" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-display text-lg font-bold text-[#f87171] mb-4 uppercase tracking-wider flex items-center gap-2">
-                    <X className="h-5 w-5 text-[#f87171]" /> Exclusions
-                  </h3>
-                  <ul className="space-y-3">
-                    {pkg.exclusions.map((item, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-white/70">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#f87171] mt-2 shrink-0" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {inclusions.length > 0 && (
+                  <div>
+                    <h3 className="font-display text-lg font-bold text-[#4ade80] mb-4 uppercase tracking-wider flex items-center gap-2">
+                      <Check className="h-5 w-5 text-[#4ade80]" /> Inclusions
+                    </h3>
+                    <ul className="space-y-3">
+                      {inclusions.map((item, i) => (
+                        <li key={i} className="flex items-start gap-3 text-sm text-white/70">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80] mt-2 shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {exclusions.length > 0 && (
+                  <div>
+                    <h3 className="font-display text-lg font-bold text-[#f87171] mb-4 uppercase tracking-wider flex items-center gap-2">
+                      <X className="h-5 w-5 text-[#f87171]" /> Exclusions
+                    </h3>
+                    <ul className="space-y-3">
+                      {exclusions.map((item, i) => (
+                        <li key={i} className="flex items-start gap-3 text-sm text-white/70">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#f87171] mt-2 shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 
