@@ -89,11 +89,6 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-app.get('/health-check', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is responding to new changes' });
-});
-
 app.use(cors());
 
 // Apply HTTP security headers
