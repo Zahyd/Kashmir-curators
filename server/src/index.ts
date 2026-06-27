@@ -123,6 +123,32 @@ app.use((req: any, res, next) => {
   next();
 });
 
+// Dedicated Image Proxy Endpoint to bypass browser CORS limits when exporting PDFs
+app.get('/api/proxy-image', async (req, res) => {
+  try {
+    const imageUrl = req.query.url as string;
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'URL parameter is required' });
+    }
+
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to fetch image' });
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    res.send(buffer);
+  } catch (error: any) {
+    console.error('Image proxy error:', error.message);
+    res.status(500).json({ error: 'Failed to proxy image: ' + error.message });
+  }
+});
+
 // Routes
 app.use('/api/packages', packageRoutes);
 app.use('/api/hotels', hotelRoutes);

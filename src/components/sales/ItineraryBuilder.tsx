@@ -278,7 +278,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     toast.info("Processing web image...");
     
     try {
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const proxyUrl = `${API_BASE_URL}/proxy-image?url=${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error("Could not fetch image");
       
