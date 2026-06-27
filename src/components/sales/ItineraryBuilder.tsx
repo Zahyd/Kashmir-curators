@@ -148,6 +148,8 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
 
   // Initialize days based on inquiry duration
   useEffect(() => {
+    if (inquiry.quoteData) return; // Do not overwrite existing quote data
+    
     const duration = parseInt(inquiry.duration) || 3;
     const initialDays = Array.from({ length: duration }, (_, i) => ({
       day: i + 1,

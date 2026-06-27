@@ -164,6 +164,7 @@ export default function CMSReservations() {
   const [reservations, setReservations] = useState<HotelReservation[]>([]);
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -279,6 +280,17 @@ export default function CMSReservations() {
           setInquiries(iData);
         }
       }
+
+      // Fetch packages
+      const pRes = await fetch(`${API_BASE_URL}/packages`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (pRes.ok) {
+        const pData = await pRes.json();
+        if (Array.isArray(pData)) {
+          setPackages(pData);
+        }
+      }
     } catch (e) {
       console.error('Failed to load meta resources:', e);
     }
@@ -355,9 +367,22 @@ export default function CMSReservations() {
 
       // Parse quoteData to generate stays dynamically
       let parsedStays: HotelStay[] = [];
-      if (inquiry.quoteData) {
+      let quoteDataStr = inquiry.quoteData;
+
+      // Fallback: If no custom quoteData exists, look up a matching standard package template
+      if (!quoteDataStr && packages.length > 0) {
+        const matchedPkg = packages.find(p => 
+          inquiry.destination.toLowerCase().includes(p.name.toLowerCase()) ||
+          p.name.toLowerCase().includes(inquiry.destination.toLowerCase())
+        );
+        if (matchedPkg && matchedPkg.itinerary) {
+          quoteDataStr = matchedPkg.itinerary;
+        }
+      }
+
+      if (quoteDataStr) {
         try {
-          const days = JSON.parse(inquiry.quoteData);
+          const days = JSON.parse(quoteDataStr);
           if (Array.isArray(days) && days.length > 0) {
             // Find base trip start date (first day with a date, or default to today)
             let baseDate = new Date();
@@ -366,14 +391,38 @@ export default function CMSReservations() {
               baseDate = new Date(firstDatedDay.date);
             }
             
-            // Helper to find hotel commission rate
-            const findHotelCommission = (hId: string) => {
-              const h = hotels.find(x => x.id === hId);
-              if (h && h.commissionStructure) {
-                const parsedComm = parseFloat(h.commissionStructure);
-                if (!isNaN(parsedComm)) return parsedComm;
+            // Helper to match hotel name or description text to registered hotel partners
+            const detectHotelFromItinerary = (day: any) => {
+              if (day.hotelId && day.hotelId.trim() !== '') {
+                const h = hotels.find(x => x.id === day.hotelId);
+                if (h) return h;
               }
-              return 10;
+
+              const textToSearch = [
+                day.title || '',
+                day.description || '',
+                day.hotelName || '',
+                ...(Array.isArray(day.activities) ? day.activities : [day.activities || ''])
+              ].join(' ').toLowerCase();
+
+              for (const h of hotels) {
+                const name = h.name.toLowerCase();
+                // 1. Direct substring match
+                if (textToSearch.includes(name)) return h;
+
+                // 2. Main unique keywords matching
+                const keywords = name
+                  .split(/\s+/)
+                  .filter(w => !['the', 'hotel', 'resort', 'palace', 'houseboat', 'stay', 'inn', 'villa', 'club', '&', 'and', 'spa', 'luxury', 'premium', 'srinagar', 'gulmarg', 'pahalgam', 'sonamarg'].includes(w) && w.length > 2);
+                
+                if (keywords.length > 0) {
+                  const primaryKeyword = keywords[0];
+                  if (textToSearch.includes(primaryKeyword)) {
+                    return h;
+                  }
+                }
+              }
+              return null;
             };
 
             // Map days with dates sequentially
@@ -391,52 +440,63 @@ export default function CMSReservations() {
             let currentStay: HotelStay | null = null;
 
             daysWithDates.forEach((day) => {
-              if (day.hotelId && day.hotelId.trim() !== '') {
+              const matchedHotel = detectHotelFromItinerary(day);
+              
+              if (matchedHotel) {
                 const nextDayDate = new Date(day.resolvedDate);
                 nextDayDate.setDate(nextDayDate.getDate() + 1);
                 const nextDayDateStr = nextDayDate.toISOString().split('T')[0];
 
-                const commissionRate = findHotelCommission(day.hotelId);
+                let defaultComm = 10;
+                if (matchedHotel.commissionStructure) {
+                  const parsedComm = parseFloat(matchedHotel.commissionStructure);
+                  if (!isNaN(parsedComm)) defaultComm = parsedComm;
+                }
+
+                const roomType = day.roomType || matchedHotel.roomTypes?.[0]?.name || 'Deluxe Room';
+                const defaultPrice = matchedHotel.roomTypes?.[0]?.price || matchedHotel.pricePerNight || 0;
+                const contractRate = day.hotelNetCost || day.hotelPrice || defaultPrice;
+                const totalAmount = day.hotelPrice || defaultPrice;
 
                 if (!currentStay) {
                   // Initialize first stay
                   currentStay = {
-                    hotelId: day.hotelId,
-                    hotelSearchQuery: day.hotelName || '',
+                    hotelId: matchedHotel.id,
+                    hotelSearchQuery: matchedHotel.name,
                     showSuggestions: false,
                     checkIn: day.resolvedDate,
                     checkOut: nextDayDateStr,
-                    roomType: day.roomType || '',
+                    roomType,
                     roomsCount: 1,
                     mealPlan: day.mealPlan || 'CP',
                     status: 'Pending',
-                    contractRate: day.hotelNetCost || day.hotelPrice || 0,
+                    contractRate,
                     seasonalPricing: 0,
-                    commissionRate,
-                    totalAmount: day.hotelPrice || 0,
+                    commissionRate: defaultComm,
+                    totalAmount,
                     holdUntil: ''
                   };
-                } else if (currentStay.hotelId === day.hotelId && currentStay.roomType === day.roomType) {
+                } else if (currentStay.hotelId === matchedHotel.id && currentStay.roomType === roomType) {
                   // Merge consecutive stay at the same hotel with the same room type
                   currentStay.checkOut = nextDayDateStr;
-                  currentStay.totalAmount += (day.hotelPrice || 0);
+                  currentStay.totalAmount += totalAmount;
                 } else {
                   // Complete previous stay and start a new one
                   parsedStays.push(currentStay);
                   currentStay = {
-                    hotelId: day.hotelId,
-                    hotelSearchQuery: day.hotelName || '',
+                    hotelId: matchedHotel.id,
+                    hotelSearchQuery: matchedHotel.name,
                     showSuggestions: false,
                     checkIn: day.resolvedDate,
                     checkOut: nextDayDateStr,
-                    roomType: day.roomType || '',
+                    roomType,
                     roomsCount: 1,
                     mealPlan: day.mealPlan || 'CP',
                     status: 'Pending',
-                    contractRate: day.hotelNetCost || day.hotelPrice || 0,
+                    contractRate,
                     seasonalPricing: 0,
-                    commissionRate,
-                    totalAmount: day.hotelPrice || 0,
+                    commissionRate: defaultComm,
+                    totalAmount,
                     holdUntil: ''
                   };
                 }
