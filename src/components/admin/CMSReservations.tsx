@@ -352,6 +352,138 @@ export default function CMSReservations() {
         guestEmail: inquiry.email,
         guestPhone: inquiry.phone
       }));
+
+      // Parse quoteData to generate stays dynamically
+      let parsedStays: HotelStay[] = [];
+      if (inquiry.quoteData) {
+        try {
+          const days = JSON.parse(inquiry.quoteData);
+          if (Array.isArray(days) && days.length > 0) {
+            // Find base trip start date (first day with a date, or default to today)
+            let baseDate = new Date();
+            const firstDatedDay = days.find(d => d.date);
+            if (firstDatedDay && firstDatedDay.date) {
+              baseDate = new Date(firstDatedDay.date);
+            }
+            
+            // Helper to find hotel commission rate
+            const findHotelCommission = (hId: string) => {
+              const h = hotels.find(x => x.id === hId);
+              if (h && h.commissionStructure) {
+                const parsedComm = parseFloat(h.commissionStructure);
+                if (!isNaN(parsedComm)) return parsedComm;
+              }
+              return 10;
+            };
+
+            // Map days with dates sequentially
+            const daysWithDates = days.map((day, idx) => {
+              const d = new Date(baseDate);
+              d.setDate(baseDate.getDate() + idx);
+              const dateStr = d.toISOString().split('T')[0];
+              return {
+                ...day,
+                resolvedDate: day.date || dateStr
+              };
+            });
+
+            // Group consecutive days at the same hotel with the same room type
+            let currentStay: HotelStay | null = null;
+
+            daysWithDates.forEach((day) => {
+              if (day.hotelId && day.hotelId.trim() !== '') {
+                const nextDayDate = new Date(day.resolvedDate);
+                nextDayDate.setDate(nextDayDate.getDate() + 1);
+                const nextDayDateStr = nextDayDate.toISOString().split('T')[0];
+
+                const commissionRate = findHotelCommission(day.hotelId);
+
+                if (!currentStay) {
+                  // Initialize first stay
+                  currentStay = {
+                    hotelId: day.hotelId,
+                    hotelSearchQuery: day.hotelName || '',
+                    showSuggestions: false,
+                    checkIn: day.resolvedDate,
+                    checkOut: nextDayDateStr,
+                    roomType: day.roomType || '',
+                    roomsCount: 1,
+                    mealPlan: day.mealPlan || 'CP',
+                    status: 'Pending',
+                    contractRate: day.hotelNetCost || day.hotelPrice || 0,
+                    seasonalPricing: 0,
+                    commissionRate,
+                    totalAmount: day.hotelPrice || 0,
+                    holdUntil: ''
+                  };
+                } else if (currentStay.hotelId === day.hotelId && currentStay.roomType === day.roomType) {
+                  // Merge consecutive stay at the same hotel with the same room type
+                  currentStay.checkOut = nextDayDateStr;
+                  currentStay.totalAmount += (day.hotelPrice || 0);
+                } else {
+                  // Complete previous stay and start a new one
+                  parsedStays.push(currentStay);
+                  currentStay = {
+                    hotelId: day.hotelId,
+                    hotelSearchQuery: day.hotelName || '',
+                    showSuggestions: false,
+                    checkIn: day.resolvedDate,
+                    checkOut: nextDayDateStr,
+                    roomType: day.roomType || '',
+                    roomsCount: 1,
+                    mealPlan: day.mealPlan || 'CP',
+                    status: 'Pending',
+                    contractRate: day.hotelNetCost || day.hotelPrice || 0,
+                    seasonalPricing: 0,
+                    commissionRate,
+                    totalAmount: day.hotelPrice || 0,
+                    holdUntil: ''
+                  };
+                }
+              }
+            });
+
+            if (currentStay) {
+              parsedStays.push(currentStay);
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing quoteData to generate stays:", e);
+        }
+      }
+
+      if (parsedStays.length > 0) {
+        setHotelStays(parsedStays);
+      } else {
+        // Fallback to default single stay
+        if (hotels.length > 0) {
+          const hotel = hotels[0];
+          let defaultComm = 10;
+          if (hotel.commissionStructure) {
+            const parsedComm = parseFloat(hotel.commissionStructure);
+            if (!isNaN(parsedComm)) defaultComm = parsedComm;
+          }
+          const defaultPrice = hotel.roomTypes?.[0]?.price || hotel.pricePerNight || 0;
+          setHotelStays([
+            {
+              hotelId: hotel.id,
+              hotelSearchQuery: hotel.name,
+              showSuggestions: false,
+              checkIn: new Date().toISOString().split('T')[0],
+              checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+              roomType: hotel.roomTypes?.[0]?.name || '',
+              roomsCount: 1,
+              mealPlan: 'CP',
+              status: 'Pending',
+              contractRate: defaultPrice,
+              seasonalPricing: 0,
+              commissionRate: defaultComm,
+              totalAmount: Math.round(defaultPrice * 1.25),
+              holdUntil: ''
+            }
+          ]);
+        }
+      }
     } else {
       setFormData(prev => ({
         ...prev,
