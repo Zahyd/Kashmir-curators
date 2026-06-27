@@ -159,12 +159,18 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const teamLogin = async (code: string): Promise<{ success: boolean; error?: string }> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const response = await fetch(`${SOCKET_URL}/api/auth/team-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -178,18 +184,28 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('teamToken', token);
       
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'Login request timed out. Please try again.' };
+      }
       return { success: false, error: 'Network error. Is the server running?' };
     }
   };
 
   const teamSendOtp = async (code: string, phone?: string): Promise<{ success: boolean; simulated?: boolean; otp?: string; phone?: string; error?: string }> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const response = await fetch(`${SOCKET_URL}/api/auth/team-send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, phone })
+        body: JSON.stringify({ code, phone }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       const data = await response.json();
       if (!response.ok) {
@@ -202,18 +218,28 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
         otp: data.otp,
         phone: data.phone
       };
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'OTP request timed out. Please check your network connection.' };
+      }
       return { success: false, error: 'Network error sending OTP. Is the server running?' };
     }
   };
 
   const teamVerifyOtp = async (code: string, otp: string): Promise<{ success: boolean; error?: string }> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const response = await fetch(`${SOCKET_URL}/api/auth/team-verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, otp })
+        body: JSON.stringify({ code, otp }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -227,7 +253,11 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('teamToken', token);
       
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'Verification request timed out. Please try again.' };
+      }
       return { success: false, error: 'Network error verifying OTP.' };
     }
   };
@@ -241,6 +271,9 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateTeamProfile = async (data: any): Promise<{ success: boolean; error?: string }> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const token = localStorage.getItem('teamToken');
       const response = await fetch(`${SOCKET_URL}/api/auth/profile`, {
@@ -249,8 +282,11 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       const resData = await response.json();
       if (!response.ok) {
@@ -260,7 +296,11 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       setTeamUser(resData.user);
       localStorage.setItem('team_user', JSON.stringify(resData.user));
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'Profile update timed out. Please try again.' };
+      }
       return { success: false, error: 'Network error updating profile.' };
     }
   };
