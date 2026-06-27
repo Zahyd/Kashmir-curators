@@ -369,7 +369,16 @@ export default function CMSReservations() {
       let parsedStays: HotelStay[] = [];
       let quoteDataStr = inquiry.quoteData;
 
-      // Fallback: If no custom quoteData exists, look up a matching standard package template
+      // Local storage draft recovery: if database is null/empty, check if a draft exists in this browser's local storage
+      if (!quoteDataStr) {
+        const localDraft = localStorage.getItem(`KC_DRAFT_ITINERARY_${inqId}`);
+        if (localDraft) {
+          quoteDataStr = localDraft;
+          toast.info(`Recovered active itinerary draft for ${inquiry.customerName} from your browser storage.`);
+        }
+      }
+
+      // Fallback: If no custom quoteData or local draft exists, look up a matching standard package template
       if (!quoteDataStr && packages.length > 0) {
         const matchedPkg = packages.find(p => 
           inquiry.destination.toLowerCase().includes(p.name.toLowerCase()) ||
@@ -523,6 +532,12 @@ export default function CMSReservations() {
             const parsedComm = parseFloat(hotel.commissionStructure);
             if (!isNaN(parsedComm)) defaultComm = parsedComm;
           }
+          
+          // Calculate default nights based on inquiry duration (e.g. "5 Days" -> 4 nights)
+          const durationDays = parseInt(inquiry.duration) || 2;
+          const nights = durationDays > 1 ? durationDays - 1 : 1;
+          const checkoutMs = Date.now() + nights * 24 * 60 * 60 * 1000;
+          
           const defaultPrice = hotel.roomTypes?.[0]?.price || hotel.pricePerNight || 0;
           setHotelStays([
             {
@@ -530,7 +545,7 @@ export default function CMSReservations() {
               hotelSearchQuery: hotel.name,
               showSuggestions: false,
               checkIn: new Date().toISOString().split('T')[0],
-              checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+              checkOut: new Date(checkoutMs).toISOString().split('T')[0],
               roomType: hotel.roomTypes?.[0]?.name || '',
               roomsCount: 1,
               mealPlan: 'CP',
@@ -538,7 +553,7 @@ export default function CMSReservations() {
               contractRate: defaultPrice,
               seasonalPricing: 0,
               commissionRate: defaultComm,
-              totalAmount: Math.round(defaultPrice * 1.25),
+              totalAmount: Math.round(defaultPrice * nights * 1.25),
               holdUntil: ''
             }
           ]);

@@ -176,6 +176,13 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     setDays(initialDays);
   }, [inquiry]);
 
+  // Auto-save draft to localStorage whenever days changes
+  useEffect(() => {
+    if (days && days.length > 0) {
+      localStorage.setItem(`KC_DRAFT_ITINERARY_${inquiry.id}`, JSON.stringify(days));
+    }
+  }, [days, inquiry.id]);
+
   const totalRevenue = days.reduce((sum, day) => sum + (day.hotelPrice || 0) + (day.transportPrice || 0) + (day.extraBedPrice || 0), 0);
   const totalNetCost = days.reduce((sum, day) => sum + (day.hotelNetCost || 0) + (day.transportNetCost || 0), 0);
   const profit = totalRevenue - totalNetCost;
