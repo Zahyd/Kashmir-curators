@@ -160,7 +160,7 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
 
   const teamLogin = async (code: string): Promise<{ success: boolean; error?: string }> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
       const response = await fetch(`${SOCKET_URL}/api/auth/team-login`, {
@@ -195,7 +195,7 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
 
   const teamSendOtp = async (code: string, phone?: string): Promise<{ success: boolean; simulated?: boolean; otp?: string; phone?: string; error?: string }> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
       const response = await fetch(`${SOCKET_URL}/api/auth/team-send-otp`, {
@@ -229,7 +229,7 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
 
   const teamVerifyOtp = async (code: string, otp: string): Promise<{ success: boolean; error?: string }> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
       const response = await fetch(`${SOCKET_URL}/api/auth/team-verify-otp`, {
@@ -272,7 +272,7 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
 
   const updateTeamProfile = async (data: any): Promise<{ success: boolean; error?: string }> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
       const token = localStorage.getItem('teamToken');
