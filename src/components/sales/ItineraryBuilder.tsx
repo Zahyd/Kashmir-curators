@@ -310,7 +310,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
       const token = localStorage.getItem('teamToken');
       const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
 
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -337,7 +337,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
       const token = localStorage.getItem('teamToken');
       const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
 
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
