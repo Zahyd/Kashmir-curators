@@ -14,7 +14,10 @@ const transporter = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD && 
       },
       tls: {
         rejectUnauthorized: false
-      }
+      },
+      connectionTimeout: 5000, // 5s connection timeout
+      greetingTimeout: 5000,   // 5s greeting timeout
+      socketTimeout: 10000     // 10s socket inactivity timeout
     })
   : null;
 
