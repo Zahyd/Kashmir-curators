@@ -172,3 +172,33 @@ export const sendProposal = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to send proposal' });
   }
 };
+
+export const getPublicInquiryItinerary = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+    const inquiry = await p.inquiry.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        customerName: true,
+        destination: true,
+        duration: true,
+        travelers: true,
+        quoteData: true,
+        proposalUrl: true,
+        status: true,
+        createdAt: true
+      }
+    });
+
+    if (!inquiry) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    res.json(inquiry);
+  } catch (error: any) {
+    console.error('Fetch public itinerary error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch itinerary' });
+  }
+};

@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Loader2,
+  Share2,
   Image as ImageIcon,
   CheckCircle2,
   Clock,
@@ -498,6 +499,20 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
           >
             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
             <span>Export</span>
+          </Button>
+          <Button 
+            onClick={() => {
+              const url = `${window.location.origin}/itinerary/${inquiry.id}`;
+              navigator.clipboard.writeText(url);
+              toast.success('Shareable link copied to clipboard!', {
+                description: 'Send this link to the customer to let them view the interactive itinerary.'
+              });
+            }}
+            variant="outline" 
+            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-emerald-400 font-bold h-14 px-8 rounded-2xl transition-all"
+          >
+            <Share2 className="w-4 h-4 mr-2" />
+            <span>Share Link</span>
           </Button>
           <Button 
             onClick={handleSendProposal} 

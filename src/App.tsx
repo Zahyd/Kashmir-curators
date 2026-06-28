@@ -23,6 +23,7 @@ import AgentPortal from "./pages/AgentPortal";
 import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
 import PaymentRequest from "./pages/PaymentRequest";
+import PublicItinerary from "./pages/PublicItinerary";
 import { useAntiTheft } from "./hooks/useAntiTheft";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => {
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/planner" element={<TripPlanner />} />
+              <Route path="/itinerary/:inquiryId" element={<PublicItinerary />} />
               <Route path="/blog" element={<BlogList />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/sales/auth" element={<SalesAuth />} />

@@ -1299,6 +1299,141 @@ Kashmir Curators`;
     });
   };
 
+  const handleExportServiceVoucherPDF = (resItem: HotelReservation) => {
+    const doc = new jsPDF('p', 'mm', 'a4');
+    
+    // Core Layout Metrics
+    const primaryColor = '#d4af37'; // Kashmir Gold
+    const darkBg = '#0a0f12';
+    const lightText = '#64748b';
+    const darkText = '#0f172a';
+    
+    // Header Banner
+    doc.setFillColor(10, 15, 18); // #0a0f12
+    doc.rect(0, 0, 210, 45, 'F');
+    
+    // Title Branding
+    doc.setTextColor(212, 175, 55); // Kashmir Gold
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text('KASHMIR CURATORS', 20, 20);
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('LUXURY TRAVELS & BESPOKE CURATIONS', 20, 28);
+    
+    // Voucher Code / Status
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(212, 175, 55);
+    const refCode = resItem.bookingReference ? `VOUCHER: ${resItem.bookingReference}` : `STATUS: ${resItem.status.toUpperCase()}`;
+    doc.text(refCode, 190, 20, { align: 'right' });
+    
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Issued: ${new Date().toLocaleDateString()}`, 190, 28, { align: 'right' });
+
+    // Section 1: Service Details
+    doc.setTextColor(darkText);
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('HOTEL SERVICE VOUCHER', 20, 60);
+    
+    // Divider line
+    doc.setDrawColor(212, 175, 55);
+    doc.setLineWidth(0.5);
+    doc.line(20, 64, 190, 64);
+    
+    // Left Grid
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(lightText);
+    doc.text('Guest Name:', 20, 75);
+    doc.text('Guest Email:', 20, 83);
+    doc.text('Guest Phone:', 20, 91);
+    doc.text('Check-In Date:', 20, 99);
+    doc.text('Check-Out Date:', 20, 107);
+    
+    doc.setFont('Helvetica', 'bold');
+    doc.setTextColor(darkText);
+    doc.text(resItem.guestName, 55, 75);
+    doc.text(resItem.guestEmail || 'N/A', 55, 83);
+    doc.text(resItem.guestPhone || 'N/A', 55, 91);
+    doc.text(new Date(resItem.checkIn).toLocaleDateString('en-US', { dateStyle: 'long' }), 55, 99);
+    doc.text(new Date(resItem.checkOut).toLocaleDateString('en-US', { dateStyle: 'long' }), 55, 107);
+
+    // Right Grid
+    doc.setFont('Helvetica', 'normal');
+    doc.setTextColor(lightText);
+    doc.text('Hotel Name:', 110, 75);
+    doc.text('Hotel Location:', 110, 83);
+    doc.text('Room Type:', 110, 91);
+    doc.text('Rooms Count:', 110, 99);
+    doc.text('Meal Plan:', 110, 107);
+    
+    doc.setFont('Helvetica', 'bold');
+    doc.setTextColor(darkText);
+    const hotelName = resItem.hotel?.name || 'Hotel';
+    const hotelLocation = resItem.hotel?.location || 'Kashmir';
+    doc.text(hotelName, 145, 75);
+    doc.text(hotelLocation, 145, 83);
+    doc.text(resItem.roomType, 145, 91);
+    doc.text(`${resItem.roomsCount} Room(s)`, 145, 99);
+    doc.text(resItem.mealPlan, 145, 107);
+
+    // Section 2: Special Instructions
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('SPECIAL INSTRUCTIONS & REQUESTS', 20, 122);
+    doc.line(20, 125, 190, 125);
+    
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(darkText);
+    const splitRequests = doc.splitTextToSize(resItem.specialRequests || 'No special requests submitted.', 170);
+    doc.text(splitRequests, 20, 133);
+
+    // Section 3: Terms & Info
+    const termsY = 160;
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(darkText);
+    doc.text('IMPORTANT CONDITIONS FOR CHECK-IN', 20, termsY);
+    doc.line(20, termsY + 3, 190, termsY + 3);
+    
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(lightText);
+    const terms = [
+      '1. This is a digital service voucher. Please present this voucher along with a valid photo ID upon arrival.',
+      '2. Standard check-in time is 14:00 hrs and check-out time is 11:00 hrs. Early check-in/late check-out is subject to availability.',
+      '3. Room allocation is at the sole discretion of the hotel management.',
+      '4. Personal expenses such as telephone calls, laundry, room service, and mini-bar are not included and must be paid directly.',
+      '5. For any urgent operational assistance, please contact Kashmir Curators Concierge desk or your dedicated agent.'
+    ];
+    terms.forEach((term, idx) => {
+      doc.text(term, 20, termsY + 10 + (idx * 6));
+    });
+
+    // Signature Area
+    const sigY = 210;
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(darkText);
+    doc.text('Authorized Signatory', 190, sigY, { align: 'right' });
+    doc.text('Kashmir Curators Operations Desk', 190, sigY + 5, { align: 'right' });
+    
+    doc.setDrawColor(200, 200, 200);
+    doc.line(140, sigY - 2, 190, sigY - 2);
+
+    doc.save(`Kashmir-Curators-Service-Voucher-${resItem.guestName.replace(/\s+/g, '-')}.pdf`);
+    toast.success('Service voucher generated as PDF!', {
+      description: 'Downloaded client/hotel ready voucher with hidden financial rates.'
+    });
+  };
+
   const calculatedForm = calculateFormFields();
 
   return (
@@ -1604,9 +1739,18 @@ Kashmir Curators`;
                           size="icon"
                           variant="outline"
                           className="w-9 h-9 rounded-xl border-white/5 bg-white/5 hover:bg-white/10 text-kashmir-gold"
-                          title="Download PDF confirmation slip / voucher"
+                          title="Download B2B PDF Confirmation Slip (Internal)"
                         >
                           <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => handleExportServiceVoucherPDF(item)}
+                          size="icon"
+                          variant="outline"
+                          className="w-9 h-9 rounded-xl border-white/5 bg-white/5 hover:bg-white/10 text-emerald-400"
+                          title="Download Client/Hotel Service Voucher (No B2B pricing)"
+                        >
+                          <FileText className="w-4 h-4" />
                         </Button>
                         <Button
                           onClick={() => openDeleteDialog(item)}
