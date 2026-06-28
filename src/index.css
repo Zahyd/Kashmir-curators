@@ -337,26 +337,26 @@ body {
 }
 
 /* ==========================================================================
-   Daylight Mode (Light Theme) Overrides - Luxury Warm Ivory & Cashmere
+   Daylight Mode (Light Theme) Overrides - Luxury Warm Cashmere & Espresso
    ========================================================================== */
 body.light-theme {
-  --background: 34 25% 98%;
+  --background: 35 20% 90%;
   --foreground: 20 15% 10%;
-  --card: 0 0% 100%;
+  --card: 35 30% 96%;
   --card-foreground: 20 15% 10%;
-  --popover: 0 0% 100%;
+  --popover: 35 30% 96%;
   --popover-foreground: 20 15% 10%;
-  --border: 30 10% 88%;
-  --input: 30 10% 88%;
-  --muted: 30 15% 95%;
+  --border: 35 15% 80%;
+  --input: 35 15% 80%;
+  --muted: 35 15% 85%;
   --muted-foreground: 30 10% 40%;
   
-  background-color: #FAF8F5 !important; /* Premium Alabaster / Warm Ivory */
-  color: #24221F !important; /* Rich Espresso / Dark Charcoal */
+  background-color: #EAE3D5 !important; /* Luxurious Warm Cashmere */
+  color: #24221F !important; /* Espresso Charcoal */
 }
 
 body.light-theme * {
-  border-color: #E6E1D8; /* Soft Cashmere */
+  border-color: #D8CEBC; /* Cashmere Shadow */
 }
 
 /* Background overrides */
@@ -368,8 +368,8 @@ body.light-theme [class*="bg-[#0c1215]"],
 body.light-theme [class*="bg-[#070b0e]"],
 body.light-theme [class*="bg-[#080d10]"],
 body.light-theme [class*="bg-[#090e11]"] {
-  background-color: #ffffff !important;
-  border-color: #E6E1D8 !important;
+  background-color: #F8F5EE !important; /* Cream Linen */
+  border-color: #D8CEBC !important;
 }
 
 /* Translucent backgrounds */
@@ -386,8 +386,8 @@ body.light-theme [class*="bg-[#0f171b]/60"],
 body.light-theme [class*="bg-[#0f171b]/80"],
 body.light-theme [class*="bg-[#080d10]/90"],
 body.light-theme [class*="bg-[#090e11]/80"] {
-  background-color: rgba(244, 241, 236, 0.95) !important; /* Soft Linen Warmth */
-  border-color: #E6E1D8 !important;
+  background-color: rgba(234, 227, 213, 0.95) !important; /* Warm Linen */
+  border-color: #D8CEBC !important;
 }
 
 /* Glassmorphism overrides */
@@ -397,9 +397,9 @@ body.light-theme [class*="bg-white/5"],
 body.light-theme [class*="bg-white/[0.03]"],
 body.light-theme [class*="bg-white/[0.05]"],
 body.light-theme [class*="bg-white/[0.08]"] {
-  background-color: rgba(255, 255, 255, 0.85) !important;
+  background-color: rgba(248, 245, 238, 0.85) !important;
   backdrop-filter: blur(20px) !important;
-  border-color: rgba(230, 225, 216, 0.7) !important;
+  border-color: rgba(216, 206, 188, 0.7) !important;
 }
 
 /* Text overrides */
@@ -431,7 +431,7 @@ body.light-theme [class*="text-white/10"] {
 body.light-theme [class*="border-white/10"],
 body.light-theme [class*="border-white/5"],
 body.light-theme [class*="border-white/20"] {
-  border-color: #E6E1D8 !important;
+  border-color: #D8CEBC !important;
 }
 
 /* Input elements styling */
@@ -440,7 +440,7 @@ body.light-theme textarea,
 body.light-theme select {
   background-color: #ffffff !important;
   color: #24221F !important;
-  border-color: #E6E1D8 !important;
+  border-color: #D8CEBC !important;
 }
 
 body.light-theme input::placeholder,
@@ -450,11 +450,11 @@ body.light-theme textarea::placeholder {
 
 /* Table rows styling */
 body.light-theme tr {
-  border-color: #E6E1D8 !important;
+  border-color: #D8CEBC !important;
 }
 
 body.light-theme tr:hover {
-  background-color: #F4EFE6 !important;
+  background-color: #EAE3D5 !important;
 }
 
 body.light-theme th {
@@ -464,17 +464,17 @@ body.light-theme th {
 
 /* Radial gradients overrides (main sections) */
 body.light-theme .bg-obsidian {
-  background: #FAF8F5 !important;
+  background: #EAE3D5 !important;
 }
 
 /* Gradient overrides (e.g. hero overlay) */
 body.light-theme [class*="from-[#05080a]"] {
-  background-image: linear-gradient(to top, #FAF8F5, rgba(250, 248, 245, 0.4), transparent) !important;
+  background-image: linear-gradient(to top, #EAE3D5, rgba(234, 227, 213, 0.4), transparent) !important;
 }
 
 /* Scrollbar overrides */
 body.light-theme .custom-scrollbar::-webkit-scrollbar-track {
-  background: #FAF8F5 !important;
+  background: #EAE3D5 !important;
 }
 
 body.light-theme .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -482,7 +482,7 @@ body.light-theme .custom-scrollbar::-webkit-scrollbar-thumb {
 }
 
 body.light-theme ::-webkit-scrollbar-track {
-  background: #FAF8F5 !important;
+  background: #EAE3D5 !important;
 }
 
 body.light-theme ::-webkit-scrollbar-thumb {
