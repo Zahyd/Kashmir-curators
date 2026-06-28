@@ -50,6 +50,9 @@ import {
 } from "@/components/ui/select";
 import { Logo } from '@/components/ui/Logo';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as UICalendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useHotels } from '@/hooks/useCMSData';
@@ -617,14 +620,34 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                           {day.showDateTime && (
                             <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
                               <div className="relative flex items-center">
-                                <Calendar className="absolute left-3 w-3.5 h-3.5 text-kashmir-gold" />
-                                <input 
-                                  type="date" 
-                                  value={day.date || ''} 
-                                  onChange={(e) => handleUpdateDay(index, 'date', e.target.value)}
-                                  className="bg-[#0f171b]/80 border border-white/10 rounded-xl h-10 pl-9 pr-3 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/40 focus:bg-white/[0.08] transition-all w-38 color-scheme-dark"
-                                  style={{ colorScheme: 'dark' }}
-                                />
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="bg-[#0f171b]/80 border border-white/10 rounded-xl h-10 pl-9 pr-8 text-xs font-bold text-white hover:bg-white/[0.08] transition-all w-38 text-left relative flex items-center"
+                                    >
+                                      <Calendar className="absolute left-3 w-3.5 h-3.5 text-kashmir-gold" />
+                                      <span className="truncate">
+                                        {day.date ? format(new Date(day.date), 'dd-MM-yyyy') : 'dd-mm-yyyy'}
+                                      </span>
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0 bg-[#0b1317]/95 border border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
+                                    <UICalendar
+                                      mode="single"
+                                      selected={day.date ? new Date(day.date) : undefined}
+                                      onSelect={(date) => {
+                                        if (date) {
+                                          const yyyy = date.getFullYear();
+                                          const mm = String(date.getMonth() + 1).padStart(2, '0');
+                                          const dd = String(date.getDate()).padStart(2, '0');
+                                          handleUpdateDay(index, 'date', `${yyyy}-${mm}-${dd}`);
+                                        }
+                                      }}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
                               </div>
                               <div className="relative flex items-center">
                                 <Clock className="w-3.5 h-3.5 absolute left-3 text-kashmir-gold" />
