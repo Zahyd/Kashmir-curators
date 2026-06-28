@@ -24,6 +24,7 @@ import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
 import PaymentRequest from "./pages/PaymentRequest";
 import PublicItinerary from "./pages/PublicItinerary";
+import ThemeToggle from "./components/common/ThemeToggle";
 import { useAntiTheft } from "./hooks/useAntiTheft";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ThemeToggle />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/packages" element={<Packages />} />

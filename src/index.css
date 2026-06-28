@@ -335,3 +335,156 @@ body {
     break-inside: avoid;
   }
 }
+
+/* ==========================================================================
+   Daylight Mode (Light Theme) Overrides
+   ========================================================================== */
+body.light-theme {
+  --background: 210 20% 98%;
+  --foreground: 210 20% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 20% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 20% 4%;
+  --border: 210 20% 88%;
+  --input: 210 20% 88%;
+  --muted: 210 20% 95%;
+  --muted-foreground: 210 20% 40%;
+  
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+body.light-theme * {
+  border-color: #cbd5e1;
+}
+
+/* Background overrides */
+body.light-theme [class*="bg-[#05080a]"],
+body.light-theme [class*="bg-[#0a0f12]"],
+body.light-theme [class*="bg-[#0b1317]"],
+body.light-theme [class*="bg-[#0f171b]"],
+body.light-theme [class*="bg-[#0c1215]"],
+body.light-theme [class*="bg-[#070b0e]"],
+body.light-theme [class*="bg-[#080d10]"],
+body.light-theme [class*="bg-[#090e11]"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Translucent backgrounds */
+body.light-theme [class*="bg-[#0a0f12]/60"],
+body.light-theme [class*="bg-[#0a0f12]/80"],
+body.light-theme [class*="bg-[#0a0f12]/90"],
+body.light-theme [class*="bg-[#0a0f12]/95"],
+body.light-theme [class*="bg-[#0b1317]/60"],
+body.light-theme [class*="bg-[#0b1317]/80"],
+body.light-theme [class*="bg-[#0b1317]/90"],
+body.light-theme [class*="bg-[#0b1317]/95"],
+body.light-theme [class*="bg-[#0f171b]/40"],
+body.light-theme [class*="bg-[#0f171b]/60"],
+body.light-theme [class*="bg-[#0f171b]/80"],
+body.light-theme [class*="bg-[#080d10]/90"],
+body.light-theme [class*="bg-[#090e11]/80"] {
+  background-color: rgba(241, 245, 249, 0.95) !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Glassmorphism overrides */
+body.light-theme .glass,
+body.light-theme .glass-card,
+body.light-theme [class*="bg-white/5"],
+body.light-theme [class*="bg-white/[0.03]"],
+body.light-theme [class*="bg-white/[0.05]"],
+body.light-theme [class*="bg-white/[0.08]"] {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  border-color: rgba(203, 213, 225, 0.6) !important;
+}
+
+/* Text overrides */
+body.light-theme .text-white {
+  color: #0f172a !important;
+}
+
+body.light-theme [class*="text-white/80"],
+body.light-theme [class*="text-white/70"] {
+  color: #1e293b !important;
+}
+
+body.light-theme [class*="text-white/60"],
+body.light-theme [class*="text-white/50"] {
+  color: #475569 !important;
+}
+
+body.light-theme [class*="text-white/40"],
+body.light-theme [class*="text-white/30"] {
+  color: #64748b !important;
+}
+
+body.light-theme [class*="text-white/20"],
+body.light-theme [class*="text-white/10"] {
+  color: #94a3b8 !important;
+}
+
+/* Border overrides */
+body.light-theme [class*="border-white/10"],
+body.light-theme [class*="border-white/5"],
+body.light-theme [class*="border-white/20"] {
+  border-color: #cbd5e1 !important;
+}
+
+/* Input elements styling */
+body.light-theme input,
+body.light-theme textarea,
+body.light-theme select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-theme input::placeholder,
+body.light-theme textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Table rows styling */
+body.light-theme tr {
+  border-color: #cbd5e1 !important;
+}
+
+body.light-theme tr:hover {
+  background-color: #f1f5f9 !important;
+}
+
+body.light-theme th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+}
+
+/* Radial gradients overrides (main sections) */
+body.light-theme .bg-obsidian {
+  background: #f8fafc !important;
+}
+
+/* Gradient overrides (e.g. hero overlay) */
+body.light-theme [class*="from-[#05080a]"] {
+  background-image: linear-gradient(to top, #f8fafc, rgba(248, 250, 252, 0.4), transparent) !important;
+}
+
+/* Scrollbar overrides */
+body.light-theme .custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+}
+
+body.light-theme .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.4) !important;
+}
+
+body.light-theme ::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+}
+
+body.light-theme ::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3) !important;
+}
