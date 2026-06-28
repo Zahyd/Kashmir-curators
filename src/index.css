@@ -337,26 +337,26 @@ body {
 }
 
 /* ==========================================================================
-   Daylight Mode (Light Theme) Overrides - Luxury Warm Cashmere & Espresso
+   Daylight Mode (Light Theme) Overrides - Coastal & Serene (Seafoam, Blue, Sand)
    ========================================================================== */
 body.light-theme {
-  --background: 35 20% 90%;
-  --foreground: 20 15% 10%;
-  --card: 35 30% 96%;
-  --card-foreground: 20 15% 10%;
-  --popover: 35 30% 96%;
-  --popover-foreground: 20 15% 10%;
-  --border: 35 15% 80%;
-  --input: 35 15% 80%;
-  --muted: 35 15% 85%;
-  --muted-foreground: 30 10% 40%;
+  --background: 190 20% 95%; /* Misty Seafoam Light Grey */
+  --foreground: 200 30% 12%; /* Deep Marine Navy */
+  --card: 0 0% 100%;
+  --card-foreground: 200 30% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 200 30% 12%;
+  --border: 190 15% 82%; /* Serene Seafoam Border */
+  --input: 190 15% 82%;
+  --muted: 190 15% 92%;
+  --muted-foreground: 200 15% 40%;
   
-  background-color: #EAE3D5 !important; /* Luxurious Warm Cashmere */
-  color: #24221F !important; /* Espresso Charcoal */
+  background-color: #EDF3F4 !important; /* Crisp Serene Mist */
+  color: #1A2E35 !important; /* Deep Ocean Slate */
 }
 
 body.light-theme * {
-  border-color: #D8CEBC; /* Cashmere Shadow */
+  border-color: #CAD7D8; /* Soft Seafoam/Sky Border */
 }
 
 /* Background overrides */
@@ -368,8 +368,8 @@ body.light-theme [class*="bg-[#0c1215]"],
 body.light-theme [class*="bg-[#070b0e]"],
 body.light-theme [class*="bg-[#080d10]"],
 body.light-theme [class*="bg-[#090e11]"] {
-  background-color: #F8F5EE !important; /* Cream Linen */
-  border-color: #D8CEBC !important;
+  background-color: #FFFFFF !important; /* Crisp Clean Paper */
+  border-color: #CAD7D8 !important;
 }
 
 /* Translucent backgrounds */
@@ -386,8 +386,8 @@ body.light-theme [class*="bg-[#0f171b]/60"],
 body.light-theme [class*="bg-[#0f171b]/80"],
 body.light-theme [class*="bg-[#080d10]/90"],
 body.light-theme [class*="bg-[#090e11]/80"] {
-  background-color: rgba(234, 227, 213, 0.95) !important; /* Warm Linen */
-  border-color: #D8CEBC !important;
+  background-color: rgba(235, 243, 244, 0.95) !important; /* Serene Mist Overlay */
+  border-color: #CAD7D8 !important;
 }
 
 /* Glassmorphism overrides */
@@ -397,41 +397,47 @@ body.light-theme [class*="bg-white/5"],
 body.light-theme [class*="bg-white/[0.03]"],
 body.light-theme [class*="bg-white/[0.05]"],
 body.light-theme [class*="bg-white/[0.08]"] {
-  background-color: rgba(248, 245, 238, 0.85) !important;
+  background-color: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(20px) !important;
-  border-color: rgba(216, 206, 188, 0.7) !important;
+  border-color: rgba(202, 215, 216, 0.7) !important;
 }
 
 /* Text overrides */
 body.light-theme .text-white {
-  color: #24221F !important;
+  color: #1A2E35 !important;
 }
 
 body.light-theme [class*="text-white/80"],
 body.light-theme [class*="text-white/70"] {
-  color: #383531 !important;
+  color: #2D434B !important;
 }
 
 body.light-theme [class*="text-white/60"],
 body.light-theme [class*="text-white/50"] {
-  color: #5C5852 !important;
+  color: #4D646E !important;
 }
 
 body.light-theme [class*="text-white/40"],
 body.light-theme [class*="text-white/30"] {
-  color: #87827B !important;
+  color: #728B96 !important;
 }
 
 body.light-theme [class*="text-white/20"],
 body.light-theme [class*="text-white/10"] {
-  color: #BFB9AF !important;
+  color: #A3BAC5 !important;
+}
+
+/* Accent texts - Change Kashmir Gold highlights to Seafoam Teal for Day view */
+body.light-theme .text-kashmir-gold,
+body.light-theme [class*="text-kashmir-gold"] {
+  color: #2E8B7F !important; /* Seafoam Teal Highlight */
 }
 
 /* Border overrides */
 body.light-theme [class*="border-white/10"],
 body.light-theme [class*="border-white/5"],
 body.light-theme [class*="border-white/20"] {
-  border-color: #D8CEBC !important;
+  border-color: #CAD7D8 !important;
 }
 
 /* Input elements styling */
@@ -439,52 +445,65 @@ body.light-theme input,
 body.light-theme textarea,
 body.light-theme select {
   background-color: #ffffff !important;
-  color: #24221F !important;
-  border-color: #D8CEBC !important;
+  color: #1A2E35 !important;
+  border-color: #CAD7D8 !important;
 }
 
 body.light-theme input::placeholder,
 body.light-theme textarea::placeholder {
-  color: #87827B !important;
+  color: #728B96 !important;
 }
 
 /* Table rows styling */
 body.light-theme tr {
-  border-color: #D8CEBC !important;
+  border-color: #CAD7D8 !important;
 }
 
 body.light-theme tr:hover {
-  background-color: #EAE3D5 !important;
+  background-color: #E6EEF0 !important; /* Soft Seafoam hover */
 }
 
 body.light-theme th {
-  background-color: #FAF8F5 !important;
-  color: #5C5852 !important;
+  background-color: #EDF3F4 !important;
+  color: #4D646E !important;
 }
 
 /* Radial gradients overrides (main sections) */
 body.light-theme .bg-obsidian {
-  background: #EAE3D5 !important;
+  background: #EDF3F4 !important;
 }
 
 /* Gradient overrides (e.g. hero overlay) */
 body.light-theme [class*="from-[#05080a]"] {
-  background-image: linear-gradient(to top, #EAE3D5, rgba(234, 227, 213, 0.4), transparent) !important;
+  background-image: linear-gradient(to top, #EDF3F4, rgba(237, 243, 244, 0.4), transparent) !important;
 }
 
 /* Scrollbar overrides */
 body.light-theme .custom-scrollbar::-webkit-scrollbar-track {
-  background: #EAE3D5 !important;
+  background: #EDF3F4 !important;
 }
 
 body.light-theme .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(212, 175, 55, 0.4) !important;
+  background: rgba(46, 139, 127, 0.3) !important;
 }
 
 body.light-theme ::-webkit-scrollbar-track {
-  background: #EAE3D5 !important;
+  background: #EDF3F4 !important;
 }
 
 body.light-theme ::-webkit-scrollbar-thumb {
-  background: rgba(212, 175, 55, 0.3) !important;
+  background: rgba(46, 139, 127, 0.3) !important;
+}
+
+/* Sandy Beige highlights for primary actionable booking buttons */
+body.light-theme .bg-kashmir-gold,
+body.light-theme [class*="bg-kashmir-gold"] {
+  background-color: #E8D2A6 !important; /* Sandy Beige active elements */
+  color: #1A2E35 !important;
+  border: 1px solid #D4B26F !important;
+  box-shadow: 0 4px 14px rgba(232, 210, 166, 0.4) !important;
+}
+
+body.light-theme [class*="bg-kashmir-gold"]:hover {
+  background-color: #DFB97F !important; /* Slightly darker sand hover */
 }
