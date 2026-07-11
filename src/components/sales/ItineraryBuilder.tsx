@@ -132,6 +132,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
   const [tempImageUrl, setTempImageUrl] = useState('');
   const [pax, setPax] = useState({ adults: 2, children: 0 });
   const [proposalUrl, setProposalUrl] = useState(inquiry.proposalUrl || '');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const pdfContentRef = useRef<HTMLDivElement>(null);
 
   const totalCost = days.reduce((sum, day) => sum + (day.hotelPrice || 0) + (day.transportPrice || 0) + (day.extraBedPrice || 0), 0);
@@ -343,6 +344,32 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     }
   };
 
+  const handleDeleteCuration = async () => {
+    setIsGenerating(true);
+    const toastId = toast.loading('Deleting inquiry curation...');
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        toast.success('Inquiry permanently deleted.', { id: toastId });
+        onBack();
+      } else {
+        throw new Error('Server rejected deletion request');
+      }
+    } catch (error: any) {
+      console.error('Delete inquiry curation error:', error);
+      toast.error(error.message || 'Failed to delete inquiry.', { id: toastId });
+    } finally {
+      setIsGenerating(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   const handleUpdateProposal = async (url: string) => {
     try {
       const token = localStorage.getItem('teamToken');
@@ -516,6 +543,14 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
           >
             <Share2 className="w-4 h-4 mr-2" />
             <span>Share Link</span>
+          </Button>
+          <Button 
+            onClick={() => setShowDeleteConfirm(true)}
+            variant="outline" 
+            className="flex-1 bg-red-500/10 border-red-500/20 hover:bg-red-500 hover:text-black text-red-400 font-bold h-14 px-8 rounded-2xl transition-all"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            <span>Delete</span>
           </Button>
           <Button 
             onClick={handleSendProposal} 
@@ -1494,6 +1529,39 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
           </div>
         </div>
       </div>
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#0f1115] border border-red-500/20 w-full max-w-md rounded-3xl p-8 relative shadow-2xl shadow-red-900/20 animate-in zoom-in-95 duration-300 text-left">
+            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 mx-auto">
+              <Trash2 className="w-8 h-8 text-red-500" />
+            </div>
+            
+            <h2 className="text-2xl font-display font-black text-white text-center mb-2">Delete Inquiry?</h2>
+            <p className="text-sm text-white/50 text-center mb-8">
+              Are you absolutely sure you want to permanently delete <span className="text-white font-bold">{inquiry.customerName}</span>'s curation inquiry and all of its proposal quotes from the database? This action is irreversible.
+            </p>
+
+            <div className="flex gap-4">
+              <Button 
+                onClick={() => setShowDeleteConfirm(false)}
+                variant="outline"
+                className="flex-1 bg-transparent border-white/10 hover:bg-white/5 text-white"
+                disabled={isGenerating}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleDeleteCuration}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold"
+                disabled={isGenerating}
+              >
+                {isGenerating ? 'Deleting...' : 'Yes, Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

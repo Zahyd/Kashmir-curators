@@ -210,3 +210,33 @@ export const getPublicInquiryItinerary = async (req: Request, res: Response) => 
     res.status(500).json({ error: 'Failed to fetch itinerary' });
   }
 };
+
+export const deleteInquiry = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+
+    // Delete any linked hotel reservations, then delete the inquiry
+    await p.$transaction([
+      p.hotelReservation.deleteMany({
+        where: { inquiryId: id }
+      }),
+      p.inquiry.delete({
+        where: { id }
+      })
+    ]);
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'DELETE',
+        message: `Inquiry ${id} permanently deleted from database`,
+        booking: { id, entityType: 'inquiry' }
+      });
+    }
+
+    res.json({ success: true, message: 'Inquiry permanently deleted' });
+  } catch (error: any) {
+    console.error('Delete inquiry error:', error.message);
+    res.status(500).json({ error: 'Failed to delete inquiry' });
+  }
+};
