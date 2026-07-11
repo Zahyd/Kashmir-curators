@@ -65,6 +65,7 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
     const rawAmount = payload?.payment?.entity?.amount || req.body.amount || 0;
     const amount = rawAmount / 100 || rawAmount; // Razorpay sends amount in paise
     const bookingId = req.body.bookingId || payload?.payment?.entity?.notes?.bookingId;
+    const inquiryId = payload?.payment?.entity?.notes?.inquiryId || req.body.inquiryId;
 
     if (!paymentId) {
       return res.status(400).json({ error: 'Missing paymentId in payload' });
@@ -80,10 +81,44 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
       return res.status(200).json({ status: 'ignored', reason: 'already_processed' });
     }
 
-    // 3. Find booking either via direct bookingId or fallback to scanning details
+    // 3. Find booking either via direct bookingId, inquiryId, or fallback to scanning details
     let targetBooking = null;
     if (bookingId) {
       targetBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    } else if (inquiryId) {
+      const allBookings = await prisma.booking.findMany();
+      targetBooking = allBookings.find(b => {
+        try {
+          const parsed = JSON.parse(b.details);
+          return parsed.inquiryId === inquiryId || parsed.inquiryId === String(inquiryId);
+        } catch {
+          return false;
+        }
+      }) || null;
+
+      if (!targetBooking) {
+        // Create booking if none exists
+        const inquiry = await prisma.inquiry.findUnique({ where: { id: inquiryId } });
+        if (inquiry) {
+          targetBooking = await prisma.booking.create({
+            data: {
+              userId: inquiry.userId || 'SYSTEM_GUEST',
+              type: 'package',
+              itemName: `Kashmir Tour Package - ${inquiry.destination}`,
+              bookingDate: new Date(),
+              totalAmount: amount,
+              details: JSON.stringify({
+                inquiryId: inquiry.id,
+                customerName: inquiry.customerName,
+                travelers: inquiry.travelers,
+                duration: inquiry.duration,
+                paymentMethod: 'Razorpay'
+              }),
+              status: 'confirmed'
+            }
+          });
+        }
+      }
     } else {
       // Fallback search for any booking whose details contains the orderId or matching parameters
       const allBookings = await prisma.booking.findMany();
@@ -153,12 +188,16 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
     // Hook into the booking automation pipeline
     if (event !== 'payment.failed') {
       try {
-        await bookingAutomationService.handlePaymentSuccess(
-          targetBooking.id,
-          amount,
-          paymentId,
-          reqWithIo.io
-        );
+        if (inquiryId) {
+          await bookingAutomationService.handleStageTransition(inquiryId, 'PAYMENT_RECEIVED', reqWithIo.io);
+        } else {
+          await bookingAutomationService.handlePaymentSuccess(
+            targetBooking.id,
+            amount,
+            paymentId,
+            reqWithIo.io
+          );
+        }
       } catch (autoErr: any) {
         console.error('[PaymentController] Booking automation execution failed:', autoErr.message);
       }
@@ -484,4 +523,76 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
   }
 
   res.json({ received: true });
+};
+
+export const createRazorpayPaymentLink = async (req: Request, res: Response) => {
+  const { inquiryId, amount, customerEmail } = req.body;
+  const p = prisma as any;
+
+  try {
+    const inquiry = await p.inquiry.findUnique({
+      where: { id: inquiryId }
+    });
+
+    if (!inquiry) {
+      return res.status(404).json({ error: 'Inquiry not found' });
+    }
+
+    const finalAmount = Number(amount);
+    if (isNaN(finalAmount) || finalAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid advance payment amount' });
+    }
+
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    // If Razorpay keys are not configured, fallback to simulation mode link
+    if (!keyId || !keySecret) {
+      console.warn('[Razorpay] Keys not configured. Generating mock simulation payment link...');
+      const mockLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/itinerary/${inquiry.id}?payment=success`;
+      return res.json({ sessionUrl: mockLink, isMock: true });
+    }
+
+    // Call Razorpay API to generate Payment Link
+    const response = await fetch('https://api.razorpay.com/v1/payment_links', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
+      },
+      body: JSON.stringify({
+        amount: Math.round(finalAmount * 100),
+        currency: 'INR',
+        accept_partial: false,
+        reference_id: inquiry.id,
+        description: `Advance deposit for Kashmir Tour Reservation - Curated for ${inquiry.customerName}`,
+        customer: {
+          name: inquiry.customerName,
+          email: customerEmail || inquiry.email,
+          contact: inquiry.phone || '9999999999'
+        },
+        notify: {
+          sms: true,
+          email: true
+        },
+        reminder_enable: true,
+        notes: {
+          inquiryId: inquiry.id
+        },
+        callback_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/itinerary/${inquiry.id}?payment=success`,
+        callback_method: 'get'
+      })
+    });
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody.error?.description || 'Razorpay Link API Error');
+    }
+
+    const data = await response.json();
+    res.json({ sessionUrl: data.short_url, paymentLinkId: data.id });
+  } catch (error: any) {
+    console.error('[Razorpay] Create payment link error:', error.message);
+    res.status(500).json({ error: 'Failed to initialize Razorpay payment: ' + error.message });
+  }
 };

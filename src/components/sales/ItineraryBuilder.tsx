@@ -377,10 +377,10 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
 
   const handleGenerateAdvanceLink = async () => {
     setIsGeneratingLink(true);
-    const toastId = toast.loading('Generating secure Stripe payment link...');
+    const toastId = toast.loading('Generating secure Razorpay payment link...');
     try {
       const token = localStorage.getItem('teamToken');
-      const response = await fetch(`${API_BASE_URL}/payments/stripe/create-checkout-session`, {
+      const response = await fetch(`${API_BASE_URL}/payments/razorpay/create-payment-link`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -398,7 +398,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
         throw new Error(data.error || 'Failed to generate payment session');
       }
       setGeneratedLink(data.sessionUrl);
-      toast.success('Stripe payment link generated successfully!', { id: toastId });
+      toast.success('Razorpay payment link generated successfully!', { id: toastId });
     } catch (err: any) {
       console.error(err);
       toast.error('Failed to create payment link: ' + err.message, { id: toastId });
@@ -1627,7 +1627,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
             
             <h2 className="text-2xl font-display font-black text-white text-center mb-2">Request Advance Deposit</h2>
             <p className="text-sm text-white/50 text-center mb-8">
-              Generate a secure Stripe payment link for <span className="text-white font-bold">{inquiry.customerName}</span> to secure lodging and cab reservations.
+              Generate a secure Razorpay payment link for <span className="text-white font-bold">{inquiry.customerName}</span> to secure lodging and cab reservations.
             </p>
 
             {!generatedLink ? (
@@ -1652,13 +1652,13 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                   className="w-full bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-12 rounded-xl shadow-lg shadow-kashmir-gold/20 border-none"
                 >
                   {isGeneratingLink ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                  Generate Stripe Link
+                  Generate Razorpay Link
                 </Button>
               </div>
             ) : (
               <div className="space-y-6">
                 <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 space-y-3">
-                  <p className="text-xs text-emerald-400 font-bold text-center">Stripe Payment Link Ready!</p>
+                  <p className="text-xs text-emerald-400 font-bold text-center">Razorpay Payment Link Ready!</p>
                   
                   <div className="flex gap-2">
                     <Input 
@@ -1669,7 +1669,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                     <Button 
                       onClick={() => {
                         navigator.clipboard.writeText(generatedLink);
-                        toast.success('Stripe link copied to clipboard!');
+                        toast.success('Payment link copied to clipboard!');
                       }}
                       className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl px-4 h-11 text-xs font-bold"
                     >
@@ -1691,7 +1691,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                   <Button 
                     onClick={() => {
                       const subject = encodeURIComponent(`Secure Payment Link - Kashmir Curators Tour reservation`);
-                      const body = encodeURIComponent(`Dear ${inquiry.customerName},\n\nTo confirm and hold your lodging/cab reservations for your Kashmir travel itinerary, please make the advance deposit of ₹${Number(advanceAmount).toLocaleString()} through this secure Stripe payment link:\n\n${generatedLink}\n\nWarm regards,\nKashmir Curators`);
+                      const body = encodeURIComponent(`Dear ${inquiry.customerName},\n\nTo confirm and hold your lodging/cab reservations for your Kashmir travel itinerary, please make the advance deposit of ₹${Number(advanceAmount).toLocaleString()} through this secure Razorpay payment link:\n\n${generatedLink}\n\nWarm regards,\nKashmir Curators`);
                       window.open(`mailto:${inquiry.email}?subject=${subject}&body=${body}`, '_blank');
                     }}
                     className="flex-1 bg-white/5 border border-white/5 text-white hover:bg-white/10 font-bold text-xs h-12 rounded-xl"

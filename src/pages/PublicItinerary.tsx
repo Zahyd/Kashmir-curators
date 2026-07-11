@@ -68,9 +68,9 @@ export default function PublicItinerary() {
 
   const handlePayAdvance = async () => {
     setIsPaying(true);
-    const toastId = toast.loading('Redirecting to secure Stripe checkout...');
+    const toastId = toast.loading('Redirecting to secure Razorpay gateway...');
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/stripe/create-checkout-session`, {
+      const response = await fetch(`${API_BASE_URL}/payments/razorpay/create-payment-link`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -84,7 +84,7 @@ export default function PublicItinerary() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to initialize Stripe payment');
+        throw new Error(data.error || 'Failed to initialize Razorpay payment');
       }
       if (data.sessionUrl) {
         window.location.href = data.sessionUrl;
@@ -250,7 +250,7 @@ export default function PublicItinerary() {
                 className="w-full md:w-auto bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-12 px-8 rounded-xl shadow-lg shadow-kashmir-gold/20 border-none"
               >
                 {isPaying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Pay Securely with Stripe
+                Pay Securely with Razorpay
               </Button>
             </div>
           </Card>
