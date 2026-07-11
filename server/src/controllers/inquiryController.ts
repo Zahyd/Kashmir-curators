@@ -196,6 +196,8 @@ export const getPublicInquiryItinerary = async (req: Request, res: Response) => 
         quoteData: true,
         proposalUrl: true,
         status: true,
+        leadStage: true,
+        netPrice: true,
         createdAt: true
       }
     });

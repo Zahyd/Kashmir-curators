@@ -43,6 +43,7 @@ import crmRoutes from './routes/crmRoutes';
 import agentRoutes from './routes/agentRoutes';
 import financeRoutes from './routes/financeRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import { handleStripeWebhook } from './controllers/paymentController';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -104,6 +105,9 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 app.use(limiter);
+
+// Stripe webhook needs raw body parser
+app.post('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

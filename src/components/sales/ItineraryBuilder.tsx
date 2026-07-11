@@ -34,7 +34,8 @@ import {
   AlertCircle,
   Activity,
   Upload,
-  Plane
+  Plane,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -133,6 +134,10 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
   const [pax, setPax] = useState({ adults: 2, children: 0 });
   const [proposalUrl, setProposalUrl] = useState(inquiry.proposalUrl || '');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const [advanceAmount, setAdvanceAmount] = useState('5000');
+  const [generatedLink, setGeneratedLink] = useState('');
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const pdfContentRef = useRef<HTMLDivElement>(null);
 
   const totalCost = days.reduce((sum, day) => sum + (day.hotelPrice || 0) + (day.transportPrice || 0) + (day.extraBedPrice || 0), 0);
@@ -370,6 +375,36 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     }
   };
 
+  const handleGenerateAdvanceLink = async () => {
+    setIsGeneratingLink(true);
+    const toastId = toast.loading('Generating secure Stripe payment link...');
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/payments/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inquiryId: inquiry.id,
+          amount: advanceAmount,
+          customerEmail: inquiry.email
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate payment session');
+      const data = await response.json();
+      setGeneratedLink(data.sessionUrl);
+      toast.success('Stripe payment link generated successfully!', { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to create payment link: ' + err.message, { id: toastId });
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
   const handleUpdateProposal = async (url: string) => {
     try {
       const token = localStorage.getItem('teamToken');
@@ -543,6 +578,17 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
           >
             <Share2 className="w-4 h-4 mr-2" />
             <span>Share Link</span>
+          </Button>
+          <Button 
+            onClick={() => {
+              setGeneratedLink('');
+              setShowAdvanceModal(true);
+            }}
+            variant="outline" 
+            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-kashmir-gold font-bold h-14 px-8 rounded-2xl transition-all"
+          >
+            <CreditCard className="w-4 h-4 mr-2" />
+            <span>Request Deposit</span>
           </Button>
           <Button 
             onClick={() => setShowDeleteConfirm(true)}
@@ -1559,6 +1605,100 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 {isGenerating ? 'Deleting...' : 'Yes, Delete'}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Advance Deposit Request Modal */}
+      {showAdvanceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#0f1115] border border-white/10 w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in zoom-in-95 duration-300 text-left">
+            <button 
+              onClick={() => setShowAdvanceModal(false)}
+              className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            
+            <div className="w-16 h-16 rounded-full bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center mb-6 mx-auto text-kashmir-gold">
+              <CreditCard className="w-8 h-8" />
+            </div>
+            
+            <h2 className="text-2xl font-display font-black text-white text-center mb-2">Request Advance Deposit</h2>
+            <p className="text-sm text-white/50 text-center mb-8">
+              Generate a secure Stripe payment link for <span className="text-white font-bold">{inquiry.customerName}</span> to secure lodging and cab reservations.
+            </p>
+
+            {!generatedLink ? (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Advance Amount (INR)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/45 text-sm font-black">₹</span>
+                    <Input 
+                      type="number"
+                      value={advanceAmount}
+                      onChange={(e) => setAdvanceAmount(e.target.value)}
+                      className="pl-10 bg-white/5 border-white/5 h-12 rounded-xl text-white font-bold placeholder:text-white/20"
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleGenerateAdvanceLink}
+                  disabled={isGeneratingLink || !advanceAmount}
+                  className="w-full bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-12 rounded-xl shadow-lg shadow-kashmir-gold/20 border-none"
+                >
+                  {isGeneratingLink ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                  Generate Stripe Link
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 space-y-3">
+                  <p className="text-xs text-emerald-400 font-bold text-center">Stripe Payment Link Ready!</p>
+                  
+                  <div className="flex gap-2">
+                    <Input 
+                      readOnly
+                      value={generatedLink}
+                      className="bg-black/40 border-white/5 h-11 rounded-xl text-xs text-white/60 font-mono"
+                    />
+                    <Button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedLink);
+                        toast.success('Stripe link copied to clipboard!');
+                      }}
+                      className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl px-4 h-11 text-xs font-bold"
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={() => {
+                      const text = `Hi ${inquiry.customerName},\n\nTo lock in and secure the hotel reservations for your upcoming Kashmir tour, please complete the advance deposit payment of ₹${Number(advanceAmount).toLocaleString()} using this secure link:\n\n${generatedLink}\n\nThank you!\n- Kashmir Curators`;
+                      window.open(`https://api.whatsapp.com/send?phone=${inquiry.phone}&text=${encodeURIComponent(text)}`, '_blank');
+                    }}
+                    className="flex-1 bg-[#25D366] text-white hover:opacity-90 font-bold text-xs h-12 rounded-xl"
+                  >
+                    WhatsApp Client
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      const subject = encodeURIComponent(`Secure Payment Link - Kashmir Curators Tour reservation`);
+                      const body = encodeURIComponent(`Dear ${inquiry.customerName},\n\nTo confirm and hold your lodging/cab reservations for your Kashmir travel itinerary, please make the advance deposit of ₹${Number(advanceAmount).toLocaleString()} through this secure Stripe payment link:\n\n${generatedLink}\n\nWarm regards,\nKashmir Curators`);
+                      window.open(`mailto:${inquiry.email}?subject=${subject}&body=${body}`, '_blank');
+                    }}
+                    className="flex-1 bg-white/5 border border-white/5 text-white hover:bg-white/10 font-bold text-xs h-12 rounded-xl"
+                  >
+                    Email Client
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

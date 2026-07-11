@@ -46,6 +46,7 @@
     "prisma": "^6.19.3",
     "resend": "^6.12.3",
     "socket.io": "^4.8.3",
+    "stripe": "^22.0.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "twilio": "^6.0.2",

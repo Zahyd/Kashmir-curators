@@ -2,6 +2,11 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { bookingAutomationService } from '../services/bookingAutomationService';
+const Stripe = require('stripe');
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51OwWnLSCR60f1Jt1k8D4S8aX5433N0QoU6JkS7m1W3N0tO...', {
+  apiVersion: '2024-06-20'
+});
 
 const getActiveUPIConfig = async () => {
   let businessVPA = process.env.BUSINESS_UPI_VPA || "thekashmircurators@okaxis";
@@ -327,4 +332,156 @@ export const getPaymentRequestDetails = async (req: Request, res: Response) => {
     console.error('Fetch Payment Request Details Error:', error);
     return res.status(500).json({ error: 'Failed to retrieve payment request details' });
   }
+};
+
+export const createStripeCheckoutSession = async (req: Request, res: Response) => {
+  const { inquiryId, amount, customerEmail } = req.body;
+  const p = prisma as any;
+
+  try {
+    const inquiry = await p.inquiry.findUnique({
+      where: { id: inquiryId }
+    });
+
+    if (!inquiry) {
+      return res.status(404).json({ error: 'Inquiry not found' });
+    }
+
+    const finalAmount = Number(amount);
+    if (isNaN(finalAmount) || finalAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid advance payment amount' });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'inr',
+            product_data: {
+              name: `Advance Deposit - Kashmir Tour Curation`,
+              description: `Securing hotel & lodging reservations for ${inquiry.customerName} (${inquiry.destination})`
+            },
+            unit_amount: Math.round(finalAmount * 100)
+          },
+          quantity: 1
+        }
+      ],
+      mode: 'payment',
+      customer_email: customerEmail || inquiry.email,
+      metadata: {
+        inquiryId: inquiry.id,
+        customerName: inquiry.customerName,
+        advanceAmount: String(finalAmount)
+      },
+      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/itinerary/${inquiry.id}?payment=success`,
+      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/itinerary/${inquiry.id}?payment=cancelled`
+    });
+
+    res.json({ sessionUrl: session.url, sessionId: session.id });
+  } catch (error: any) {
+    console.error('[Stripe] Create session error:', error.message);
+    res.status(500).json({ error: 'Failed to initialize Stripe payment: ' + error.message });
+  }
+};
+
+export const handleStripeWebhook = async (req: Request, res: Response) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+  const p = prisma as any;
+
+  let event: any;
+
+  try {
+    if (endpointSecret && sig) {
+      event = stripe.webhooks.constructEvent(req.body, sig as string, endpointSecret);
+    } else {
+      event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    }
+  } catch (err: any) {
+    console.error(`[Stripe Webhook] Verification failed:`, err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as any;
+    const metadata = session.metadata;
+
+    if (metadata && metadata.inquiryId) {
+      const inquiryId = metadata.inquiryId;
+      const amount = Number(metadata.advanceAmount || 0);
+      const paymentId = (session.payment_intent as string) || session.id;
+
+      console.log(`[Stripe Webhook] Payment completed! Inquiry ID: ${inquiryId}, Amount: ₹${amount}`);
+
+      try {
+        const inquiry = await p.inquiry.findUnique({
+          where: { id: inquiryId }
+        });
+
+        if (inquiry) {
+          let booking = await p.booking.findFirst({
+            where: {
+              details: {
+                contains: inquiryId
+              }
+            }
+          });
+
+          if (!booking) {
+            booking = await p.booking.create({
+              data: {
+                userId: inquiry.userId || 'SYSTEM_GUEST',
+                type: 'package',
+                itemName: `Kashmir Tour Package - ${inquiry.destination}`,
+                bookingDate: new Date(),
+                status: 'confirmed',
+                stage: 'CONFIRMED',
+                totalAmount: amount,
+                details: JSON.stringify({
+                  inquiryId: inquiry.id,
+                  customerName: inquiry.customerName,
+                  travelers: inquiry.travelers,
+                  duration: inquiry.duration,
+                  paymentMethod: 'Stripe'
+                })
+              }
+            });
+          } else {
+            booking = await p.booking.update({
+              where: { id: booking.id },
+              data: { 
+                status: 'confirmed',
+                stage: 'CONFIRMED'
+              }
+            });
+          }
+
+          await p.transactionLedger.create({
+            data: {
+              bookingId: booking.id,
+              amount: amount,
+              type: 'INFLOW',
+              category: 'BOOKING_ADVANCE',
+              paymentGateway: 'STRIPE',
+              transactionId: paymentId,
+              status: 'COMPLETED',
+              reconciled: true,
+              metadata: JSON.stringify({
+                inquiryId,
+                customerEmail: session.customer_email || inquiry.email,
+                checkoutSessionId: session.id
+              })
+            }
+          });
+
+          await bookingAutomationService.handleStageTransition(inquiryId, 'PAYMENT_RECEIVED', (req as any).io);
+        }
+      } catch (dbErr: any) {
+        console.error('[Stripe Webhook] DB Sync failed:', dbErr.message);
+      }
+    }
+  }
+
+  res.json({ received: true });
 };

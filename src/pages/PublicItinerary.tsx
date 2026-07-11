@@ -40,6 +40,8 @@ interface PublicItineraryData {
   quoteData: string; // JSON string
   proposalUrl?: string | null;
   status: string;
+  leadStage?: string;
+  netPrice?: number;
   createdAt: string;
 }
 
@@ -49,6 +51,51 @@ export default function PublicItinerary() {
   const [days, setDays] = useState<ItineraryDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(1); // Default expand day 1
+  const [isPaying, setIsPaying] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      toast.success('Advance payment successfully processed! Your reservations are locked in.', {
+        duration: 10000
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('payment') === 'cancelled') {
+      toast.warning('Payment cancelled. You can complete the deposit at any time to hold reservations.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  const handlePayAdvance = async () => {
+    setIsPaying(true);
+    const toastId = toast.loading('Redirecting to secure Stripe checkout...');
+    try {
+      const response = await fetch(`${API_BASE_URL}/payments/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inquiryId: itinerary?.id,
+          amount: itinerary?.netPrice || 5000,
+          customerEmail: ''
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to initialize Stripe payment');
+      const data = await response.json();
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl;
+      } else {
+        throw new Error('No session URL returned');
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Payment error: ' + err.message, { id: toastId });
+    } finally {
+      setIsPaying(false);
+    }
+  };
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -171,6 +218,42 @@ export default function PublicItinerary() {
           </div>
         </Card>
       </div>
+
+      {/* Advance Payment Action Banner */}
+      {itinerary.leadStage === 'PAYMENT_PENDING' && (
+        <div className="container max-w-4xl mx-auto px-6 mt-10">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-[#0c1f24] via-[#0d161a] to-[#080d0f] border border-kashmir-gold/20 p-8 rounded-3xl shadow-[0_20px_45px_-10px_rgba(212,175,55,0.15)] flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Compass className="w-48 h-48 text-kashmir-gold" />
+            </div>
+            
+            <div className="space-y-3 text-center md:text-left relative z-10">
+              <Badge className="bg-kashmir-gold/20 hover:bg-kashmir-gold/20 text-kashmir-gold border border-kashmir-gold/30 px-3 py-1 text-[9px] font-black uppercase tracking-widest">
+                Action Required: Secure Booking
+              </Badge>
+              <h3 className="text-2xl font-display font-black text-white tracking-tight">Lock in Your Reservation</h3>
+              <p className="text-sm text-white/60 max-w-md">
+                To guarantee hotel pricing, room configurations, and cab availability for your tour dates, please submit the secure advance deposit.
+              </p>
+            </div>
+            
+            <div className="flex flex-col items-center md:items-end gap-3 w-full md:w-auto relative z-10">
+              <div className="text-center md:text-right">
+                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Advance Deposit Amount</p>
+                <p className="text-3xl font-black text-kashmir-gold mt-1">₹{itinerary.netPrice?.toLocaleString() || '5,000'}</p>
+              </div>
+              <Button 
+                onClick={handlePayAdvance}
+                disabled={isPaying}
+                className="w-full md:w-auto bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-12 px-8 rounded-xl shadow-lg shadow-kashmir-gold/20 border-none"
+              >
+                {isPaying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Pay Securely with Stripe
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Main Timeline Section */}
       <div className="container max-w-4xl mx-auto px-6 py-12">
