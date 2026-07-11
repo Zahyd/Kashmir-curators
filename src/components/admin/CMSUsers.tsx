@@ -152,6 +152,8 @@ export default function CMSUsers() {
   const [activeTab, setActiveTab] = useState<'clients' | 'team' | 'agents'>('clients');
   const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [selectedBookingForView, setSelectedBookingForView] = useState<any | null>(null);
   
   // Add Team Member Modal State
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
@@ -168,7 +170,21 @@ export default function CMSUsers() {
   useEffect(() => {
     fetchUsers();
     fetchAgents();
+    fetchBookings();
   }, []);
+
+  const fetchBookings = async () => {
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setBookings(data || []);
+    } catch (error) {
+      console.error('Failed to fetch bookings:', error);
+    }
+  };
 
   const fetchAgents = async () => {
     try {
@@ -500,6 +516,44 @@ export default function CMSUsers() {
                     <p className="text-xs text-white/50 flex items-center gap-3"><Phone className="w-4.5 h-4.5 text-kashmir-gold" /> {u.phone || 'No Contact'}</p>
                     <p className="text-xs text-white/50 flex items-center gap-3"><Calendar className="w-4.5 h-4.5 text-kashmir-gold" /> Enrolled {new Date(u.createdAt).toLocaleDateString()}</p>
                   </div>
+
+                  {/* Linked Traveler Bookings */}
+                  {(() => {
+                    const userBookings = bookings.filter(b => b.userId === u.id);
+                    if (userBookings.length === 0) return null;
+                    return (
+                      <div className="space-y-3 mt-6 pt-6 border-t border-white/5">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-white/20">Active Travel Assets</p>
+                        <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-1 text-left">
+                          {userBookings.map(b => (
+                            <div 
+                              key={b.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedBookingForView(b);
+                              }}
+                              className="p-3.5 rounded-xl bg-white/5 hover:bg-kashmir-gold/10 border border-white/5 hover:border-kashmir-gold/20 transition-all cursor-pointer flex justify-between items-center group/booking"
+                            >
+                              <div className="min-w-0 flex-1 pr-2">
+                                <p className="text-[10px] font-bold text-white group-hover/booking:text-kashmir-gold truncate transition-colors">{b.itemName}</p>
+                                <p className="text-[8px] text-white/40 uppercase tracking-wider font-black mt-0.5">{b.type} • {new Date(b.bookingDate).toLocaleDateString()}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-[10px] font-mono font-bold text-white/80">₹{b.totalAmount.toLocaleString()}</p>
+                                <Badge className={cn(
+                                  "text-[7px] font-black uppercase tracking-wider border-none px-1.5 py-0 mt-0.5 block w-max ml-auto",
+                                  b.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400' :
+                                  b.status === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
+                                )}>
+                                  {b.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Footer Controls */}
@@ -730,6 +784,79 @@ export default function CMSUsers() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Traveler Booking Detail Modal */}
+      {selectedBookingForView && (
+        <Dialog open={!!selectedBookingForView} onOpenChange={() => setSelectedBookingForView(null)}>
+          <DialogContent className="max-w-xl bg-[#0d1216]/95 border-white/10 text-white rounded-[3rem] p-10 max-h-[90vh] overflow-y-auto custom-scrollbar backdrop-blur-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-display font-bold">Booking Intelligence</DialogTitle>
+              <p className="text-white/40 text-xs uppercase tracking-widest font-black mt-2">REF: {selectedBookingForView.id}</p>
+            </DialogHeader>
+
+            <div className="py-6 space-y-6 text-left">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest text-white/30 block mb-1">Service Selection</label>
+                  <h4 className="text-lg font-bold text-kashmir-gold">{selectedBookingForView.itemName}</h4>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest mt-0.5">{selectedBookingForView.type}</p>
+                </div>
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest text-white/30 block mb-1">Financial Summary</label>
+                  <p className="text-2xl font-display font-black text-white">₹{selectedBookingForView.totalAmount.toLocaleString()}</p>
+                  <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">Confirmed Pricing</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 border-t border-white/5 pt-4">
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest text-white/30 block mb-1">Current State</label>
+                  <div>
+                    <Badge className={cn(
+                      "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border-none",
+                      selectedBookingForView.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400' :
+                      selectedBookingForView.status === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
+                    )}>
+                      {selectedBookingForView.status}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest text-white/30 block mb-1">Booking Date</label>
+                  <p className="text-sm font-bold text-white">{new Date(selectedBookingForView.bookingDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {selectedBookingForView.type === 'cab' && selectedBookingForView.details && (() => {
+                const cabDetails = typeof selectedBookingForView.details === 'string'
+                  ? JSON.parse(selectedBookingForView.details)
+                  : selectedBookingForView.details;
+                return (
+                  <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
+                    <h5 className="text-[9px] font-black uppercase tracking-widest text-white/30">Cab Transfer Details</h5>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="text-white/40 text-[9px] uppercase tracking-wider">Pickup</p>
+                        <p className="font-semibold text-white/90">{cabDetails.pickupLocation || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <p className="text-white/40 text-[9px] uppercase tracking-wider">Drop</p>
+                        <p className="font-semibold text-white/90">{cabDetails.dropLocation || 'Not specified'}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <DialogFooter className="pt-4 border-t border-white/5">
+              <Button onClick={() => setSelectedBookingForView(null)} className="w-full bg-white/5 border-white/5 hover:bg-white/10 rounded-xl h-12 font-black text-[10px] uppercase tracking-widest text-white hover:text-white">
+                Close View
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
     </div>

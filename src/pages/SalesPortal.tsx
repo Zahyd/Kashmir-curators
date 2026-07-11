@@ -102,11 +102,8 @@ export default function SalesPortal() {
 
   // Real-time refresh
   useEffect(() => {
-    const latestEvent = systemEvents[0];
-    if (latestEvent && latestEvent.booking && (latestEvent.booking.entityType === 'inquiry' || latestEvent.booking.entityType === 'booking')) {
-      fetchInquiries();
-      fetchSalesStats();
-    }
+    fetchInquiries();
+    fetchSalesStats();
   }, [systemEvents]);
 
   const fetchInquiries = async () => {
