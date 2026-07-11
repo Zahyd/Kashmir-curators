@@ -83,9 +83,19 @@ export const notificationService = {
     let redirectLink = '/admin';
 
     if (data && data.entityType === 'inquiry') {
-      title = 'New Inquiry Request';
-      notificationType = 'inquiry';
-      priority = 'high';
+      if (data.leadStage === 'PAYMENT_RECEIVED') {
+        title = 'Payment Received';
+        notificationType = 'payment';
+        priority = 'high';
+      } else if (data.leadStage === 'CONFIRMED') {
+        title = 'Curation Confirmed';
+        notificationType = 'booking';
+        priority = 'high';
+      } else {
+        title = 'New Inquiry Request';
+        notificationType = 'inquiry';
+        priority = 'high';
+      }
       redirectLink = '/admin';
     } else if (data && data.entityType === 'booking') {
       title = 'New Booking Alert';

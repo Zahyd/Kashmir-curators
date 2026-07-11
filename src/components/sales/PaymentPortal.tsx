@@ -12,7 +12,8 @@ import {
   Smartphone,
   ExternalLink,
   Info,
-  XCircle
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,8 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
   const [transactionId, setTransactionId] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [razorpayLink, setRazorpayLink] = useState('');
+  const [isGeneratingScanner, setIsGeneratingScanner] = useState(false);
   const { systemEvents } = useTeamAuth();
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed'>('pending');
 
@@ -91,11 +94,52 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
     return `upi://pay?pa=${businessVPA}&pn=${encodedName}&am=${amount}&cu=INR&tn=${encodedNote}`;
   };
 
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(generateUPILink())}&bgcolor=faf9f6&color=0a0f12&margin=20`;
+  const qrCodeUrl = razorpayLink 
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(razorpayLink)}&bgcolor=faf9f6&color=0a0f12&margin=20`
+    : `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(generateUPILink())}&bgcolor=faf9f6&color=0a0f12&margin=20`;
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(generateUPILink());
-    toast.success("UPI Link copied to clipboard");
+    navigator.clipboard.writeText(razorpayLink || generateUPILink());
+    toast.success(razorpayLink ? "Razorpay Link copied to clipboard" : "UPI Link copied to clipboard");
+  };
+
+  const handleGenerateScanner = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error("Please enter a valid amount first");
+      return;
+    }
+
+    setIsGeneratingScanner(true);
+    const toastId = toast.loading('Generating secure Razorpay payment scanner...');
+    try {
+      const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/payments/razorpay/create-payment-link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          inquiryId: inquiry.id,
+          amount: parseFloat(amount),
+          customerEmail: inquiry.email
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate Razorpay link');
+      }
+
+      setRazorpayLink(data.sessionUrl);
+      setShowScanner(true);
+      toast.success('Razorpay payment scanner generated successfully!', { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to generate scanner: ' + err.message, { id: toastId });
+    } finally {
+      setIsGeneratingScanner(false);
+    }
   };
 
   const handleVerifyPayment = () => {
@@ -121,6 +165,13 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
     }
     setIsSendingWhatsApp(true);
     try {
+      if (razorpayLink) {
+        const text = `Hi ${inquiry.customerName},\n\nPlease make the payment of ₹${Number(amount).toLocaleString()} using this secure Razorpay link:\n\n${razorpayLink}\n\nThank you!\n- Kashmir Curators`;
+        window.open(`https://api.whatsapp.com/send?phone=${inquiry.phone}&text=${encodeURIComponent(text)}`, '_blank');
+        toast.success("WhatsApp message window opened");
+        return;
+      }
+
       const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/payments/send-whatsapp-scanner`, {
         method: 'POST',
@@ -237,11 +288,11 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
 
               <div className="pt-6 border-t border-white/5">
                 <Button 
-                  onClick={() => setShowScanner(true)}
-                  disabled={!amount || parseInt(amount) <= 0}
-                  className="w-full bg-kashmir-gold text-black hover:bg-amber-500 h-16 rounded-2xl font-black uppercase tracking-widest text-xs gap-3 shadow-xl shadow-kashmir-gold/10"
+                  onClick={handleGenerateScanner}
+                  disabled={isGeneratingScanner || !amount || parseFloat(amount) <= 0}
+                  className="w-full bg-kashmir-gold text-black hover:bg-amber-500 h-16 rounded-2xl font-black uppercase tracking-widest text-xs gap-3 shadow-xl shadow-kashmir-gold/10 border-none"
                 >
-                  <QrCode className="w-5 h-5" />
+                  {isGeneratingScanner ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5" />}
                   Generate Payment Scanner
                 </Button>
               </div>
