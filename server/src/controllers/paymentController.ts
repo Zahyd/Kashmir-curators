@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { bookingAutomationService } from '../services/bookingAutomationService';
+import { notificationService } from '../services/notificationService';
 const Stripe = require('stripe');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51OwWnLSCR60f1Jt1k8D4S8aX5433N0QoU6JkS7m1W3N0tO...', {
@@ -66,6 +67,7 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
     const amount = rawAmount / 100 || rawAmount; // Razorpay sends amount in paise
     const bookingId = req.body.bookingId || payload?.payment?.entity?.notes?.bookingId;
     const inquiryId = payload?.payment?.entity?.notes?.inquiryId || req.body.inquiryId;
+    const paymentIdNotes = payload?.payment?.entity?.notes?.paymentId || req.body.paymentIdNotes;
 
     if (!paymentId) {
       return res.status(400).json({ error: 'Missing paymentId in payload' });
@@ -207,10 +209,38 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
     if (reqWithIo.io) {
       const socketPayload = { type: 'UPDATE', booking: result.updatedBooking };
       reqWithIo.io.to(`user-${result.updatedBooking.userId}`).emit('booking-updated', socketPayload);
-      reqWithIo.io.to('admin-room').emit('new-system-event', {
-        ...socketPayload,
-        message: `Idempotent Payment ledger locked: ₹${amount.toLocaleString()} for ${result.updatedBooking.itemName}`
-      });
+      
+      const msg = event === 'payment.failed' 
+        ? `Payment Failed: Razorpay payment for ${result.updatedBooking.itemName} failed.`
+        : `Payment Received: ₹${amount.toLocaleString()} locked for ${result.updatedBooking.itemName}`;
+      
+      // Persist alert to database and broadcast to admin-room
+      try {
+        await notificationService.emitSystemEvent(
+          reqWithIo.io,
+          event === 'payment.failed' ? 'ERROR' : 'PAYMENT',
+          msg,
+          { ...result.updatedBooking, entityType: 'booking' }
+        );
+      } catch (notifErr: any) {
+        console.error('Failed to emit system event from webhook:', notifErr.message);
+      }
+
+      // Notify the specific customer payment link room if payment was initiated from a payment request
+      if (paymentIdNotes) {
+        if (event === 'payment.failed') {
+          reqWithIo.io.to(`payment-${paymentIdNotes}`).emit('payment-failed', {
+            paymentId: paymentIdNotes,
+            reason: payload?.payment?.entity?.error_description || 'Payment failed'
+          });
+        } else {
+          reqWithIo.io.to(`payment-${paymentIdNotes}`).emit('payment-success', {
+            paymentId: paymentIdNotes,
+            amount,
+            status: 'confirmed'
+          });
+        }
+      }
     }
 
     return res.status(200).json({
@@ -245,18 +275,44 @@ export const sendWhatsAppPaymentRequest = async (req: Request, res: Response) =>
     const customerName = inquiry.customerName || 'Valued Client';
     const cleanPhone = phone.replace(/[^0-9]/g, ''); // Ensure only digits for WhatsApp (e.g. 919999999999)
 
-    // 2. Generate unique payment reference and save to ledger
+    // 2. Generate unique payment reference
     const paymentId = `TXN-KC-${inquiryId.substring(0, 6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
-    const { businessVPA, merchantName } = await getActiveUPIConfig();
-    const encodedName = encodeURIComponent(merchantName);
-    const shortId = inquiryId.includes('-') ? `KC-${inquiryId.split('-')[0].toUpperCase()}` : `KC-${inquiryId.substring(0, 8).toUpperCase()}`;
-    const encodedNote = encodeURIComponent(`Booking for ${shortId}`);
     
-    // Standard UPI Link
-    const upiLink = `upi://pay?pa=${businessVPA}&pn=${encodedName}&am=${amount}&cu=INR&tn=${encodedNote}`;
+    // Create Razorpay Order
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
     
-    // Generate QR Code URL via external qrserver API
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiLink)}&bgcolor=faf9f6&color=0a0f12&margin=20`;
+    let razorpayOrderId = 'MOCK_ORDER_' + Date.now();
+    if (keyId && keySecret) {
+      try {
+        const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
+          },
+          body: JSON.stringify({
+            amount: Math.round(parseFloat(amount) * 100),
+            currency: 'INR',
+            receipt: paymentId,
+            notes: {
+              paymentId,
+              inquiryId
+            }
+          })
+        });
+        
+        if (!orderRes.ok) {
+          const errBody = await orderRes.json().catch(() => ({}));
+          throw new Error(errBody.error?.description || 'Razorpay Order API Error');
+        }
+        
+        const orderData = await orderRes.json();
+        razorpayOrderId = orderData.id;
+      } catch (err: any) {
+        console.error('[Razorpay] Order creation failed:', err.message);
+      }
+    }
 
     // 3. Log the payment request in TransactionLedger as PENDING (Unpaid/Credit)
     const ledgerEntry = await (prisma as any).transactionLedger.create({
@@ -265,22 +321,25 @@ export const sendWhatsAppPaymentRequest = async (req: Request, res: Response) =>
         amount: parseFloat(amount),
         type: 'CREDIT',
         paymentId,
-        orderId: 'WHATSAPP_GPAY',
-        description: `Pending WhatsApp Google Pay request sent to ${phone} for ${customerName}`
+        orderId: razorpayOrderId,
+        description: `Pending WhatsApp Razorpay request sent to ${phone} for ${customerName}`
       }
     });
 
     // 4. Construct WhatsApp Message text
-    const checkoutUrl = `https://kashmir-curators.vercel.app/payment-request/${paymentId}`;
-    const messageText = `🏔️ *Kashmir Curators - Payment Request* 🏔️\n\nHi *${customerName}*,\n\nHere is your secure checkout link for your Kashmir expedition:\n\n*Amount:* ₹${parseFloat(amount).toLocaleString()}\n*Reference ID:* ${paymentId}\n\n📲 *Direct Payment Link:*\n${checkoutUrl}\n\nClick this link to pay instantly using *Google Pay*, *Paytm*, or *PhonePe*.\n\nWe look forward to welcoming you to Kashmir! ✨`;
+    const frontendUrl = process.env.FRONTEND_URL || 'https://kashmir-curators.vercel.app';
+    const checkoutUrl = `${frontendUrl}/payment-request/${paymentId}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(checkoutUrl)}&bgcolor=faf9f6&color=0a0f12&margin=20`;
+
+    const messageText = `🏔️ *Kashmir Curators - Payment Request* 🏔️\n\nHi *${customerName}*,\n\nHere is your secure checkout link for your Kashmir expedition:\n\n*Amount:* ₹${parseFloat(amount).toLocaleString()}\n*Reference ID:* ${paymentId}\n\n📲 *Direct Payment Link:*\n${checkoutUrl}\n\nClick this link to pay instantly using *UPI*, *Cards*, or *Netbanking*.\n\nWe look forward to welcoming you to Kashmir! ✨`;
 
     // 5. Send QR Code Image and Text Message via WhatsApp Service
     const { whatsappService } = require('../services/whatsappService');
     
-    // Send Image first (QR Code)
+    // Send Image first (QR Code that opens the checkout page)
     let imageSent = false;
     try {
-      imageSent = await whatsappService.sendWhatsAppImage(cleanPhone, qrCodeUrl, `Scan QR Code to pay ₹${parseFloat(amount).toLocaleString()}`);
+      imageSent = await whatsappService.sendWhatsAppImage(cleanPhone, qrCodeUrl, `Scan to open secure checkout for ₹${parseFloat(amount).toLocaleString()}`);
     } catch (wsErr: any) {
       console.error('Failed to send QR image via WhatsApp:', wsErr.message);
     }
@@ -298,15 +357,14 @@ export const sendWhatsAppPaymentRequest = async (req: Request, res: Response) =>
     if (reqWithIo.io) {
       reqWithIo.io.emit('new-system-event', {
         type: 'CREATE',
-        message: `GPay payment request of ₹${parseFloat(amount).toLocaleString()} sent to ${customerName} on WhatsApp. UTR: ${paymentId}`
+        message: `Razorpay payment request of ₹${parseFloat(amount).toLocaleString()} sent to ${customerName} on WhatsApp. UTR: ${paymentId}`
       });
     }
 
     return res.status(200).json({
       success: true,
       paymentId,
-      upiLink,
-      qrCodeUrl,
+      checkoutUrl,
       whatsappStatus: {
         imageSent,
         textSent
@@ -345,14 +403,41 @@ export const getPaymentRequestDetails = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Associated inquiry not found' });
     }
 
-    // 3. Re-generate upiLink and qrCodeUrl
-    const { businessVPA, merchantName } = await getActiveUPIConfig();
-    const encodedName = encodeURIComponent(merchantName);
-    const shortId = ledger.bookingId.includes('-') ? `KC-${ledger.bookingId.split('-')[0].toUpperCase()}` : `KC-${ledger.bookingId.substring(0, 8).toUpperCase()}`;
-    const encodedNote = encodeURIComponent(`Booking for ${shortId}`);
-    
-    const upiLink = `upi://pay?pa=${businessVPA}&pn=${encodedName}&am=${ledger.amount}&cu=INR&tn=${encodedNote}`;
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiLink)}&bgcolor=faf9f6&color=0a0f12&margin=20`;
+    let razorpayOrderId = ledger.orderId;
+    const razorpayKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_TC6hJeqiMJD6a5';
+    const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    // Backward compatibility: if orderId is old 'WHATSAPP_GPAY', generate a Razorpay order on the fly
+    if (razorpayOrderId === 'WHATSAPP_GPAY' && razorpayKeyId && razorpayKeySecret) {
+      try {
+        const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + Buffer.from(`${razorpayKeyId}:${razorpayKeySecret}`).toString('base64')
+          },
+          body: JSON.stringify({
+            amount: Math.round(ledger.amount * 100),
+            currency: 'INR',
+            receipt: ledger.paymentId,
+            notes: {
+              paymentId: ledger.paymentId,
+              inquiryId: ledger.bookingId
+            }
+          })
+        });
+        if (orderRes.ok) {
+          const orderData = await orderRes.json();
+          razorpayOrderId = orderData.id;
+          await (prisma as any).transactionLedger.update({
+            where: { paymentId },
+            data: { orderId: razorpayOrderId }
+          });
+        }
+      } catch (err: any) {
+        console.error('Failed to create Razorpay Order on the fly:', err.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -362,8 +447,8 @@ export const getPaymentRequestDetails = async (req: Request, res: Response) => {
       destination: inquiry.destination || 'Kashmir Tour',
       duration: inquiry.duration || '6 Days',
       description: ledger.description,
-      upiLink,
-      qrCodeUrl,
+      razorpayOrderId,
+      razorpayKeyId,
       createdAt: ledger.createdAt
     });
 

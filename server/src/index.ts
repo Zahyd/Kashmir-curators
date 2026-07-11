@@ -121,6 +121,10 @@ io.on('connection', (socket) => {
   socket.on('join-admin', () => {
     socket.join('admin-room');
   });
+
+  socket.on('join-payment', (paymentId) => {
+    socket.join(`payment-${paymentId}`);
+  });
 });
 
 // Middleware to attach io to request
