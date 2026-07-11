@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, SALES_AGENTS } from '@/contexts/TeamAuthContext';
@@ -44,6 +45,7 @@ import {
 
 
 export default function CMSInquiries() {
+  const navigate = useNavigate();
   const { teamUser, hasPermission, systemEvents } = useTeamAuth();
   const canAssign = hasPermission('assign_leads');
   const [searchTerm, setSearchTerm] = useState('');
@@ -821,7 +823,15 @@ export default function CMSInquiries() {
                 <Button variant="ghost" onClick={() => setSelectedInquiry(null)} className="h-14 px-8 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white hover:bg-white/5">
                   Terminate View
                 </Button>
-                <div className="flex gap-4">
+                 <div className="flex gap-4">
+                  <Button 
+                    onClick={() => {
+                      navigate(`/sales/portal?inquiryId=${selectedInquiry.id}`);
+                    }}
+                    className="h-14 px-8 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 hover:bg-blue-500 hover:text-white"
+                  >
+                    <Sparkles className="w-4 h-4 mr-3" /> Itinerary Builder
+                  </Button>
                   <Button variant="outline" className="h-14 px-8 rounded-2xl bg-white/5 border-white/5 text-[10px] font-black uppercase tracking-[0.3em] text-white/60 hover:text-white hover:bg-white/10">
                     <CheckCircle2 className="w-4 h-4 mr-3" /> Mark Verified
                   </Button>

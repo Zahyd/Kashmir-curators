@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Package, 
   Search, 
@@ -19,7 +20,8 @@ import {
   Building,
   Car,
   Trash2,
-  Plus
+  Plus,
+  Sparkles
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,6 +74,7 @@ interface Booking {
 }
 
 export default function CMSBookings() {
+  const navigate = useNavigate();
   const { systemEvents } = useTeamAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -637,6 +640,29 @@ export default function CMSBookings() {
                       </div>
                     </div>
                   ) : null;
+                })()}
+
+                {(() => {
+                  let inquiryId = "";
+                  if (selectedBooking.details) {
+                    try {
+                      const parsed = typeof selectedBooking.details === 'string'
+                        ? JSON.parse(selectedBooking.details)
+                        : selectedBooking.details;
+                      inquiryId = parsed.inquiryId || "";
+                    } catch (e) {}
+                  }
+                  if (!inquiryId) return null;
+                  return (
+                    <Button
+                      onClick={() => {
+                        navigate(`/sales/portal?inquiryId=${inquiryId}`);
+                      }}
+                      className="w-full bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl h-14 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-kashmir-gold/15 mb-4"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" /> Open in Itinerary Builder
+                    </Button>
+                  );
                 })()}
 
                 <div className="pt-8 border-t border-white/5 flex flex-wrap gap-4">

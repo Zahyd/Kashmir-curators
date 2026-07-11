@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   MessageSquare, 
   Users, 
@@ -58,6 +58,9 @@ const mockReminders: any[] = [];
 
 export default function SalesPortal() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const inquiryIdParam = searchParams.get('inquiryId');
+  
   const { teamUser, isTeamAuthenticated, isTeamLoading, teamLogout, systemEvents } = useTeamAuth();
   const [activeTab, setActiveTab] = useState<'live-leads' | 'my-inquiries' | 'performance' | 'work-log' | 'builder' | 'payments' | 'vault' | 'clients'>('live-leads');
   const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
@@ -84,6 +87,18 @@ export default function SalesPortal() {
       fetchSalesStats();
     }
   }, [isTeamAuthenticated]);
+
+  // Handle auto-routing to itinerary builder if inquiryId is provided in URL
+  useEffect(() => {
+    if (inquiryIdParam && inquiries.length > 0) {
+      const found = inquiries.find(i => i.id === inquiryIdParam);
+      if (found) {
+        setSelectedInquiry(found);
+        setActiveTab('builder');
+        setSearchParams({});
+      }
+    }
+  }, [inquiryIdParam, inquiries, setSearchParams]);
 
   // Real-time refresh
   useEffect(() => {
