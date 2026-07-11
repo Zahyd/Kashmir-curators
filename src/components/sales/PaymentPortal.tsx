@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   Smartphone,
   ExternalLink,
-  Info
+  Info,
+  XCircle
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
 interface PaymentPortalProps {
   inquiry: any;
@@ -33,6 +35,28 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
   const [transactionId, setTransactionId] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const { systemEvents } = useTeamAuth();
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed'>('pending');
+
+  React.useEffect(() => {
+    const latestEvent = systemEvents[0];
+    if (latestEvent) {
+      const isMatch = 
+        (latestEvent.booking && String(latestEvent.booking.id) === String(inquiry.id)) ||
+        latestEvent.message.includes(inquiry.id) ||
+        (latestEvent.message.toLowerCase().includes('payment') && latestEvent.message.toLowerCase().includes(inquiry.customerName.toLowerCase()));
+      
+      if (isMatch) {
+        if (latestEvent.message.toLowerCase().includes('failed')) {
+          setPaymentStatus('failed');
+          toast.error("Payment failed: " + latestEvent.message);
+        } else {
+          setPaymentStatus('success');
+          toast.success("Payment confirmed! Booking locked.");
+        }
+      }
+    }
+  }, [systemEvents, inquiry]);
 
   const [businessVPA, setBusinessVPA] = useState<string>("thekashmircurators@okaxis");
   const [merchantName, setMerchantName] = useState<string>("The Kashmir Curators");
@@ -271,7 +295,40 @@ export default function PaymentPortal({ inquiry, onBack }: PaymentPortalProps) {
             </div>
 
             <div className="p-10 flex flex-col items-center">
-              {showScanner && amount && parseInt(amount) > 0 ? (
+              {paymentStatus === 'success' ? (
+                <div className="py-16 text-center animate-in zoom-in-95 duration-500 flex flex-col items-center">
+                  <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6 text-emerald-400">
+                    <CheckCircle2 className="w-10 h-10" />
+                  </div>
+                  <p className="text-lg font-bold text-white uppercase tracking-widest">Payment Captured</p>
+                  <p className="text-emerald-400 font-display font-bold text-2xl mt-2">₹{parseInt(amount || '0').toLocaleString()} Received</p>
+                  <p className="text-xs text-white/40 mt-4 max-w-[220px]">
+                    The system has auto-confirmed the reservations. You can return to the leads panel.
+                  </p>
+                  <Button 
+                    onClick={onBack}
+                    className="mt-8 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl px-6 h-10 text-xs font-bold border-none"
+                  >
+                    Return to Pipeline
+                  </Button>
+                </div>
+              ) : paymentStatus === 'failed' ? (
+                <div className="py-16 text-center animate-in zoom-in-95 duration-500 flex flex-col items-center">
+                  <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 text-red-500">
+                    <XCircle className="w-10 h-10" />
+                  </div>
+                  <p className="text-lg font-bold text-white uppercase tracking-widest">Payment Failed</p>
+                  <p className="text-red-400 text-xs mt-3 max-w-[200px]">
+                    An issue occurred while processing the customer's transfer. Please try generating a new scanner request.
+                  </p>
+                  <Button 
+                    onClick={() => setPaymentStatus('pending')}
+                    className="mt-8 bg-red-500 text-black hover:bg-red-600 rounded-xl px-6 h-10 text-xs font-bold border-none"
+                  >
+                    Retry Scanner
+                  </Button>
+                </div>
+              ) : showScanner && amount && parseInt(amount) > 0 ? (
                 <div className="space-y-8 w-full">
                   <div className="p-6 bg-white rounded-3xl shadow-2xl relative group">
                     <img 
