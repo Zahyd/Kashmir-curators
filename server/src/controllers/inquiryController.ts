@@ -4,6 +4,7 @@ import { notificationService } from '../services/notificationService';
 import { googleSheetsService } from '../services/googleSheetsService';
 import { PricingService } from '../services/pricingService';
 import { CRMService } from '../services/crmService';
+import { bookingAutomationService } from '../services/bookingAutomationService';
 
 
 export const getInquiries = async (req: Request, res: Response) => {
@@ -110,8 +111,15 @@ export const updateInquiry = async (req: Request, res: Response) => {
       duration,
       travelers,
       budget,
-      accommodation
+      accommodation,
+      leadStage
     } = req.body;
+
+    // Handle lead stage transitions through the automation engine
+    if (leadStage !== undefined) {
+      const transitioned = await bookingAutomationService.handleStageTransition(req.params.id as string, String(leadStage), (req as any).io);
+      return res.json(transitioned);
+    }
 
     const data: any = {};
     if (status !== undefined) data.status = String(status);

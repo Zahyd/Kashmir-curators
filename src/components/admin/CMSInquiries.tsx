@@ -701,6 +701,61 @@ export default function CMSInquiries() {
                       </div>
                     </div>
                   </div>
+
+                  {/* CRM Pipeline Operations */}
+                  <div className="space-y-6 p-8 rounded-[2rem] bg-white/[0.02] border border-white/5">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      CRM Pipeline Operations
+                    </h4>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-white/50">Lead Stage State</span>
+                      <select
+                        value={selectedInquiry.leadStage || 'NEW_LEAD'}
+                        onChange={async (e) => {
+                          const newStage = e.target.value;
+                          try {
+                            const token = localStorage.getItem('teamToken');
+                            const response = await fetch(`${API_BASE_URL}/inquiries/${selectedInquiry.id}`, {
+                              method: 'PATCH',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                              },
+                              body: JSON.stringify({ leadStage: newStage })
+                            });
+                            if (response.ok) {
+                              const updated = await response.json();
+                              setSelectedInquiry(updated);
+                              setInquiries(prev => prev.map(i => i.id === updated.id ? updated : i));
+                              toast.success(`CRM state updated: ${newStage.replace('_', ' ')}`);
+                            } else {
+                              toast.error('Failed to trigger workflow change');
+                            }
+                          } catch (err) {
+                            toast.error('Failed to communicate with CRM server');
+                          }
+                        }}
+                        className="bg-[#0a0f12] border border-white/10 text-white rounded-xl px-4 py-2 text-xs font-bold focus:border-kashmir-gold outline-none cursor-pointer"
+                      >
+                        {[
+                          { code: 'NEW_LEAD', label: 'New Lead' },
+                          { code: 'FOLLOW_UP', label: 'Contacted' },
+                          { code: 'QUOTE_SENT', label: 'Quotation Sent' },
+                          { code: 'NEGOTIATION', label: 'Negotiation' },
+                          { code: 'PAYMENT_PENDING', label: 'Payment Pending' },
+                          { code: 'PAYMENT_RECEIVED', label: 'Payment Received' },
+                          { code: 'CONFIRMED', label: 'Trip Confirmed' },
+                          { code: 'COMPLETED', label: 'Trip Completed' },
+                          { code: 'CANCELLED', label: 'Cancelled' }
+                        ].map(stage => (
+                          <option key={stage.code} value={stage.code} className="bg-[#0a0f12] text-white">
+                            {stage.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-10">

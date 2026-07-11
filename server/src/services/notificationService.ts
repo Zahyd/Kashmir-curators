@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
+import prisma from '../lib/prisma';
 
 // Configure the Resend client
 const resend = new Resend(process.env.RESEND_API_KEY || 're_mock_key_123');
@@ -72,44 +73,89 @@ export const notificationService = {
   },
 
   /**
-   * Blast an event via WebSocket
+   * Blast an event via WebSocket and save it to the persistent Notification log
    */
-  emitSystemEvent(io: any, type: string, message: string, data: any) {
-    if (!io) return;
-    
-    // Broadcast to the admin room for CRM updates
-    io.to('admin-room').emit('new-system-event', {
-      type,
-      message,
-      booking: data
-    });
+  async emitSystemEvent(io: any, type: string, message: string, data: any) {
+    // 1. Determine priority, type, and redirect link
+    let priority = 'medium';
+    let title = 'System Update';
+    let notificationType = 'info';
+    let redirectLink = '/admin';
 
-    // If there's a specific user ID, broadcast to their personal room
-    if (data && data.userId) {
-      io.to(`user-${data.userId}`).emit(`${type.toLowerCase()}-updated`, { type, data });
+    if (data && data.entityType === 'inquiry') {
+      title = 'New Inquiry Request';
+      notificationType = 'inquiry';
+      priority = 'high';
+      redirectLink = '/admin';
+    } else if (data && data.entityType === 'booking') {
+      title = 'New Booking Alert';
+      notificationType = 'booking';
+      priority = 'high';
+      redirectLink = '/admin';
+    } else if (type === 'PAYMENT') {
+      title = 'Payment Received';
+      notificationType = 'payment';
+      priority = 'high';
+      redirectLink = '/admin';
     }
 
-    // Broadcast to everyone for live social proof / curation updates
-    if (type === 'CREATE' && data) {
-      if (data.entityType === 'inquiry') {
-        io.emit('new-live-curation', {
-          id: data.id,
-          message: `Expedition to ${data.destination || 'Kashmir'} curated`,
-          details: `${data.travelers || '2'} Travelers • for ${data.customerName || 'Explorer'}`,
-          createdAt: data.createdAt || new Date()
-        });
-      } else if (data.entityType === 'booking') {
-        let travelers = '2';
-        try {
-          const detailsParsed = data.details ? (typeof data.details === 'string' ? JSON.parse(data.details) : data.details) : {};
-          travelers = detailsParsed.travelers || '2';
-        } catch (e) {}
-        io.emit('new-live-curation', {
-          id: data.id,
-          message: `${data.type === 'package' ? 'Luxury package' : data.type === 'hotel' ? 'Premium hotel' : 'Chauffeur cab'} secured: ${data.itemName}`,
-          details: `${travelers} Guests from ${data.user?.name || 'Explorer'}`,
-          createdAt: data.createdAt || new Date()
-        });
+    // 2. Save notification to the database
+    let savedNotification = null;
+    try {
+      const p = prisma as any;
+      savedNotification = await p.notification.create({
+        data: {
+          title,
+          message,
+          type: notificationType,
+          priority,
+          link: redirectLink,
+          read: false
+        }
+      });
+      console.log(`[NotificationService] Persistent alert recorded in db: ${savedNotification.id}`);
+    } catch (dbErr: any) {
+      console.error('[NotificationService] Failed to persist alert to db:', dbErr.message);
+    }
+
+    // 3. Emit real-time WebSockets
+    if (io) {
+      // Broadcast to the admin room for CRM updates
+      io.to('admin-room').emit('new-system-event', {
+        type,
+        message,
+        booking: data,
+        notification: savedNotification,
+        timestamp: new Date().toISOString()
+      });
+
+      // If there's a specific user ID, broadcast to their personal room
+      if (data && data.userId) {
+        io.to(`user-${data.userId}`).emit(`${type.toLowerCase()}-updated`, { type, data });
+      }
+
+      // Broadcast to everyone for live social proof / curation updates
+      if (type === 'CREATE' && data) {
+        if (data.entityType === 'inquiry') {
+          io.emit('new-live-curation', {
+            id: data.id,
+            message: `Expedition to ${data.destination || 'Kashmir'} curated`,
+            details: `${data.travelers || '2'} Travelers • for ${data.customerName || 'Explorer'}`,
+            createdAt: data.createdAt || new Date()
+          });
+        } else if (data.entityType === 'booking') {
+          let travelers = '2';
+          try {
+            const detailsParsed = data.details ? (typeof data.details === 'string' ? JSON.parse(data.details) : data.details) : {};
+            travelers = detailsParsed.travelers || '2';
+          } catch (e) {}
+          io.emit('new-live-curation', {
+            id: data.id,
+            message: `${data.type === 'package' ? 'Luxury package' : data.type === 'hotel' ? 'Premium hotel' : 'Chauffeur cab'} secured: ${data.itemName}`,
+            details: `${travelers} Guests from ${data.user?.name || 'Explorer'}`,
+            createdAt: data.createdAt || new Date()
+          });
+        }
       }
     }
   },
@@ -119,7 +165,7 @@ export const notificationService = {
    */
   async triggerInquiryReceived(io: any, inquiry: any) {
     // 1. Emit to system
-    this.emitSystemEvent(
+    await this.emitSystemEvent(
       io, 
       'CREATE', 
       `New Lead: ${inquiry.customerName} interested in ${inquiry.destination}`, 
@@ -146,7 +192,7 @@ export const notificationService = {
    */
   async triggerSendProposal(io: any, inquiry: any) {
     // 1. Emit to system
-    this.emitSystemEvent(
+    await this.emitSystemEvent(
       io, 
       'UPDATE', 
       `Proposal Sent to ${inquiry.customerName}`, 

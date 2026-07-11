@@ -370,3 +370,16 @@ model AuditLog {
   details   String   // JSON string of changes
   createdAt DateTime @default(now())
 }
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?  // Target user code or ID, null for global/admin
+  title     String
+  message   String
+  type      String   // info, success, warning, booking, inquiry, payment
+  read      Boolean  @default(false)
+  priority  String   @default("medium") // low, medium, high
+  link      String?  // Redirect link (e.g. /admin)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

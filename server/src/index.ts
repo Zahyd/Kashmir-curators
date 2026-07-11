@@ -42,6 +42,7 @@ import hotelReservationRoutes from './routes/hotelReservationRoutes';
 import crmRoutes from './routes/crmRoutes';
 import agentRoutes from './routes/agentRoutes';
 import financeRoutes from './routes/financeRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -174,6 +175,7 @@ app.use('/api/advisories', advisoryRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers

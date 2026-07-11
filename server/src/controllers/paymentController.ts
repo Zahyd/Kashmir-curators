@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import prisma from '../lib/prisma';
+import { bookingAutomationService } from '../services/bookingAutomationService';
 
 const getActiveUPIConfig = async () => {
   let businessVPA = process.env.BUSINESS_UPI_VPA || "thekashmircurators@okaxis";
@@ -142,8 +143,23 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
 
     console.log(`Successfully verified and logged payment ${paymentId} under ledger!`);
 
-    // Emit live web sockets to keep admin and user screens dynamically synchronized!
     const reqWithIo = req as any;
+
+    // Hook into the booking automation pipeline
+    if (event !== 'payment.failed') {
+      try {
+        await bookingAutomationService.handlePaymentSuccess(
+          targetBooking.id,
+          amount,
+          paymentId,
+          reqWithIo.io
+        );
+      } catch (autoErr: any) {
+        console.error('[PaymentController] Booking automation execution failed:', autoErr.message);
+      }
+    }
+
+    // Emit live web sockets to keep admin and user screens dynamically synchronized!
     if (reqWithIo.io) {
       const socketPayload = { type: 'UPDATE', booking: result.updatedBooking };
       reqWithIo.io.to(`user-${result.updatedBooking.userId}`).emit('booking-updated', socketPayload);

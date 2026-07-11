@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { API_BASE_URL } from '@/lib/api';
+import NotificationBell from '@/components/admin/NotificationBell';
 
 
 // Admin Components
@@ -405,6 +406,33 @@ export default function Admin() {
           isOpen={isSidebarOpen}
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         />
+
+        {/* Top Header Bar for Desktop */}
+        <header className="hidden lg:flex items-center justify-between px-12 h-24 border-b border-white/5 bg-[#0a0f12]/30 backdrop-blur-md sticky top-0 z-40">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-kashmir-gold">
+              {activeSection === 'dashboard' ? 'Overview' : activeSection.replace('_', ' ') + ' Command'}
+            </h2>
+            <div className="w-1.5 h-1.5 rounded-full bg-kashmir-gold animate-pulse" />
+          </div>
+          <div className="flex items-center gap-6">
+            <NotificationBell />
+            <div className="w-px h-6 bg-white/10" />
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-xs font-black text-white uppercase tracking-wider">{teamUser?.name}</p>
+                <p className="text-[8px] text-kashmir-gold font-bold uppercase tracking-widest mt-0.5">{ROLE_LABELS[teamRole]}</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center">
+                {teamUser?.image ? (
+                  <img src={teamUser.image} alt={teamUser.name} className="w-full h-full object-cover rounded-xl" />
+                ) : (
+                  <Users className="w-5 h-5 text-kashmir-gold" />
+                )}
+              </div>
+            </div>
+          </div>
+        </header>
 
         <main className="p-6 lg:p-12 pt-28 lg:pt-12 max-w-7xl mx-auto w-full">
           {renderContent()}

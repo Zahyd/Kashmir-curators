@@ -1,6 +1,7 @@
-import { Menu, X, Bell, User } from 'lucide-react';
+import { Menu, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import NotificationBell from '../admin/NotificationBell';
 
 interface MobilePortalNavProps {
   title: string;
@@ -30,9 +31,7 @@ export default function MobilePortalNav({ title, onMenuToggle, isOpen, roleLabel
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="text-white/40 hover:text-white rounded-xl">
-          <Bell className="w-5 h-5" />
-        </Button>
+        <NotificationBell />
         <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
           <User className="w-4 h-4 text-kashmir-gold" />
         </div>
