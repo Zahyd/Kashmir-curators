@@ -393,8 +393,10 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
         })
       });
 
-      if (!response.ok) throw new Error('Failed to generate payment session');
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate payment session');
+      }
       setGeneratedLink(data.sessionUrl);
       toast.success('Stripe payment link generated successfully!', { id: toastId });
     } catch (err: any) {
