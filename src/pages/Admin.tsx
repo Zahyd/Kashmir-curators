@@ -49,6 +49,7 @@ import CMSPayments from '@/components/admin/CMSPayments';
 import CMSJourney from '@/components/admin/CMSJourney';
 import CMSProfile from '@/components/admin/CMSProfile';
 import CMSReservations from '@/components/admin/CMSReservations';
+import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
 
 const ROLE_STATS: Record<string, any[]> = {
   admin: [
@@ -435,7 +436,9 @@ export default function Admin() {
         </header>
 
         <main className="p-6 lg:p-12 pt-28 lg:pt-12 max-w-7xl mx-auto w-full">
-          {renderContent()}
+          <AdminErrorBoundary>
+            {renderContent()}
+          </AdminErrorBoundary>
         </main>
       </div>
     </div>
