@@ -370,8 +370,7 @@ body.light-theme *::selection {
 body.light-theme *:not(footer):not(footer *):not(nav):not(nav *):not([class*="bg-black"]) {
   border-color: #E3DAD0; /* Soft Warm Sand Border */
 }
-
-/* Background overrides */
+/* Background overrides - Royal Navy for card components in Day View */
 body.light-theme [class*="bg-[#05080a]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#0a0f12]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#0b1317]"]:not(footer):not(nav):not(nav *),
@@ -380,11 +379,11 @@ body.light-theme [class*="bg-[#0c1215]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#070b0e]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#080d10]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#090e11]"]:not(footer):not(nav):not(nav *) {
-  background-color: #FFFFFF !important; /* Crisp Clean White Card Surface */
-  border-color: #E3DAD0 !important;
+  background-color: #0A141A !important; /* Deep Royal Navy Card Surface */
+  border-color: rgba(184, 142, 47, 0.25) !important; /* Subtle Gold Border */
 }
 
-/* Translucent backgrounds */
+/* Translucent backgrounds - Royal Navy */
 body.light-theme [class*="bg-[#0a0f12]/60"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#0a0f12]/80"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#0a0f12]/90"]:not(footer):not(nav):not(nav *),
@@ -398,48 +397,76 @@ body.light-theme [class*="bg-[#0f171b]/60"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#0f171b]/80"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#080d10]/90"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#090e11]/80"]:not(footer):not(nav):not(nav *) {
-  background-color: rgba(244, 240, 230, 0.95) !important; /* Translucent Sand Overlay */
-  border-color: #E3DAD0 !important;
+  background-color: rgba(10, 20, 26, 0.95) !important; 
+  border-color: rgba(184, 142, 47, 0.25) !important;
 }
 
-/* Glassmorphism overrides */
+/* Glassmorphism overrides - Royal Navy */
 body.light-theme .glass:not(footer):not(nav):not(nav *),
 body.light-theme .glass-card:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-white/5"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-white/[0.03]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-white/[0.05]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-white/[0.08]"]:not(footer):not(nav):not(nav *) {
-  background-color: rgba(255, 255, 255, 0.92) !important; /* Opaque white cards */
+  background-color: rgba(10, 20, 26, 0.92) !important; 
   backdrop-filter: blur(25px) !important;
-  border-color: rgba(227, 218, 208, 0.8) !important;
+  border-color: rgba(184, 142, 47, 0.2) !important;
 }
 
-/* Text overrides - High contrast Espresso colors */
+/* Global light theme text overrides (charcoal on sand) */
 body.light-theme .text-white:not(footer *):not(nav *):not([class*="bg-black"]) {
   color: #1E1815 !important;
 }
-
 body.light-theme [class*="text-white/80"]:not(footer *):not(nav *),
 body.light-theme [class*="text-white/70"]:not(footer *):not(nav *) {
   color: #3B322D !important;
 }
-
 body.light-theme [class*="text-white/60"]:not(footer *):not(nav *),
 body.light-theme [class*="text-white/50"]:not(footer *):not(nav *) {
   color: #63564F !important;
 }
-
 body.light-theme [class*="text-white/40"]:not(footer *):not(nav *),
 body.light-theme [class*="text-white/30"]:not(footer *):not(nav *) {
   color: #8C8075 !important;
 }
-
 body.light-theme [class*="text-white/20"]:not(footer *):not(nav *),
 body.light-theme [class*="text-white/10"]:not(footer *):not(nav *) {
   color: #C7BCB0 !important;
 }
 
-/* Accent texts - Keep Kashmir Gold brand color in Day view, but slightly deeper for premium legibility */
+/* Restore crisp white text inside all Navy card elements in Daylight view */
+body.light-theme [class*="bg-[#"] .text-white,
+body.light-theme [class*="bg-[#"] [class*="text-white/"],
+body.light-theme [class*="bg-white/"] .text-white,
+body.light-theme [class*="bg-white/"] [class*="text-white/"],
+body.light-theme .glass-card .text-white,
+body.light-theme .glass-card [class*="text-white/"],
+body.light-theme .glass .text-white,
+body.light-theme .glass [class*="text-white/"],
+body.light-theme [class*="bg-[#0A141A]"] .text-white,
+body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/"] {
+  color: #FFFFFF !important;
+}
+body.light-theme [class*="bg-[#"] [class*="text-white/80"],
+body.light-theme [class*="bg-white/"] [class*="text-white/80"],
+body.light-theme .glass-card [class*="text-white/80"] {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+body.light-theme [class*="bg-[#"] [class*="text-white/60"],
+body.light-theme [class*="bg-white/"] [class*="text-white/60"],
+body.light-theme .glass-card [class*="text-white/60"] {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+body.light-theme [class*="bg-[#"] [class*="text-white/40"],
+body.light-theme [class*="bg-white/"] [class*="text-white/40"],
+body.light-theme .glass-card [class*="text-white/40"] {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+body.light-theme [class*="bg-[#"] [class*="text-white/20"],
+body.light-theme [class*="bg-white/"] [class*="text-white/20"],
+body.light-theme .glass-card [class*="text-white/20"] {
+  color: rgba(255, 255, 255, 0.2) !important;
+}/* Accent texts - Keep Kashmir Gold brand color in Day view, but slightly deeper for premium legibility */
 body.light-theme .text-kashmir-gold:not(footer *):not(nav *),
 body.light-theme [class*="text-kashmir-gold"]:not(footer *):not(nav *) {
   color: #B88E2F !important; /* Rich Luxury Gold */
