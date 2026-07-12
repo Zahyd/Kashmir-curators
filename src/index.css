@@ -342,30 +342,33 @@ body {
 /* ==========================================================================
    Daylight Mode (Light Theme) Overrides - Warm Alabaster, Espresso & Royal Gold
    ========================================================================== */
+/* ==========================================================================
+   Daylight Mode (Light Theme) Overrides - Warm Sand, Espresso & Royal Gold
+   ========================================================================== */
 body.light-theme {
-  --background: 34 30% 98%; /* Warm Alabaster */
-  --foreground: 24 15% 10%; /* Espresso Charcoal */
+  --background: 38 25% 93%; /* Warm Sand */
+  --foreground: 20 15% 10%; /* Espresso Charcoal */
   --card: 0 0% 100%;
-  --card-foreground: 24 15% 10%;
+  --card-foreground: 20 15% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 24 15% 10%;
-  --border: 34 15% 88%; /* Warm Linen Border */
-  --input: 34 15% 88%;
-  --muted: 34 15% 94%;
-  --muted-foreground: 24 10% 40%;
+  --popover-foreground: 20 15% 10%;
+  --border: 38 15% 82%; /* Sand Border */
+  --input: 38 15% 82%;
+  --muted: 38 15% 90%;
+  --muted-foreground: 20 10% 40%;
   
-  background-color: #FAF8F5 !important; /* Premium Alabaster Cream */
-  color: #1C1816 !important; /* Rich Espresso Charcoal */
+  background-color: #F4F0E6 !important; /* Premium Warm Sand / Champagne */
+  color: #1E1815 !important; /* Rich Espresso Charcoal */
 }
 
 /* Custom selection highlight for daylight mode */
 body.light-theme *::selection {
-  background-color: rgba(212, 175, 55, 0.15) !important;
-  color: #1C1816 !important;
+  background-color: rgba(212, 175, 55, 0.18) !important;
+  color: #1E1815 !important;
 }
 
 body.light-theme *:not(footer):not(footer *):not(nav):not(nav *):not([class*="bg-black"]) {
-  border-color: #EBE6DD; /* Soft Warm Linen Border */
+  border-color: #E3DAD0; /* Soft Warm Sand Border */
 }
 
 /* Background overrides */
@@ -377,8 +380,8 @@ body.light-theme [class*="bg-[#0c1215]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#070b0e]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#080d10]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#090e11]"]:not(footer):not(nav):not(nav *) {
-  background-color: #FFFFFF !important; /* Crisp Clean Paper */
-  border-color: #EBE6DD !important;
+  background-color: #FFFFFF !important; /* Crisp Clean White Card Surface */
+  border-color: #E3DAD0 !important;
 }
 
 /* Translucent backgrounds */
@@ -395,8 +398,8 @@ body.light-theme [class*="bg-[#0f171b]/60"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#0f171b]/80"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#080d10]/90"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-[#090e11]/80"]:not(footer):not(nav):not(nav *) {
-  background-color: rgba(250, 248, 245, 0.95) !important; /* Warm Alabaster Translucent */
-  border-color: #EBE6DD !important;
+  background-color: rgba(244, 240, 230, 0.95) !important; /* Translucent Sand Overlay */
+  border-color: #E3DAD0 !important;
 }
 
 /* Glassmorphism overrides */
@@ -406,24 +409,24 @@ body.light-theme [class*="bg-white/5"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-white/[0.03]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-white/[0.05]"]:not(footer):not(nav):not(nav *),
 body.light-theme [class*="bg-white/[0.08]"]:not(footer):not(nav):not(nav *) {
-  background-color: rgba(255, 255, 255, 0.85) !important;
+  background-color: rgba(255, 255, 255, 0.92) !important; /* Opaque white cards */
   backdrop-filter: blur(25px) !important;
-  border-color: rgba(235, 230, 221, 0.8) !important;
+  border-color: rgba(227, 218, 208, 0.8) !important;
 }
 
 /* Text overrides - High contrast Espresso colors */
 body.light-theme .text-white:not(footer *):not(nav *):not([class*="bg-black"]) {
-  color: #1C1816 !important;
+  color: #1E1815 !important;
 }
 
 body.light-theme [class*="text-white/80"]:not(footer *):not(nav *),
 body.light-theme [class*="text-white/70"]:not(footer *):not(nav *) {
-  color: #38302B !important;
+  color: #3B322D !important;
 }
 
 body.light-theme [class*="text-white/60"]:not(footer *):not(nav *),
 body.light-theme [class*="text-white/50"]:not(footer *):not(nav *) {
-  color: #5C524B !important;
+  color: #63564F !important;
 }
 
 body.light-theme [class*="text-white/40"]:not(footer *):not(nav *),
@@ -433,7 +436,7 @@ body.light-theme [class*="text-white/30"]:not(footer *):not(nav *) {
 
 body.light-theme [class*="text-white/20"]:not(footer *):not(nav *),
 body.light-theme [class*="text-white/10"]:not(footer *):not(nav *) {
-  color: #C2B8AD !important;
+  color: #C7BCB0 !important;
 }
 
 /* Accent texts - Keep Kashmir Gold brand color in Day view, but slightly deeper for premium legibility */
@@ -452,7 +455,7 @@ body.light-theme svg.fill-kashmir-gold:not(footer *) {
 body.light-theme [class*="border-white/10"]:not(footer *):not(nav *),
 body.light-theme [class*="border-white/5"]:not(footer *):not(nav *),
 body.light-theme [class*="border-white/20"]:not(footer *):not(nav *) {
-  border-color: #EBE6DD !important;
+  border-color: #E3DAD0 !important;
 }
 
 /* Input elements styling */
@@ -460,8 +463,8 @@ body.light-theme input:not(footer *),
 body.light-theme textarea:not(footer *),
 body.light-theme select:not(footer *) {
   background-color: #ffffff !important;
-  color: #1C1816 !important;
-  border-color: #EBE6DD !important;
+  color: #1E1815 !important;
+  border-color: #E3DAD0 !important;
 }
 
 body.light-theme input::placeholder,
@@ -471,31 +474,31 @@ body.light-theme textarea::placeholder {
 
 /* Table rows styling */
 body.light-theme tr:not(footer *) {
-  border-color: #EBE6DD !important;
+  border-color: #E3DAD0 !important;
 }
 
 body.light-theme tr:not(footer *):hover {
-  background-color: #FAF8F5 !important;
+  background-color: #F4F0E6 !important;
 }
 
 body.light-theme th:not(footer *) {
-  background-color: #FAF8F5 !important;
-  color: #5C524B !important;
+  background-color: #F4F0E6 !important;
+  color: #63564F !important;
 }
 
 /* Radial gradients overrides (main sections) */
 body.light-theme .bg-obsidian:not(footer) {
-  background: #FAF8F5 !important;
+  background: #F4F0E6 !important;
 }
 
 /* Gradient overrides (e.g. hero overlay) */
 body.light-theme [class*="from-[#05080a]"]:not(footer):not(nav):not(nav *) {
-  background-image: linear-gradient(to top, #FAF8F5, rgba(250, 248, 245, 0.4), transparent) !important;
+  background-image: linear-gradient(to top, #F4F0E6, rgba(244, 240, 230, 0.4), transparent) !important;
 }
 
 /* Scrollbar overrides */
 body.light-theme .custom-scrollbar::-webkit-scrollbar-track {
-  background: #FAF8F5 !important;
+  background: #F4F0E6 !important;
 }
 
 body.light-theme .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -503,7 +506,7 @@ body.light-theme .custom-scrollbar::-webkit-scrollbar-thumb {
 }
 
 body.light-theme ::-webkit-scrollbar-track {
-  background: #FAF8F5 !important;
+  background: #F4F0E6 !important;
 }
 
 body.light-theme ::-webkit-scrollbar-thumb {
