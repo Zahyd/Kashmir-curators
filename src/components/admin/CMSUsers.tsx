@@ -25,6 +25,12 @@ import { Badge } from '@/components/ui/badge';
 import { API_BASE_URL } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface UserAccount {
   id: string;
