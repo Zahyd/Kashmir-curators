@@ -339,105 +339,120 @@ body {
 /* ==========================================================================
    Daylight Mode (Light Theme) Overrides - Coastal & Serene (Seafoam, Blue, Sand)
    ========================================================================== */
+/* ==========================================================================
+   Daylight Mode (Light Theme) Overrides - Warm Alabaster, Espresso & Royal Gold
+   ========================================================================== */
 body.light-theme {
-  --background: 190 20% 95%; /* Misty Seafoam Light Grey */
-  --foreground: 200 30% 12%; /* Deep Marine Navy */
+  --background: 34 30% 98%; /* Warm Alabaster */
+  --foreground: 24 15% 10%; /* Espresso Charcoal */
   --card: 0 0% 100%;
-  --card-foreground: 200 30% 12%;
+  --card-foreground: 24 15% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 200 30% 12%;
-  --border: 190 15% 82%; /* Serene Seafoam Border */
-  --input: 190 15% 82%;
-  --muted: 190 15% 92%;
-  --muted-foreground: 200 15% 40%;
+  --popover-foreground: 24 15% 10%;
+  --border: 34 15% 88%; /* Warm Linen Border */
+  --input: 34 15% 88%;
+  --muted: 34 15% 94%;
+  --muted-foreground: 24 10% 40%;
   
-  background-color: #EDF3F4 !important; /* Crisp Serene Mist */
-  color: #1A2E35 !important; /* Deep Ocean Slate */
+  background-color: #FAF8F5 !important; /* Premium Alabaster Cream */
+  color: #1C1816 !important; /* Rich Espresso Charcoal */
 }
 
-body.light-theme *:not(footer):not(footer *) {
-  border-color: #CAD7D8; /* Soft Seafoam/Sky Border */
+/* Custom selection highlight for daylight mode */
+body.light-theme *::selection {
+  background-color: rgba(212, 175, 55, 0.15) !important;
+  color: #1C1816 !important;
+}
+
+body.light-theme *:not(footer):not(footer *):not(nav):not(nav *):not([class*="bg-black"]) {
+  border-color: #EBE6DD; /* Soft Warm Linen Border */
 }
 
 /* Background overrides */
-body.light-theme [class*="bg-[#05080a]"]:not(footer),
-body.light-theme [class*="bg-[#0a0f12]"]:not(footer),
-body.light-theme [class*="bg-[#0b1317]"]:not(footer),
-body.light-theme [class*="bg-[#0f171b]"]:not(footer),
-body.light-theme [class*="bg-[#0c1215]"]:not(footer),
-body.light-theme [class*="bg-[#070b0e]"]:not(footer),
-body.light-theme [class*="bg-[#080d10]"]:not(footer),
-body.light-theme [class*="bg-[#090e11]"]:not(footer) {
+body.light-theme [class*="bg-[#05080a]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0a0f12]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0b1317]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0f171b]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0c1215]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#070b0e]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#080d10]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#090e11]"]:not(footer):not(nav):not(nav *) {
   background-color: #FFFFFF !important; /* Crisp Clean Paper */
-  border-color: #CAD7D8 !important;
+  border-color: #EBE6DD !important;
 }
 
 /* Translucent backgrounds */
-body.light-theme [class*="bg-[#0a0f12]/60"]:not(footer),
-body.light-theme [class*="bg-[#0a0f12]/80"]:not(footer),
-body.light-theme [class*="bg-[#0a0f12]/90"]:not(footer),
-body.light-theme [class*="bg-[#0a0f12]/95"]:not(footer),
-body.light-theme [class*="bg-[#0b1317]/60"]:not(footer),
-body.light-theme [class*="bg-[#0b1317]/80"]:not(footer),
-body.light-theme [class*="bg-[#0b1317]/90"]:not(footer),
-body.light-theme [class*="bg-[#0b1317]/95"]:not(footer),
-body.light-theme [class*="bg-[#0f171b]/40"]:not(footer),
-body.light-theme [class*="bg-[#0f171b]/60"]:not(footer),
-body.light-theme [class*="bg-[#0f171b]/80"]:not(footer),
-body.light-theme [class*="bg-[#080d10]/90"]:not(footer),
-body.light-theme [class*="bg-[#090e11]/80"]:not(footer) {
-  background-color: rgba(235, 243, 244, 0.95) !important; /* Serene Mist Overlay */
-  border-color: #CAD7D8 !important;
+body.light-theme [class*="bg-[#0a0f12]/60"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0a0f12]/80"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0a0f12]/90"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0a0f12]/95"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0b1317]/60"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0b1317]/80"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0b1317]/90"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0b1317]/95"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0f171b]/40"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0f171b]/60"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#0f171b]/80"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#080d10]/90"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-[#090e11]/80"]:not(footer):not(nav):not(nav *) {
+  background-color: rgba(250, 248, 245, 0.95) !important; /* Warm Alabaster Translucent */
+  border-color: #EBE6DD !important;
 }
 
 /* Glassmorphism overrides */
-body.light-theme .glass:not(footer),
-body.light-theme .glass-card:not(footer),
-body.light-theme [class*="bg-white/5"]:not(footer),
-body.light-theme [class*="bg-white/[0.03]"]:not(footer),
-body.light-theme [class*="bg-white/[0.05]"]:not(footer),
-body.light-theme [class*="bg-white/[0.08]"]:not(footer) {
+body.light-theme .glass:not(footer):not(nav):not(nav *),
+body.light-theme .glass-card:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-white/5"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-white/[0.03]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-white/[0.05]"]:not(footer):not(nav):not(nav *),
+body.light-theme [class*="bg-white/[0.08]"]:not(footer):not(nav):not(nav *) {
   background-color: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(20px) !important;
-  border-color: rgba(202, 215, 216, 0.7) !important;
+  backdrop-filter: blur(25px) !important;
+  border-color: rgba(235, 230, 221, 0.8) !important;
 }
 
-/* Text overrides */
-body.light-theme .text-white:not(footer *) {
-  color: #1A2E35 !important;
+/* Text overrides - High contrast Espresso colors */
+body.light-theme .text-white:not(footer *):not(nav *):not([class*="bg-black"]) {
+  color: #1C1816 !important;
 }
 
-body.light-theme [class*="text-white/80"]:not(footer *),
-body.light-theme [class*="text-white/70"]:not(footer *) {
-  color: #2D434B !important;
+body.light-theme [class*="text-white/80"]:not(footer *):not(nav *),
+body.light-theme [class*="text-white/70"]:not(footer *):not(nav *) {
+  color: #38302B !important;
 }
 
-body.light-theme [class*="text-white/60"]:not(footer *),
-body.light-theme [class*="text-white/50"]:not(footer *) {
-  color: #4D646E !important;
+body.light-theme [class*="text-white/60"]:not(footer *):not(nav *),
+body.light-theme [class*="text-white/50"]:not(footer *):not(nav *) {
+  color: #5C524B !important;
 }
 
-body.light-theme [class*="text-white/40"]:not(footer *),
-body.light-theme [class*="text-white/30"]:not(footer *) {
-  color: #728B96 !important;
+body.light-theme [class*="text-white/40"]:not(footer *):not(nav *),
+body.light-theme [class*="text-white/30"]:not(footer *):not(nav *) {
+  color: #8C8075 !important;
 }
 
-body.light-theme [class*="text-white/20"]:not(footer *),
-body.light-theme [class*="text-white/10"]:not(footer *) {
-  color: #A3BAC5 !important;
+body.light-theme [class*="text-white/20"]:not(footer *):not(nav *),
+body.light-theme [class*="text-white/10"]:not(footer *):not(nav *) {
+  color: #C2B8AD !important;
 }
 
-/* Accent texts - Change Kashmir Gold highlights to Seafoam Teal for Day view */
-body.light-theme .text-kashmir-gold:not(footer *),
-body.light-theme [class*="text-kashmir-gold"]:not(footer *) {
-  color: #2E8B7F !important; /* Seafoam Teal Highlight */
+/* Accent texts - Keep Kashmir Gold brand color in Day view, but slightly deeper for premium legibility */
+body.light-theme .text-kashmir-gold:not(footer *):not(nav *),
+body.light-theme [class*="text-kashmir-gold"]:not(footer *):not(nav *) {
+  color: #B88E2F !important; /* Rich Luxury Gold */
+}
+
+/* Star rating colors - keep gold in light mode */
+body.light-theme svg.fill-kashmir-gold:not(footer *) {
+  fill: #B88E2F !important;
+  color: #B88E2F !important;
 }
 
 /* Border overrides */
-body.light-theme [class*="border-white/10"]:not(footer *),
-body.light-theme [class*="border-white/5"]:not(footer *),
-body.light-theme [class*="border-white/20"]:not(footer *) {
-  border-color: #CAD7D8 !important;
+body.light-theme [class*="border-white/10"]:not(footer *):not(nav *),
+body.light-theme [class*="border-white/5"]:not(footer *):not(nav *),
+body.light-theme [class*="border-white/20"]:not(footer *):not(nav *) {
+  border-color: #EBE6DD !important;
 }
 
 /* Input elements styling */
@@ -445,65 +460,70 @@ body.light-theme input:not(footer *),
 body.light-theme textarea:not(footer *),
 body.light-theme select:not(footer *) {
   background-color: #ffffff !important;
-  color: #1A2E35 !important;
-  border-color: #CAD7D8 !important;
+  color: #1C1816 !important;
+  border-color: #EBE6DD !important;
 }
 
 body.light-theme input::placeholder,
 body.light-theme textarea::placeholder {
-  color: #728B96 !important;
+  color: #8C8075 !important;
 }
 
 /* Table rows styling */
 body.light-theme tr:not(footer *) {
-  border-color: #CAD7D8 !important;
+  border-color: #EBE6DD !important;
 }
 
 body.light-theme tr:not(footer *):hover {
-  background-color: #E6EEF0 !important; /* Soft Seafoam hover */
+  background-color: #FAF8F5 !important;
 }
 
 body.light-theme th:not(footer *) {
-  background-color: #EDF3F4 !important;
-  color: #4D646E !important;
+  background-color: #FAF8F5 !important;
+  color: #5C524B !important;
 }
 
 /* Radial gradients overrides (main sections) */
 body.light-theme .bg-obsidian:not(footer) {
-  background: #EDF3F4 !important;
+  background: #FAF8F5 !important;
 }
 
 /* Gradient overrides (e.g. hero overlay) */
-body.light-theme [class*="from-[#05080a]"]:not(footer) {
-  background-image: linear-gradient(to top, #EDF3F4, rgba(237, 243, 244, 0.4), transparent) !important;
+body.light-theme [class*="from-[#05080a]"]:not(footer):not(nav):not(nav *) {
+  background-image: linear-gradient(to top, #FAF8F5, rgba(250, 248, 245, 0.4), transparent) !important;
 }
 
 /* Scrollbar overrides */
 body.light-theme .custom-scrollbar::-webkit-scrollbar-track {
-  background: #EDF3F4 !important;
+  background: #FAF8F5 !important;
 }
 
 body.light-theme .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(46, 139, 127, 0.3) !important;
+  background: rgba(184, 142, 47, 0.3) !important;
 }
 
 body.light-theme ::-webkit-scrollbar-track {
-  background: #EDF3F4 !important;
+  background: #FAF8F5 !important;
 }
 
 body.light-theme ::-webkit-scrollbar-thumb {
-  background: rgba(46, 139, 127, 0.3) !important;
+  background: rgba(184, 142, 47, 0.3) !important;
 }
 
-/* Sandy Beige highlights for primary actionable booking buttons */
-body.light-theme .bg-kashmir-gold:not(footer *),
-body.light-theme [class*="bg-kashmir-gold"]:not(footer *) {
-  background-color: #E8D2A6 !important; /* Sandy Beige active elements */
-  color: #1A2E35 !important;
-  border: 1px solid #D4B26F !important;
-  box-shadow: 0 4px 14px rgba(232, 210, 166, 0.4) !important;
+/* Royal Gold active elements in Day view */
+body.light-theme .bg-kashmir-gold:not(footer *):not(nav *),
+body.light-theme [class*="bg-kashmir-gold"]:not(footer *):not(nav *) {
+  background-color: #B88E2F !important; /* Rich Brand Gold */
+  color: #FFFFFF !important;
+  border: 1px solid #A47D25 !important;
+  box-shadow: 0 4px 14px rgba(184, 142, 47, 0.25) !important;
 }
 
-body.light-theme [class*="bg-kashmir-gold"]:not(footer *):hover {
-  background-color: #DFB97F !important; /* Slightly darker sand hover */
+body.light-theme [class*="bg-kashmir-gold"]:not(footer *):not(nav *):hover {
+  background-color: #A47D25 !important;
+}
+
+/* Improve cards inside Featured Packages and Destinations grids */
+body.light-theme .group:hover .h-full {
+  box-shadow: 0 20px 40px -15px rgba(184, 142, 47, 0.08) !important;
 }
