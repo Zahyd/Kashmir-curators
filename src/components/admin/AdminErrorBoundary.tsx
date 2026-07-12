@@ -66,7 +66,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
       );
     }
 
-    return this.children;
+    return this.props.children;
   }
 }
 export default AdminErrorBoundary;
