@@ -12,6 +12,7 @@ import Testimonials from '@/components/home/Testimonials';
 import FAQSection from '@/components/home/FAQSection';
 import NewsletterSignup from '@/components/home/NewsletterSignup';
 import ContactSection from '@/components/home/ContactSection';
+import DynamicCurationTicker from '@/components/home/DynamicCurationTicker';
 import SeoMeta from '@/components/SeoMeta';
 
 const Index = () => {
@@ -48,6 +49,7 @@ const Index = () => {
       <Navbar />
       <main>
         <HeroSection />
+        <DynamicCurationTicker />
         
         <section className="py-24 bg-transparent relative overflow-hidden" id="planner">
           {/* Subtle background decoration */}

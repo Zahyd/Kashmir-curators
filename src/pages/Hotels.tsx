@@ -48,6 +48,18 @@ export default function Hotels() {
     roomType: '',
   });
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const loc = params.get('destination') || params.get('location');
+    const guests = params.get('guests');
+    if (loc) {
+      setFilters(prev => ({ ...prev, location: loc }));
+    }
+    if (guests) {
+      setBookingData(prev => ({ ...prev, guests }));
+    }
+  }, []);
+
   const parseDateString = (dateStr: string) => {
     if (!dateStr) return undefined;
     const [year, month, day] = dateStr.split('-').map(Number);

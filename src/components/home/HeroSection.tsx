@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, ArrowRight, Search, CheckCircle, Award, ShieldCheck } from 'lucide-react';
+import { 
+  MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, 
+  ArrowRight, Search, CheckCircle, Award, ShieldCheck, 
+  Compass, Building, Car, Navigation, Clock 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,11 +21,31 @@ export default function HeroSection() {
   const navigate = useNavigate();
   const { data: destinations = [] } = useDestinations();
   const [isSearching, setIsSearching] = useState(false);
+  const [searchTab, setSearchTab] = useState<'packages' | 'hotels' | 'cabs'>('packages');
+  
+  // Packages Search
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [searchData, setSearchData] = useState({
     destination: '',
     dates: '',
-    travelers: '',
+    travelers: '2',
+  });
+
+  // Hotels Search
+  const [selectedHotelDate, setSelectedHotelDate] = useState<Date | undefined>(undefined);
+  const [hotelData, setHotelData] = useState({
+    destination: '',
+    checkIn: '',
+    guests: '2',
+  });
+
+  // Cabs Search
+  const [selectedCabDate, setSelectedCabDate] = useState<Date | undefined>(undefined);
+  const [cabData, setCabData] = useState({
+    pickup: '',
+    drop: '',
+    date: '',
+    time: '09:00',
   });
 
   const [heroData, setHeroData] = useState({
@@ -78,16 +102,45 @@ export default function HeroSection() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchData.destination) {
-      toast.error('Select your destination');
-      return;
+    
+    if (searchTab === 'packages') {
+      if (!searchData.destination) {
+        toast.error('Select your destination');
+        return;
+      }
+      setIsSearching(true);
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const params = new URLSearchParams();
+      if (searchData.destination) params.set('destination', searchData.destination);
+      if (searchData.travelers) params.set('travelers', searchData.travelers);
+      if (searchData.dates) params.set('date', searchData.dates);
+      navigate(`/packages?${params.toString()}`);
+    } else if (searchTab === 'hotels') {
+      if (!hotelData.destination) {
+        toast.error('Select your destination');
+        return;
+      }
+      setIsSearching(true);
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const params = new URLSearchParams();
+      if (hotelData.destination) params.set('destination', hotelData.destination);
+      if (hotelData.guests) params.set('guests', hotelData.guests);
+      if (hotelData.checkIn) params.set('checkIn', hotelData.checkIn);
+      navigate(`/hotels?${params.toString()}`);
+    } else if (searchTab === 'cabs') {
+      if (!cabData.pickup) {
+        toast.error('Enter pickup location');
+        return;
+      }
+      setIsSearching(true);
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const params = new URLSearchParams();
+      if (cabData.pickup) params.set('pickup', cabData.pickup);
+      if (cabData.drop) params.set('drop', cabData.drop);
+      if (cabData.date) params.set('date', cabData.date);
+      navigate(`/cabs?${params.toString()}`);
     }
-    setIsSearching(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const params = new URLSearchParams();
-    if (searchData.destination) params.set('destination', searchData.destination);
-    if (searchData.travelers) params.set('travelers', searchData.travelers);
-    navigate(`/packages?${params.toString()}`);
+    
     setIsSearching(false);
   };
 
@@ -141,115 +194,384 @@ export default function HeroSection() {
 
           {/* Glassmorphic Command Module (Search) */}
           <div className="w-full max-w-5xl animate-fade-up" style={{ animationDelay: '300ms' }}>
+            {/* Search Tabs */}
+            <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start pl-4 md:pl-8">
+              <button 
+                type="button"
+                onClick={() => setSearchTab('packages')}
+                className={cn(
+                  "flex items-center gap-2.5 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500 border backdrop-blur-xl",
+                  searchTab === 'packages' 
+                    ? "bg-kashmir-gold text-black border-kashmir-gold shadow-lg shadow-kashmir-gold/20 scale-105" 
+                    : "bg-[#070b0e]/40 text-white/50 border-white/5 hover:text-white hover:bg-white/10"
+                )}
+              >
+                <Compass className="w-3.5 h-3.5 animate-pulse" />
+                <span>Luxury Packages</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => setSearchTab('hotels')}
+                className={cn(
+                  "flex items-center gap-2.5 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500 border backdrop-blur-xl",
+                  searchTab === 'hotels' 
+                    ? "bg-kashmir-gold text-black border-kashmir-gold shadow-lg shadow-kashmir-gold/20 scale-105" 
+                    : "bg-[#070b0e]/40 text-white/50 border-white/5 hover:text-white hover:bg-white/10"
+                )}
+              >
+                <Building className="w-3.5 h-3.5" />
+                <span>Premium Estates</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => setSearchTab('cabs')}
+                className={cn(
+                  "flex items-center gap-2.5 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500 border backdrop-blur-xl",
+                  searchTab === 'cabs' 
+                    ? "bg-kashmir-gold text-black border-kashmir-gold shadow-lg shadow-kashmir-gold/20 scale-105" 
+                    : "bg-[#070b0e]/40 text-white/50 border-white/5 hover:text-white hover:bg-white/10"
+                )}
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>Luxury Fleet</span>
+              </button>
+            </div>
+
             <form 
               onSubmit={handleSearch}
-              className="bg-[#070b0e]/75 backdrop-blur-3xl border border-white/10 rounded-[2rem] md:rounded-full p-2 md:p-3 shadow-2xl flex flex-col md:flex-row gap-2 md:gap-0 relative group transition-all duration-500 hover:border-kashmir-gold/25 hover:shadow-[0_25px_60px_-15px_rgba(212,175,55,0.08)]"
+              className="bg-[#070b0e]/75 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] md:rounded-full p-2.5 md:p-3.5 shadow-2xl flex flex-col md:flex-row gap-2 md:gap-0 relative group transition-all duration-500 hover:border-kashmir-gold/25 hover:shadow-[0_25px_60px_-15px_rgba(212,175,55,0.08)]"
             >
               {/* Internal Glow */}
-              <div className="absolute inset-0 rounded-[2rem] md:rounded-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 rounded-[2.5rem] md:rounded-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
 
-              <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-0">
-                {/* Destination */}
-                <div className="flex-1 md:flex-[1.2] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
-                  <div className="px-6 py-4 md:py-3 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
-                      <MapPin className="w-4.5 h-4.5" />
+              {searchTab === 'packages' && (
+                <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-0">
+                  {/* Destination */}
+                  <div className="flex-1 md:flex-[1.2] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <MapPin className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Where to?</span>
+                        <Select
+                          value={searchData.destination}
+                          onValueChange={(value) => setSearchData(prev => ({ ...prev, destination: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Search destinations" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {destinations.map((dest) => (
+                              <SelectItem key={dest} value={dest} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{dest}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Where</span>
-                      <Select
-                        value={searchData.destination}
-                        onValueChange={(value) => setSearchData(prev => ({ ...prev, destination: value }))}
-                      >
-                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
-                          <SelectValue placeholder="Search destinations" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
-                          {destinations.map((dest) => (
-                            <SelectItem key={dest} value={dest} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{dest}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Dates */}
+                  <div className="flex-1 md:flex-1 relative rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="w-full text-left outline-none focus:outline-none"
+                        >
+                          <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold transition-all duration-300">
+                              <CalendarIcon className="w-4.5 h-4.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">When</span>
+                              <span className={cn(
+                                "block text-sm md:text-base font-bold truncate leading-tight transition-colors",
+                                selectedDate ? "text-white" : "text-white/40"
+                              )}>
+                                {selectedDate ? format(selectedDate, "dd MMM yyyy") : "Select date"}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-[#0c1216] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-3xl z-50" align="start" sideOffset={8}>
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => {
+                            setSelectedDate(date);
+                            setSearchData(prev => ({
+                              ...prev,
+                              dates: date ? format(date, 'yyyy-MM-dd') : ''
+                            }));
+                          }}
+                          disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                          initialFocus
+                          className="bg-[#0c1216] text-white rounded-2xl"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Travelers */}
+                  <div className="flex-1 md:flex-[0.9] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <Users className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Who</span>
+                        <Select
+                          value={searchData.travelers}
+                          onValueChange={(value) => setSearchData(prev => ({ ...prev, travelers: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Add guests" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {[1, 2, 4, 6, 8, '10+'].map((num) => (
+                              <SelectItem key={num} value={num.toString()} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">
+                                {num} {num === 1 ? 'Guest' : 'Guests'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Divider */}
-                <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
-
-                {/* Dates (Duration) */}
-                <div className="flex-1 md:flex-1 relative rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="w-full text-left outline-none focus:outline-none"
-                      >
-                        <div className="px-6 py-4 md:py-3 flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold transition-all duration-300">
-                            <CalendarIcon className="w-4.5 h-4.5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">When</span>
-                            <span className={cn(
-                              "block text-sm md:text-base font-bold truncate leading-tight transition-colors",
-                              selectedDate ? "text-white" : "text-white/40"
-                            )}>
-                              {selectedDate ? format(selectedDate, "dd MMM yyyy") : "Select dates"}
-                            </span>
-                          </div>
-                        </div>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-[#0c1216] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-3xl z-50" align="start" sideOffset={8}>
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => {
-                          setSelectedDate(date);
-                          setSearchData(prev => ({
-                            ...prev,
-                            dates: date ? format(date, 'yyyy-MM-dd') : ''
-                          }));
-                        }}
-                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                        initialFocus
-                        className="bg-[#0c1216] text-white rounded-2xl"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Divider */}
-                <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
-
-                {/* Travelers */}
-                <div className="flex-1 md:flex-[0.9] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
-                  <div className="px-6 py-4 md:py-3 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
-                      <Users className="w-4.5 h-4.5" />
+              {searchTab === 'hotels' && (
+                <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-0 animate-in fade-in slide-in-from-left-4 duration-300">
+                  {/* Destination */}
+                  <div className="flex-1 md:flex-[1.2] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <MapPin className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Destination Area</span>
+                        <Select
+                          value={hotelData.destination}
+                          onValueChange={(value) => setHotelData(prev => ({ ...prev, destination: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Where to stay?" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {destinations.map((dest) => (
+                              <SelectItem key={dest} value={dest} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{dest}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Who</span>
-                      <Select
-                        value={searchData.travelers}
-                        onValueChange={(value) => setSearchData(prev => ({ ...prev, travelers: value }))}
-                      >
-                        <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
-                          <SelectValue placeholder="Add guests" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
-                          {[1, 2, 4, 6, 8, '10+'].map((num) => (
-                            <SelectItem key={num} value={num.toString()} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">
-                              {num} {num === 1 ? 'Guest' : 'Guests'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Check-In */}
+                  <div className="flex-1 md:flex-1 relative rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="w-full text-left outline-none focus:outline-none"
+                        >
+                          <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold transition-all duration-300">
+                              <CalendarIcon className="w-4.5 h-4.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Check-In</span>
+                              <span className={cn(
+                                "block text-sm md:text-base font-bold truncate leading-tight transition-colors",
+                                selectedHotelDate ? "text-white" : "text-white/40"
+                              )}>
+                                {selectedHotelDate ? format(selectedHotelDate, "dd MMM yyyy") : "Select date"}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-[#0c1216] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-3xl z-50" align="start" sideOffset={8}>
+                        <Calendar
+                          mode="single"
+                          selected={selectedHotelDate}
+                          onSelect={(date) => {
+                            setSelectedHotelDate(date);
+                            setHotelData(prev => ({
+                              ...prev,
+                              checkIn: date ? format(date, 'yyyy-MM-dd') : ''
+                            }));
+                          }}
+                          disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                          initialFocus
+                          className="bg-[#0c1216] text-white rounded-2xl"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Guests */}
+                  <div className="flex-1 md:flex-[0.9] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <Users className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Guests</span>
+                        <Select
+                          value={hotelData.guests}
+                          onValueChange={(value) => setHotelData(prev => ({ ...prev, guests: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Add guests" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {[1, 2, 3, 4, 5, '6+'].map((num) => (
+                              <SelectItem key={num} value={num.toString()} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">
+                                {num} {num === 1 ? 'Guest' : 'Guests'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {searchTab === 'cabs' && (
+                <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-0 animate-in fade-in slide-in-from-left-4 duration-300">
+                  {/* Pickup */}
+                  <div className="flex-1 md:flex-[1.2] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <Navigation className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Pickup Point</span>
+                        <Select
+                          value={cabData.pickup}
+                          onValueChange={(value) => setCabData(prev => ({ ...prev, pickup: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Pickup location" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {[
+                              "Srinagar Airport (SXR)",
+                              "Dal Lake Ghats, Srinagar",
+                              "Lal Chowk, Srinagar",
+                              "Gulmarg Gondola Resort, Gulmarg",
+                              "Pahalgam Main Market, Pahalgam",
+                              "Thajiwas Glacier, Sonamarg"
+                            ].map((loc) => (
+                              <SelectItem key={loc} value={loc} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{loc}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Drop */}
+                  <div className="flex-1 md:flex-[1.2] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <MapPin className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Drop Point</span>
+                        <Select
+                          value={cabData.drop}
+                          onValueChange={(value) => setCabData(prev => ({ ...prev, drop: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Where to drop?" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {[
+                              "Srinagar Airport (SXR)",
+                              "Dal Lake Ghats, Srinagar",
+                              "Lal Chowk, Srinagar",
+                              "Gulmarg Gondola Resort, Gulmarg",
+                              "Pahalgam Main Market, Pahalgam",
+                              "Thajiwas Glacier, Sonamarg",
+                              "Doodhpathri Meadows",
+                              "Yousmarg Alpine Valley"
+                            ].map((loc) => (
+                              <SelectItem key={loc} value={loc} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{loc}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Date */}
+                  <div className="flex-1 md:flex-1 relative rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="w-full text-left outline-none focus:outline-none"
+                        >
+                          <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold transition-all duration-300">
+                              <Clock className="w-4.5 h-4.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Date</span>
+                              <span className={cn(
+                                "block text-sm md:text-base font-bold truncate leading-tight transition-colors",
+                                selectedCabDate ? "text-white" : "text-white/40"
+                              )}>
+                                {selectedCabDate ? format(selectedCabDate, "dd MMM yyyy") : "Select date"}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-[#0c1216] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-3xl z-50" align="start" sideOffset={8}>
+                        <Calendar
+                          mode="single"
+                          selected={selectedCabDate}
+                          onSelect={(date) => {
+                            setSelectedCabDate(date);
+                            setCabData(prev => ({
+                              ...prev,
+                              date: date ? format(date, 'yyyy-MM-dd') : ''
+                            }));
+                          }}
+                          disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                          initialFocus
+                          className="bg-[#0c1216] text-white rounded-2xl"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              )}
 
               {/* Action Button */}
               <div className="p-1 md:p-0 flex items-center">
@@ -263,7 +585,7 @@ export default function HeroSection() {
                   ) : (
                     <>
                       <Search className="w-4 h-4 text-black group-hover:rotate-12 transition-transform duration-300" />
-                      <span>Explore</span>
+                      <span>Search</span>
                     </>
                   )}
                 </Button>

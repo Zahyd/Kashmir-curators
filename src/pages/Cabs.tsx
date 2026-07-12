@@ -201,6 +201,24 @@ export default function Cabs() {
   const [bookingTime, setBookingTime] = useState('09:00');
   const [returnDate, setReturnDate] = useState('');
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pickup = params.get('pickup');
+    const drop = params.get('drop');
+    const date = params.get('date');
+    if (pickup) {
+      setPickupInput(pickup);
+      setPickupCoords({ lat: 0, lon: 0, name: pickup }); // Fallback coords for static queries
+    }
+    if (drop) {
+      setDropInput(drop);
+      setDropCoords({ lat: 0, lon: 0, name: drop });
+    }
+    if (date) {
+      setBookingDate(date);
+    }
+  }, []);
+
   const parseDateString = (dateStr: string) => {
     if (!dateStr) return undefined;
     const [year, month, day] = dateStr.split('-').map(Number);
