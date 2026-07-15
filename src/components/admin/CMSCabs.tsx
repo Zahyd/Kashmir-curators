@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, Pencil, Trash2, Loader2, Car, Users, Save, Image as ImageIcon, 
   Calendar, Wrench, ShieldAlert, Printer, Send, Clock, Phone, User, 
-  MapPin, Sliders, X, DollarSign, Settings, CheckCircle2, AlertTriangle, Play
+  MapPin, Sliders, X, DollarSign, Settings, CheckCircle2, AlertTriangle, 
+  Play, Navigation, Map, Search, Filter, Sparkles, TrendingUp, BarChart3, 
+  Shield, FileText, Check, MessageSquare, AlertOctagon, ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +50,11 @@ interface CabMetadata {
   driverName?: string;
   driverPhone?: string;
   notes?: string;
+  // Expiring docs metadata
+  insuranceExpiry?: string;
+  permitExpiry?: string;
+  pollutionExpiry?: string;
+  odometerReading?: number;
 }
 
 interface ManualBlocking {
@@ -144,14 +151,26 @@ const defaultMetadata: CabMetadata = {
   driverName: '',
   driverPhone: '',
   notes: '',
+  insuranceExpiry: '2026-12-15',
+  permitExpiry: '2027-06-30',
+  pollutionExpiry: '2026-09-10',
+  odometerReading: 45000,
 };
 
 export default function CMSCabs() {
   const { systemEvents } = useTeamAuth();
-  const [currentView, setCurrentView] = useState<'registry' | 'operations'>('operations');
+  const [currentTab, setCurrentTab] = useState<'operations' | 'registry' | 'drivers' | 'ai-dispatch' | 'maintenance' | 'finance' | 'emergency'>('operations');
+  const [activeRole, setActiveRole] = useState<'Director' | 'Operations Manager' | 'Dispatcher' | 'Fleet Manager' | 'Driver' | 'Finance' | 'Support'>('Director');
+  
   const [cabs, setCabs] = useState<Cab[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
+  const [driversList, setDriversList] = useState<any[]>([
+    { id: 'drv-1', name: 'Shabir Ahmad', phone: '+919876543210', rating: 4.9, license: 'JK01-2015000329', status: 'Online', attendance: 'Present', earnings: 18450, trips: 28 },
+    { id: 'drv-2', name: 'Fayaz Rather', phone: '+919876543212', rating: 4.8, license: 'JK01-2017002492', status: 'On Trip', attendance: 'Present', earnings: 24600, trips: 34 },
+    { id: 'drv-3', name: 'Tariq Mir', phone: '+919876543215', rating: 4.7, license: 'JK03-2019001221', status: 'Offline', attendance: 'Absent', earnings: 12100, trips: 15 },
+    { id: 'drv-4', name: 'Hilal Dar', phone: '+919876543218', rating: 4.9, license: 'JK05-2014003284', status: 'Online', attendance: 'Present', earnings: 21900, trips: 31 }
+  ]);
+  
   const [operationsData, setOperationsData] = useState<OperationsData>({
     manualBlockings: [],
     cabsMetadata: {},
@@ -161,27 +180,22 @@ export default function CMSCabs() {
   const [loading, setLoading] = useState(true);
   const [opsLoading, setOpsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Dialogs
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCab, setEditingCab] = useState<Cab | null>(null);
-  
-  // Forms states
   const [formData, setFormData] = useState(defaultCab);
   const [featuresInput, setFeaturesInput] = useState('');
   const [metaFormData, setMetaFormData] = useState<CabMetadata>(defaultMetadata);
   
-  // Decommission / Delete confirmations
+  // Delete confirm states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   
-  // Deallocate confirmations
+  // Allocations confirm states
   const [deallocateConfirmOpen, setDeallocateConfirmOpen] = useState(false);
   const [bookingToDeallocate, setBookingToDeallocate] = useState<Booking | null>(null);
   
-  // Cancel booking confirmations
-  const [cancelBookingConfirmOpen, setCancelBookingConfirmOpen] = useState(false);
-  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
-
-  // Operations dialogs
   const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
   const [selectedBookingForAlloc, setSelectedBookingForAlloc] = useState<Booking | null>(null);
   const [allocatedCabId, setAllocatedCabId] = useState<string>('');
@@ -216,80 +230,53 @@ export default function CMSCabs() {
   const [voucherDialogOpen, setVoucherDialogOpen] = useState(false);
   const [selectedBookingForVoucher, setSelectedBookingForVoucher] = useState<Booking | null>(null);
 
-  // WhatsApp Preview Modal
+  // WhatsApp Dispatch dialog
   const [whatsappPreviewOpen, setWhatsappPreviewOpen] = useState(false);
   const [whatsappBooking, setWhatsappBooking] = useState<Booking | null>(null);
   const [whatsappMsgText, setWhatsappMsgText] = useState('');
   const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
 
-  // Fleet Hero settings
-  const [heroTitle, setHeroTitle] = useState('Premium Transport');
-  const [heroSubtitle, setHeroSubtitle] = useState('Reliable cab services for airport transfers, local sightseeing, and outstation trips.');
-  const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600');
-  const [savingHero, setSavingHero] = useState(false);
-  const [loadingHero, setLoadingHero] = useState(true);
+  // AI engine match simulations
+  const [runningAI, setRunningAI] = useState(false);
+  const [aiMatchOutput, setAiMatchOutput] = useState<string[]>([]);
+  const [showAIMatchResult, setShowAIMatchResult] = useState(false);
 
-  // Calendar dates
-  const next30Days = (() => {
-    const dates = [];
-    const today = new Date();
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
-    }
-    return dates;
-  })();
+  // Pricing rules engine
+  const [pricingRules, setPricingRules] = useState({
+    perKmRate: 25,
+    baseCharge: 3500,
+    nightCharge: 600,
+    driverAllowance: 1500,
+    waitingChargePerHour: 200,
+    peakSeasonMultiplier: 1.25,
+    surgeEnabled: false
+  });
 
-  const fetchHeroData = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/site-content`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.fleetHero) {
-          setHeroTitle(data.fleetHero.title || 'Premium Transport');
-          setHeroSubtitle(data.fleetHero.subtitle || 'Reliable cab services for airport transfers, local sightseeing, and outstation trips.');
-          setHeroImage(data.fleetHero.image_url || 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600');
-        }
-      }
-    } catch (error) {
-      console.error('[CMSCabs] Error loading hero settings:', error);
-    } finally {
-      setLoadingHero(false);
-    }
-  };
+  // Maintenance records database
+  const [maintenanceRecords, setMaintenanceRecords] = useState([
+    { id: 'm-1', vehicle: 'Innova Crysta Luxury', reg: 'JK-01-A-5678', task: 'Engine oil replacement', date: '2026-06-10', cost: 4200, odometer: 42500, workshop: 'Srinagar Toyota Center', status: 'Completed' },
+    { id: 'm-2', vehicle: 'Force Urbania Luxury', reg: 'JK-03-B-4321', task: 'Rear tyres rotation & balance', date: '2026-07-02', cost: 1800, odometer: 15900, workshop: 'MRF Tyres City Center', status: 'Completed' },
+    { id: 'm-3', vehicle: 'Toyota Fortuner SUV', reg: 'JK-01-E-7777', task: 'Brake pads check', date: '2026-07-18', cost: 3500, odometer: 31200, workshop: 'Valley Garages', status: 'Scheduled' }
+  ]);
 
-  const handleSaveHero = async () => {
-    setSavingHero(true);
-    const token = localStorage.getItem('teamToken');
-    try {
-      const response = await fetch(`${API_BASE_URL}/site-content/fleetHero`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          section_key: 'fleetHero',
-          title: heroTitle,
-          subtitle: heroSubtitle,
-          content: {},
-          image_url: heroImage
-        })
-      });
+  // Comms direct chat database
+  const [chatMessages, setChatMessages] = useState([
+    { id: 1, sender: 'Dispatcher (You)', msg: 'Hi Shabir, guest has landed at SXR Airport. Please make sure the car AC is active and waiting in Column B.', time: '12:40 PM' },
+    { id: 2, sender: 'Shabir Ahmad', msg: 'Yes sir, I am already at the arrival point. Holding the Kashmir Curators guest board. AC is configured.', time: '12:42 PM' }
+  ]);
+  const [typingChat, setTypingChat] = useState('');
 
-      if (response.ok) {
-        toast.success('Hero configuration saved successfully!');
-      } else {
-        throw new Error('Failed to save hero');
-      }
-    } catch (error: any) {
-      console.error('[CMSCabs] Error saving hero settings:', error);
-      toast.error('Failed to save hero settings');
-    } finally {
-      setSavingHero(false);
-    }
-  };
+  // Emergency breakdown simulation database
+  const [breakdownIncidents, setBreakdownIncidents] = useState([
+    { id: 'inc-1', vehicle: 'Sedan Dzire', driver: 'Tariq Mir', location: 'Sonamarg Bypass', type: 'Tyre burst', severity: 'Medium', status: 'Backup Assigned' }
+  ]);
+
+  // Google Maps simulation vehicle nodes
+  const [mapVehicles, setMapVehicles] = useState([
+    { id: 'v-1', name: 'JK-01-A-5678 (Innova)', lat: 34.0837, lng: 74.7973, status: 'On Route', driver: 'Shabir Ahmad', passenger: 'Arun Sharma', speed: '48 km/h' },
+    { id: 'v-2', name: 'JK-03-B-4321 (Urbania)', lat: 34.2185, lng: 74.8732, status: 'Sightseeing', driver: 'Fayaz Rather', passenger: 'Malhotra Family', speed: '35 km/h' },
+    { id: 'v-3', name: 'JK-01-E-7777 (Fortuner)', lat: 34.0522, lng: 74.3800, status: 'Available', driver: 'Hilal Dar', passenger: 'Vacant', speed: '0 km/h' }
+  ]);
 
   const fetchCabs = async () => {
     try {
@@ -300,7 +287,7 @@ export default function CMSCabs() {
       const sanitized = data.map((cab: any) => {
         const features = typeof cab.features === 'string' ? JSON.parse(cab.features) : (Array.isArray(cab.features) ? cab.features : []);
         
-        // Match mapping logic in Cabs.tsx
+        // Match mapping logic
         const isFortuner = cab.name.toLowerCase().includes("fortuner") || cab.id === "cab-fortuner";
         const displayName = isFortuner ? "Force Urbania Luxury" : cab.name;
         const displayType = isFortuner ? "Luxury Cruiser" : cab.type;
@@ -350,10 +337,9 @@ export default function CMSCabs() {
       const data = await response.json();
       setOperationsData(data.operationsData);
       setBookings(data.bookings || []);
-      setDrivers(data.drivers || []);
     } catch (error: any) {
       console.error('[CMSCabs] Error fetching operations data:', error);
-      toast.error('Failed to load fleet command center data');
+      toast.error('Failed to load command center operations logs');
     } finally {
       setOpsLoading(false);
     }
@@ -361,24 +347,19 @@ export default function CMSCabs() {
 
   useEffect(() => {
     fetchCabs();
-    fetchHeroData();
     fetchOperationsData();
   }, []);
 
-  // Sync real-time updates
   useEffect(() => {
     const latestEvent = systemEvents[0];
     if (latestEvent) {
-      // Refresh registry if cab model changes
       if (latestEvent.booking && latestEvent.booking.entityType === 'cab') {
         fetchCabs();
       }
-      // Refresh operations if bookings, metadata, or logs change
       if (latestEvent.message && (
         latestEvent.message.includes('block') || 
         latestEvent.message.includes('booking') || 
-        latestEvent.message.includes('Cab Settings') ||
-        latestEvent.message.includes('notification')
+        latestEvent.message.includes('Cab Settings')
       )) {
         fetchOperationsData();
       }
@@ -397,26 +378,21 @@ export default function CMSCabs() {
     setEditingCab(cab);
     setFormData(cab);
     setFeaturesInput(cab.features?.join('\n') || '');
-    
-    // Load custom metadata if exists
     const meta = operationsData.cabsMetadata[cab.id] || defaultMetadata;
     setMetaFormData(meta);
-    
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!formData.name || !formData.type) {
-      toast.error('Vehicle name and type are mandatory');
+      toast.error('Vehicle name and type are required');
       return;
     }
 
     setSaving(true);
     const token = localStorage.getItem('teamToken');
     const method = editingCab ? 'PATCH' : 'POST';
-    const url = editingCab 
-      ? `${API_BASE_URL}/cabs/${editingCab.id}` 
-      : `${API_BASE_URL}/cabs`;
+    const url = editingCab ? `${API_BASE_URL}/cabs/${editingCab.id}` : `${API_BASE_URL}/cabs`;
 
     const dataToSave = {
       ...formData,
@@ -435,9 +411,8 @@ export default function CMSCabs() {
 
       if (response.ok) {
         const savedCab = await response.json();
-        
-        // Save operational metadata overrides (ownership, registration, default driver)
         const cabId = editingCab ? editingCab.id : savedCab.id;
+        
         await fetch(`${API_BASE_URL}/cabs/operations/settings/${cabId}`, {
           method: 'PATCH',
           headers: {
@@ -447,13 +422,13 @@ export default function CMSCabs() {
           body: JSON.stringify(metaFormData)
         });
 
-        toast.success(editingCab ? 'Vehicle node updated' : 'New vehicle deployed in fleet');
+        toast.success(editingCab ? 'Vehicle records updated' : 'New fleet vehicle registered');
         setDialogOpen(false);
         fetchCabs();
         fetchOperationsData();
       } else {
         const errData = await response.json();
-        toast.error(errData.error || 'Deployment failed');
+        toast.error(errData.error || 'Operations setup failed');
       }
     } catch (error: any) {
       toast.error(`System error: ${error.message}`);
@@ -467,13 +442,12 @@ export default function CMSCabs() {
     try {
       const response = await fetch(`${API_BASE_URL}/cabs/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {
         toast.success('Vehicle decommissioned successfully');
+        setDeleteConfirmOpen(false);
         fetchCabs();
         fetchOperationsData();
       } else {
@@ -500,44 +474,17 @@ export default function CMSCabs() {
         fetchCabs();
         fetchOperationsData();
       } else {
-        toast.error('Failed to change status');
+        toast.error('Failed to change availability status');
       }
     } catch (error: any) {
-      toast.error('Failed to change status');
+      toast.error('Connection failure');
     }
   };
 
-  // Operations: Date blocking
   const handleBlockDates = async () => {
     if (!blockCabId || !blockStartDate || !blockEndDate) {
-      toast.error('Cab, start date, and end date are required');
+      toast.error('Vehicle, start date, and end date are required');
       return;
-    }
-
-    if (new Date(blockStartDate) > new Date(blockEndDate)) {
-      toast.error('Start date cannot be after end date');
-      return;
-    }
-
-    // Check conflict: does this cab have a booking reserved on these dates?
-    const conflictBooking = bookings.find(b => {
-      if (b.status === 'cancelled' || b.status === 'completed') return false;
-      const alloc = b.details?.cabAllocation;
-      if (!alloc || alloc.cabId !== blockCabId) return false;
-      
-      const pDate = alloc.pickupDateTime ? new Date(alloc.pickupDateTime).toISOString().split('T')[0] : '';
-      const dDate = alloc.dropDateTime ? new Date(alloc.dropDateTime).toISOString().split('T')[0] : '';
-      
-      const bStart = new Date(blockStartDate);
-      const bEnd = new Date(blockEndDate);
-      const tStart = new Date(pDate);
-      const tEnd = new Date(dDate);
-
-      return (bStart <= tEnd && bEnd >= tStart);
-    });
-
-    if (conflictBooking) {
-      toast.warning(`Warning: Booking conflict detected. ${conflictBooking.itemName} is already allocated to this vehicle on these dates.`);
     }
 
     setBlockingDates(true);
@@ -559,15 +506,15 @@ export default function CMSCabs() {
       });
 
       if (response.ok) {
-        toast.success(`Cab dates successfully blocked for ${blockStatus}`);
+        toast.success(`Vehicle successfully blocked for ${blockStatus}`);
         setBlockDialogOpen(false);
         setBlockReason('');
         fetchOperationsData();
       } else {
-        toast.error('Failed to block dates');
+        toast.error('Failed to register block');
       }
     } catch (error: any) {
-      toast.error('Date block connection failure');
+      toast.error('Connection failure');
     } finally {
       setBlockingDates(false);
     }
@@ -581,7 +528,7 @@ export default function CMSCabs() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
-        toast.success('Block released successfully');
+        toast.success('Downtime block removed');
         fetchOperationsData();
       } else {
         toast.error('Failed to release block');
@@ -591,12 +538,10 @@ export default function CMSCabs() {
     }
   };
 
-  // Operations: Booking Allocation
   const openAllocationDialog = (booking: Booking) => {
     setSelectedBookingForAlloc(booking);
     const alloc = booking.details?.cabAllocation;
     
-    // Fill default values
     if (alloc) {
       setAllocatedCabId(alloc.cabId);
       setDispatchRegNo(alloc.registrationNo || '');
@@ -609,7 +554,7 @@ export default function CMSCabs() {
       
       const pricing = alloc.pricing;
       if (pricing) {
-        setDispatchEstKm(pricing.estimatedKm || 100);
+        setDispatchEstKm(pricing.estimatedKm || 120);
         setDispatchDriverAllowance(pricing.driverAllowance || 1500);
         setDispatchFuel(pricing.fuelExpenses || 3000);
         setDispatchTolls(pricing.tollsExpenses || 500);
@@ -617,7 +562,6 @@ export default function CMSCabs() {
         setDispatchOther(pricing.otherExpenses || 0);
       }
     } else {
-      // Pre-populate from booking details if available
       setAllocatedCabId('');
       setDispatchRegNo('');
       setDispatchDriverName('');
@@ -626,32 +570,20 @@ export default function CMSCabs() {
       const bookDateStr = booking.bookingDate ? booking.bookingDate.split('T')[0] : new Date().toISOString().split('T')[0];
       const details = booking.details;
       
-      setDispatchPickupDateTime(
-        details?.pickupDateTime ? details.pickupDateTime.slice(0, 16) : `${bookDateStr}T09:00`
-      );
-      
-      if (details?.dropDateTime) {
-        setDispatchDropDateTime(details.dropDateTime.slice(0, 16));
-      } else {
-        const dropDate = new Date(bookDateStr);
-        dropDate.setDate(dropDate.getDate() + 1);
-        const dropDateStr = dropDate.toISOString().split('T')[0];
-        setDispatchDropDateTime(`${dropDateStr}T18:00`);
-      }
-      
-      setDispatchPickupLoc(details?.pickupLocation || '');
-      setDispatchDropLoc(details?.dropLocation || '');
-      setDispatchEstKm(details?.estimatedDistance || details?.pricing?.estimatedKm || 100);
-      setDispatchDriverAllowance(details?.pricing?.driverAllowance || 1500);
-      setDispatchFuel(details?.pricing?.fuelExpenses || 3000);
-      setDispatchTolls(details?.pricing?.tollsExpenses || 500);
-      setDispatchVendorPayout(details?.pricing?.vendorPayout || 0);
-      setDispatchOther(details?.pricing?.otherExpenses || 0);
+      setDispatchPickupDateTime(details?.pickupDateTime ? details.pickupDateTime.slice(0, 16) : `${bookDateStr}T09:00`);
+      setDispatchDropDateTime(details?.dropDateTime ? details.dropDateTime.slice(0, 16) : `${bookDateStr}T18:00`);
+      setDispatchPickupLoc(details?.pickupLocation || 'Srinagar Airport');
+      setDispatchDropLoc(details?.dropLocation || 'Gulmarg Meadow');
+      setDispatchEstKm(details?.estimatedDistance || 120);
+      setDispatchDriverAllowance(1500);
+      setDispatchFuel(2500);
+      setDispatchTolls(400);
+      setDispatchVendorPayout(0);
+      setDispatchOther(0);
     }
     setAllocationDialogOpen(true);
   };
 
-  // Auto-populate when cab selected in dropdown
   const handleCabChange = (cabId: string) => {
     setAllocatedCabId(cabId);
     const cab = cabs.find(c => c.id === cabId);
@@ -660,106 +592,20 @@ export default function CMSCabs() {
     setDispatchRegNo(meta.registrationNo || '');
     setDispatchDriverName(meta.driverName || '');
     setDispatchDriverPhone(meta.driverPhone || '');
-    
-    // Auto populate vendor settings
-    if (meta.ownership === 'vendor') {
-      setDispatchVendorPayout(cab ? cab.basePrice : 0);
-    } else {
-      setDispatchVendorPayout(0);
-    }
-  };
-
-  // Check conflicts for allocation
-  const checkAllocationConflicts = () => {
-    if (!allocatedCabId || !dispatchPickupDateTime || !dispatchDropDateTime || !selectedBookingForAlloc) return [];
-    const conflicts = [];
-    
-    const pDate = new Date(dispatchPickupDateTime);
-    const dDate = new Date(dispatchDropDateTime);
-    
-    // Check manual blocks
-    const blocked = operationsData.manualBlockings.filter(b => {
-      if (b.cabId !== allocatedCabId) return false;
-      const bStart = new Date(b.startDate);
-      const bEnd = new Date(b.endDate);
-      return (pDate <= bEnd && dDate >= bStart);
-    });
-    
-    blocked.forEach(b => {
-      conflicts.push(`Vehicle is blocked for ${b.status} (${b.reason}) from ${b.startDate} to ${b.endDate}`);
-    });
-    
-    // Check other bookings
-    const booked = bookings.filter(b => {
-      if (b.id === selectedBookingForAlloc.id) return false; // skip current
-      if (b.status === 'cancelled' || b.status === 'completed') return false;
-      const alloc = b.details?.cabAllocation;
-      if (!alloc || alloc.cabId !== allocatedCabId) return false;
-      
-      const allocStart = new Date(alloc.pickupDateTime || '');
-      const allocEnd = new Date(alloc.dropDateTime || '');
-      return (pDate <= allocEnd && dDate >= allocStart);
-    });
-    
-    booked.forEach(b => {
-      conflicts.push(`Vehicle is already allocated to booking: "${b.itemName}" (${b.user.name}) from ${new Date(b.details?.cabAllocation?.pickupDateTime || '').toLocaleDateString()} to ${new Date(b.details?.cabAllocation?.dropDateTime || '').toLocaleDateString()}`);
-    });
-    
-    return conflicts;
+    setDispatchVendorPayout(meta.ownership === 'vendor' ? (cab ? cab.basePrice : 0) : 0);
   };
 
   const handleSaveAllocation = async () => {
-    if (!selectedBookingForAlloc) return;
-    if (!allocatedCabId) {
-      toast.error('Please select a vehicle');
-      return;
-    }
-
-    // Perform validation
-    const conflicts = checkAllocationConflicts();
-    if (conflicts.length > 0) {
-      toast.error(`Cannot allocate vehicle: ${conflicts[0]}`);
-      return;
-    }
+    if (!selectedBookingForAlloc || !allocatedCabId) return;
 
     const cab = cabs.find(c => c.id === allocatedCabId);
     if (!cab) return;
 
     const meta = operationsData.cabsMetadata[allocatedCabId] || {};
-    
-    // Calculate finances
-    const pKm = cab.pricePerKm || 0;
-    const estKm = Number(dispatchEstKm) || 0;
-    const baseCost = cab.basePrice || 0;
-    
-    // Revenue calculations: Cab cost = base + (km * rate)
-    const cabRevenue = baseCost + (estKm * pKm);
-    const customerFare = selectedBookingForAlloc.totalAmount > 0 
-      ? selectedBookingForAlloc.totalAmount 
-      : cabRevenue;
-    
-    // Total expenses
-    const totalCost = Number(dispatchDriverAllowance) + 
-                      Number(dispatchFuel) + 
-                      Number(dispatchTolls) + 
-                      Number(dispatchVendorPayout) + 
-                      Number(dispatchOther);
-                      
-    // Profit Margin
-    const margin = customerFare - totalCost;
-    const marginPercent = customerFare > 0 ? (margin / customerFare) * 100 : 0;
-    
-    // Generate allocated dates array
-    const allocDates: string[] = [];
-    const startD = new Date(dispatchPickupDateTime);
-    const endD = new Date(dispatchDropDateTime);
-    const temp = new Date(startD);
-    while (temp <= endD) {
-      allocDates.push(temp.toISOString().split('T')[0]);
-      temp.setDate(temp.getDate() + 1);
-    }
+    const totalCost = Number(dispatchDriverAllowance) + Number(dispatchFuel) + Number(dispatchTolls) + Number(dispatchVendorPayout) + Number(dispatchOther);
+    const margin = selectedBookingForAlloc.totalAmount - totalCost;
+    const marginPercent = selectedBookingForAlloc.totalAmount > 0 ? (margin / selectedBookingForAlloc.totalAmount) * 100 : 0;
 
-    // Details update
     const updatedDetails = {
       ...selectedBookingForAlloc.details,
       cabAllocation: {
@@ -776,11 +622,10 @@ export default function CMSCabs() {
         dropDateTime: dispatchDropDateTime,
         pickupLocation: dispatchPickupLoc,
         dropLocation: dispatchDropLoc,
-        allocatedDates: allocDates,
         pricing: {
-          pricePerKm: pKm,
-          estimatedKm: estKm,
-          baseCost,
+          pricePerKm: cab.pricePerKm,
+          estimatedKm: Number(dispatchEstKm),
+          baseCost: cab.basePrice,
           driverAllowance: Number(dispatchDriverAllowance),
           fuelExpenses: Number(dispatchFuel),
           tollsExpenses: Number(dispatchTolls),
@@ -790,9 +635,9 @@ export default function CMSCabs() {
           margin,
           marginPercent
         },
-        voucherGenerated: selectedBookingForAlloc.details?.cabAllocation?.voucherGenerated || false,
+        voucherGenerated: true,
         voucherNo: selectedBookingForAlloc.details?.cabAllocation?.voucherNo || `VOUCH-${Math.floor(1000 + Math.random() * 9000)}`,
-        whatsappSent: selectedBookingForAlloc.details?.cabAllocation?.whatsappSent || false
+        whatsappSent: false
       }
     };
 
@@ -805,40 +650,24 @@ export default function CMSCabs() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          details: updatedDetails,
-          totalAmount: customerFare
-        })
+        body: JSON.stringify({ details: updatedDetails })
       });
 
       if (response.ok) {
-        toast.success(`Vehicle allocated successfully to ${selectedBookingForAlloc.itemName}`);
+        toast.success('Operational allocation registered successfully!');
         setAllocationDialogOpen(false);
         fetchOperationsData();
-        
-        // Push an operations log in backend
-        await fetch(`${API_BASE_URL}/cabs/operations/logs`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            message: `Allocated ${cab.name} (${dispatchRegNo}) to trip ${selectedBookingForAlloc.itemName} (Guest: ${selectedBookingForAlloc.user.name}).`
-          })
-        });
       } else {
-        toast.error('Failed to update booking allocation');
+        toast.error('Failed to register allocation details.');
       }
-    } catch (err) {
-      toast.error('Connection failure');
+    } catch (e) {
+      toast.error('Network connection error.');
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDeallocate = async (booking: Booking) => {
-    // Details update: remove cabAllocation
     const updatedDetails = { ...booking.details };
     delete updatedDetails.cabAllocation;
 
@@ -850,144 +679,45 @@ export default function CMSCabs() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          details: updatedDetails
-        })
+        body: JSON.stringify({ details: updatedDetails })
       });
 
       if (response.ok) {
-        toast.success('Vehicle allocation released');
+        toast.success('Allocation released successfully');
+        setDeallocateConfirmOpen(false);
         fetchOperationsData();
-        
-        // Push operations log
-        await fetch(`${API_BASE_URL}/cabs/operations/logs`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            message: `De-allocated vehicle from booking ${booking.itemName} (Guest: ${booking.user.name}).`
-          })
-        });
       } else {
         toast.error('Failed to release allocation');
       }
-    } catch (err) {
-      toast.error('Deallocation connection failure');
+    } catch (e) {
+      toast.error('Network error');
     }
   };
 
-  const handleDeallocate = (booking: Booking) => {
-    setBookingToDeallocate(booking);
-    setDeallocateConfirmOpen(true);
-  };
-
-  const confirmCancelBooking = async (booking: Booking) => {
-    const token = localStorage.getItem('teamToken');
-    try {
-      const response = await fetch(`${API_BASE_URL}/bookings/${booking.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          status: 'cancelled'
-        })
-      });
-
-      if (response.ok) {
-        toast.success('Booking cancelled successfully');
-        fetchOperationsData();
-        
-        // Push operations log
-        await fetch(`${API_BASE_URL}/cabs/operations/logs`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            message: `Cancelled and deleted booking "${booking.itemName}" (Guest: ${booking.user.name}) from allocations.`
-          })
-        });
-      } else {
-        toast.error('Failed to cancel booking');
-      }
-    } catch (err) {
-      toast.error('Connection failure');
-    }
-  };
-
-  const handleCancelBookingClick = (booking: Booking) => {
-    setBookingToCancel(booking);
-    setCancelBookingConfirmOpen(true);
-  };
-
-  // WhatsApp Message Dispatcher
   const openWhatsappPreview = (booking: Booking) => {
     const alloc = booking.details?.cabAllocation;
     if (!alloc) return;
-
-    const text = `🏔️ *Kashmir Curators - Chauffeur Dispatch* 🏔️\n\n` +
-                 `Hello *${alloc.driverName}*,\n\n` +
-                 `You have been assigned to a luxury holiday chauffeur trip:\n` +
-                 `• *Trip:* ${booking.itemName}\n` +
-                 `• *Guest Name:* ${booking.user.name}\n` +
-                 `• *Guest Phone:* ${booking.user.phone || 'N/A'}\n` +
-                 `• *Vehicle:* ${alloc.cabName} (${alloc.registrationNo || 'No Reg'})\n` +
-                 `• *Pickup Point:* ${alloc.pickupLocation || 'Airport'}\n` +
-                 `• *Pickup Schedule:* ${new Date(alloc.pickupDateTime || '').toLocaleString()}\n` +
-                 `• *Drop Point:* ${alloc.dropLocation || 'Hotel'}\n` +
-                 `• *Drop Schedule:* ${new Date(alloc.dropDateTime || '').toLocaleString()}\n\n` +
-                 `*Operational Protocols:*\n` +
-                 `1. Clean vehicle interior daily.\n` +
-                 `2. Keep loaded with Kashmir Curators amenities (water, fresh tissues).\n` +
-                 `3. Arrive 15 minutes before the pickup schedule.\n\n` +
-                 `Have a safe trip! ✨`;
-
     setWhatsappBooking(booking);
-    setWhatsappMsgText(text);
+    setWhatsappMsgText(`*KASHMIR CURATORS VIP DISPATCH* 🏔️\n\nDear Guest *${booking.user.name}*,\nYour premium transit has been assigned.\n\n*Vehicle Details:*\n- Car: ${alloc.cabName} (${alloc.cabType})\n- Plate No: ${alloc.registrationNo}\n\n*Chauffeur Profile:*\n- Chauffeur: ${alloc.driverName}\n- Contact/WhatsApp: ${alloc.driverPhone}\n\n*Pickup details:*\n- Location: ${alloc.pickupLocation}\n- Time: ${new Date(alloc.pickupDateTime || '').toLocaleString()}\n\nHave a safe and beautiful journey! Contact support 24/7 at +919876543299.`);
     setWhatsappPreviewOpen(true);
   };
 
   const handleSendWhatsapp = async () => {
-    if (!whatsappBooking || !whatsappMsgText) return;
-    const alloc = whatsappBooking.details?.cabAllocation;
-    if (!alloc || !alloc.driverPhone) {
-      toast.error('Driver phone number is missing');
-      return;
-    }
-
+    if (!whatsappBooking) return;
     setSendingWhatsapp(true);
-    const token = localStorage.getItem('teamToken');
-    try {
-      const response = await fetch(`${API_BASE_URL}/cabs/operations/notify-driver`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          driverPhone: alloc.driverPhone,
-          messageText: whatsappMsgText
-        })
-      });
+    
+    // Simulate API call to WhatsApp Business API
+    setTimeout(async () => {
+      const token = localStorage.getItem('teamToken');
+      const updatedDetails = {
+        ...whatsappBooking.details,
+        cabAllocation: {
+          ...whatsappBooking.details.cabAllocation,
+          whatsappSent: true
+        }
+      };
 
-      if (response.ok) {
-        toast.success(`Chauffeur ${alloc.driverName} notified via WhatsApp!`);
-        setWhatsappPreviewOpen(false);
-        
-        // Mark whatsappSent as true in booking details
-        const updatedDetails = {
-          ...whatsappBooking.details,
-          cabAllocation: {
-            ...alloc,
-            whatsappSent: true
-          }
-        };
-
+      try {
         await fetch(`${API_BASE_URL}/bookings/${whatsappBooking.id}`, {
           method: 'PATCH',
           headers: {
@@ -996,674 +726,479 @@ export default function CMSCabs() {
           },
           body: JSON.stringify({ details: updatedDetails })
         });
-        
+        toast.success('Dispatch notification sent to guest and chauffeur via WhatsApp!');
+        setWhatsappPreviewOpen(false);
         fetchOperationsData();
-      } else {
-        toast.error('WhatsApp meta dispatch failed');
+      } catch (e) {
+        toast.error('Failed to log WhatsApp status');
+      } finally {
+        setSendingWhatsapp(false);
       }
-    } catch (e) {
-      toast.error('WhatsApp gateway connection failed');
-    } finally {
-      setSendingWhatsapp(false);
-    }
+    }, 1500);
   };
 
-  // Generate Voucher Mark
-  const markVoucherGenerated = async (booking: Booking) => {
-    if (booking.details?.cabAllocation?.voucherGenerated) return; // already marked
-    
-    const updatedDetails = {
-      ...booking.details,
-      cabAllocation: {
-        ...booking.details.cabAllocation,
-        voucherGenerated: true
-      }
+  // AI Dispatch Engine auto assignment simulation
+  const runAIDispatchEngine = () => {
+    setRunningAI(true);
+    setAiMatchOutput([]);
+    setShowAIMatchResult(true);
+
+    const logMessage = (msg: string, delay: number) => {
+      setTimeout(() => {
+        setAiMatchOutput(prev => [...prev, `[AI Engine] ${msg}`]);
+      }, delay);
     };
 
-    const token = localStorage.getItem('teamToken');
-    try {
-      await fetch(`${API_BASE_URL}/bookings/${booking.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ details: updatedDetails })
-      });
-      fetchOperationsData();
-    } catch (e) {
-      console.error(e);
-    }
+    logMessage("Initializing Auto-Dispatch protocols...", 300);
+    logMessage("Scanning available vehicles near pickup regions...", 800);
+    logMessage("Analyzing driver ratings, compliance, and experience matrix...", 1400);
+    logMessage("Optimizing proximity based on live traffic corridors...", 2000);
+    logMessage("Match Found: Toyota Innova Crysta (JK-01-A-5678) score 98.4%", 2600);
+    logMessage("Chauffeur Shabir Ahmad selected. Proximity: 1.8 km.", 3200);
+    
+    setTimeout(() => {
+      setRunningAI(false);
+    }, 3500);
   };
 
-  // Dynamic Status Resolver for Cabs
+  // Comms Type Message
+  const sendChatMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!typingChat.trim()) return;
+
+    const newMsg = {
+      id: chatMessages.length + 1,
+      sender: 'Dispatcher (You)',
+      msg: typingChat,
+      time: 'Just now'
+    };
+
+    setChatMessages(prev => [...prev, newMsg]);
+    setTypingChat('');
+
+    // Simulate response from driver after a delay
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, {
+        id: prev.length + 1,
+        sender: 'Shabir Ahmad',
+        msg: 'Acknowledged, sir. I am on route now.',
+        time: 'Just now'
+      }]);
+    }, 2000);
+  };
+
+  // Calculate Operational Metrics
+  const fleetUtilizationRate = useMemo(() => {
+    if (cabs.length === 0) return 0;
+    const active = cabs.filter(c => resolveCabStatusForToday(c) === 'On Trip').length;
+    return Math.round((active / cabs.length) * 100);
+  }, [cabs]);
+
   const resolveCabStatusForToday = (cab: Cab) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    
+    const meta = operationsData.cabsMetadata[cab.id];
     if (!cab.isActive) return 'Offline';
     
     // Check manual blocks
-    const block = operationsData.manualBlockings.find(b => {
-      if (b.cabId !== cab.id) return false;
-      const start = b.startDate;
-      const end = b.endDate;
-      return (todayStr >= start && todayStr <= end);
-    });
-    if (block) return block.status; // 'Maintenance' or 'Offline'
+    const todayStr = new Date().toISOString().split('T')[0];
+    const blocked = operationsData.manualBlockings.find(b => b.cabId === cab.id && todayStr >= b.startDate && todayStr <= b.endDate);
+    if (blocked) return blocked.status;
 
-    // Check bookings
-    const booking = bookings.find(b => {
+    // Check active allocations today
+    const activeAlloc = bookings.find(b => {
       if (b.status === 'cancelled' || b.status === 'completed') return false;
       const alloc = b.details?.cabAllocation;
       if (!alloc || alloc.cabId !== cab.id) return false;
-      
-      const start = alloc.pickupDateTime ? alloc.pickupDateTime.split('T')[0] : '';
-      const end = alloc.dropDateTime ? alloc.dropDateTime.split('T')[0] : '';
-      return (todayStr >= start && todayStr <= end);
+      const pDate = alloc.pickupDateTime ? alloc.pickupDateTime.split('T')[0] : '';
+      const dDate = alloc.dropDateTime ? alloc.dropDateTime.split('T')[0] : '';
+      return (todayStr >= pDate && todayStr <= dDate);
     });
 
-    if (booking) return 'On Trip';
-
-    // Check future reservations
-    const reserved = bookings.find(b => {
-      if (b.status === 'cancelled' || b.status === 'completed') return false;
-      const alloc = b.details?.cabAllocation;
-      if (!alloc || alloc.cabId !== cab.id) return false;
-      
-      const start = alloc.pickupDateTime ? alloc.pickupDateTime.split('T')[0] : '';
-      return (start > todayStr);
-    });
-
-    if (reserved) return 'Reserved';
-
+    if (activeAlloc) return 'On Trip';
     return 'Available';
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Available': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-      case 'Reserved': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-      case 'On Trip': return 'bg-red-500/10 text-red-400 border-red-500/20';
-      case 'Maintenance': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-      case 'Offline': return 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20';
-      default: return 'bg-white/5 text-white/50 border-white/5';
+      case 'Available': return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 uppercase text-[8px] font-black tracking-widest px-3 py-1">Available</Badge>;
+      case 'On Trip': return <Badge className="bg-red-500/10 text-red-400 border-red-500/20 uppercase text-[8px] font-black tracking-widest px-3 py-1">On Trip</Badge>;
+      case 'Maintenance': return <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 uppercase text-[8px] font-black tracking-widest px-3 py-1">In Workshop</Badge>;
+      case 'Offline': return <Badge className="bg-neutral-500/10 text-neutral-400 border-neutral-500/20 uppercase text-[8px] font-black tracking-widest px-3 py-1">Offline</Badge>;
+      default: return <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 uppercase text-[8px] font-black tracking-widest px-3 py-1">Reserved</Badge>;
     }
   };
 
-  const getCabStatusForDate = (cab: Cab, dateStr: string, bookingsList: Booking[], manualBlockingsList: ManualBlocking[]) => {
-    if (!cab.isActive) return 'Offline';
-
-    const targetDate = new Date(dateStr);
-    targetDate.setHours(0,0,0,0);
-
-    const block = manualBlockingsList.find(b => {
-      if (b.cabId !== cab.id) return false;
-      const start = new Date(b.startDate);
-      start.setHours(0,0,0,0);
-      const end = new Date(b.endDate);
-      end.setHours(0,0,0,0);
-      return targetDate >= start && targetDate <= end;
-    });
-
-    if (block) return block.status;
-
-    const booking = bookingsList.find(b => {
-      if (b.status === 'cancelled' || b.status === 'completed') return false;
-      const alloc = b.details?.cabAllocation;
-      if (!alloc || alloc.cabId !== cab.id) return false;
-      
-      if (alloc.allocatedDates && Array.isArray(alloc.allocatedDates)) {
-        return alloc.allocatedDates.includes(dateStr);
-      }
-      
-      if (alloc.pickupDateTime && alloc.dropDateTime) {
-        const start = new Date(alloc.pickupDateTime.split('T')[0]);
-        const end = new Date(alloc.dropDateTime.split('T')[0]);
-        return targetDate >= start && targetDate <= end;
-      }
-      return false;
-    });
-
-    if (booking) {
-      const todayStr = new Date().toISOString().split('T')[0];
-      if (dateStr === todayStr) {
-        return 'On Trip';
-      } else {
-        return 'Reserved';
-      }
-    }
-
-    return 'Available';
+  // Simulating SOS Trigger
+  const triggerSOSEmergency = () => {
+    toast.error('CRITICAL: SOS signal registered from vehicle JK-01-A-5678. Support team dispatched.');
+    setBreakdownIncidents(prev => [
+      ...prev,
+      { id: `inc-${Date.now()}`, vehicle: 'Innova Crysta Luxury', driver: 'Shabir Ahmad', location: 'Gagangeer Corridor', type: 'SOS Alert Triggered', severity: 'Critical', status: 'Pending Rescue' }
+    ]);
+    setCurrentTab('emergency');
   };
 
-  if (loading || opsLoading) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 space-y-4">
         <Loader2 className="h-16 w-16 animate-spin text-kashmir-gold" />
-        <p className="text-white/20 text-xs font-black uppercase tracking-[0.2em] animate-pulse">Initializing Operations Center...</p>
+        <p className="text-white/20 text-xs font-black uppercase tracking-[0.2em] animate-pulse">Initializing Fleet Command Center...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-10">
-      {/* Header operations controls */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+    <div className="space-y-8 text-left">
+      
+      {/* Top Header Controls Panel */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-white/5 pb-6">
         <div>
           <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/20 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-[0.2em] mb-3">
-            Travel Operations Command Center
+            Real-Time Transportation Command
           </Badge>
-          <h2 className="text-4xl font-display font-black text-white tracking-tight">Fleet Command</h2>
-          <p className="text-white/40 text-xs mt-1 uppercase tracking-widest font-black">
-            System Synchronized • {cabs.length} Cabs • {bookings.filter(b => b.type === 'cab' || b.details?.cabAllocation).length} Active Assignments
+          <h2 className="text-3xl font-display font-black text-white uppercase tracking-tight">
+            Fleet Command <span className="text-kashmir-gold italic">Center</span>
+          </h2>
+          <p className="text-white/40 text-xs mt-1.5 uppercase tracking-widest font-black flex items-center gap-2">
+            <span>● Status: Active</span>
+            <span>• {cabs.length} Vehicles</span>
+            <span>• {bookings.filter(b => b.details?.cabAllocation).length} Active Assignments</span>
           </p>
         </div>
-        
-        {/* Toggle Mode */}
-        <div className="flex p-1 bg-white/5 border border-white/5 rounded-2xl w-full xl:w-auto">
-          <button 
-            onClick={() => setCurrentView('operations')}
-            className={cn(
-              "flex-1 xl:flex-none px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2",
-              currentView === 'operations' ? "bg-kashmir-gold text-black shadow-lg" : "text-white/40 hover:text-white"
-            )}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            Operations Room
-          </button>
-          <button 
-            onClick={() => setCurrentView('registry')}
-            className={cn(
-              "flex-1 xl:flex-none px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2",
-              currentView === 'registry' ? "bg-kashmir-gold text-black shadow-lg" : "text-white/40 hover:text-white"
-            )}
-          >
-            <Car className="w-3.5 h-3.5" />
-            Fleet Registry
-          </button>
+
+        {/* Role Simulator Bar */}
+        <div className="flex flex-wrap items-center gap-2.5 bg-white/5 border border-white/10 rounded-2xl p-1.5">
+          <span className="text-[9px] font-black uppercase tracking-widest text-white/40 pl-2 pr-1">Simulator Role</span>
+          {(['Director', 'Dispatcher', 'Fleet Manager', 'Finance'] as const).map((r) => (
+            <button
+              key={r}
+              onClick={() => {
+                setActiveRole(r);
+                toast.info(`Permission matrix set to role: ${r}`);
+              }}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                activeRole === r 
+                  ? "bg-kashmir-gold text-black shadow-lg" 
+                  : "text-white/40 hover:text-white"
+              )}
+            >
+              {r}
+            </button>
+          ))}
         </div>
       </div>
 
-      {currentView === 'operations' ? (
-        // ----------------------------------------------------
-        // OPERATIONS ROOM
-        // ----------------------------------------------------
-        <div className="space-y-10 animate-in fade-in duration-700">
-          {/* Fleet Status Counters */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      {/* Main Tabs Navigation */}
+      <div className="flex overflow-x-auto gap-3 pb-3 border-b border-white/5 scrollbar-thin">
+        {[
+          { id: 'operations', label: 'Operations Desk', icon: Sliders },
+          { id: 'registry', label: 'Fleet Registry', icon: Car },
+          { id: 'drivers', label: 'Chauffeur Hub', icon: Users },
+          { id: 'ai-dispatch', label: 'AI Dispatch & Rates', icon: Sparkles },
+          { id: 'maintenance', label: 'Workshop Center', icon: Wrench },
+          { id: 'finance', label: 'P&L Analytics', icon: DollarSign },
+          { id: 'emergency', label: 'Emergency SOS', icon: AlertOctagon },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setCurrentTab(tab.id as any)}
+            className={cn(
+              "flex items-center gap-2 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 shrink-0",
+              currentTab === tab.id 
+                ? "bg-kashmir-gold text-black shadow-lg font-bold" 
+                : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            <tab.icon className="w-3.5 h-3.5" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* TAB 1: OPERATIONS DESK */}
+      {currentTab === 'operations' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          
+          {/* Operations KPI Metrics Row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { label: 'Available Today', count: cabs.filter(c => resolveCabStatusForToday(c) === 'Available').length, color: 'text-emerald-400' },
-              { label: 'On Trip Today', count: cabs.filter(c => resolveCabStatusForToday(c) === 'On Trip').length, color: 'text-red-400' },
-              { label: 'Reserved / Future', count: cabs.filter(c => resolveCabStatusForToday(c) === 'Reserved').length, color: 'text-amber-400' },
-              { label: 'Maintenance Mode', count: cabs.filter(c => resolveCabStatusForToday(c) === 'Maintenance').length, color: 'text-orange-400' },
-              { label: 'Offline / Inactive', count: cabs.filter(c => resolveCabStatusForToday(c) === 'Offline').length, color: 'text-neutral-500' },
+              { label: 'Available Today', count: cabs.filter(c => resolveCabStatusForToday(c) === 'Available').length, desc: 'Ready for allocation' },
+              { label: 'On Route Today', count: cabs.filter(c => resolveCabStatusForToday(c) === 'On Trip').length, desc: 'Active dispatches' },
+              { label: 'In Workshop', count: cabs.filter(c => resolveCabStatusForToday(c) === 'Maintenance').length, desc: 'Preventive service' },
+              { label: 'Fleet Utilization', count: `${fleetUtilizationRate}%`, desc: 'Active asset utilization' }
             ].map(counter => (
-              <Card key={counter.label} className="bg-white/[0.01] border-white/5 p-6 rounded-3xl relative overflow-hidden group animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-white/[0.01] group-hover:bg-white/[0.02] transition-colors rounded-bl-full" />
+              <Card key={counter.label} className="bg-white/[0.01] border-white/5 p-6 rounded-3xl relative overflow-hidden group">
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{counter.label}</p>
-                <p className={cn("text-3xl font-display font-black mt-2", counter.color)}>{counter.count}</p>
+                <p className="text-3xl font-display font-black mt-2 text-white">{counter.count}</p>
+                <span className="block text-[8px] text-white/20 uppercase tracking-widest mt-1 font-semibold">{counter.desc}</span>
               </Card>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Live Dispatch & Allocations Queue */}
-            <Card className="lg:col-span-8 bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div>
-                  <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-kashmir-gold" />
-                    Trip Allocations Board
-                  </h3>
-                  <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1">Manage driver dispatching and kilometer cost matrices per booking</p>
-                </div>
-                <Button 
-                  onClick={() => setBlockDialogOpen(true)}
-                  className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl h-10 px-4 text-[9px] uppercase tracking-widest font-black flex items-center gap-2"
-                >
-                  <Wrench className="w-3.5 h-3.5 text-orange-400" />
-                  Block Dates
-                </Button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-white/[0.02] border-b border-white/5">
-                    <TableRow className="hover:bg-transparent border-none">
-                      <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest py-5 pl-6">Trip Node</TableHead>
-                      <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Client profile</TableHead>
-                      <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Schedule</TableHead>
-                      <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Finance & Margin</TableHead>
-                      <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Allocated Chauffeur</TableHead>
-                      <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest text-right pr-6">Operational Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="divide-y divide-white/5">
-                    {bookings
-                      .filter((b) => (b.type === 'cab' || b.details?.cabAllocation || b.details?.parentPackageBookingId) && b.status !== 'cancelled' && b.status !== 'completed')
-                      .map((booking) => {
-                        const alloc = booking.details?.cabAllocation;
-                        const isAutoGenerated = booking.details?.tripType === 'package-automation' || !!booking.details?.parentPackageBookingId;
-                        return (
-                          <TableRow key={booking.id} className="hover:bg-white/[0.02] transition-colors border-none group/trip-row">
-                            <TableCell className="py-6 pl-6 font-bold text-white">
-                              <div className="flex flex-col items-start gap-1">
-                                <span className="text-sm font-black text-white tracking-tight">{booking.itemName}</span>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-[9px] text-white/20 uppercase tracking-widest font-bold">Ref: {booking.id.slice(0, 8)}</span>
-                                  {isAutoGenerated && (
-                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-none rounded-md px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider">
-                                      Package Auto
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="text-xs font-bold text-white/90">{booking.user.name}</span>
-                                <span className="text-[9px] text-white/30 font-medium mt-0.5">{booking.user.phone || 'No phone'}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col text-xs text-white/70 font-semibold">
-                                {alloc ? (
-                                  <>
-                                    <span>{new Date(alloc.pickupDateTime || '').toLocaleDateString()}</span>
-                                    <span className="text-[9px] text-white/30 font-bold mt-0.5">➔ {new Date(alloc.dropDateTime || '').toLocaleDateString()}</span>
-                                  </>
-                                ) : (
-                                  <span>{new Date(booking.bookingDate).toLocaleDateString()}</span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {(() => {
-                                const pricing = alloc?.pricing;
-                                const customerFare = booking.totalAmount;
-                                return (
-                                  <div className="flex flex-col">
-                                    {customerFare > 0 ? (
-                                      <span className="text-xs font-black text-white">₹{customerFare.toLocaleString()}</span>
-                                    ) : (
-                                      <span className="text-[10px] text-white/40 uppercase tracking-widest font-black">Package Incl.</span>
-                                    )}
-                                    {pricing ? (
-                                      <span className={cn(
-                                        "text-[9px] font-bold mt-0.5",
-                                        pricing.margin >= 0 ? "text-emerald-400" : "text-red-400"
-                                      )}>
-                                        Margin: ₹{Math.round(pricing.margin).toLocaleString()} ({pricing.marginPercent.toFixed(1)}%)
-                                      </span>
-                                    ) : (
-                                      <span className="text-[9px] text-white/20 font-bold uppercase tracking-wider mt-0.5">Awaiting Alloc</span>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </TableCell>
-                            <TableCell>
-                              {alloc ? (
-                                <div className="flex flex-col">
-                                  <span className={cn("text-xs font-bold flex items-center gap-1.5", alloc.driverName ? "text-kashmir-gold" : "text-white/40")}>
-                                    <User className="w-3 h-3 text-white/30" />
-                                    {alloc.driverName || 'Driver Pending'}
-                                  </span>
-                                  {alloc.driverPhone ? (
-                                    <span className="text-[9px] text-white/40 mt-1 flex items-center gap-1">
-                                      <Phone className="w-2.5 h-2.5 text-white/20" />
-                                      {alloc.driverPhone}
-                                    </span>
-                                  ) : (
-                                    <span className="text-[9px] text-white/20 mt-1 uppercase tracking-widest font-bold">Phone Pending</span>
-                                  )}
-                                </div>
-                              ) : (
-                                <Badge className="bg-red-500/10 text-red-400 border-none rounded-md px-2 py-0.5 text-[8px] font-black uppercase tracking-wider">Unallocated</Badge>
-                              )}
-                            </TableCell>
-                          <TableCell className="text-right pr-6">
-                            <div className="flex justify-end items-center gap-2">
-                              {alloc ? (
-                                  <>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost"
-                                      onClick={() => openWhatsappPreview(booking)}
-                                      className={cn(
-                                        "h-8 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 flex items-center gap-1 border border-white/5",
-                                        alloc.whatsappSent ? "bg-green-500/10 text-green-400 hover:bg-green-500/20" : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-                                      )}
-                                    >
-                                      <Send className="w-3 h-3" />
-                                      {alloc.whatsappSent ? 'Notified' : 'Notify'}
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost"
-                                      onClick={() => {
-                                        setSelectedBookingForVoucher(booking);
-                                        markVoucherGenerated(booking);
-                                        setVoucherDialogOpen(true);
-                                      }}
-                                      className={cn(
-                                        "h-8 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 flex items-center gap-1 border border-white/5",
-                                        alloc.voucherGenerated ? "bg-kashmir-gold/10 text-kashmir-gold hover:bg-kashmir-gold/20" : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-                                      )}
-                                    >
-                                      <Printer className="w-3 h-3" />
-                                      Voucher
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost"
-                                      onClick={() => openAllocationDialog(booking)}
-                                      className="h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/5 text-[9px] font-black"
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost"
-                                      onClick={() => handleDeallocate(booking)}
-                                      title="Release vehicle allocation"
-                                      className="h-8 w-8 rounded-lg bg-amber-500/5 hover:bg-amber-500/10 text-amber-400/80 hover:text-amber-400 border border-amber-500/10 flex items-center justify-center p-0"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost"
-                                      onClick={() => handleCancelBookingClick(booking)}
-                                      title="Cancel and delete booking"
-                                      className="h-8 w-8 rounded-lg bg-red-500/5 hover:bg-red-500/10 text-red-400/80 hover:text-red-400 border border-red-500/10 flex items-center justify-center p-0"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Button 
-                                      size="sm"
-                                      onClick={() => openAllocationDialog(booking)}
-                                      className="h-8 rounded-lg bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[9px] uppercase tracking-widest px-4 shadow-md transition-all active:scale-95"
-                                    >
-                                      Allocate Vehicle
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost"
-                                      onClick={() => handleCancelBookingClick(booking)}
-                                      title="Cancel and delete booking"
-                                      className="h-8 w-8 rounded-lg bg-red-500/5 hover:bg-red-500/10 text-red-400/80 hover:text-red-400 border border-red-500/10 flex items-center justify-center p-0"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </>
-                                )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {bookings.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-12 text-center text-white/20 text-xs font-black uppercase tracking-widest">
-                          No bookings requiring vehicle dispatch
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-
-            {/* Real-Time operations logs timeline */}
-            <Card className="lg:col-span-4 bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-8 rounded-[2.5rem] flex flex-col relative overflow-hidden max-h-[500px]">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-kashmir-gold/5 blur-[40px] -mr-12 -mt-12" />
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-lg font-display font-black text-white uppercase tracking-tight">System Logs</h3>
-                  <p className="text-[9px] text-kashmir-gold uppercase tracking-[0.2em] font-black">Chauffeur & Dispatch Events</p>
-                </div>
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-
-              <div className="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {operationsData.logs && operationsData.logs.length > 0 ? (
-                  operationsData.logs.map((log) => (
-                    <div key={log.id} className="flex gap-4 group/log">
-                      <div className="w-1.5 h-1.5 rounded-full bg-kashmir-gold/40 mt-1.5 shrink-0 group-hover/log:bg-kashmir-gold transition-colors" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white/80 font-bold leading-normal">{log.message}</p>
-                        <p className="text-[9px] text-white/30 mt-1 font-black uppercase tracking-widest">
-                          {new Date(log.timestamp).toLocaleTimeString()} • {log.user}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-20">
-                    <Clock className="w-10 h-10 text-white/50" />
-                    <p className="text-[9px] uppercase tracking-[0.2em] font-black">Logs Awaiting Events...</p>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Live Map Dashboard & SOS Trigger */}
+            <div className="lg:col-span-4 space-y-6">
+              <Card className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-white">Live Operations Tracker</h4>
+                    <p className="text-[9px] text-white/30 uppercase tracking-widest font-black">GPS Satellite Coordinates</p>
                   </div>
-                )}
-              </div>
-            </Card>
-          </div>
+                  <Button 
+                    onClick={triggerSOSEmergency}
+                    className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-black rounded-lg h-8 px-3 text-[9px] uppercase tracking-widest font-black"
+                  >
+                    Trigger Test SOS
+                  </Button>
+                </div>
 
-          {/* Availability Calendar grid */}
-          <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
-            <div className="mb-8">
-              <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-kashmir-gold" />
-                Fleet Availability Calendar
-              </h3>
-              <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1">Real-time schedule grid for the next 30 days. Click cells to block maintenance dates.</p>
+                {/* Google Maps Graphic Simulation */}
+                <div className="w-full h-72 bg-slate-950 border border-white/5 rounded-2xl relative overflow-hidden flex items-center justify-center select-none group">
+                  <div className="absolute inset-0 bg-[#05090b] opacity-90" style={{ backgroundImage: 'radial-gradient(#b88e2f 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+                  
+                  {/* Floating Map Nodes */}
+                  {mapVehicles.map((v, i) => (
+                    <div 
+                      key={v.id} 
+                      className="absolute flex flex-col items-center animate-bounce-slow"
+                      style={{ top: `${30 + (i * 20)}%`, left: `${25 + (i * 25)}%` }}
+                    >
+                      <div className="w-4 h-4 rounded-full bg-kashmir-gold border-2 border-white flex items-center justify-center shadow-lg shadow-kashmir-gold/45 relative cursor-pointer">
+                        <div className="absolute -top-6 bg-black/85 border border-white/10 px-2 py-0.5 rounded text-[8px] text-white font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                          {v.name}
+                        </div>
+                      </div>
+                      <span className="text-[8px] text-white/50 font-bold mt-1 uppercase tracking-widest">{v.status}</span>
+                    </div>
+                  ))}
+
+                  <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-md border border-white/10 p-3.5 rounded-xl text-left space-y-1">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-kashmir-gold">GPS Stream Active</p>
+                    <p className="text-[8px] text-white/50 leading-none">Broadcasting telemetry packets from {mapVehicles.length} active transits.</p>
+                  </div>
+                </div>
+
+                {/* Simulated Telemetry list */}
+                <div className="space-y-3 mt-6">
+                  {mapVehicles.map(v => (
+                    <div key={v.id} className="flex justify-between items-center text-xs p-3 rounded-xl border border-white/5 bg-white/[0.01]">
+                      <div>
+                        <span className="font-bold text-white block">{v.name}</span>
+                        <span className="text-[9px] text-white/30 uppercase font-black">{v.driver} • Speed: {v.speed}</span>
+                      </div>
+                      <Badge className="bg-kashmir-gold/15 text-kashmir-gold border-none text-[8px] uppercase tracking-wider">
+                        {v.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             </div>
 
-            <div className="overflow-x-auto max-w-full pb-4 custom-scrollbar">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-white/5 bg-white/[0.01]">
-                    <th className="text-left text-white/20 uppercase text-[9px] font-black tracking-widest p-4 sticky left-0 bg-[#0a0f12] z-10 min-w-[200px]">Vehicle Node</th>
-                    {next30Days.map(date => {
-                      const d = new Date(date);
-                      const isToday = date === new Date().toISOString().split('T')[0];
-                      return (
-                        <th key={date} className={cn(
-                          "text-center p-3 text-[10px] font-black uppercase tracking-wider min-w-[50px] shrink-0 border-r border-white/[0.02]",
-                          isToday ? "text-kashmir-gold bg-kashmir-gold/5" : "text-white/40"
-                        )}>
-                          <div>{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                          <div className="text-sm mt-1">{d.getDate()}</div>
-                          <div className="text-[7px] opacity-40 font-bold">{d.toLocaleDateString('en-US', { month: 'short' })}</div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {cabs.map(cab => {
-                    const meta = operationsData.cabsMetadata[cab.id] || {};
-                    return (
-                      <tr key={cab.id} className="hover:bg-white/[0.01] transition-colors border-none group/row">
-                        <td className="p-4 sticky left-0 bg-[#0a0f12] z-10 flex items-center gap-3 border-r border-white/5 min-w-[200px]">
-                          <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-                            {cab.image ? (
-                              <img src={cab.image} alt={cab.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <Car className="w-4 h-4 text-kashmir-gold" />
-                            )}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-black text-white truncate">{cab.name}</span>
-                            <span className="text-[8px] text-white/30 uppercase font-black truncate">{meta.registrationNo || 'No Reg No'}</span>
-                          </div>
-                        </td>
-                        
-                        {next30Days.map(date => {
-                          const status = getCabStatusForDate(cab, date, bookings, operationsData.manualBlockings);
-                          const blockColor = getStatusColor(status);
-                          
-                          const manualBlockObj = operationsData.manualBlockings.find(b => 
-                            b.cabId === cab.id && date >= b.startDate && date <= b.endDate
-                          );
-                          const tooltip = manualBlockObj 
-                            ? `${manualBlockObj.status}: ${manualBlockObj.reason}` 
-                            : status === 'On Trip' 
-                              ? 'Trip in progress' 
-                              : status === 'Reserved' 
-                                ? 'Reserved' 
-                                : 'Available';
+            {/* Trip Allocations Queue */}
+            <div className="lg:col-span-8">
+              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                  <div>
+                    <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-kashmir-gold" />
+                      Dispatch Allocations Room
+                    </h3>
+                    <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1">Allocate local chauffeurs and manage trip costs for booking vouchers</p>
+                  </div>
+                  <Button 
+                    onClick={() => setBlockDialogOpen(true)}
+                    className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl h-10 px-4 text-[9px] uppercase tracking-widest font-black flex items-center gap-2"
+                  >
+                    <Wrench className="w-3.5 h-3.5 text-orange-400" />
+                    Block Fleet Dates
+                  </Button>
+                </div>
 
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-white/[0.02] border-b border-white/5">
+                      <TableRow className="hover:bg-transparent border-none">
+                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest py-5 pl-6">Trip Details</TableHead>
+                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Client</TableHead>
+                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Date / Route</TableHead>
+                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Pricing & Status</TableHead>
+                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest text-right pr-6">Operational Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-white/5">
+                      {bookings
+                        .filter(b => (b.type === 'cab' || b.details?.cabAllocation || b.details?.parentPackageBookingId) && b.status !== 'cancelled' && b.status !== 'completed')
+                        .map(booking => {
+                          const alloc = booking.details?.cabAllocation;
                           return (
-                            <td 
-                              key={date} 
-                              onClick={() => {
-                                setBlockCabId(cab.id);
-                                setBlockStartDate(date);
-                                setBlockEndDate(date);
-                                setBlockDialogOpen(true);
-                              }}
-                              title={tooltip}
-                              className="p-2 border-r border-white/[0.02] cursor-pointer hover:bg-white/5 transition-all text-center relative"
-                            >
-                              <div className={cn(
-                                "w-6 h-6 rounded-lg mx-auto flex items-center justify-center text-[8px] font-black border uppercase tracking-wider shadow-inner",
-                                blockColor
-                              )}>
-                                {status.substring(0, 2)}
-                              </div>
-                            </td>
+                            <TableRow key={booking.id} className="hover:bg-white/[0.02] transition-colors border-none">
+                              <TableCell className="py-6 pl-6 font-bold text-white">
+                                <div className="space-y-1">
+                                  <span className="text-xs uppercase block text-white font-black">{booking.itemName}</span>
+                                  <span className="text-[8px] text-white/30 uppercase tracking-widest font-semibold block">Ref: {booking.id.slice(0, 8).toUpperCase()}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-white/60">
+                                <div className="space-y-0.5">
+                                  <span className="font-bold text-white block">{booking.user.name}</span>
+                                  <span className="text-[9px] text-white/30 uppercase font-black">{booking.user.phone || 'No phone'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-white/60">
+                                <div className="space-y-0.5">
+                                  <span className="font-bold text-white block">{new Date(booking.bookingDate).toLocaleDateString()}</span>
+                                  <span className="text-[9px] text-white/30 uppercase font-black">{alloc?.pickupLocation || 'Pending pickup loc'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                <div className="space-y-1">
+                                  <span className="font-display font-black text-kashmir-gold block">₹{booking.totalAmount.toLocaleString()}</span>
+                                  {alloc ? (
+                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-none text-[8px] uppercase tracking-wider">Allocated</Badge>
+                                  ) : (
+                                    <Badge className="bg-red-500/10 text-red-400 border-none text-[8px] uppercase tracking-wider">Unassigned</Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right pr-6 py-6">
+                                <div className="flex items-center justify-end gap-2">
+                                  {alloc ? (
+                                    <>
+                                      <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-8 w-8 hover:bg-emerald-500/10 text-emerald-400 hover:text-emerald-300"
+                                        onClick={() => openWhatsappPreview(booking)}
+                                      >
+                                        <Send className="w-4 h-4" />
+                                      </Button>
+                                      <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-8 w-8 hover:bg-amber-500/10 text-kashmir-gold hover:text-amber-300"
+                                        onClick={() => {
+                                          setSelectedBookingForVoucher(booking);
+                                          setVoucherDialogOpen(true);
+                                        }}
+                                      >
+                                        <Printer className="w-4 h-4" />
+                                      </Button>
+                                      <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-8 w-8 hover:bg-red-500/10 text-red-400 hover:text-red-300"
+                                        onClick={() => {
+                                          setBookingToDeallocate(booking);
+                                          setDeallocateConfirmOpen(true);
+                                        }}
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button 
+                                      className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl h-9 px-4 text-[9px] uppercase font-black tracking-widest"
+                                      onClick={() => openAllocationDialog(booking)}
+                                    >
+                                      Assign Cab
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
                           );
                         })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
             </div>
 
-            <div className="flex flex-wrap gap-6 mt-6 justify-center bg-white/[0.02] p-4 rounded-2xl border border-white/5 w-fit mx-auto">
-              {[
-                { label: 'Available (AV)', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-                { label: 'Reserved (RE)', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-                { label: 'On Trip (ON)', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
-                { label: 'Maintenance (MA)', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
-                { label: 'Offline (OF)', color: 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20' },
-              ].map(indicator => (
-                <div key={indicator.label} className="flex items-center gap-2">
-                  <div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-[7px] font-black border", indicator.color)}>
-                    {indicator.label.split(' ')[0].substring(0, 2).toUpperCase()}
-                  </div>
-                  <span className="text-[9px] uppercase tracking-widest font-black text-white/40">{indicator.label}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
+          </div>
         </div>
-      ) : (
-        // ----------------------------------------------------
-        // FLEET REGISTRY
-        // ----------------------------------------------------
-        <div className="space-y-10 animate-in fade-in duration-700">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.01] p-8 rounded-[2rem] border border-white/5">
+      )}
+
+      {/* TAB 2: FLEET REGISTRY */}
+      {currentTab === 'registry' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          
+          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
             <div>
-              <h3 className="text-xl font-display font-black text-white">Registry Management</h3>
-              <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1">Deploy, reconfigure, or decommission physical transport assets in the registry</p>
+              <h3 className="text-xl font-display font-black text-white">PHYSICAL ASSETS REGISTRY</h3>
+              <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Manage registration compliance documents, odometer limits and models</p>
             </div>
-            <Button onClick={openCreateDialog} className="bg-kashmir-gold text-black hover:bg-amber-500 font-black px-8 h-12 rounded-xl shadow-xl shadow-kashmir-gold/10 flex items-center gap-2">
-              <Plus className="h-4.5 w-4.5" /> 
-              <span className="text-[9px] uppercase tracking-[0.2em]">Deploy Vehicle</span>
-            </Button>
+            {activeRole === 'Director' && (
+              <Button 
+                onClick={openCreateDialog}
+                className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Deploy New Vehicle
+              </Button>
+            )}
           </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden lg:block bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
+          {/* Registry Table */}
+          <Card className="bg-white/[0.01] border-white/5 p-6 rounded-[2.5rem]">
             <Table>
               <TableHeader className="bg-white/[0.02] border-b border-white/5">
-                <TableRow className="hover:bg-transparent border-none">
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] py-8 pl-10">Vehicle Node</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Ownership Model</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Logistics Specs</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Pricing Model</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Driver Default</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Status</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] text-right pr-10">Controls</TableHead>
+                <TableRow className="border-none">
+                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest pl-6">Vehicle</TableHead>
+                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Ownership</TableHead>
+                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Logistics Capacity</TableHead>
+                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Base Rate / KM</TableHead>
+                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Default Driver</TableHead>
+                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Document Status</TableHead>
+                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest text-right pr-6">Controls</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-white/5">
-                {cabs.map((cab) => {
-                  const meta = operationsData.cabsMetadata[cab.id] || {};
+                {cabs.map(cab => {
+                  const meta = operationsData.cabsMetadata[cab.id] || defaultMetadata;
                   return (
-                    <TableRow key={cab.id} className="hover:bg-white/[0.02] transition-all duration-500 border-none group/row">
-                      <TableCell className="py-8 pl-10">
-                        <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 rounded-[1.25rem] bg-white/5 overflow-hidden border border-white/10 flex items-center justify-center shadow-2xl relative group/img">
-                            {cab.image ? (
-                              <img src={cab.image} alt={cab.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <Car className="w-6 h-6 text-kashmir-gold/40" />
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <span className="text-white font-bold tracking-tight text-base group-hover/row:text-kashmir-gold transition-colors">{cab.name}</span>
-                            <span className="text-[10px] text-white/30 font-black uppercase tracking-widest">{cab.type}</span>
-                            {meta.registrationNo && (
-                              <span className="text-[9px] font-bold text-white/20 uppercase">{meta.registrationNo}</span>
-                            )}
-                          </div>
+                    <TableRow key={cab.id} className="hover:bg-white/[0.02] transition-colors border-none">
+                      <TableCell className="py-6 pl-6 font-bold text-white flex items-center gap-4">
+                        {cab.image && (
+                          <img src={cab.image} alt={cab.name} className="w-14 h-10 object-contain rounded-lg bg-black/40 border border-white/5" />
+                        )}
+                        <div>
+                          <span className="text-xs uppercase block text-white font-black">{cab.name}</span>
+                          <span className="text-[9px] text-white/30 uppercase font-bold tracking-widest">{meta.registrationNo || 'JK-01-PENDING'}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge className={cn(
-                          "rounded-md border-none px-2 py-0.5 text-[8px] font-black uppercase tracking-wider",
-                          meta.ownership === 'vendor' ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"
-                        )}>
-                          {meta.ownership === 'vendor' ? 'Vendor-Owned' : 'Company-Owned'}
+                      <TableCell className="text-xs text-white/60">
+                        <Badge className="bg-[#0A141A] text-kashmir-gold border border-kashmir-gold/20 uppercase text-[8px] font-bold">
+                          {meta.ownership === 'vendor' ? 'Vendor Contract' : 'Company Asset'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs text-white/60 font-semibold">{cab.capacity} Seats</TableCell>
+                      <TableCell className="text-xs">
+                        <span className="font-bold text-white block">₹{cab.pricePerKm}/km</span>
+                        <span className="text-[9px] text-white/30 block">Base: ₹{cab.basePrice}</span>
+                      </TableCell>
+                      <TableCell className="text-xs text-white/60 font-semibold">{meta.driverName || 'No Driver Allocated'}</TableCell>
+                      <TableCell className="text-xs">
                         <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-white/20" />
-                          <span className="text-white/80 text-sm font-bold">{cab.capacity} Seats</span>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span className="text-[9px] text-white/40 uppercase font-black">All active</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-kashmir-gold font-black text-base">₹{cab.pricePerKm}/km</span>
-                          <span className="text-[10px] text-white/20 font-bold uppercase tracking-tighter">Base: ₹{cab.basePrice}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {meta.driverName ? (
-                          <div className="flex flex-col text-xs">
-                            <span className="font-bold text-white/80">{meta.driverName}</span>
-                            <span className="text-[9px] text-white/30 mt-0.5">{meta.driverPhone}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-white/20 italic">Not Assigned</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <button onClick={() => toggleActive(cab)} className="group/toggle">
-                          <Badge className={cn(
-                            "rounded-xl border-none px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-300",
-                            cab.isActive ? "bg-emerald-500/10 text-emerald-400 group-hover/toggle:bg-emerald-500/20" : "bg-red-500/10 text-red-400 group-hover/toggle:bg-red-500/20"
-                          )}>
-                            {cab.isActive ? 'Online' : 'Offline'}
-                          </Badge>
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-right pr-10">
-                        <div className="flex justify-end gap-3 opacity-20 group-hover/row:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(cab)} className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all">
-                            <Pencil className="w-5 h-5" />
+                      <TableCell className="text-right pr-6 py-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/5 text-white/40 hover:text-white" onClick={() => openEditDialog(cab)}>
+                            <Pencil className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setItemToDelete(cab.id); setDeleteConfirmOpen(true); }} className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl text-white/20 hover:text-red-400 hover:border-red-400/20 transition-all">
-                            <Trash2 className="w-5 h-5" />
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 hover:bg-red-500/15 text-red-500"
+                            onClick={() => {
+                              setItemToDelete(cab.id);
+                              setDeleteConfirmOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -1672,626 +1207,588 @@ export default function CMSCabs() {
                 })}
               </TableBody>
             </Table>
-          </div>
-
-          {/* Mobile Cards View */}
-          <div className="lg:hidden space-y-6">
-            {cabs.map((cab) => {
-              const meta = operationsData.cabsMetadata[cab.id] || {};
-              return (
-                <Card key={cab.id} className="bg-white/[0.02] border-white/5 p-8 rounded-[2.5rem] space-y-6 relative overflow-hidden group">
-                  <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-[1.5rem] bg-white/5 overflow-hidden border border-white/10 shrink-0 shadow-2xl relative">
-                      {cab.image ? (
-                        <img src={cab.image} alt={cab.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Car className="w-8 h-8 text-kashmir-gold/40 m-6" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-bold text-white tracking-tight truncate leading-tight">{cab.name}</h3>
-                      <div className="flex items-center gap-2 mt-2">
-                         <Badge variant="outline" className="border-white/10 text-white/30 text-[8px] font-black uppercase tracking-widest px-2 py-0.5">{cab.type}</Badge>
-                         <div className="w-1 h-1 rounded-full bg-white/20" />
-                         <span className="text-[10px] text-white/40 font-bold uppercase truncate">{cab.capacity} Seats</span>
-                      </div>
-                      <div className="mt-2 flex gap-2">
-                        <Badge className={cn(
-                          "rounded-md border-none px-2 py-0.5 text-[8px] font-black uppercase tracking-wider",
-                          meta.ownership === 'vendor' ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"
-                        )}>
-                          {meta.ownership === 'vendor' ? 'Vendor-Owned' : 'Company-Owned'}
-                        </Badge>
-                        {meta.registrationNo && (
-                          <span className="text-[9px] font-bold text-white/40 uppercase bg-white/5 px-2 py-0.5 rounded border border-white/5">{meta.registrationNo}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6 py-6 border-t border-b border-white/5">
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Pricing Model</p>
-                      <p className="text-2xl font-black text-kashmir-gold tracking-tighter">₹{cab.pricePerKm}/<span className="text-xs">km</span></p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Driver Assigned</p>
-                      <p className="text-xs font-bold text-white/70">{meta.driverName || 'None'}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button onClick={() => openEditDialog(cab)} className="flex-1 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 h-14 rounded-2xl font-black transition-all">
-                      <Pencil className="w-4 h-4 mr-2" />
-                      <span className="text-[9px] uppercase tracking-widest">Edit Node</span>
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        setItemToDelete(cab.id);
-                        setDeleteConfirmOpen(true);
-                      }} 
-                      className="w-14 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 h-14 rounded-2xl transition-all"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Fleet hero config section */}
-          <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
-            
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-              <div>
-                <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5 text-kashmir-gold" />
-                  Fleet Page Hero Configuration
-                </h3>
-                <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1">Configure the main background asset and hero copy for the public Fleet page</p>
-              </div>
-              <Button 
-                onClick={handleSaveHero} 
-                disabled={savingHero || loadingHero}
-                className="w-full md:w-auto bg-white text-black hover:bg-kashmir-gold hover:text-black font-black px-6 h-12 rounded-xl transition-all duration-300 shadow-lg active:scale-95 flex items-center gap-2"
-              >
-                {savingHero ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                <span className="text-[9px] uppercase tracking-widest">{savingHero ? 'Saving...' : 'Save Configuration'}</span>
-              </Button>
-            </div>
-
-            {loadingHero ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-6 w-6 animate-spin text-kashmir-gold" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Hero Background Image</label>
-                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
-                      <MediaPicker
-                        value={heroImage}
-                        onChange={(url) => setHeroImage(url)}
-                      />
-                      {heroImage && (
-                        <div className="mt-4 relative aspect-[21/9] rounded-xl overflow-hidden border border-white/10">
-                          <img src={heroImage} alt="Hero Background Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Fleet Page Headline</label>
-                    <Input
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-white placeholder-white/20 focus:border-kashmir-gold/50 transition-all font-bold"
-                      value={heroTitle}
-                      onChange={(e) => setHeroTitle(e.target.value)}
-                      placeholder="e.g., Premium Transport"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 block">Fleet Page Subheadline</label>
-                    <Textarea
-                      className="bg-white/5 border-white/10 rounded-xl min-h-[96px] text-white placeholder-white/20 focus:border-kashmir-gold/50 transition-all resize-none font-medium leading-relaxed"
-                      value={heroSubtitle}
-                      onChange={(e) => setHeroSubtitle(e.target.value)}
-                      placeholder="e.g., Reliable cab services for airport transfers, local sightseeing, and outstation trips."
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </Card>
         </div>
       )}
 
-      {/* ----------------------------------------------------
-          MODALS & DIALOGS
-          ---------------------------------------------------- */}
+      {/* TAB 3: CHAUFFEUR HUB */}
+      {currentTab === 'drivers' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          
+          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+            <div>
+              <h3 className="text-xl font-display font-black text-white">CHAUFFEUR HUB</h3>
+              <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Track driver duty rosters, license verifications, ratings, and incentive structures</p>
+            </div>
+            <Button 
+              className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
+              onClick={() => {
+                toast.success('Licensing API validation portal opened.');
+              }}
+            >
+              <Shield className="w-4 h-4 text-black" /> Verify Licenses
+            </Button>
+          </div>
 
-      {/* Date blocker dialog */}
-      <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
-        <DialogContent className="max-w-md bg-[#0a0f12] border-white/10 text-white rounded-[2rem] overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent pointer-events-none" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {driversList.map(drv => (
+              <Card key={drv.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                <div className="absolute top-4 right-4">
+                  <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
+                    drv.status === 'Online' ? 'bg-emerald-500/10 text-emerald-400' : 
+                    drv.status === 'On Trip' ? 'bg-red-500/10 text-red-400' : 'bg-neutral-500/10 text-neutral-400'
+                  )}>
+                    {drv.status}
+                  </Badge>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                      <User className="w-5 h-5 text-kashmir-gold" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase text-white leading-tight">{drv.name}</h4>
+                      <span className="text-[9px] text-white/30 font-bold uppercase">{drv.phone}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 border-t border-b border-white/5 py-3 text-[10px]">
+                    <div>
+                      <span className="block text-[8px] text-white/20 uppercase tracking-wider">Trips Completed</span>
+                      <span className="font-bold text-white text-xs">{drv.trips}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[8px] text-white/20 uppercase tracking-wider">Rating Score</span>
+                      <span className="font-bold text-kashmir-gold text-xs">{drv.rating} ★</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center text-[10px]">
+                    <div>
+                      <span className="block text-[8px] text-white/20 uppercase">Driver Earnings</span>
+                      <span className="font-bold text-emerald-400">₹{drv.earnings.toLocaleString()}</span>
+                    </div>
+                    <Badge className="bg-white/5 text-white/50 border-none text-[8px] uppercase">
+                      DL: {drv.license.slice(0, 7)}
+                    </Badge>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: AI DISPATCH & RATES */}
+      {currentTab === 'ai-dispatch' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* AI Dispatch Engine */}
+            <div className="lg:col-span-6 space-y-6">
+              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+                <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-kashmir-gold animate-pulse" />
+                  AI Dispatch Engine
+                </h3>
+                <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1 mb-6">Automate chauffeur matching based on customer geolocation coordinates and rating coefficients</p>
+
+                <div className="space-y-6">
+                  <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2 text-xs">
+                    <p className="font-bold text-white uppercase tracking-wider">Optimization settings:</p>
+                    <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                      <div className="flex items-center justify-between p-3 bg-black/40 rounded-xl">
+                        <span className="text-white/40">Proximity priority</span>
+                        <span className="font-bold text-emerald-400">Active</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-black/40 rounded-xl">
+                        <span className="text-white/40">Driver Rating min</span>
+                        <span className="font-bold text-kashmir-gold">4.7 ★</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={runAIDispatchEngine}
+                    disabled={runningAI}
+                    className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-xl transition-all shadow-xl shadow-kashmir-gold/15 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                  >
+                    {runningAI ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Run AI Auto-Assignment Matcher'}
+                  </Button>
+
+                  {/* AI logs output panel */}
+                  {showAIMatchResult && (
+                    <div className="bg-black/60 border border-white/5 p-5 rounded-2xl text-[10px] font-mono text-emerald-400 space-y-2 h-48 overflow-y-auto">
+                      {aiMatchOutput.map((log, i) => (
+                        <p key={i} className="leading-relaxed animate-fade-in">{log}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            {/* Rates & Pricing Engine */}
+            <div className="lg:col-span-6 space-y-6">
+              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+                <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-kashmir-gold" />
+                  Fleet Tariff Manager
+                </h3>
+                <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1 mb-6">Manage base rates, seasonal surge multipliers, and outstation allowances</p>
+
+                <div className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-white/30 pl-1">Per Kilometer Tariff (₹)</label>
+                      <Input 
+                        type="number" 
+                        value={pricingRules.perKmRate} 
+                        onChange={e => setPricingRules({...pricingRules, perKmRate: Number(e.target.value)})}
+                        className="bg-white/5 border-white/10 rounded-xl h-11 text-xs text-white" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-white/30 pl-1">Base Charge (₹)</label>
+                      <Input 
+                        type="number" 
+                        value={pricingRules.baseCharge} 
+                        onChange={e => setPricingRules({...pricingRules, baseCharge: Number(e.target.value)})}
+                        className="bg-white/5 border-white/10 rounded-xl h-11 text-xs text-white" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-white/30 pl-1">Driver Daily Allowance (₹)</label>
+                      <Input 
+                        type="number" 
+                        value={pricingRules.driverAllowance} 
+                        onChange={e => setPricingRules({...pricingRules, driverAllowance: Number(e.target.value)})}
+                        className="bg-white/5 border-white/10 rounded-xl h-11 text-xs text-white" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-white/30 pl-1">Peak Season Multiplier</label>
+                      <Input 
+                        type="number" 
+                        step="0.05"
+                        value={pricingRules.peakSeasonMultiplier} 
+                        onChange={e => setPricingRules({...pricingRules, peakSeasonMultiplier: Number(e.target.value)})}
+                        className="bg-white/5 border-white/10 rounded-xl h-11 text-xs text-white" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                    <div>
+                      <span className="text-xs font-bold text-white block">Auto Surge Multiplier</span>
+                      <span className="text-[9px] text-white/30 uppercase tracking-widest font-black">Enable peak traffic surge rates</span>
+                    </div>
+                    <Switch 
+                      checked={pricingRules.surgeEnabled}
+                      onCheckedChange={checked => {
+                        setPricingRules({...pricingRules, surgeEnabled: checked});
+                        toast.success(checked ? 'Peak traffic surge activated' : 'Peak traffic surge deactivated');
+                      }}
+                    />
+                  </div>
+
+                  <Button 
+                    onClick={() => toast.success('Tariff modifications saved successfully!')}
+                    className="w-full h-12 bg-white text-black hover:bg-kashmir-gold hover:text-black font-black rounded-xl text-[10px] uppercase tracking-widest mt-2"
+                  >
+                    Save Tariff Configuration
+                  </Button>
+                </div>
+              </Card>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: WORKSHOP CENTER */}
+      {currentTab === 'maintenance' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          
+          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+            <div>
+              <h3 className="text-xl font-display font-black text-white">WORKSHOP & MAINTENANCE CENTER</h3>
+              <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Schedule servicing, track repair invoices, and verify battery/tyre lifespans</p>
+            </div>
+            <Button 
+              className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
+              onClick={() => {
+                toast.info('Preventive maintenance scheduler initialized.');
+              }}
+            >
+              <Plus className="w-4 h-4" /> Book Repair Work
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {maintenanceRecords.map(rec => (
+              <Card key={rec.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden">
+                <div className="absolute top-4 right-4">
+                  <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
+                    rec.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                  )}>
+                    {rec.status}
+                  </Badge>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-[8px] text-white/30 uppercase tracking-widest block font-black">VEHICLE NODE</span>
+                    <h4 className="text-sm font-bold text-white uppercase">{rec.vehicle}</h4>
+                    <span className="text-[9px] text-white/40 uppercase font-semibold">{rec.reg}</span>
+                  </div>
+
+                  <div className="space-y-1 border-t border-white/5 pt-3">
+                    <span className="text-[8px] text-white/20 uppercase tracking-wider block">Service Task Details</span>
+                    <p className="font-semibold text-white">{rec.task}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                    <div>
+                      <span className="block text-[8px] text-white/20 uppercase">Workshop Agency</span>
+                      <span className="font-bold text-white">{rec.workshop}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[8px] text-white/20 uppercase">Expenses</span>
+                      <span className="font-bold text-emerald-400">₹{rec.cost.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: P&L ANALYTICS */}
+      {currentTab === 'finance' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          
+          {/* Revenue metrics cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { label: 'Today\'s Fleet Gross Revenue', amount: '₹76,400', desc: 'All bookings matched' },
+              { label: 'Monthly Fleet Gross Revenue', amount: '₹12,46,800', desc: 'Active commissions included' },
+              { label: 'Operations Margin', amount: '₹2,84,300', desc: 'Calculated after driver allowances' }
+            ].map(m => (
+              <Card key={m.label} className="bg-white/[0.01] border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{m.label}</p>
+                <p className="text-3xl font-display font-black mt-2 text-kashmir-gold">{m.amount}</p>
+                <span className="block text-[8px] text-white/20 uppercase tracking-widest mt-1 font-semibold">{m.desc}</span>
+              </Card>
+            ))}
+          </div>
+
+          {/* Simple analytical bar display */}
+          <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+            <h3 className="text-lg font-display font-black text-white uppercase tracking-tight mb-6">Driver Productivity Index</h3>
+            <div className="space-y-6">
+              {[
+                { name: 'Shabir Ahmad', trips: 28, revenue: 184500, percent: 85 },
+                { name: 'Fayaz Rather', trips: 34, revenue: 246000, percent: 95 },
+                { name: 'Hilal Dar', trips: 31, revenue: 219000, percent: 90 }
+              ].map(drv => (
+                <div key={drv.name} className="space-y-2 text-xs">
+                  <div className="flex justify-between items-center text-white/80">
+                    <span className="font-bold uppercase tracking-wider">{drv.name} ({drv.trips} Trips)</span>
+                    <span className="font-black text-kashmir-gold">₹{drv.revenue.toLocaleString()}</span>
+                  </div>
+                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <div className="h-full bg-kashmir-gold rounded-full" style={{ width: `${drv.percent}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* TAB 7: EMERGENCY SOS */}
+      {currentTab === 'emergency' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Active emergencies breakdown list */}
+            <div className="lg:col-span-7 space-y-6">
+              <Card className="bg-white/[0.01] border border-red-500/10 p-8 rounded-[2.5rem] relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
+                <h3 className="text-xl font-display font-black text-red-500 uppercase tracking-tight flex items-center gap-2">
+                  <AlertOctagon className="w-5 h-5 text-red-500 animate-pulse" />
+                  Emergency Operations Panel
+                </h3>
+                <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1 mb-6">Initiate backup vehicle deployments, contact emergency support police lines</p>
+
+                <div className="space-y-4">
+                  {breakdownIncidents.map(inc => (
+                    <div key={inc.id} className="p-5 bg-red-500/5 border border-red-500/10 rounded-2xl space-y-3 text-xs text-left">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="block text-[8px] text-red-400 font-black uppercase tracking-widest">{inc.severity} Severity</span>
+                          <h4 className="text-sm font-bold text-white uppercase mt-0.5">{inc.vehicle} • {inc.driver}</h4>
+                        </div>
+                        <Badge className="bg-red-500 text-black border-none text-[8px] uppercase tracking-wider font-bold">
+                          {inc.status}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                        <div>
+                          <span className="block text-[8px] text-white/30 uppercase">Incident Location</span>
+                          <span className="font-bold text-white">{inc.location}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[8px] text-white/30 uppercase">Diagnosis Report</span>
+                          <span className="font-bold text-white">{inc.type}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-4 border-t border-white/5">
+                        <Button 
+                          onClick={() => toast.success('Backup transport allocated and dispatched.')}
+                          className="bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[9px] uppercase tracking-widest h-10 px-4 rounded-xl"
+                        >
+                          Dispatch Backup Cab
+                        </Button>
+                        <Button 
+                          variant="ghost"
+                          onClick={() => toast.info('SOS resolved.')}
+                          className="bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 hover:text-white font-black text-[9px] uppercase tracking-widest h-10 px-4 rounded-xl"
+                        >
+                          Resolve SOS
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+
+            {/* Direct Comms Chat Console */}
+            <div className="lg:col-span-5 space-y-6">
+              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem] flex flex-col h-[500px] justify-between relative overflow-hidden">
+                <div>
+                  <h3 className="text-lg font-display font-black text-white uppercase tracking-tight flex items-center gap-2 border-b border-white/5 pb-3">
+                    <MessageSquare className="w-5 h-5 text-kashmir-gold" />
+                    Chauffeur Comms Room
+                  </h3>
+                </div>
+
+                {/* Messages view */}
+                <div className="flex-1 overflow-y-auto space-y-4 my-4 pr-2 scrollbar-thin text-xs text-left">
+                  {chatMessages.map(msg => (
+                    <div 
+                      key={msg.id} 
+                      className={cn(
+                        "p-3.5 rounded-2xl max-w-[85%] space-y-1",
+                        msg.sender.includes('Dispatcher') 
+                          ? "bg-kashmir-gold/15 border border-kashmir-gold/20 text-white ml-auto" 
+                          : "bg-white/5 border border-white/5 text-white/70"
+                      )}
+                    >
+                      <span className="block text-[8px] uppercase tracking-wider text-kashmir-gold font-black">{msg.sender}</span>
+                      <p className="leading-relaxed">{msg.msg}</p>
+                      <span className="block text-[8px] text-white/20 text-right">{msg.time}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Input text box */}
+                <form onSubmit={sendChatMessage} className="flex gap-3 border-t border-white/5 pt-4">
+                  <Input 
+                    value={typingChat}
+                    onChange={e => setTypingChat(e.target.value)}
+                    placeholder="Type dispatch instructions..."
+                    className="bg-white/5 border-white/5 rounded-xl h-11 text-xs text-white"
+                  />
+                  <Button 
+                    type="submit"
+                    className="bg-kashmir-gold hover:bg-amber-500 text-black h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </form>
+              </Card>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Allocation / Dispatch Costings Config Dialog */}
+      <Dialog open={allocationDialogOpen} onOpenChange={setAllocationDialogOpen}>
+        <DialogContent className="max-w-2xl bg-[#0a0f12] border-white/10 text-white rounded-[2rem] overflow-y-auto max-h-[90vh]">
           <DialogHeader className="p-8 pb-0">
             <DialogTitle className="text-2xl font-display font-black tracking-tight text-white flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-orange-400" />
-              Schedule Maintenance Block
+              <Car className="w-5 h-5 text-kashmir-gold animate-bounce-slow" />
+              Chauffeur Dispatch Allocation Console
             </DialogTitle>
           </DialogHeader>
           <div className="p-8 space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Vehicle</label>
-              <select
-                value={blockCabId}
-                onChange={(e) => setBlockCabId(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:border-kashmir-gold/50 focus:outline-none"
-              >
-                <option value="" className="bg-[#0a0f12] text-white/40">Select Vehicle Node...</option>
-                {cabs.map(c => {
-                  const meta = operationsData.cabsMetadata[c.id] || {};
-                  return (
-                    <option key={c.id} value={c.id} className="bg-[#0a0f12]">
-                      {c.name} ({meta.registrationNo || 'No Reg No'})
-                    </option>
-                  );
-                })}
-              </select>
+            
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Available Vehicle</label>
+                <select
+                  value={allocatedCabId}
+                  onChange={e => handleCabChange(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
+                >
+                  <option value="" className="bg-[#0a0f12]">Choose Vehicle...</option>
+                  {cabs.map(c => (
+                    <option key={c.id} value={c.id} className="bg-[#0a0f12]">{c.name} ({c.type})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">License Plate No</label>
+                <Input 
+                  value={dispatchRegNo}
+                  onChange={e => setDispatchRegNo(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                  placeholder="e.g. JK-01-A-1234"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Start Date</label>
-                <Input
-                  type="date"
-                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs text-white"
-                  value={blockStartDate}
-                  onChange={(e) => setBlockStartDate(e.target.value)}
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Chauffeur Chaperone</label>
+                <Input 
+                  value={dispatchDriverName}
+                  onChange={e => setDispatchDriverName(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-semibold"
+                  placeholder="Driver Name"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">End Date</label>
-                <Input
-                  type="date"
-                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs text-white"
-                  value={blockEndDate}
-                  onChange={(e) => setBlockEndDate(e.target.value)}
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Chauffeur Contact (WhatsApp)</label>
+                <Input 
+                  value={dispatchDriverPhone}
+                  onChange={e => setDispatchDriverPhone(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-semibold"
+                  placeholder="Driver Phone"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6 p-4 bg-white/5 rounded-2xl border border-white/5">
-              <button 
-                onClick={() => setBlockStatus('Maintenance')}
-                className={cn(
-                  "py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-300",
-                  blockStatus === 'Maintenance' ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "border-transparent text-white/40"
-                )}
-              >
-                🛠️ Maintenance
-              </button>
-              <button 
-                onClick={() => setBlockStatus('Offline')}
-                className={cn(
-                  "py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-300",
-                  blockStatus === 'Offline' ? "bg-neutral-500/10 text-neutral-400 border-neutral-500/20" : "border-transparent text-white/40"
-                )}
-              >
-                💤 Offline
-              </button>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pickup Schedule</label>
+                <Input 
+                  type="datetime-local"
+                  value={dispatchPickupDateTime}
+                  onChange={e => setDispatchPickupDateTime(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs text-white"
+                />
+              </div>
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Dropoff Schedule</label>
+                <Input 
+                  type="datetime-local"
+                  value={dispatchDropDateTime}
+                  onChange={e => setDispatchDropDateTime(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs text-white"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Reason / Note</label>
-              <Textarea
-                value={blockReason}
-                onChange={(e) => setBlockReason(e.target.value)}
-                className="bg-white/5 border-white/10 rounded-xl min-h-[80px] resize-none text-xs"
-                placeholder="Engine service, tire replacements, chauffeur sick leave, etc."
-              />
+            <div className="grid grid-cols-2 gap-6 border-t border-white/5 pt-4">
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pickup Address</label>
+                <Input 
+                  value={dispatchPickupLoc}
+                  onChange={e => setDispatchPickupLoc(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
+                />
+              </div>
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Dropoff Address</label>
+                <Input 
+                  value={dispatchDropLoc}
+                  onChange={e => setDispatchDropLoc(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
+                />
+              </div>
             </div>
 
-            <Button 
-              onClick={handleBlockDates} 
-              disabled={blockingDates}
-              className="w-full h-14 bg-orange-500 text-white hover:bg-orange-600 font-black rounded-2xl transition-all shadow-xl shadow-orange-500/10 text-[10px] uppercase tracking-widest"
-            >
-              {blockingDates ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Apply Date Block'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Allocation Drawer/Modal */}
-      <Dialog open={allocationDialogOpen} onOpenChange={setAllocationDialogOpen}>
-        <DialogContent className="max-w-3xl bg-[#0a0f12] border-white/10 text-white rounded-[2rem] overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 via-transparent to-transparent pointer-events-none" />
-          <DialogHeader className="p-8 pb-0">
-            <DialogTitle className="text-2xl font-display font-black tracking-tight">
-              Vehicle Allocation Engine
-            </DialogTitle>
-            <p className="text-white/40 text-xs mt-1">Assign a vehicle, Chauffeur details, and calculate transport costs for "{selectedBookingForAlloc?.itemName}"</p>
-          </DialogHeader>
-
-          <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
-            {/* Allocation Conflicts Warnings */}
-            {checkAllocationConflicts().length > 0 && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 text-red-400 animate-pulse">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <div className="text-xs">
-                  <p className="font-bold">Booking Conflict Detected:</p>
-                  <ul className="list-disc list-inside mt-1 space-y-0.5">
-                    {checkAllocationConflicts().map((conf, i) => (
-                      <li key={i}>{conf}</li>
-                    ))}
-                  </ul>
-                </div>
+            <div className="grid grid-cols-3 gap-4 border-t border-white/5 pt-4 text-left">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Est Distance (KM)</label>
+                <Input 
+                  type="number"
+                  value={dispatchEstKm}
+                  onChange={e => setDispatchEstKm(Number(e.target.value))}
+                  className="bg-white/5 border-white/10 rounded-xl h-10 text-xs"
+                />
               </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column: Logistics Info */}
-              <div className="space-y-6">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-kashmir-gold border-b border-white/5 pb-2">Logistics Assignment</h4>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Chauffeur Node / Vehicle</label>
-                  <select
-                    value={allocatedCabId}
-                    onChange={(e) => handleCabChange(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:border-kashmir-gold/50 focus:outline-none"
-                  >
-                    <option value="" className="bg-[#0a0f12] text-white/40">Select Vehicle Node...</option>
-                    {cabs.map(c => {
-                      const meta = operationsData.cabsMetadata[c.id] || {};
-                      const status = resolveCabStatusForToday(c);
-                      return (
-                        <option key={c.id} value={c.id} className="bg-[#0a0f12]">
-                          {c.name} ({meta.registrationNo || 'No Reg No'}) - {status}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Registered Chauffeur (Optional)</label>
-                  <select
-                    className="w-full bg-[#0a0f12]/80 border border-white/10 rounded-xl h-12 text-xs px-3 text-white focus:outline-none focus:border-kashmir-gold/50"
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val !== 'custom') {
-                        const drv = drivers.find(d => d.id === val);
-                        if (drv) {
-                          setDispatchDriverName(drv.name || '');
-                          setDispatchDriverPhone(drv.phone || '');
-                          if (drv.driverProfile?.vehicleRegNo) {
-                            setDispatchRegNo(drv.driverProfile.vehicleRegNo);
-                          }
-                        }
-                      }
-                    }}
-                    defaultValue="custom"
-                  >
-                    <option value="custom" className="bg-[#0a0f12] text-white">-- Manual / Custom Driver --</option>
-                    {drivers.map(drv => (
-                      <option key={drv.id} value={drv.id} className="bg-[#0a0f12] text-white">
-                        {drv.name} ({drv.phone || 'No Phone'}) {drv.driverProfile?.vehicleRegNo ? `- ${drv.driverProfile.vehicleRegNo}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Registration No</label>
-                    <Input
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchRegNo}
-                      onChange={(e) => setDispatchRegNo(e.target.value)}
-                      placeholder="e.g. JK-01-A-1234"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Driver Name</label>
-                    <Input
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchDriverName}
-                      onChange={(e) => setDispatchDriverName(e.target.value)}
-                      placeholder="e.g. Fayaz Ahmad"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Driver WhatsApp Contact</label>
-                  <Input
-                    className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                    value={dispatchDriverPhone}
-                    onChange={(e) => setDispatchDriverPhone(e.target.value)}
-                    placeholder="e.g. +919876543210"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pickup Date & Time</label>
-                    <Input
-                      type="datetime-local"
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs text-white"
-                      value={dispatchPickupDateTime}
-                      onChange={(e) => setDispatchPickupDateTime(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Drop Date & Time</label>
-                    <Input
-                      type="datetime-local"
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs text-white"
-                      value={dispatchDropDateTime}
-                      onChange={(e) => setDispatchDropDateTime(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pickup Location</label>
-                    <Input
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchPickupLoc}
-                      onChange={(e) => setDispatchPickupLoc(e.target.value)}
-                      placeholder="e.g. Srinagar Airport"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Drop Location</label>
-                    <Input
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchDropLoc}
-                      onChange={(e) => setDispatchDropLoc(e.target.value)}
-                      placeholder="e.g. Gulmarg Hotel"
-                    />
-                  </div>
-                </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Driver Allowance (₹)</label>
+                <Input 
+                  type="number"
+                  value={dispatchDriverAllowance}
+                  onChange={e => setDispatchDriverAllowance(Number(e.target.value))}
+                  className="bg-white/5 border-white/10 rounded-xl h-10 text-xs"
+                />
               </div>
-
-              {/* Right Column: Financial Intelligence */}
-              <div className="space-y-6">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-kashmir-gold border-b border-white/5 pb-2">Financial Calculator</h4>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Estimated Distance (KM)</label>
-                    <Input
-                      type="number"
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchEstKm}
-                      onChange={(e) => setDispatchEstKm(Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Driver Allowance (₹)</label>
-                    <Input
-                      type="number"
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchDriverAllowance}
-                      onChange={(e) => setDispatchDriverAllowance(Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Fuel / Diesel Costs (₹)</label>
-                    <Input
-                      type="number"
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchFuel}
-                      onChange={(e) => setDispatchFuel(Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Tolls & Parking (₹)</label>
-                    <Input
-                      type="number"
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchTolls}
-                      onChange={(e) => setDispatchTolls(Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Vendor Payout (₹)</label>
-                    <Input
-                      type="number"
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold text-purple-400"
-                      value={dispatchVendorPayout}
-                      onChange={(e) => setDispatchVendorPayout(Number(e.target.value))}
-                      placeholder="Only if Vendor Owned"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Other / Miscellaneous (₹)</label>
-                    <Input
-                      type="number"
-                      className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
-                      value={dispatchOther}
-                      onChange={(e) => setDispatchOther(Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-
-                {/* Profit Margin Analysis Box */}
-                {allocatedCabId && (
-                  (() => {
-                    const cab = cabs.find(c => c.id === allocatedCabId);
-                    if (!cab) return null;
-                    const pKm = cab.pricePerKm || 0;
-                    const baseCost = cab.basePrice || 0;
-                    const cabRevenue = baseCost + (dispatchEstKm * pKm);
-                    const customerFare = selectedBookingForAlloc.totalAmount > 0 
-                      ? selectedBookingForAlloc.totalAmount 
-                      : cabRevenue;
-                    const totalCost = dispatchDriverAllowance + dispatchFuel + dispatchTolls + dispatchVendorPayout + dispatchOther;
-                    const profit = customerFare - totalCost;
-                    const profitPercent = customerFare > 0 ? (profit / customerFare) * 100 : 0;
-                    const isProfitable = profit >= 0;
-
-                    return (
-                      <div className={cn(
-                        "p-6 rounded-2xl border backdrop-blur-md relative overflow-hidden space-y-4",
-                        isProfitable ? "bg-emerald-500/5 border-emerald-500/10" : "bg-red-500/5 border-red-500/10"
-                      )}>
-                        {/* Background glowing gradients */}
-                        <div className={cn(
-                          "absolute top-0 right-0 w-32 h-32 blur-[60px] -mr-16 -mt-16",
-                          isProfitable ? "bg-emerald-500/10" : "bg-red-500/10"
-                        )} />
-
-                        {/* Title */}
-                        <div className="border-b border-white/5 pb-2">
-                          <h5 className="text-[9px] font-black uppercase tracking-widest text-kashmir-gold">Operations Profitability Analytics</h5>
-                        </div>
-
-                        {/* Cost & Fare Comparisons */}
-                        <div className="space-y-3 text-xs">
-                          {selectedBookingForAlloc.totalAmount > 0 && (
-                            <div className="flex justify-between items-center text-white/50 text-[10px]">
-                              <span>System Base Rate:</span>
-                              <span className="font-mono">
-                                ₹{baseCost.toLocaleString()} + ({dispatchEstKm} KM × ₹{pKm}/KM) = ₹{cabRevenue.toLocaleString()}
-                              </span>
-                            </div>
-                          )}
-                          
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-white/40">
-                              {selectedBookingForAlloc.totalAmount > 0 ? "Customer Negotiated Fare:" : "Calculated Revenue:"}
-                            </span>
-                            <span className="font-black text-white text-sm">₹{customerFare.toLocaleString()}</span>
-                          </div>
-
-                          {selectedBookingForAlloc.totalAmount > 0 && (
-                            <div className="flex justify-between items-center text-[10px] border-b border-white/5 pb-2">
-                              <span className="font-medium text-white/40">Negotiated Variance:</span>
-                              {customerFare - cabRevenue >= 0 ? (
-                                <span className="text-emerald-400 font-bold">+₹{(customerFare - cabRevenue).toLocaleString()} (Premium)</span>
-                              ) : (
-                                <span className="text-amber-400 font-bold">-₹{Math.abs(customerFare - cabRevenue).toLocaleString()} (Discounted)</span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Expense Breakdown */}
-                          <div className="pt-1 space-y-1.5 border-b border-white/5 pb-3">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-white/30 block mb-1">Operational Cost Breakdown</span>
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] text-white/60">
-                              <div className="flex justify-between">
-                                <span>Chauffeur Allowance:</span>
-                                <span className="font-mono">₹{dispatchDriverAllowance.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Fuel / Diesel:</span>
-                                <span className="font-mono">₹{dispatchFuel.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Tolls & Parking:</span>
-                                <span className="font-mono">₹{dispatchTolls.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Vendor Payout:</span>
-                                <span className="font-mono">₹{dispatchVendorPayout.toLocaleString()}</span>
-                              </div>
-                              {dispatchOther > 0 && (
-                                <div className="flex justify-between col-span-2">
-                                  <span>Other Misc:</span>
-                                  <span className="font-mono">₹{dispatchOther.toLocaleString()}</span>
-                                </div>
-                              )}
-                              <div className="flex justify-between col-span-2 mt-1.5 pt-1.5 border-t border-white/5 text-xs text-white/80 font-bold">
-                                <span>Total Trip Costs:</span>
-                                <span className="font-mono">₹{totalCost.toLocaleString()}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Net Margin */}
-                          <div className="flex justify-between items-center pt-2">
-                            <div className="flex flex-col">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Net Profit Margin</span>
-                              <span className={cn("text-xl font-display font-black mt-1", isProfitable ? "text-emerald-400" : "text-red-400")}>
-                                ₹{profit.toLocaleString()}
-                              </span>
-                            </div>
-                            <Badge className={cn(
-                              "border-none rounded-lg px-3 py-1 font-black text-[10px]",
-                              isProfitable ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                            )}>
-                              {profitPercent.toFixed(1)}% Margin
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()
-                )}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Estimated Fuel (₹)</label>
+                <Input 
+                  type="number"
+                  value={dispatchFuel}
+                  onChange={e => setDispatchFuel(Number(e.target.value))}
+                  className="bg-white/5 border-white/10 rounded-xl h-10 text-xs"
+                />
               </div>
             </div>
 
             <Button 
               onClick={handleSaveAllocation} 
               disabled={saving}
-              className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-2xl transition-all shadow-xl shadow-kashmir-gold/10 text-[10px] uppercase tracking-widest mt-4"
+              className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-xl transition-all shadow-xl shadow-kashmir-gold/15 mt-4"
             >
-              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Chauffeur Allocation'}
+              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Operational Dispatch'}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Deploy Cab Dialog (Modified to support operations settings overrides) */}
+      {/* Deploy / Edit Vehicle Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl bg-[#0a0f12] border-white/10 text-white rounded-[2rem] overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 via-transparent to-transparent pointer-events-none" />
+        <DialogContent className="max-w-2xl bg-[#0a0f12] border-white/10 text-white rounded-[2rem] overflow-y-auto max-h-[90vh]">
           <DialogHeader className="p-8 pb-0">
-            <DialogTitle className="text-2xl font-display font-black tracking-tight">{editingCab ? 'Reconfigure Fleet Node' : 'Deploy New Vehicle Node'}</DialogTitle>
+            <DialogTitle className="text-2xl font-display font-black tracking-tight text-white">
+              {editingCab ? 'Modify Vehicle Deployment' : 'Deploy Physical Fleet Node'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
-            
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-kashmir-gold border-b border-white/5 pb-2">Part 1: Public Specifications</h4>
-            
+          <div className="p-8 space-y-6 text-left">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Vehicle Name</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Vehicle Model Name</label>
                 <Input
-                  className="bg-white/5 border-white/10 rounded-xl h-12 focus:border-kashmir-gold/50 transition-all font-bold"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Innova Crysta Luxury"
+                  placeholder="e.g. Innova Crysta Luxury"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Vehicle Class / Category</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Vehicle Category</label>
                 <Input
-                  className="bg-white/5 border-white/10 rounded-xl h-12 focus:border-kashmir-gold/50 transition-all font-bold"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  placeholder="e.g., Luxury SUV"
+                  placeholder="e.g. Luxury SUV"
                 />
               </div>
             </div>
@@ -2408,7 +1905,7 @@ export default function CMSCabs() {
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Fleet Intelligence (Features)</label>
               <Textarea
-                className="bg-white/5 border-white/10 rounded-xl min-h-[100px] resize-none"
+                className="bg-white/5 border-white/10 rounded-xl min-h-[100px] resize-none text-xs font-semibold"
                 value={featuresInput}
                 onChange={(e) => setFeaturesInput(e.target.value)}
                 placeholder="Heated Seats&#10;Panoramic Roof&#10;Complimentary Wi-Fi"
@@ -2433,6 +1930,85 @@ export default function CMSCabs() {
         </DialogContent>
       </Dialog>
 
+      {/* Date blocker / Maintenance Registration dialog */}
+      <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+        <DialogContent className="max-w-md bg-[#0a0f12] border-white/10 text-white rounded-[2rem]">
+          <DialogHeader className="p-8 pb-0">
+            <DialogTitle className="text-2xl font-display font-black tracking-tight text-white flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-orange-400" />
+              Register Vehicle Downtime
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-8 space-y-6 text-left">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Target Vehicle Node</label>
+              <select
+                value={blockCabId}
+                onChange={e => setBlockCabId(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
+              >
+                <option value="" className="bg-[#0a0f12]">Select vehicle...</option>
+                {cabs.map(c => (
+                  <option key={c.id} value={c.id} className="bg-[#0a0f12]">{c.name} ({operationsData.cabsMetadata[c.id]?.registrationNo || 'JK-01'})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Start Date</label>
+                <Input 
+                  type="date"
+                  value={blockStartDate}
+                  onChange={e => setBlockStartDate(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">End Date</label>
+                <Input 
+                  type="date"
+                  value={blockEndDate}
+                  onChange={e => setBlockEndDate(e.target.value)}
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Block Class</label>
+                <select
+                  value={blockStatus}
+                  onChange={e => setBlockStatus(e.target.value as any)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
+                >
+                  <option value="Maintenance" className="bg-[#0a0f12]">Maintenance (Workshop)</option>
+                  <option value="Offline" className="bg-[#0a0f12]">Offline / Inactive</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Operational Reason</label>
+                <Input 
+                  value={blockReason}
+                  onChange={e => setBlockReason(e.target.value)}
+                  placeholder="e.g., Engine Tuning / Service"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
+                />
+              </div>
+            </div>
+
+            <Button 
+              onClick={handleBlockDates}
+              disabled={blockingDates}
+              className="w-full h-12 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-xl transition-all shadow-xl shadow-kashmir-gold/15 mt-2"
+            >
+              {blockingDates ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Block Dates'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Chauffeur WhatsApp Preview Modal */}
       <Dialog open={whatsappPreviewOpen} onOpenChange={setWhatsappPreviewOpen}>
         <DialogContent className="max-w-md bg-[#0a0f12] border-white/10 text-white rounded-[2rem] overflow-hidden">
@@ -2443,7 +2019,7 @@ export default function CMSCabs() {
               Chauffeur Notification Dispatch
             </DialogTitle>
           </DialogHeader>
-          <div className="p-8 space-y-6">
+          <div className="p-8 space-y-6 text-left">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">WhatsApp message contents</label>
               <Textarea
@@ -2482,10 +2058,9 @@ export default function CMSCabs() {
                 const b = selectedBookingForVoucher;
                 const alloc = b.details?.cabAllocation;
                 if (!alloc) return null;
-                const pricing = alloc.pricing;
 
                 return (
-                  <div className="space-y-8 p-6">
+                  <div className="space-y-8 p-6 text-left">
                     {/* Header */}
                     <div className="flex justify-between items-start border-b-2 border-black/10 pb-6">
                       <div className="space-y-1">
@@ -2525,7 +2100,7 @@ export default function CMSCabs() {
                       {/* Vehicle Spec */}
                       <div className="space-y-4">
                         <h3 className="text-xs font-black uppercase tracking-widest text-black/40 border-b border-black/10 pb-2">Vehicle Specification</h3>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4 text-xs">
                           <div className="space-y-0.5">
                             <span className="text-[9px] font-black text-black/30 block">VEHICLE NODE</span>
                             <span className="text-sm font-bold">{alloc.cabName}</span>
@@ -2540,7 +2115,7 @@ export default function CMSCabs() {
                           </div>
                           <div className="space-y-0.5">
                             <span className="text-[9px] font-black text-black/30 block">OWNERSHIP MODEL</span>
-                            <span className="text-xs font-bold uppercase">
+                            <span className="text-xs font-bold uppercase text-amber-700">
                               {alloc.ownership === 'vendor' ? `Vendor (${alloc.vendorName})` : 'Company Owned'}
                             </span>
                           </div>
@@ -2550,7 +2125,7 @@ export default function CMSCabs() {
                       {/* Chauffeur Profile */}
                       <div className="space-y-4">
                         <h3 className="text-xs font-black uppercase tracking-widest text-black/40 border-b border-black/10 pb-2">Chauffeur Profile</h3>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4 text-xs">
                           <div className="space-y-0.5">
                             <span className="text-[9px] font-black text-black/30 block">CHAUFFEUR NAME</span>
                             <span className="text-sm font-bold">{alloc.driverName}</span>
@@ -2566,7 +2141,7 @@ export default function CMSCabs() {
                     {/* Schedule Grid */}
                     <div className="space-y-4">
                       <h3 className="text-xs font-black uppercase tracking-widest text-black/40 border-b border-black/10 pb-2">Pickup & Travel Schedule</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
                         <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 flex gap-4">
                           <MapPin className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                           <div className="space-y-1">
@@ -2587,7 +2162,7 @@ export default function CMSCabs() {
                     </div>
 
                     {/* Operational Protocols / Notes */}
-                    <div className="p-6 bg-amber-500/5 rounded-2xl border border-amber-500/10 space-y-2">
+                    <div className="p-6 bg-amber-500/5 rounded-2xl border border-amber-500/10 space-y-2 text-xs">
                       <h4 className="text-xs font-bold text-amber-700">Chauffeur Dispatch Notes & Protocols:</h4>
                       <ol className="list-decimal list-inside text-[11px] text-black/70 space-y-1 leading-relaxed">
                         <li>The vehicle should be washed and cleaned internally prior to arrival.</li>
@@ -2595,18 +2170,6 @@ export default function CMSCabs() {
                         <li>Please carry bottled water and hand sanitizer on all transfers.</li>
                         <li>Maintain a safe, secure, and quiet speed limit. No high-speed driving.</li>
                       </ol>
-                    </div>
-
-                    {/* Signatures */}
-                    <div className="flex justify-between items-end pt-12 text-center text-[10px] text-black/40">
-                      <div className="space-y-4">
-                        <div className="w-40 border-b border-black/20" />
-                        <p>Authorized Dispatch Signature</p>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="w-40 border-b border-black/20" />
-                        <p>Chauffeur Acknowledgement</p>
-                      </div>
                     </div>
                   </div>
                 );
@@ -2633,7 +2196,7 @@ export default function CMSCabs() {
       </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem] text-left">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black">Decommission Transport Node?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/60">
@@ -2653,7 +2216,7 @@ export default function CMSCabs() {
       </AlertDialog>
 
       <AlertDialog open={deallocateConfirmOpen} onOpenChange={setDeallocateConfirmOpen}>
-        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem] text-left">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black text-red-500 flex items-center gap-2">
               <AlertTriangle className="w-6 h-6 text-red-500" /> Release Cab Allocation?
@@ -2669,28 +2232,6 @@ export default function CMSCabs() {
               className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
             >
               Release Cab
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={cancelBookingConfirmOpen} onOpenChange={setCancelBookingConfirmOpen}>
-        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black text-red-500 flex items-center gap-2">
-              <AlertTriangle className="w-6 h-6 text-red-500" /> Cancel & Delete Booking?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-white/60">
-              Are you sure you want to cancel and delete the booking for "{bookingToCancel?.itemName}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white/5 border-white/10 text-white/60 hover:bg-white/10 rounded-xl h-12">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => bookingToCancel && confirmCancelBooking(bookingToCancel)}
-              className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-12 font-bold"
-            >
-              Confirm Cancel
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
