@@ -50,6 +50,93 @@ const INTERESTS = [
   { id: 'shopping', label: 'Artisanal Crafts', icon: Briefcase }
 ];
 
+// Date Picker Popover Component — styled like premium flight apps
+function DatePickerField({
+  date,
+  onSelect,
+  label,
+  minDate,
+  placeholder = 'Select date',
+}: {
+  date: Date | undefined;
+  onSelect: (date: Date | undefined) => void;
+  label: string;
+  minDate?: Date;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative flex-1 min-w-0">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={`w-full h-16 pl-12 pr-4 rounded-xl border bg-[#0a0f12] text-left flex items-center transition-all duration-300 group ${
+              open 
+                ? 'border-kashmir-gold/60 ring-1 ring-kashmir-gold/30 shadow-[0_0_20px_rgba(212,175,55,0.08)]' 
+                : 'border-white/10 hover:border-white/20'
+            }`}
+          >
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <CalendarDays className={`h-5 w-5 transition-colors duration-300 ${open ? 'text-kashmir-gold' : 'text-kashmir-gold/70'}`} />
+            </div>
+            {date ? (
+              <div className="flex flex-col">
+                <span className="text-white font-semibold text-lg leading-tight">{format(date, 'dd MMM')}</span>
+                <span className="text-white/30 text-xs">{format(date, 'EEEE, yyyy')}</span>
+              </div>
+            ) : (
+              <span className="text-white/30 text-lg">{placeholder}</span>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent 
+          className="w-auto p-0 bg-[#0d1317] border-white/10 shadow-2xl shadow-black/60 rounded-2xl overflow-hidden" 
+          align="start"
+          sideOffset={8}
+        >
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={(d) => {
+              onSelect(d);
+              setOpen(false);
+            }}
+            disabled={(d) => minDate ? isBefore(d, minDate) : isBefore(d, startOfToday())}
+            initialFocus
+            className="bg-[#0d1317] text-white"
+            classNames={{
+              months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+              month: "space-y-4",
+              caption: "flex justify-center pt-1 relative items-center text-white",
+              caption_label: "text-sm font-semibold text-white",
+              nav: "space-x-1 flex items-center",
+              nav_button: "h-8 w-8 bg-white/5 border border-white/10 rounded-lg p-0 hover:bg-kashmir-gold/20 hover:border-kashmir-gold/40 text-white/60 hover:text-white inline-flex items-center justify-center transition-all",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse space-y-1",
+              head_row: "flex",
+              head_cell: "text-white/30 rounded-md w-10 font-medium text-[0.75rem] uppercase",
+              row: "flex w-full mt-1",
+              cell: "h-10 w-10 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+              day: "h-10 w-10 p-0 font-normal text-white/70 hover:bg-kashmir-gold/20 hover:text-white rounded-lg transition-all inline-flex items-center justify-center",
+              day_range_end: "day-range-end",
+              day_selected: "bg-kashmir-gold text-black hover:bg-kashmir-gold hover:text-black focus:bg-kashmir-gold focus:text-black font-bold shadow-[0_0_12px_rgba(212,175,55,0.3)]",
+              day_today: "bg-white/10 text-white font-bold ring-1 ring-white/20",
+              day_outside: "text-white/15 opacity-50",
+              day_disabled: "text-white/10 opacity-30 cursor-not-allowed",
+              day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+              day_hidden: "invisible",
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+      <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider z-10">{label}</Label>
+    </div>
+  );
+}
+
 export function InteractiveTripPlanner() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
