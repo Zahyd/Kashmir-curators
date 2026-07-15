@@ -409,7 +409,9 @@ body.light-theme [class*="bg-white/[0.08]"]:not(nav):not(nav *):not(footer):not(
 body.light-theme .glass-card:not(nav):not(nav *):not(footer):not(footer *),
 body.light-theme .glass:not(nav):not(nav *):not(footer):not(footer *),
 body.light-theme div[class*="bg-[#0a0f12]"][class*="rounded"]:not(nav):not(nav *),
-body.light-theme div[class*="bg-[#0b1317]"][class*="rounded"]:not(nav):not(nav *) {
+body.light-theme div[class*="bg-[#0b1317]"][class*="rounded"]:not(nav):not(nav *),
+body.light-theme div[class*="bg-[#070b0d]"][class*="rounded"]:not(nav):not(nav *),
+body.light-theme div[class*="bg-[#0c1216]"][class*="rounded"]:not(nav):not(nav *) {
   background-color: #0A141A !important; /* Deep Royal Navy Card Surface */
   border-color: rgba(184, 142, 47, 0.25) !important; /* Subtle Gold Border */
 }
@@ -426,13 +428,25 @@ body.light-theme .ticker-fade-right {
   background-image: linear-gradient(to left, #0A141A, transparent) !important;
 }
 
+/* Fix input absolute floating labels legibility in day mode by matching card background */
+body.light-theme label[class*="bg-[#0a0f12]"],
+body.light-theme .absolute[class*="bg-[#0a0f12]"],
+body.light-theme label[class*="bg-black"],
+body.light-theme .absolute[class*="bg-black"] {
+  background-color: #0A141A !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
 /* Global text overrides to Espresso Charcoal on Warm Sand background */
 body.light-theme .text-white {
   color: #1E1815 !important;
 }
 body.light-theme [class*="text-white/80"],
-body.light-theme [class*="text-white/70"] {
+body.light-theme [class*="text-white/90"] {
   color: #3B322D !important;
+}
+body.light-theme [class*="text-white/70"] {
+  color: #4A3E38 !important;
 }
 body.light-theme [class*="text-white/60"],
 body.light-theme [class*="text-white/50"] {
@@ -466,9 +480,26 @@ body.light-theme [class*="bg-[#0a0f12]"] .text-white,
 body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/"],
 body.light-theme [class*="bg-[#0b1317]"] .text-white,
 body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/"],
+body.light-theme [class*="bg-[#0c1216]"] .text-white,
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/"],
+body.light-theme [class*="bg-[#070b0d]"] .text-white,
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/"],
 body.light-theme [class*="bg-[#0d1317]"] .text-white,
 body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/"] {
   color: #FFFFFF !important;
+}
+body.light-theme nav [class*="text-white/90"],
+body.light-theme footer [class*="text-white/90"],
+body.light-theme .glass-card [class*="text-white/90"],
+body.light-theme [class*="bg-white/"] [class*="text-white/90"],
+body.light-theme .bg-slate-950 [class*="text-white/90"],
+body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/90"],
+body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/90"],
+body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/90"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/90"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/90"],
+body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/90"] {
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 body.light-theme nav [class*="text-white/80"],
 body.light-theme footer [class*="text-white/80"],
@@ -478,8 +509,23 @@ body.light-theme .bg-slate-950 [class*="text-white/80"],
 body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/80"],
 body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/80"],
 body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/80"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/80"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/80"],
 body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/80"] {
   color: rgba(255, 255, 255, 0.8) !important;
+}
+body.light-theme nav [class*="text-white/70"],
+body.light-theme footer [class*="text-white/70"],
+body.light-theme .glass-card [class*="text-white/70"],
+body.light-theme [class*="bg-white/"] [class*="text-white/70"],
+body.light-theme .bg-slate-950 [class*="text-white/70"],
+body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/70"],
+body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/70"],
+body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/70"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/70"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/70"],
+body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/70"] {
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 body.light-theme nav [class*="text-white/60"],
 body.light-theme footer [class*="text-white/60"],
@@ -489,8 +535,23 @@ body.light-theme .bg-slate-950 [class*="text-white/60"],
 body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/60"],
 body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/60"],
 body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/60"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/60"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/60"],
 body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/60"] {
   color: rgba(255, 255, 255, 0.6) !important;
+}
+body.light-theme nav [class*="text-white/50"],
+body.light-theme footer [class*="text-white/50"],
+body.light-theme .glass-card [class*="text-white/50"],
+body.light-theme [class*="bg-white/"] [class*="text-white/50"],
+body.light-theme .bg-slate-950 [class*="text-white/50"],
+body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/50"],
+body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/50"],
+body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/50"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/50"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/50"],
+body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/50"] {
+  color: rgba(255, 255, 255, 0.5) !important;
 }
 body.light-theme nav [class*="text-white/40"],
 body.light-theme footer [class*="text-white/40"],
@@ -500,8 +561,23 @@ body.light-theme .bg-slate-950 [class*="text-white/40"],
 body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/40"],
 body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/40"],
 body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/40"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/40"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/40"],
 body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/40"] {
   color: rgba(255, 255, 255, 0.4) !important;
+}
+body.light-theme nav [class*="text-white/30"],
+body.light-theme footer [class*="text-white/30"],
+body.light-theme .glass-card [class*="text-white/30"],
+body.light-theme [class*="bg-white/"] [class*="text-white/30"],
+body.light-theme .bg-slate-950 [class*="text-white/30"],
+body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/30"],
+body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/30"],
+body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/30"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/30"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/30"],
+body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/30"] {
+  color: rgba(255, 255, 255, 0.3) !important;
 }
 body.light-theme nav [class*="text-white/20"],
 body.light-theme footer [class*="text-white/20"],
@@ -511,8 +587,23 @@ body.light-theme .bg-slate-950 [class*="text-white/20"],
 body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/20"],
 body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/20"],
 body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/20"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/20"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/20"],
 body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/20"] {
   color: rgba(255, 255, 255, 0.2) !important;
+}
+body.light-theme nav [class*="text-white/10"],
+body.light-theme footer [class*="text-white/10"],
+body.light-theme .glass-card [class*="text-white/10"],
+body.light-theme [class*="bg-white/"] [class*="text-white/10"],
+body.light-theme .bg-slate-950 [class*="text-white/10"],
+body.light-theme [class*="bg-[#0A141A]"] [class*="text-white/10"],
+body.light-theme [class*="bg-[#0a0f12]"] [class*="text-white/10"],
+body.light-theme [class*="bg-[#0b1317]"] [class*="text-white/10"],
+body.light-theme [class*="bg-[#0c1216]"] [class*="text-white/10"],
+body.light-theme [class*="bg-[#070b0d]"] [class*="text-white/10"],
+body.light-theme [class*="bg-[#0d1317]"] [class*="text-white/10"] {
+  color: rgba(255, 255, 255, 0.1) !important;
 }/* Accent texts - Keep Kashmir Gold brand color in Day view, but slightly deeper for premium legibility */
 body.light-theme .text-kashmir-gold:not(footer *):not(nav *),
 body.light-theme [class*="text-kashmir-gold"]:not(footer *):not(nav *) {
