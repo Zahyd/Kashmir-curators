@@ -126,12 +126,18 @@ const getOrCreateFleetOperationsDoc = async () => {
     where: { sectionKey: 'fleet_operations' }
   });
 
+  const defaultData = {
+    manualBlockings: [],
+    cabsMetadata: {},
+    logs: [],
+    maintenanceRecords: [
+      { id: 'm-1', vehicle: 'Innova Crysta Luxury', reg: 'JK-01-A-5678', task: 'Engine oil replacement', date: '2026-06-10', cost: 4200, odometer: 42500, workshop: 'Srinagar Toyota Center', status: 'Completed' },
+      { id: 'm-2', vehicle: 'Force Urbania Luxury', reg: 'JK-03-B-4321', task: 'Rear tyres rotation & balance', date: '2026-07-02', cost: 1800, odometer: 15900, workshop: 'MRF Tyres City Center', status: 'Completed' },
+      { id: 'm-3', vehicle: 'Toyota Fortuner SUV', reg: 'JK-01-E-7777', task: 'Brake pads check', date: '2026-07-18', cost: 3500, odometer: 31200, workshop: 'Valley Garages', status: 'Scheduled' }
+    ]
+  };
+
   if (!doc) {
-    const defaultData = {
-      manualBlockings: [],
-      cabsMetadata: {},
-      logs: []
-    };
     doc = await prisma.siteContent.create({
       data: {
         sectionKey: 'fleet_operations',
@@ -147,7 +153,7 @@ const getOrCreateFleetOperationsDoc = async () => {
     try {
       content = JSON.parse(content);
     } catch (e) {
-      content = { manualBlockings: [], cabsMetadata: {}, logs: [] };
+      content = defaultData;
     }
   }
 
@@ -155,6 +161,7 @@ const getOrCreateFleetOperationsDoc = async () => {
   if (!data.manualBlockings) data.manualBlockings = [];
   if (!data.cabsMetadata) data.cabsMetadata = {};
   if (!data.logs) data.logs = [];
+  if (!data.maintenanceRecords) data.maintenanceRecords = defaultData.maintenanceRecords;
 
   return { doc, data };
 };
@@ -625,5 +632,32 @@ export const deleteDriver = async (req: any, res: Response) => {
   } catch (error: any) {
     console.error('Failed to delete driver:', error);
     res.status(500).json({ error: error.message || 'Failed to delete driver' });
+  }
+};
+
+export const updateMaintenanceRecords = async (req: any, res: Response) => {
+  const { records } = req.body;
+
+  try {
+    const { doc, data } = await getOrCreateFleetOperationsDoc();
+    
+    data.maintenanceRecords = records;
+
+    await prisma.siteContent.update({
+      where: { id: doc.id },
+      data: { content: data }
+    });
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'UPDATE',
+        message: 'Maintenance records updated successfully'
+      });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Failed to update maintenance records:', error);
+    res.status(500).json({ error: 'Failed to update maintenance records' });
   }
 };

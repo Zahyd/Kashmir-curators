@@ -373,12 +373,128 @@ export default function CMSCabs() {
     surgeEnabled: false
   });
 
-  // Maintenance records database
-  const [maintenanceRecords, setMaintenanceRecords] = useState([
-    { id: 'm-1', vehicle: 'Innova Crysta Luxury', reg: 'JK-01-A-5678', task: 'Engine oil replacement', date: '2026-06-10', cost: 4200, odometer: 42500, workshop: 'Srinagar Toyota Center', status: 'Completed' },
-    { id: 'm-2', vehicle: 'Force Urbania Luxury', reg: 'JK-03-B-4321', task: 'Rear tyres rotation & balance', date: '2026-07-02', cost: 1800, odometer: 15900, workshop: 'MRF Tyres City Center', status: 'Completed' },
-    { id: 'm-3', vehicle: 'Toyota Fortuner SUV', reg: 'JK-01-E-7777', task: 'Brake pads check', date: '2026-07-18', cost: 3500, odometer: 31200, workshop: 'Valley Garages', status: 'Scheduled' }
-  ]);
+  // Maintenance records database (initialized dynamically from DB)
+  const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
+
+  // Maintenance dialog states
+  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
+  const [maintenanceFormData, setMaintenanceFormData] = useState({
+    vehicle: '',
+    reg: '',
+    task: '',
+    date: new Date().toISOString().split('T')[0],
+    cost: 0,
+    odometer: 0,
+    workshop: '',
+    status: 'Scheduled'
+  });
+  const [savingMaintenance, setSavingMaintenance] = useState(false);
+
+  const openBookRepairDialog = () => {
+    setMaintenanceFormData({
+      vehicle: '',
+      reg: '',
+      task: '',
+      date: new Date().toISOString().split('T')[0],
+      cost: 0,
+      odometer: 0,
+      workshop: '',
+      status: 'Scheduled'
+    });
+    setMaintenanceDialogOpen(true);
+  };
+
+  const handleSaveMaintenance = async () => {
+    if (!maintenanceFormData.vehicle || !maintenanceFormData.task || !maintenanceFormData.workshop) {
+      toast.error('Vehicle, service task, and workshop agency are required');
+      return;
+    }
+
+    setSavingMaintenance(true);
+    const token = localStorage.getItem('teamToken');
+    
+    // Create new record
+    const newRecord = {
+      id: `m-${Math.random().toString(36).substring(2, 11)}`,
+      ...maintenanceFormData
+    };
+
+    const updatedRecords = [newRecord, ...maintenanceRecords];
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/cabs/operations/maintenance`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ records: updatedRecords })
+      });
+
+      if (response.ok) {
+        toast.success('Preventive maintenance record registered successfully!');
+        setMaintenanceDialogOpen(false);
+        fetchOperationsData();
+      } else {
+        toast.error('Failed to sync maintenance record to database.');
+      }
+    } catch (e: any) {
+      toast.error(`Network error: ${e.message}`);
+    } finally {
+      setSavingMaintenance(false);
+    }
+  };
+
+  const handleToggleMaintenanceStatus = async (id: string, newStatus: string) => {
+    const token = localStorage.getItem('teamToken');
+    const updatedRecords = maintenanceRecords.map(r => r.id === id ? { ...r, status: newStatus } : r);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/cabs/operations/maintenance`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ records: updatedRecords })
+      });
+
+      if (response.ok) {
+        toast.success(`Service record marked as ${newStatus}`);
+        fetchOperationsData();
+      } else {
+        toast.error('Failed to update service status');
+      }
+    } catch (e) {
+      toast.error('Network connection error');
+    }
+  };
+
+  const handleDeleteMaintenanceRecord = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this maintenance entry?')) return;
+    const token = localStorage.getItem('teamToken');
+    const updatedRecords = maintenanceRecords.filter(r => r.id !== id);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/cabs/operations/maintenance`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ records: updatedRecords })
+      });
+
+      if (response.ok) {
+        toast.success('Maintenance record deleted successfully');
+        fetchOperationsData();
+      } else {
+        toast.error('Failed to delete maintenance record');
+      }
+    } catch (e) {
+      toast.error('Network connection error');
+    }
+  };
 
   // Comms direct chat database
   const [chatMessages, setChatMessages] = useState([
@@ -483,6 +599,9 @@ export default function CMSCabs() {
         };
       });
       setDriversList(formattedDrivers);
+      if (data.operationsData && data.operationsData.maintenanceRecords) {
+        setMaintenanceRecords(data.operationsData.maintenanceRecords);
+      }
     } catch (error: any) {
       console.error('[CMSCabs] Error fetching operations data:', error);
       toast.error('Failed to load command center operations logs');
@@ -511,6 +630,92 @@ export default function CMSCabs() {
       }
     }
   }, [systemEvents]);
+
+  const financeMetrics = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    let todayRevenue = 0;
+    let monthlyRevenue = 0;
+    let todayExpenses = 0;
+    let monthlyExpenses = 0;
+
+    bookings.forEach(b => {
+      if (b.status === 'cancelled') return;
+      
+      const bDate = new Date(b.bookingDate);
+      const bDateStr = b.bookingDate.split('T')[0];
+      const isToday = bDateStr === today;
+      const isThisMonth = bDate.getMonth() === currentMonth && bDate.getFullYear() === currentYear;
+
+      const alloc = b.details?.cabAllocation;
+      const pricing = alloc?.pricing;
+
+      // Expense breakdown
+      const tripCost = pricing ? (
+        Number(pricing.driverAllowance || 0) +
+        Number(pricing.fuelExpenses || 0) +
+        Number(pricing.tollsExpenses || 0) +
+        Number(pricing.vendorPayout || 0) +
+        Number(pricing.otherExpenses || 0)
+      ) : 0;
+
+      // Revenue amount
+      const amount = Number(b.totalAmount || 0);
+
+      if (isToday) {
+        todayRevenue += amount;
+        todayExpenses += tripCost;
+      }
+      if (isThisMonth) {
+        monthlyRevenue += amount;
+        monthlyExpenses += tripCost;
+      }
+    });
+
+    const todayMargin = todayRevenue - todayExpenses;
+    const monthlyMargin = monthlyRevenue - monthlyExpenses;
+
+    return {
+      todayRevenue,
+      monthlyRevenue,
+      todayMargin,
+      monthlyMargin
+    };
+  }, [bookings]);
+
+  const driverProductivity = useMemo(() => {
+    const map: Record<string, { trips: number, revenue: number }> = {};
+    
+    // Initialize with database drivers
+    driversList.forEach(d => {
+      map[d.name] = { trips: 0, revenue: 0 };
+    });
+
+    bookings.forEach(b => {
+      if (b.status === 'cancelled') return;
+      const alloc = b.details?.cabAllocation;
+      if (alloc && alloc.driverName) {
+        const dName = alloc.driverName;
+        if (!map[dName]) {
+          map[dName] = { trips: 0, revenue: 0 };
+        }
+        map[dName].trips += 1;
+        map[dName].revenue += Number(b.totalAmount || 0);
+      }
+    });
+
+    // Convert to array
+    const list = Object.entries(map).map(([name, data]) => ({
+      name,
+      trips: data.trips,
+      revenue: data.revenue
+    }));
+
+    // Sort by revenue descending
+    return list.sort((a, b) => b.revenue - a.revenue);
+  }, [bookings, driversList]);
 
   const openCreateDialog = () => {
     setEditingCab(null);
@@ -1629,52 +1834,106 @@ export default function CMSCabs() {
               <h3 className="text-xl font-display font-black text-white">WORKSHOP & MAINTENANCE CENTER</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Schedule servicing, track repair invoices, and verify battery/tyre lifespans</p>
             </div>
-            <Button 
-              className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
-              onClick={() => {
-                toast.info('Preventive maintenance scheduler initialized.');
-              }}
-            >
-              <Plus className="w-4 h-4" /> Book Repair Work
-            </Button>
+            {activeRole === 'Director' && (
+              <Button 
+                className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
+                onClick={openBookRepairDialog}
+              >
+                <Plus className="w-4 h-4" /> Book Repair Work
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {maintenanceRecords.map(rec => (
-              <Card key={rec.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden">
-                <div className="absolute top-4 right-4">
-                  <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
-                    rec.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                  )}>
-                    {rec.status}
-                  </Badge>
-                </div>
-
-                <div className="space-y-4 text-xs">
-                  <div className="space-y-1">
-                    <span className="text-[8px] text-white/30 uppercase tracking-widest block font-black">VEHICLE NODE</span>
-                    <h4 className="text-sm font-bold text-white uppercase">{rec.vehicle}</h4>
-                    <span className="text-[9px] text-white/40 uppercase font-semibold">{rec.reg}</span>
-                  </div>
-
-                  <div className="space-y-1 border-t border-white/5 pt-3">
-                    <span className="text-[8px] text-white/20 uppercase tracking-wider block">Service Task Details</span>
-                    <p className="font-semibold text-white">{rec.task}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
-                    <div>
-                      <span className="block text-[8px] text-white/20 uppercase">Workshop Agency</span>
-                      <span className="font-bold text-white">{rec.workshop}</span>
+            {maintenanceRecords.length === 0 ? (
+              <div className="lg:col-span-3 text-center p-12 bg-white/[0.01] border border-white/5 rounded-[2rem]">
+                <p className="text-xs text-white/30 uppercase tracking-wider font-bold">No active vehicle servicing entries in the database.</p>
+              </div>
+            ) : (
+              maintenanceRecords.map(rec => (
+                <Card key={rec.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                  {/* Action Overlays */}
+                  {activeRole === 'Director' && (
+                    <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/5 z-10">
+                      {rec.status === 'Scheduled' && (
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-7 w-7 hover:bg-emerald-500/20 text-emerald-400" 
+                          onClick={() => handleToggleMaintenanceStatus(rec.id, 'Completed')}
+                          title="Mark as Completed"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      {rec.status === 'Completed' && (
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-7 w-7 hover:bg-amber-500/20 text-amber-400" 
+                          onClick={() => handleToggleMaintenanceStatus(rec.id, 'Scheduled')}
+                          title="Mark as Scheduled"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7 hover:bg-red-500/20 text-red-400" 
+                        onClick={() => handleDeleteMaintenanceRecord(rec.id)}
+                        title="Delete Record"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
-                    <div>
-                      <span className="block text-[8px] text-white/20 uppercase">Expenses</span>
-                      <span className="font-bold text-emerald-400">₹{rec.cost.toLocaleString()}</span>
+                  )}
+
+                  <div className="absolute top-4 right-4">
+                    <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
+                      rec.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                    )}>
+                      {rec.status}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-4 text-xs pt-4">
+                    <div className="space-y-1">
+                      <span className="text-[8px] text-white/30 uppercase tracking-widest block font-black">VEHICLE NODE</span>
+                      <h4 className="text-sm font-bold text-white uppercase">{rec.vehicle}</h4>
+                      <span className="text-[9px] text-white/40 uppercase font-semibold">{rec.reg}</span>
+                    </div>
+
+                    <div className="space-y-1 border-t border-white/5 pt-3">
+                      <span className="text-[8px] text-white/20 uppercase tracking-wider block">Service Task Details</span>
+                      <p className="font-semibold text-white">{rec.task}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                      <div>
+                        <span className="block text-[8px] text-white/20 uppercase">Workshop Agency</span>
+                        <span className="font-bold text-white">{rec.workshop}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] text-white/20 uppercase">Expenses</span>
+                        <span className="font-bold text-emerald-400">₹{Number(rec.cost || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-1 text-[10px] border-t border-white/5 pt-2">
+                      <div>
+                        <span className="block text-[8px] text-white/20 uppercase">Odometer</span>
+                        <span className="font-bold text-white">{Number(rec.odometer || 0).toLocaleString()} KM</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] text-white/20 uppercase">Scheduled Date</span>
+                        <span className="font-bold text-white">{rec.date}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -1686,9 +1945,9 @@ export default function CMSCabs() {
           {/* Revenue metrics cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { label: 'Today\'s Fleet Gross Revenue', amount: '₹76,400', desc: 'All bookings matched' },
-              { label: 'Monthly Fleet Gross Revenue', amount: '₹12,46,800', desc: 'Active commissions included' },
-              { label: 'Operations Margin', amount: '₹2,84,300', desc: 'Calculated after driver allowances' }
+              { label: "Today's Fleet Gross Revenue", amount: `₹${financeMetrics.todayRevenue.toLocaleString()}`, desc: 'All bookings matched' },
+              { label: 'Monthly Fleet Gross Revenue', amount: `₹${financeMetrics.monthlyRevenue.toLocaleString()}`, desc: 'Active commissions included' },
+              { label: 'Operations Margin (Monthly)', amount: `₹${financeMetrics.monthlyMargin.toLocaleString()}`, desc: 'Calculated after driver allowances' }
             ].map(m => (
               <Card key={m.label} className="bg-white/[0.01] border-white/5 p-6 rounded-3xl relative overflow-hidden group">
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{m.label}</p>
@@ -1702,21 +1961,25 @@ export default function CMSCabs() {
           <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
             <h3 className="text-lg font-display font-black text-white uppercase tracking-tight mb-6">Driver Productivity Index</h3>
             <div className="space-y-6">
-              {[
-                { name: 'Shabir Ahmad', trips: 28, revenue: 184500, percent: 85 },
-                { name: 'Fayaz Rather', trips: 34, revenue: 246000, percent: 95 },
-                { name: 'Hilal Dar', trips: 31, revenue: 219000, percent: 90 }
-              ].map(drv => (
-                <div key={drv.name} className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center text-white/80">
-                    <span className="font-bold uppercase tracking-wider">{drv.name} ({drv.trips} Trips)</span>
-                    <span className="font-black text-kashmir-gold">₹{drv.revenue.toLocaleString()}</span>
-                  </div>
-                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                    <div className="h-full bg-kashmir-gold rounded-full" style={{ width: `${drv.percent}%` }} />
-                  </div>
-                </div>
-              ))}
+              {driverProductivity.length === 0 ? (
+                <p className="text-xs text-white/30 uppercase tracking-wider font-bold">No active driver trip assignments registered yet.</p>
+              ) : (
+                driverProductivity.map(drv => {
+                  const maxRevenue = driverProductivity.length > 0 ? Math.max(...driverProductivity.map(d => d.revenue)) : 1;
+                  const percent = maxRevenue > 0 ? (drv.revenue / maxRevenue) * 100 : 0;
+                  return (
+                    <div key={drv.name} className="space-y-2 text-xs">
+                      <div className="flex justify-between items-center text-white/80">
+                        <span className="font-bold uppercase tracking-wider">{drv.name} ({drv.trips} Trips)</span>
+                        <span className="font-black text-kashmir-gold">₹{drv.revenue.toLocaleString()}</span>
+                      </div>
+                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                        <div className="h-full bg-kashmir-gold rounded-full" style={{ width: `${percent}%` }} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </Card>
         </div>
@@ -2634,6 +2897,107 @@ export default function CMSCabs() {
 
             <Button onClick={handleSaveDriver} className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-2xl transition-all shadow-xl shadow-kashmir-gold/10" disabled={savingDriver}>
               {savingDriver ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingDriver ? 'Save Roster Profile' : 'Register Chauffeur Profile')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Book Repair Work Dialog */}
+      <Dialog open={maintenanceDialogOpen} onOpenChange={setMaintenanceDialogOpen}>
+        <DialogContent className="max-w-md bg-[#0a0f12] border-white/10 text-white rounded-[2rem]">
+          <DialogHeader className="p-8 pb-0">
+            <DialogTitle className="text-xl font-display font-black tracking-tight text-white uppercase">
+              Schedule Vehicle Servicing
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-8 space-y-6 text-left">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Select Fleet Vehicle</label>
+              <select
+                value={JSON.stringify({ vehicle: maintenanceFormData.vehicle, reg: maintenanceFormData.reg })}
+                onChange={e => {
+                  try {
+                    const parsed = JSON.parse(e.target.value);
+                    setMaintenanceFormData({
+                      ...maintenanceFormData,
+                      vehicle: parsed.vehicle,
+                      reg: parsed.reg
+                    });
+                  } catch (e) {
+                    setMaintenanceFormData({
+                      ...maintenanceFormData,
+                      vehicle: '',
+                      reg: ''
+                    });
+                  }
+                }}
+                className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
+              >
+                <option value="" className="bg-[#0a0f12]">Choose a vehicle...</option>
+                {cabs.map(c => (
+                  <option key={c.id} value={JSON.stringify({ vehicle: c.name, reg: c.registrationNo || 'JK-01-A-0000' })} className="bg-[#0a0f12]">
+                    {c.name} ({c.registrationNo})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Service Task Description</label>
+              <Input
+                className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                value={maintenanceFormData.task}
+                onChange={e => setMaintenanceFormData({ ...maintenanceFormData, task: e.target.value })}
+                placeholder="e.g. Battery replacement & brake check"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Odometer Reading (KM)</label>
+                <Input
+                  type="number"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                  value={maintenanceFormData.odometer || ''}
+                  onChange={e => setMaintenanceFormData({ ...maintenanceFormData, odometer: Number(e.target.value) })}
+                  placeholder="e.g. 45000"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Service Expense (₹)</label>
+                <Input
+                  type="number"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold text-emerald-400"
+                  value={maintenanceFormData.cost || ''}
+                  onChange={e => setMaintenanceFormData({ ...maintenanceFormData, cost: Number(e.target.value) })}
+                  placeholder="e.g. 3500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Workshop Agency</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                  value={maintenanceFormData.workshop}
+                  onChange={e => setMaintenanceFormData({ ...maintenanceFormData, workshop: e.target.value })}
+                  placeholder="e.g. Toyota Srinagar Center"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Scheduled Date</label>
+                <Input
+                  type="date"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
+                  value={maintenanceFormData.date}
+                  onChange={e => setMaintenanceFormData({ ...maintenanceFormData, date: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <Button onClick={handleSaveMaintenance} className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-2xl transition-all shadow-xl shadow-kashmir-gold/10" disabled={savingMaintenance}>
+              {savingMaintenance ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Register Service Request'}
             </Button>
           </div>
         </DialogContent>

@@ -12,7 +12,8 @@ import {
   addOperationsLog,
   createDriver,
   updateDriver,
-  deleteDriver
+  deleteDriver,
+  updateMaintenanceRecords
 } from '../controllers/cabController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -25,6 +26,9 @@ router.post('/operations/block', authenticateToken, blockCabDates);
 router.delete('/operations/block/:blockId', authenticateToken, unblockCabDates);
 router.post('/operations/notify-driver', authenticateToken, notifyDriver);
 router.post('/operations/logs', authenticateToken, addOperationsLog);
+
+// Maintenance management endpoint
+router.patch('/operations/maintenance', authenticateToken, updateMaintenanceRecords);
 
 // Driver Management CRUD endpoints
 router.post('/operations/drivers', authenticateToken, createDriver);
