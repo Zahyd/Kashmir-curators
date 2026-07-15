@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, 
   ArrowRight, Search, CheckCircle, Award, ShieldCheck, 
-  Compass, Building, Car, Navigation, Clock 
+  Compass, Building, Car, Navigation, Clock,
+  Bed, Plane, Bus, Luggage
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +22,7 @@ export default function HeroSection() {
   const navigate = useNavigate();
   const { data: destinations = [] } = useDestinations();
   const [isSearching, setIsSearching] = useState(false);
-  const [searchTab, setSearchTab] = useState<'packages' | 'hotels' | 'cabs'>('packages');
+  const [searchTab, setSearchTab] = useState<'packages' | 'hotels' | 'cabs' | 'flights' | 'bus'>('packages');
   
   // Packages Search
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -46,6 +47,22 @@ export default function HeroSection() {
     drop: '',
     date: '',
     time: '09:00',
+  });
+
+  // Flights Search
+  const [selectedFlightDate, setSelectedFlightDate] = useState<Date | undefined>(undefined);
+  const [flightData, setFlightData] = useState({
+    origin: 'DEL',
+    dates: '',
+    travelers: '2',
+  });
+
+  // Bus Search
+  const [selectedBusDate, setSelectedBusDate] = useState<Date | undefined>(undefined);
+  const [busData, setBusData] = useState({
+    pickup: 'Srinagar Airport (SXR)',
+    date: '',
+    passengers: '12',
   });
 
   const [heroData, setHeroData] = useState({
@@ -139,6 +156,28 @@ export default function HeroSection() {
       if (cabData.drop) params.set('drop', cabData.drop);
       if (cabData.date) params.set('date', cabData.date);
       navigate(`/cabs?${params.toString()}`);
+    } else if (searchTab === 'flights') {
+      setIsSearching(true);
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const params = new URLSearchParams();
+      params.set('flights', 'true');
+      if (flightData.origin) params.set('origin', flightData.origin);
+      if (flightData.dates) params.set('date', flightData.dates);
+      if (flightData.travelers) params.set('travelers', flightData.travelers);
+      navigate(`/planner?${params.toString()}`);
+    } else if (searchTab === 'bus') {
+      if (!busData.pickup) {
+        toast.error('Select pickup point');
+        return;
+      }
+      setIsSearching(true);
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const params = new URLSearchParams();
+      params.set('tripType', 'local');
+      if (busData.pickup) params.set('pickup', busData.pickup);
+      if (busData.date) params.set('date', busData.date);
+      params.set('capacity', busData.passengers);
+      navigate(`/cabs?${params.toString()}`);
     }
     
     setIsSearching(false);
@@ -194,46 +233,76 @@ export default function HeroSection() {
 
           {/* Glassmorphic Command Module (Search) */}
           <div className="w-full max-w-5xl animate-fade-up" style={{ animationDelay: '300ms' }}>
-            {/* Search Tabs */}
-            <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start pl-4 md:pl-8">
+            {/* Expedia-Style Flat Search Tabs */}
+            <div className="flex items-center gap-6 md:gap-10 mb-6 justify-center md:justify-start pl-4 md:pl-8 overflow-x-auto no-scrollbar pb-1">
               <button 
                 type="button"
                 onClick={() => setSearchTab('packages')}
                 className={cn(
-                  "flex items-center gap-2.5 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500 border backdrop-blur-xl",
+                  "flex flex-col items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
                   searchTab === 'packages' 
-                    ? "bg-kashmir-gold text-black border-kashmir-gold shadow-lg shadow-kashmir-gold/20 scale-105" 
-                    : "bg-[#070b0e]/40 text-white/50 border-white/5 hover:text-white hover:bg-white/10"
+                    ? "border-kashmir-gold text-kashmir-gold scale-105" 
+                    : "border-transparent text-white/40 hover:text-white/80 hover:border-white/10"
                 )}
               >
-                <Compass className="w-3.5 h-3.5 animate-pulse" />
+                <Luggage className="w-5 h-5" />
                 <span>Luxury Packages</span>
               </button>
+              
               <button 
                 type="button"
                 onClick={() => setSearchTab('hotels')}
                 className={cn(
-                  "flex items-center gap-2.5 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500 border backdrop-blur-xl",
+                  "flex flex-col items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
                   searchTab === 'hotels' 
-                    ? "bg-kashmir-gold text-black border-kashmir-gold shadow-lg shadow-kashmir-gold/20 scale-105" 
-                    : "bg-[#070b0e]/40 text-white/50 border-white/5 hover:text-white hover:bg-white/10"
+                    ? "border-kashmir-gold text-kashmir-gold scale-105" 
+                    : "border-transparent text-white/40 hover:text-white/80 hover:border-white/10"
                 )}
               >
-                <Building className="w-3.5 h-3.5" />
+                <Bed className="w-5 h-5" />
                 <span>Premium Estates</span>
               </button>
+              
               <button 
                 type="button"
                 onClick={() => setSearchTab('cabs')}
                 className={cn(
-                  "flex items-center gap-2.5 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500 border backdrop-blur-xl",
+                  "flex flex-col items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
                   searchTab === 'cabs' 
-                    ? "bg-kashmir-gold text-black border-kashmir-gold shadow-lg shadow-kashmir-gold/20 scale-105" 
-                    : "bg-[#070b0e]/40 text-white/50 border-white/5 hover:text-white hover:bg-white/10"
+                    ? "border-kashmir-gold text-kashmir-gold scale-105" 
+                    : "border-transparent text-white/40 hover:text-white/80 hover:border-white/10"
                 )}
               >
-                <Car className="w-3.5 h-3.5" />
+                <Car className="w-5 h-5" />
                 <span>Luxury Fleet</span>
+              </button>
+              
+              <button 
+                type="button"
+                onClick={() => setSearchTab('flights')}
+                className={cn(
+                  "flex flex-col items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
+                  searchTab === 'flights' 
+                    ? "border-kashmir-gold text-kashmir-gold scale-105" 
+                    : "border-transparent text-white/40 hover:text-white/80 hover:border-white/10"
+                )}
+              >
+                <Plane className="w-5 h-5" />
+                <span>Flights</span>
+              </button>
+              
+              <button 
+                type="button"
+                onClick={() => setSearchTab('bus')}
+                className={cn(
+                  "flex flex-col items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
+                  searchTab === 'bus' 
+                    ? "border-kashmir-gold text-kashmir-gold scale-105" 
+                    : "border-transparent text-white/40 hover:text-white/80 hover:border-white/10"
+                )}
+              >
+                <Bus className="w-5 h-5" />
+                <span>Luxury Coaches</span>
               </button>
             </div>
 
@@ -569,6 +638,219 @@ export default function HeroSection() {
                         />
                       </PopoverContent>
                     </Popover>
+                  </div>
+                </div>
+              )}
+              
+              {searchTab === 'flights' && (
+                <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-0 animate-in fade-in slide-in-from-left-4 duration-300">
+                  {/* Origin */}
+                  <div className="flex-1 md:flex-[1.2] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <MapPin className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Flying From</span>
+                        <Select
+                          value={flightData.origin}
+                          onValueChange={(value) => setFlightData(prev => ({ ...prev, origin: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Origin airport" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {[
+                              { code: 'DEL', city: 'New Delhi (DEL)' },
+                              { code: 'BOM', city: 'Mumbai (BOM)' },
+                              { code: 'BLR', city: 'Bengaluru (BLR)' },
+                              { code: 'HYD', city: 'Hyderabad (HYD)' },
+                              { code: 'MAA', city: 'Chennai (MAA)' },
+                              { code: 'CCU', city: 'Kolkata (CCU)' },
+                              { code: 'ATQ', city: 'Amritsar (ATQ)' },
+                            ].map((ap) => (
+                              <SelectItem key={ap.code} value={ap.code} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{ap.city}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Destination */}
+                  <div className="flex-1 md:flex-1 relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <Plane className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Flying To</span>
+                        <span className="block text-sm md:text-base font-bold text-white leading-tight">Srinagar (SXR)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Date */}
+                  <div className="flex-1 md:flex-1 relative rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="w-full text-left outline-none focus:outline-none"
+                        >
+                          <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold transition-all duration-300">
+                              <CalendarIcon className="w-4.5 h-4.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Departure Date</span>
+                              <span className={cn(
+                                "block text-sm md:text-base font-bold truncate leading-tight transition-colors",
+                                selectedFlightDate ? "text-white" : "text-white/40"
+                              )}>
+                                {selectedFlightDate ? format(selectedFlightDate, "dd MMM yyyy") : "Select date"}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-[#0c1216] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-3xl z-50" align="start" sideOffset={8}>
+                        <Calendar
+                          mode="single"
+                          selected={selectedFlightDate}
+                          onSelect={(date) => {
+                            setSelectedFlightDate(date);
+                            setFlightData(prev => ({
+                              ...prev,
+                              dates: date ? format(date, 'yyyy-MM-dd') : ''
+                            }));
+                          }}
+                          disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                          initialFocus
+                          className="bg-[#0c1216] text-white rounded-2xl"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              )}
+
+              {searchTab === 'bus' && (
+                <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-0 animate-in fade-in slide-in-from-left-4 duration-300">
+                  {/* Pickup */}
+                  <div className="flex-1 md:flex-[1.2] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <Navigation className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Pickup Location</span>
+                        <Select
+                          value={busData.pickup}
+                          onValueChange={(value) => setBusData(prev => ({ ...prev, pickup: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Pickup location" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {[
+                              "Srinagar Airport (SXR)",
+                              "Dal Lake Ghats, Srinagar",
+                              "Lal Chowk, Srinagar",
+                              "Gulmarg Gondola Resort, Gulmarg",
+                              "Pahalgam Main Market, Pahalgam"
+                            ].map((loc) => (
+                              <SelectItem key={loc} value={loc} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{loc}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Date */}
+                  <div className="flex-1 md:flex-1 relative rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="w-full text-left outline-none focus:outline-none"
+                        >
+                          <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold transition-all duration-300">
+                              <CalendarIcon className="w-4.5 h-4.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Travel Date</span>
+                              <span className={cn(
+                                "block text-sm md:text-base font-bold truncate leading-tight transition-colors",
+                                selectedBusDate ? "text-white" : "text-white/40"
+                              )}>
+                                {selectedBusDate ? format(selectedBusDate, "dd MMM yyyy") : "Select date"}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-[#0c1216] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-3xl z-50" align="start" sideOffset={8}>
+                        <Calendar
+                          mode="single"
+                          selected={selectedBusDate}
+                          onSelect={(date) => {
+                            setSelectedBusDate(date);
+                            setBusData(prev => ({
+                              ...prev,
+                              date: date ? format(date, 'yyyy-MM-dd') : ''
+                            }));
+                          }}
+                          disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                          initialFocus
+                          className="bg-[#0c1216] text-white rounded-2xl"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="hidden md:block w-[1px] h-8 bg-white/10 self-center mx-1" />
+
+                  {/* Passengers */}
+                  <div className="flex-1 md:flex-[0.9] relative group/segment rounded-[1.5rem] md:rounded-full hover:bg-white/[0.04] transition-all duration-300">
+                    <div className="px-6 py-4 md:py-3 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/10 flex items-center justify-center text-kashmir-gold group-hover/segment:bg-kashmir-gold/20 transition-all duration-300">
+                        <Users className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Capacity</span>
+                        <Select
+                          value={busData.passengers}
+                          onValueChange={(value) => setBusData(prev => ({ ...prev, passengers: value }))}
+                        >
+                          <SelectTrigger className="h-auto p-0 border-none bg-transparent text-white font-bold focus:ring-0 text-sm md:text-base focus-visible:ring-0 focus:outline-none focus:border-none focus-visible:ring-offset-0 [&>svg]:hidden w-full text-left truncate">
+                            <SelectValue placeholder="Passengers" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0c1216] border-white/10 text-white rounded-2xl p-1.5 shadow-2xl backdrop-blur-3xl z-50">
+                            {[
+                              { label: '9-Seater (Urbania)', value: '10' },
+                              { label: '12-Seater (Tempo)', value: '12' },
+                              { label: '17-Seater Coach', value: '17' },
+                              { label: '26-Seater Mini-Bus', value: '26' }
+                            ].map((coach) => (
+                              <SelectItem key={coach.value} value={coach.value} className="hover:bg-white/5 focus:bg-white/5 rounded-xl cursor-pointer py-2.5 px-4">{coach.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
