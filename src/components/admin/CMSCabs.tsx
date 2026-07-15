@@ -787,13 +787,6 @@ export default function CMSCabs() {
     }, 2000);
   };
 
-  // Calculate Operational Metrics
-  const fleetUtilizationRate = useMemo(() => {
-    if (cabs.length === 0) return 0;
-    const active = cabs.filter(c => resolveCabStatusForToday(c) === 'On Trip').length;
-    return Math.round((active / cabs.length) * 100);
-  }, [cabs]);
-
   const resolveCabStatusForToday = (cab: Cab) => {
     const meta = operationsData.cabsMetadata[cab.id];
     if (!cab.isActive) return 'Offline';
@@ -816,6 +809,13 @@ export default function CMSCabs() {
     if (activeAlloc) return 'On Trip';
     return 'Available';
   };
+
+  // Calculate Operational Metrics
+  const fleetUtilizationRate = useMemo(() => {
+    if (cabs.length === 0) return 0;
+    const active = cabs.filter(c => resolveCabStatusForToday(c) === 'On Trip').length;
+    return Math.round((active / cabs.length) * 100);
+  }, [cabs, bookings, operationsData]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
