@@ -312,6 +312,13 @@ export const updateProfile = async (req: any, res: Response) => {
     if (phone !== undefined) dataToUpdate.phone = phone;
     if (image !== undefined) dataToUpdate.image = image;
     if (uploadedDocuments !== undefined) dataToUpdate.uploadedDocuments = uploadedDocuments ? String(uploadedDocuments) : null;
+    if (req.body.isOnline !== undefined) {
+      dataToUpdate.isOnline = req.body.isOnline;
+      await prisma.driverProfile.updateMany({
+        where: { userId },
+        data: { status: req.body.isOnline ? 'AVAILABLE' : 'OFFLINE' }
+      });
+    }
     if (password) {
       dataToUpdate.password = await bcrypt.hash(password, 10);
     }

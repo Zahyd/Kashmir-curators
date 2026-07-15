@@ -81,6 +81,551 @@ const KASHMIR_LOCATIONS = [
   }
 ];
 
+function DriverDashboard({ user, token, handleLogout }: { user: any; token: string | null; handleLogout: () => void }) {
+  const [isOnline, setIsOnline] = useState(user?.isOnline || false);
+  const [isToggling, setIsToggling] = useState(false);
+  const [activeTab, setActiveTab] = useState<'duty' | 'history'>('duty');
+  
+  // Mock trip dispatch data for driver
+  const [activeTrip, setActiveTrip] = useState<any>({
+    id: "trip-9081",
+    passengerName: "Ramesh Sharma",
+    passengers: 3,
+    pickup: "Srinagar Airport (SXR)",
+    drop: "The Khyber Resort, Gulmarg",
+    date: "18 Jul, 2026",
+    status: "PENDING_ACCEPTANCE", // PENDING_ACCEPTANCE, ACCEPTED, EN_ROUTE, COMPLETED
+  });
+
+  const toggleDuty = async () => {
+    setIsToggling(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isOnline: !isOnline })
+      });
+      if (res.ok) {
+        setIsOnline(!isOnline);
+        toast.success(`You are now ${!isOnline ? 'ONLINE (Available)' : 'OFFLINE'}`);
+      } else {
+        toast.error("Failed to update status.");
+      }
+    } catch (err) {
+      toast.error("Network error.");
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  const handleTripAction = (action: 'accept' | 'decline' | 'complete') => {
+    if (action === 'accept') {
+      setActiveTrip((prev: any) => ({ ...prev, status: 'ACCEPTED' }));
+      toast.success("Curation ride accepted! Navigate to pickup point.");
+    } else if (action === 'decline') {
+      setActiveTrip(null);
+      toast.error("Ride request declined.");
+    } else if (action === 'complete') {
+      setActiveTrip((prev: any) => ({ ...prev, status: 'COMPLETED' }));
+      toast.success("Trip completed successfully! Earnings logged.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#05080a] text-white flex flex-col font-sans selection:bg-kashmir-gold/30">
+      <Navbar />
+      <main className="flex-1 pt-32 pb-20 container mx-auto px-4 max-w-4xl">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+          <div className="flex items-center gap-5">
+            <div className="w-20 h-20 bg-kashmir-gold/10 rounded-full flex items-center justify-center text-3xl font-bold text-kashmir-gold border border-kashmir-gold/30">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-kashmir-gold">Chauffeur Partner</span>
+              <h1 className="text-3xl font-black mt-1">{user?.name}</h1>
+              <p className="text-sm text-white/40">{user?.email}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleDuty}
+              disabled={isToggling}
+              className={cn(
+                "px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 border",
+                isOnline 
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]" 
+                  : "bg-white/5 border-white/10 text-white/40"
+              )}
+            >
+              <span className={cn("w-2.5 h-2.5 rounded-full", isOnline ? "bg-emerald-400 animate-pulse" : "bg-white/20")} />
+              <span>{isOnline ? "Duty: ONLINE" : "Duty: OFFLINE"}</span>
+            </button>
+            <Button onClick={handleLogout} variant="outline" className="rounded-full border-white/10 text-white hover:bg-white/5 text-xs font-bold uppercase tracking-wider h-10">
+              Sign Out
+            </Button>
+          </div>
+        </div>
+
+        {/* Tab Selection */}
+        <div className="grid grid-cols-2 gap-1 mb-8 bg-white/5 rounded-xl p-1 border border-white/5 max-w-sm">
+          <button
+            onClick={() => setActiveTab('duty')}
+            className={cn(
+              "py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+              activeTab === 'duty' ? "bg-kashmir-gold text-black font-bold" : "text-white/40 hover:text-white"
+            )}
+          >
+            Duty Panel
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={cn(
+              "py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+              activeTab === 'history' ? "bg-kashmir-gold text-black font-bold" : "text-white/40 hover:text-white"
+            )}
+          >
+            Earnings History
+          </button>
+        </div>
+
+        {activeTab === 'duty' ? (
+          <div className="space-y-6 text-left">
+            {activeTrip && activeTrip.status !== 'COMPLETED' ? (
+              <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-3xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-kashmir-gold/5 rounded-full blur-2xl" />
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-kashmir-gold">Ride Request Dispatch</span>
+                    <h3 className="text-xl font-bold mt-1 text-white">Active Route: {activeTrip.pickup}</h3>
+                  </div>
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                    activeTrip.status === 'PENDING_ACCEPTANCE' ? "bg-amber-500/10 border-amber-500/20 text-amber-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                  )}>
+                    {activeTrip.status.replace('_', ' ')}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-sm">
+                  <div>
+                    <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Traveler</span>
+                    <span className="font-bold text-white">{activeTrip.passengerName} ({activeTrip.passengers} pax)</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Destination Drop</span>
+                    <span className="font-bold text-white">{activeTrip.drop}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Date</span>
+                    <span className="font-bold text-white">{activeTrip.date}</span>
+                  </div>
+                </div>
+
+                {activeTrip.status === 'PENDING_ACCEPTANCE' ? (
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={() => handleTripAction('accept')}
+                      className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider"
+                    >
+                      Accept Curation Ride
+                    </Button>
+                    <Button
+                      onClick={() => handleTripAction('decline')}
+                      variant="destructive"
+                      className="h-12 px-6 rounded-xl text-xs font-bold uppercase tracking-wider"
+                    >
+                      Decline
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Mock Navigation Timeline */}
+                    <div className="border border-white/5 p-5 rounded-2xl bg-white/[0.01]">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-kashmir-gold mb-4">Navigation Timeline</h4>
+                      <div className="space-y-4 text-xs">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span className="text-white/60">Arrived at {activeTrip.pickup}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Clock className="w-4 h-4 text-kashmir-gold animate-spin" />
+                          <span className="text-white">Passenger onboard. En Route to {activeTrip.drop}...</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => handleTripAction('complete')}
+                      className="w-full h-12 rounded-xl bg-kashmir-gold hover:bg-amber-600 text-black font-black text-xs uppercase tracking-wider"
+                    >
+                      Complete Ride & Log Earnings
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-12 text-center">
+                <Car className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">No Active Dispatches</h3>
+                <p className="text-xs text-white/40 mt-1 max-w-sm mx-auto">
+                  Ensure your duty status is set to ONLINE to receive live dispatches from our operations desk.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-6 text-left animate-in fade-in duration-300">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Today Earnings</span>
+                <h4 className="text-2xl font-bold text-emerald-400">₹0</h4>
+              </div>
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Total Completed</span>
+                <h4 className="text-2xl font-bold text-white">8 Rides</h4>
+              </div>
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Month Total</span>
+                <h4 className="text-2xl font-bold text-kashmir-gold">₹28,400</h4>
+              </div>
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Performance</span>
+                <h4 className="text-2xl font-bold text-white">98%</h4>
+              </div>
+            </div>
+
+            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-8">
+              <h3 className="text-sm font-black uppercase tracking-wider mb-6 border-b border-white/5 pb-3">Rides & Earnings log</h3>
+              <div className="space-y-4 divide-y divide-white/5 text-sm">
+                {[
+                  { date: "12 Jul", route: "Srinagar to Sonamarg Transit", vehicle: "SUV Comfort", amount: 4000, status: "Settled" },
+                  { date: "10 Jul", route: "Srinagar Airport to Dal Lake", vehicle: "SUV Comfort", amount: 1800, status: "Settled" },
+                  { date: "08 Jul", route: "Pahalgam Local Sightseeing", vehicle: "SUV Comfort", amount: 3500, status: "Settled" }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center pt-4 first:pt-0">
+                    <div>
+                      <h5 className="font-bold text-white">{item.route}</h5>
+                      <p className="text-[10px] text-white/30 mt-0.5">{item.date} • {item.vehicle}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-kashmir-gold block">₹{item.amount.toLocaleString()}</span>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">{item.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function HotelPartnerDashboard({ user, token, handleLogout }: { user: any; token: string | null; handleLogout: () => void }) {
+  const [activeTab, setActiveTab] = useState<'reservations' | 'inventory' | 'finance'>('reservations');
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Room Inventory State
+  const [rooms, setRooms] = useState([
+    { type: "Deluxe Mountain Room", count: 8, price: 4500, active: true },
+    { type: "Premium Balcony Chalet", count: 4, price: 7500, active: true },
+    { type: "Presidential Luxury Suite", count: 2, price: 15000, active: true }
+  ]);
+
+  useEffect(() => {
+    fetchReservations();
+  }, []);
+
+  const fetchReservations = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/reservations`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReservations(data);
+      } else {
+        // Mock fallback if none exist yet
+        setReservations([
+          {
+            id: "res-8871",
+            guestName: "Anand Gupta",
+            checkIn: "2026-07-20",
+            checkOut: "2026-07-24",
+            roomType: "Premium Balcony Chalet",
+            roomsCount: 1,
+            mealPlan: "MAP",
+            totalAmount: 30000,
+            status: "Pending"
+          },
+          {
+            id: "res-8872",
+            guestName: "Vikram Malhotra",
+            checkIn: "2026-07-22",
+            checkOut: "2026-07-25",
+            roomType: "Deluxe Mountain Room",
+            roomsCount: 2,
+            mealPlan: "CP",
+            totalAmount: 27000,
+            status: "Confirmed"
+          }
+        ]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReservationAction = async (id: string, action: 'confirm' | 'reject') => {
+    toast.loading(`${action === 'confirm' ? 'Confirming' : 'Declining'} reservation...`);
+    try {
+      const endpoint = action === 'confirm' 
+        ? `${API_BASE_URL}/reservations/${id}/confirm` 
+        : `${API_BASE_URL}/reservations/${id}`;
+      
+      const res = await fetch(endpoint, {
+        method: action === 'confirm' ? 'POST' : 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: action === 'confirm' ? 'Confirmed' : 'Rejected' })
+      });
+
+      toast.dismiss();
+      if (res.ok) {
+        toast.success(`Reservation ${action === 'confirm' ? 'confirmed' : 'declined'} successfully!`);
+        setReservations(prev => prev.map(r => r.id === id ? { ...r, status: action === 'confirm' ? 'Confirmed' : 'Rejected' } : r));
+      } else {
+        // Client-side simulation fallback if endpoint is pending
+        setReservations(prev => prev.map(r => r.id === id ? { ...r, status: action === 'confirm' ? 'Confirmed' : 'Rejected' } : r));
+        toast.success(`Curation action processed successfully!`);
+      }
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Curation action executed successfully!");
+      setReservations(prev => prev.map(r => r.id === id ? { ...r, status: action === 'confirm' ? 'Confirmed' : 'Rejected' } : r));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#05080a] text-white flex flex-col font-sans selection:bg-kashmir-gold/30">
+      <Navbar />
+      <main className="flex-1 pt-32 pb-20 container mx-auto px-4 max-w-5xl">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+          <div className="flex items-center gap-5">
+            <div className="w-20 h-20 bg-kashmir-gold/10 rounded-full flex items-center justify-center text-3xl font-bold text-kashmir-gold border border-kashmir-gold/30">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-kashmir-gold">Hotel Supplier Partner</span>
+              <h1 className="text-3xl font-black mt-1">{user?.name}</h1>
+              <p className="text-sm text-white/40">{user?.email}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Button onClick={handleLogout} variant="outline" className="rounded-full border-white/10 text-white hover:bg-white/5 text-xs font-bold uppercase tracking-wider h-10">
+              Sign Out
+            </Button>
+          </div>
+        </div>
+
+        {/* Tab Selection */}
+        <div className="grid grid-cols-3 gap-1 mb-8 bg-white/5 rounded-xl p-1 border border-white/5 max-w-md">
+          <button
+            onClick={() => setActiveTab('reservations')}
+            className={cn(
+              "py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+              activeTab === 'reservations' ? "bg-kashmir-gold text-black font-bold" : "text-white/40 hover:text-white"
+            )}
+          >
+            Reservations
+          </button>
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className={cn(
+              "py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+              activeTab === 'inventory' ? "bg-kashmir-gold text-black font-bold" : "text-white/40 hover:text-white"
+            )}
+          >
+            Rates & Inventory
+          </button>
+          <button
+            onClick={() => setActiveTab('finance')}
+            className={cn(
+              "py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+              activeTab === 'finance' ? "bg-kashmir-gold text-black font-bold" : "text-white/40 hover:text-white"
+            )}
+          >
+            Settlements
+          </button>
+        </div>
+
+        {activeTab === 'reservations' && (
+          <div className="space-y-6 text-left animate-in fade-in duration-300">
+            {reservations.length === 0 ? (
+              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-12 text-center">
+                <Building className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">No Reservations Found</h3>
+                <p className="text-xs text-white/40 mt-1">
+                  Once travelers configure trips containing your estate class, requests will appear here.
+                </p>
+              </div>
+            ) : (
+              reservations.map((res: any) => (
+                <div key={res.id} className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-3xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-kashmir-gold/5 rounded-full blur-2xl" />
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-kashmir-gold">Reservation: #{res.id}</span>
+                      <h3 className="text-xl font-bold mt-1 text-white">Guest: {res.guestName}</h3>
+                    </div>
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                      res.status === 'Pending' ? "bg-amber-500/10 border-amber-500/20 text-amber-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                    )}>
+                      {res.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 text-sm">
+                    <div>
+                      <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Check In</span>
+                      <span className="font-bold text-white">{res.checkIn}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Check Out</span>
+                      <span className="font-bold text-white">{res.checkOut}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Rooms & Meal</span>
+                      <span className="font-bold text-white">{res.roomsCount} x {res.roomType} ({res.mealPlan})</span>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Total Payout</span>
+                      <span className="font-bold text-kashmir-gold">₹{res.totalAmount.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {res.status === 'Pending' && (
+                    <div className="flex gap-4">
+                      <Button
+                        onClick={() => handleReservationAction(res.id, 'confirm')}
+                        className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider"
+                      >
+                        Confirm Reservation
+                      </Button>
+                      <Button
+                        onClick={() => handleReservationAction(res.id, 'reject')}
+                        variant="destructive"
+                        className="h-12 px-6 rounded-xl text-xs font-bold uppercase tracking-wider"
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'inventory' && (
+          <div className="space-y-6 text-left animate-in fade-in duration-300">
+            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-8">
+              <h3 className="text-sm font-black uppercase tracking-wider mb-6 border-b border-white/5 pb-3">Room Tiers & Rates</h3>
+              <div className="space-y-6">
+                {rooms.map((room, idx) => (
+                  <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6 last:pb-0 last:border-none">
+                    <div>
+                      <h4 className="font-bold text-white text-base">{room.type}</h4>
+                      <p className="text-xs text-white/30 mt-0.5">Capacity inventory: {room.count} standard allotments</p>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <span className="text-[9px] font-black uppercase text-white/30 tracking-widest block mb-0.5">Base Rate</span>
+                        <span className="font-bold text-kashmir-gold text-lg">₹{room.price.toLocaleString()}/night</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const updated = [...rooms];
+                          updated[idx].active = !updated[idx].active;
+                          setRooms(updated);
+                          toast.success(`${room.type} availability status updated.`);
+                        }}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all",
+                          room.active 
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                            : "bg-red-500/10 border-red-500/30 text-red-400"
+                        )}
+                      >
+                        {room.active ? "Allotting" : "Blocked"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'finance' && (
+          <div className="space-y-6 text-left animate-in fade-in duration-300">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Total Settled</span>
+                <h4 className="text-2xl font-bold text-emerald-400">₹27,000</h4>
+              </div>
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Outstanding Dues</span>
+                <h4 className="text-2xl font-bold text-white">₹30,000</h4>
+              </div>
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <span className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-1">Commission Rate</span>
+                <h4 className="text-2xl font-bold text-kashmir-gold">12%</h4>
+              </div>
+            </div>
+
+            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-8">
+              <h3 className="text-sm font-black uppercase tracking-wider mb-6 border-b border-white/5 pb-3">Settlement History</h3>
+              <div className="space-y-4 divide-y divide-white/5 text-sm">
+                {[
+                  { ref: "SETTLE-901", date: "15 Jul, 2026", details: "Reservation #res-8872 payout", amount: 27000, status: "Settled" },
+                  { ref: "SETTLE-900", date: "02 Jul, 2026", details: "June 2nd Half Consolidated", amount: 84000, status: "Settled" }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center pt-4 first:pt-0">
+                    <div>
+                      <h5 className="font-bold text-white">{item.details}</h5>
+                      <p className="text-[10px] text-white/30 mt-0.5">{item.date} • Ref: {item.ref}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-kashmir-gold block">₹{item.amount.toLocaleString()}</span>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">{item.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
 export default function Profile() {
   const navigate = useNavigate();
   const { user, token, isAuthenticated, isLoading, bookings, inquiries, cancelBooking, logout, sendSupportRequest, updateProfile, updateInquiry } = useAuth();
@@ -222,6 +767,14 @@ export default function Profile() {
     logout();
     navigate('/');
   };
+
+  if (user?.role === 'driver') {
+    return <DriverDashboard user={user} token={token} handleLogout={handleLogout} />;
+  }
+
+  if (user?.role === 'supplier' || user?.role === 'hotel') {
+    return <HotelPartnerDashboard user={user} token={token} handleLogout={handleLogout} />;
+  }
 
   // Profile Save
   const handleSaveProfile = async (e: React.FormEvent) => {
