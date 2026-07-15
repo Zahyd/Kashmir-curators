@@ -1,253 +1,66 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, Plane, Calendar as CalendarIcon, Users, ArrowRight, CheckCircle, MapPin, ArrowLeftRight, Clock, ChevronDown, IndianRupee, TrendingUp, Minus, Plus, AlertCircle, Compass, Building, Sparkles } from 'lucide-react';
+import { 
+  Loader2, Users, ArrowRight, CheckCircle, MapPin, Clock, ChevronDown, 
+  Minus, Plus, AlertCircle, Compass, Building, Sparkles, Camera, Video, 
+  Heart, Utensils, Shield, Activity, Briefcase, Sun, CloudRain, Snowflake,
+  CalendarDays, Wallet, Car, RefreshCw
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { io } from 'socket.io-client';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL } from '@/lib/api';
 import { format, addDays, isBefore, startOfToday } from 'date-fns';
 import { cn } from '@/lib/utils';
-// Comprehensive Indian airport database
-const AIRPORTS = [
-  { code: 'SXR', city: 'Srinagar', name: 'Sheikh Ul-Alam Intl', state: 'J&K' },
-  { code: 'DEL', city: 'New Delhi', name: 'Indira Gandhi Intl', state: 'Delhi' },
-  { code: 'BOM', city: 'Mumbai', name: 'Chhatrapati Shivaji Intl', state: 'Maharashtra' },
-  { code: 'BLR', city: 'Bengaluru', name: 'Kempegowda Intl', state: 'Karnataka' },
-  { code: 'MAA', city: 'Chennai', name: 'Chennai Intl', state: 'Tamil Nadu' },
-  { code: 'CCU', city: 'Kolkata', name: 'Netaji Subhas Chandra Bose Intl', state: 'West Bengal' },
-  { code: 'HYD', city: 'Hyderabad', name: 'Rajiv Gandhi Intl', state: 'Telangana' },
-  { code: 'AMD', city: 'Ahmedabad', name: 'Sardar Vallabhbhai Patel Intl', state: 'Gujarat' },
-  { code: 'PNQ', city: 'Pune', name: 'Pune Airport', state: 'Maharashtra' },
-  { code: 'JAI', city: 'Jaipur', name: 'Jaipur Intl', state: 'Rajasthan' },
-  { code: 'LKO', city: 'Lucknow', name: 'Chaudhary Charan Singh Intl', state: 'Uttar Pradesh' },
-  { code: 'GOI', city: 'Goa', name: 'Manohar Intl', state: 'Goa' },
-  { code: 'COK', city: 'Kochi', name: 'Cochin Intl', state: 'Kerala' },
-  { code: 'GAU', city: 'Guwahati', name: 'Lokpriya Gopinath Intl', state: 'Assam' },
-  { code: 'PAT', city: 'Patna', name: 'Jay Prakash Narayan Intl', state: 'Bihar' },
-  { code: 'IXC', city: 'Chandigarh', name: 'Chandigarh Intl', state: 'Chandigarh' },
-  { code: 'ATQ', city: 'Amritsar', name: 'Sri Guru Ram Dass Jee Intl', state: 'Punjab' },
-  { code: 'VNS', city: 'Varanasi', name: 'Lal Bahadur Shastri Intl', state: 'Uttar Pradesh' },
-  { code: 'IXJ', city: 'Jammu', name: 'Jammu Airport', state: 'J&K' },
-  { code: 'IXL', city: 'Leh', name: 'Kushok Bakula Rimpochee', state: 'Ladakh' },
+
+// Travel Types database
+const TRAVEL_TYPES = [
+  { value: 'Solo', label: 'Solo Adventurer', desc: 'Private exploration & self-discovery' },
+  { value: 'Couple', label: 'Romantic Escape', desc: 'Bespoke curations for two' },
+  { value: 'Honeymoon', label: 'Honeymoon Suite', desc: 'VIP couples experiences & photo curations' },
+  { value: 'Family', label: 'Family Vacation', desc: 'Comfortable transits & family-friendly estates' },
+  { value: 'Friends', label: 'Friends Expedition', desc: 'Adventure sports & mountain activities' },
+  { value: 'Corporate', label: 'Corporate Retreat', desc: 'Team bonding & high-end conferences' }
 ];
 
-function AirportSearchInput({
-  value,
-  onChange,
-  label,
-  icon: Icon,
-  placeholder,
-  excludeCode,
-}: {
-  value: string;
-  onChange: (code: string) => void;
-  label: string;
-  icon: React.ElementType;
-  placeholder: string;
-  excludeCode?: string;
-}) {
-  const [query, setQuery] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+// Destinations database
+const DESTINATIONS = [
+  { id: 'srinagar', name: 'Srinagar', desc: 'Dal Lake & Houseboats' },
+  { id: 'gulmarg', name: 'Gulmarg', desc: 'Gondola & Alpine Snow' },
+  { id: 'pahalgam', name: 'Pahalgam', desc: 'Lidder River & Valleys' },
+  { id: 'sonamarg', name: 'Sonamarg', desc: 'Glaciers & River Rafting' },
+  { id: 'doodhpathri', name: 'Doodhpathri', desc: 'Meadows of Milk' },
+  { id: 'gurez', name: 'Gurez Valley', desc: 'Untouched Borderlands' },
+  { id: 'yusmarg', name: 'Yusmarg', desc: 'Meadows of Jesus' }
+];
 
-  const selected = AIRPORTS.find(a => a.code === value);
-
-  const filteredAirports = AIRPORTS.filter(a => {
-    if (a.code === excludeCode) return false;
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (
-      a.code.toLowerCase().includes(q) ||
-      a.city.toLowerCase().includes(q) ||
-      a.name.toLowerCase().includes(q) ||
-      a.state.toLowerCase().includes(q)
-    );
-  });
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setIsFocused(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={wrapperRef} className="relative flex-1 min-w-0">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-        <Icon className={`h-5 w-5 transition-colors duration-300 ${isFocused ? 'text-kashmir-gold' : 'text-kashmir-gold/70'}`} />
-      </div>
-      <div
-        className={`pl-12 pr-4 h-16 w-full rounded-xl border bg-[#0a0f12] text-lg text-white flex items-center cursor-pointer transition-all duration-300 ${
-          isFocused ? 'border-kashmir-gold/60 ring-1 ring-kashmir-gold/30 shadow-[0_0_20px_rgba(212,175,55,0.08)]' : 'border-white/10 hover:border-white/20'
-        }`}
-        onClick={() => {
-          setIsOpen(true);
-          setIsFocused(true);
-          setTimeout(() => inputRef.current?.focus(), 50);
-        }}
-      >
-        {isOpen ? (
-          <input
-            ref={inputRef}
-            className="bg-transparent w-full outline-none text-white placeholder:text-white/30"
-            placeholder={placeholder}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onFocus={() => { setIsOpen(true); setIsFocused(true); }}
-          />
-        ) : (
-          <div className="flex items-center gap-3 w-full overflow-hidden">
-            {selected ? (
-              <>
-                <span className="font-bold text-kashmir-gold text-xl tracking-wider">{selected.code}</span>
-                <span className="text-white/50 text-sm truncate">{selected.city}</span>
-              </>
-            ) : (
-              <span className="text-white/30">{placeholder}</span>
-            )}
-            <ChevronDown className="w-4 h-4 text-white/30 ml-auto flex-shrink-0" />
-          </div>
-        )}
-      </div>
-      <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider z-10">{label}</Label>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#0d1317] border border-white/10 rounded-xl shadow-2xl shadow-black/40 z-50 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
-          {filteredAirports.length === 0 ? (
-            <div className="px-4 py-6 text-center text-white/30 text-sm">No airports found</div>
-          ) : (
-            filteredAirports.map(airport => (
-              <div
-                key={airport.code}
-                className={`px-4 py-3 flex items-center gap-3 cursor-pointer transition-all duration-200 hover:bg-white/5 ${
-                  value === airport.code ? 'bg-kashmir-gold/10 border-l-2 border-kashmir-gold' : 'border-l-2 border-transparent'
-                }`}
-                onClick={() => {
-                  onChange(airport.code);
-                  setQuery('');
-                  setIsOpen(false);
-                  setIsFocused(false);
-                }}
-              >
-                <span className="font-bold text-kashmir-gold text-sm w-10">{airport.code}</span>
-                <div className="min-w-0">
-                  <p className="text-white text-sm font-medium truncate">{airport.city}</p>
-                  <p className="text-white/30 text-xs truncate">{airport.name}</p>
-                </div>
-                <span className="ml-auto text-white/20 text-xs flex-shrink-0">{airport.state}</span>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Date Picker Popover Component — styled like premium flight apps
-function DatePickerField({
-  date,
-  onSelect,
-  label,
-  minDate,
-  placeholder = 'Select date',
-}: {
-  date: Date | undefined;
-  onSelect: (date: Date | undefined) => void;
-  label: string;
-  minDate?: Date;
-  placeholder?: string;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="relative flex-1 min-w-0">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            className={`w-full h-16 pl-12 pr-4 rounded-xl border bg-[#0a0f12] text-left flex items-center transition-all duration-300 group ${
-              open 
-                ? 'border-kashmir-gold/60 ring-1 ring-kashmir-gold/30 shadow-[0_0_20px_rgba(212,175,55,0.08)]' 
-                : 'border-white/10 hover:border-white/20'
-            }`}
-          >
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <CalendarIcon className={`h-5 w-5 transition-colors duration-300 ${open ? 'text-kashmir-gold' : 'text-kashmir-gold/70'}`} />
-            </div>
-            {date ? (
-              <div className="flex flex-col">
-                <span className="text-white font-semibold text-lg leading-tight">{format(date, 'dd MMM')}</span>
-                <span className="text-white/30 text-xs">{format(date, 'EEEE, yyyy')}</span>
-              </div>
-            ) : (
-              <span className="text-white/30 text-lg">{placeholder}</span>
-            )}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent 
-          className="w-auto p-0 bg-[#0d1317] border-white/10 shadow-2xl shadow-black/60 rounded-2xl overflow-hidden" 
-          align="start"
-          sideOffset={8}
-        >
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={(d) => {
-              onSelect(d);
-              setOpen(false);
-            }}
-            disabled={(d) => minDate ? isBefore(d, minDate) : isBefore(d, startOfToday())}
-            initialFocus
-            className="bg-[#0d1317] text-white"
-            classNames={{
-              months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-              month: "space-y-4",
-              caption: "flex justify-center pt-1 relative items-center text-white",
-              caption_label: "text-sm font-semibold text-white",
-              nav: "space-x-1 flex items-center",
-              nav_button: "h-8 w-8 bg-white/5 border border-white/10 rounded-lg p-0 hover:bg-kashmir-gold/20 hover:border-kashmir-gold/40 text-white/60 hover:text-white inline-flex items-center justify-center transition-all",
-              nav_button_previous: "absolute left-1",
-              nav_button_next: "absolute right-1",
-              table: "w-full border-collapse space-y-1",
-              head_row: "flex",
-              head_cell: "text-white/30 rounded-md w-10 font-medium text-[0.75rem] uppercase",
-              row: "flex w-full mt-1",
-              cell: "h-10 w-10 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-              day: "h-10 w-10 p-0 font-normal text-white/70 hover:bg-kashmir-gold/20 hover:text-white rounded-lg transition-all inline-flex items-center justify-center",
-              day_range_end: "day-range-end",
-              day_selected: "bg-kashmir-gold text-black hover:bg-kashmir-gold hover:text-black focus:bg-kashmir-gold focus:text-black font-bold shadow-[0_0_12px_rgba(212,175,55,0.3)]",
-              day_today: "bg-white/10 text-white font-bold ring-1 ring-white/20",
-              day_outside: "text-white/15 opacity-50",
-              day_disabled: "text-white/10 opacity-30 cursor-not-allowed",
-              day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-              day_hidden: "invisible",
-            }}
-          />
-        </PopoverContent>
-      </Popover>
-      <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider z-10">{label}</Label>
-    </div>
-  );
-}
+// Interests database
+const INTERESTS = [
+  { id: 'snow', label: 'Snow Sports', icon: Snowflake },
+  { id: 'adventure', label: 'Extreme Adventure', icon: Activity },
+  { id: 'photography', label: 'Artisan Photography', icon: Camera },
+  { id: 'houseboat', label: 'Houseboat Stay', icon: Building },
+  { id: 'trekking', label: 'Alpine Trekking', icon: Compass },
+  { id: 'food', label: 'Wazwan Culinary', icon: Utensils },
+  { id: 'culture', label: 'Heritage Culture', icon: Sparkles },
+  { id: 'shopping', label: 'Artisanal Crafts', icon: Briefcase }
+];
 
 export function InteractiveTripPlanner() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [currency, setCurrency] = useState<'INR' | 'USD' | 'AED'>('INR');
-  
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Currency info
   const CURRENCY_RATES = {
-    INR: { symbol: '₹', rate: 1, label: 'INR' },
-    USD: { symbol: '$', rate: 0.012, label: 'USD' },
-    AED: { symbol: 'AED ', rate: 0.044, label: 'AED' }
+    INR: { symbol: '₹', rate: 1 },
+    USD: { symbol: '$', rate: 0.012 },
+    AED: { symbol: 'AED ', rate: 0.044 }
   };
 
   const formatPrice = (amount: number) => {
@@ -256,556 +69,555 @@ export function InteractiveTripPlanner() {
     return `${info.symbol}${converted.toLocaleString()}`;
   };
 
-  const [formData, setFormData] = useState({
-    origin: 'DEL',
-    destination: 'SXR',
-    departureDate: addDays(new Date(), 30) as Date | undefined,
-    returnDate: undefined as Date | undefined,
-    adults: 2,
-    includeFlights: false,
-    tripType: 'oneway' as 'oneway' | 'roundtrip',
-    cabinClass: 'economy',
-    departureTimePref: 'any',
-    directOnly: false,
+  // State Profile
+  const [profile, setProfile] = useState({
+    travelType: 'Couple',
+    departureDate: addDays(new Date(), 14),
+    duration: 5,
+    budget: 'Premium',
+    destinations: ['srinagar', 'gulmarg', 'pahalgam'],
+    interests: ['houseboat', 'culture'],
+    addons: {
+      transfers: true,
+      gondola: false,
+      photographer: false,
+      dinner: false,
+      insurance: false,
+      guide: false
+    },
     name: '',
     email: '',
     phone: ''
   });
 
-  const [heroTitle, setHeroTitle] = useState('Design Your Journey');
-  const [heroSubtitle, setHeroSubtitle] = useState('BESPOKE TRAVEL CURATED FOR YOU');
-  const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80');
+  // Calculate pricing dynamically
+  const pricingBreakdown = useMemo(() => {
+    const days = profile.duration;
+    let baseRate = 3500; // Budget
+    if (profile.budget === 'Premium') baseRate = 6500;
+    if (profile.budget === 'Luxury') baseRate = 12000;
 
+    // Travel Type multipliers
+    let multiplier = 1.0;
+    if (profile.travelType === 'Solo') multiplier = 1.0;
+    if (profile.travelType === 'Couple') multiplier = 1.8;
+    if (profile.travelType === 'Honeymoon') multiplier = 2.2;
+    if (profile.travelType === 'Family') multiplier = 3.5;
+    if (profile.travelType === 'Friends') multiplier = 4.0;
+    if (profile.travelType === 'Corporate') multiplier = 6.0;
 
+    let subtotal = baseRate * days * multiplier;
 
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/site-content`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.journeyHero) {
-            setHeroTitle(data.journeyHero.title || 'Design Your Journey');
-            setHeroSubtitle(data.journeyHero.subtitle || 'BESPOKE TRAVEL CURATED FOR YOU');
-            setHeroImage(data.journeyHero.image_url || 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80');
-          }
-        }
-      } catch (error) {
-        console.error('[InteractiveTripPlanner] Error loading content:', error);
-      }
-    };
-    fetchContent();
+    // Addons Cost
+    if (profile.addons.transfers) subtotal += 3000;
+    if (profile.addons.gondola) subtotal += 2000 * (profile.travelType === 'Solo' ? 1 : 2);
+    if (profile.addons.photographer) subtotal += 5000;
+    if (profile.addons.dinner) subtotal += 4500;
+    if (profile.addons.insurance) subtotal += 600 * (profile.travelType === 'Solo' ? 1 : 2);
+    if (profile.addons.guide) subtotal += 3500 * days;
 
-    const socket = io(SOCKET_URL);
-    socket.on('site-content-updated', (data) => {
-      if (data && data.section_key === 'journeyHero') {
-        setHeroTitle(data.title || 'Design Your Journey');
-        setHeroSubtitle(data.subtitle || 'BESPOKE TRAVEL CURATED FOR YOU');
-        setHeroImage(data.image_url || 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80');
-      }
-    });
+    const taxes = Math.round(subtotal * 0.05);
+    const total = subtotal + taxes;
 
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
+    return { subtotal, taxes, total };
+  }, [profile.duration, profile.budget, profile.travelType, profile.addons]);
 
-  const renderSplitTitle = (title: string) => {
-    const words = title.split(' ');
-    if (words.length <= 1) return title;
-    const lastWord = words.pop();
-    return (
-      <>
-        {words.join(' ')}{' '}
-        <span className="text-kashmir-gold italic">{lastWord}</span>
-      </>
-    );
-  };
+  // AI curator advice generator
+  const curatorInsight = useMemo(() => {
+    const type = profile.travelType;
+    const destCount = profile.destinations.length;
+    const budget = profile.budget;
+
+    if (type === 'Honeymoon') {
+      return `For your romantic honeymoon in Kashmir, we have curated luxury houseboats on Nigeen Lake and private candlelight dining options. Recommended best season: Autumn (Sep-Oct) for beautiful red foliage, or Winter (Jan) for magical snow views.`;
+    }
+    if (type === 'Friends' || profile.interests.includes('adventure')) {
+      return `Adventure focus detected! We recommended exploring high altitude treks in Sonamarg and skiing in Gulmarg. A chauffeured SUV transfer has been auto-allocated to navigate winding mountain passes comfortably.`;
+    }
+    if (type === 'Family') {
+      return `Family vacation curation: Priority set to comfortable transits with minimal changes. Selected premium family estates in Srinagar and Pahalgam, including optional airport pickups and child-friendly activities.`;
+    }
+    return `Based on your comfort class (${budget}) and travel type (${type}), we selected high-comfort accommodations and optimized transits across ${destCount} regions. Peak travel season is active, securing early inventory allocations.`;
+  }, [profile.travelType, profile.destinations, profile.budget, profile.interests]);
+
+  // Hotel recommendation
+  const recommendedHotel = useMemo(() => {
+    if (profile.budget === 'Luxury') {
+      return { name: "The Khyber Resort & Spa", location: "Gulmarg Highlands", rating: "5★ VIP Palace" };
+    }
+    if (profile.budget === 'Premium') {
+      return { name: "Senator Pine Creek", location: "Pahalgam Valley", rating: "4★ Boutique Comfort" };
+    }
+    return { name: "Pine Spring Cozy Chalet", location: "Srinagar Central", rating: "3★ Deluxe Room" };
+  }, [profile.budget]);
+
+  // Cab recommendation
+  const recommendedCab = useMemo(() => {
+    const type = profile.travelType;
+    if (type === 'Friends' || type === 'Corporate') {
+      return { model: "Force Urbania Coach", type: "12-Seater Premium Transit" };
+    }
+    if (type === 'Family' || type === 'Honeymoon') {
+      return { model: "Toyota Innova Crysta", type: "Chauffeured VIP SUV" };
+    }
+    return { model: "Toyota Etios / Dzire", type: "Luxury Compact Sedan" };
+  }, [profile.travelType]);
+
+  // Weather insight
+  const weatherInsight = useMemo(() => {
+    const date = profile.departureDate;
+    if (!date) return { temp: '15°C', icon: Sun, desc: 'Spring bloom season. Clear views.' };
+    const month = date.getMonth(); // 0 = Jan, 11 = Dec
+
+    if (month >= 10 || month <= 1) {
+      return { temp: '-2°C to 6°C', icon: Snowflake, desc: 'Glacial winter. Heaviest snowfall active. Perfect for ski sports.' };
+    }
+    if (month >= 5 && month <= 7) {
+      return { temp: '18°C to 28°C', icon: Sun, desc: 'Summery meadows. Pleasant alpine lake breezes. Great for trekking.' };
+    }
+    return { temp: '10°C to 18°C', icon: CloudRain, desc: 'Crisp autumn. Cool night breezes. Red maple leaves blooming.' };
+  }, [profile.departureDate]);
 
   const handleNext = () => setStep(s => s + 1);
   const handleBack = () => setStep(s => s - 1);
 
-  const swapAirports = () => {
-    setFormData(prev => ({
+  const toggleDestination = (id: string) => {
+    setProfile(prev => {
+      const active = prev.destinations.includes(id)
+        ? prev.destinations.filter(d => d !== id)
+        : [...prev.destinations, id];
+      return { ...prev, destinations: active };
+    });
+  };
+
+  const toggleInterest = (id: string) => {
+    setProfile(prev => {
+      const active = prev.interests.includes(id)
+        ? prev.interests.filter(i => i !== id)
+        : [...prev.interests, id];
+      return { ...prev, interests: active };
+    });
+  };
+
+  const toggleAddon = (key: keyof typeof profile.addons) => {
+    setProfile(prev => ({
       ...prev,
-      origin: prev.destination,
-      destination: prev.origin
+      addons: { ...prev.addons, [key]: !prev.addons[key] }
     }));
   };
 
   const handleSubmit = async () => {
-    toast.loading('Curating your experience...');
-
-    const originAirport = AIRPORTS.find(a => a.code === formData.origin);
-    const destAirport = AIRPORTS.find(a => a.code === formData.destination);
-
-    const flightDetailsObj = formData.includeFlights ? {
-      includeFlights: true,
-      origin: formData.origin,
-      originCity: originAirport?.city || formData.origin,
-      destination: formData.destination,
-      destinationCity: destAirport?.city || formData.destination,
-      departureDate: formData.departureDate ? format(formData.departureDate, 'yyyy-MM-dd') : undefined,
-      returnDate: formData.returnDate ? format(formData.returnDate, 'yyyy-MM-dd') : undefined,
-      tripType: formData.tripType,
-      cabinClass: formData.cabinClass,
-      departureTimePref: formData.departureTimePref,
-      directOnly: formData.directOnly,
-    } : { includeFlights: false };
-
+    setIsGenerating(true);
+    toast.loading('Curating your customized premium journey...');
+    
     try {
       const res = await fetch(`${API_BASE_URL}/inquiries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customerName: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          destination: destAirport?.city || 'Bespoke Kashmir Experience',
-          duration: `5 Nights`,
-          travelers: String(formData.adults),
-          budget: `TBD`,
-          accommodation: formData.includeFlights ? 'Luxury Hotel + Flights' : 'Luxury Hotel Only',
-          flightDetails: JSON.stringify(flightDetailsObj)
+          customerName: profile.name,
+          email: profile.email,
+          phone: profile.phone,
+          destination: profile.destinations.map(d => d.toUpperCase()).join(', '),
+          duration: `${profile.duration} Nights`,
+          travelers: profile.travelType,
+          budget: profile.budget,
+          accommodation: `${profile.budget} Hotel`,
+          flightDetails: JSON.stringify({
+            interests: profile.interests,
+            addons: profile.addons,
+            pricing: pricingBreakdown,
+            recommendedHotel,
+            recommendedCab
+          })
         })
       });
 
+      toast.dismiss();
       if (res.ok) {
-        toast.dismiss();
-        setStep(4);
+        toast.success('Bespoke journey generated successfully! Opening dashboard...');
+        navigate('/profile');
       } else {
-        toast.dismiss();
-        toast.error('Failed to submit request.');
+        toast.error('Failed to register inquiry.');
       }
     } catch (e) {
       toast.dismiss();
-      toast.error('Failed to submit request.');
+      toast.error('Network error registering journey.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const CABIN_CLASSES = [
-    { value: 'economy', label: 'Economy' },
-    { value: 'premium_economy', label: 'Premium Economy' },
-    { value: 'business', label: 'Business' },
-  ];
-
-  const StepIndicator = () => (
-    <div className="flex items-center justify-center space-x-4 mb-12">
-      {[1, 2, 3].map((num) => (
-        <div key={num} className="flex items-center">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
-            step === num 
-              ? 'border-kashmir-gold bg-kashmir-gold text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]' 
-              : step > num 
-                ? 'border-kashmir-gold text-kashmir-gold bg-white/5' 
-                : 'border-white/10 text-white/40 bg-white/[0.02]'
-          }`}>
-            {step > num ? <CheckCircle className="w-5 h-5" /> : <span className="font-medium text-lg">{num}</span>}
-          </div>
-          {num < 3 && (
-            <div className={`w-16 h-[2px] mx-2 transition-colors duration-500 ${step > num ? 'bg-kashmir-gold' : 'bg-white/10'}`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-
-
-
   return (
-    <div className="w-full max-w-4xl mx-auto py-12 relative">
-      {/* Decorative blurred background elements for luxury feel */}
+    <div className="w-full max-w-6xl mx-auto py-8 relative">
       <div className="absolute top-0 -left-10 w-40 h-40 bg-kashmir-gold/5 rounded-full blur-3xl" />
       <div className="absolute bottom-0 -right-10 w-60 h-60 bg-blue-900/5 rounded-full blur-3xl" />
 
-      <div className="bg-[#0a0f12]/60 backdrop-blur-3xl border border-white/5 shadow-2xl rounded-[3rem] overflow-hidden relative z-10">
-        <div className="bg-slate-950 px-8 py-12 text-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url("${heroImage}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent"></div>
-          <h2 className="text-4xl md:text-5xl font-light text-white relative z-10 mb-3 tracking-wide">{renderSplitTitle(heroTitle)}</h2>
-          <p className="text-white/70 relative z-10 font-bold tracking-widest text-[10px] uppercase">{heroSubtitle}</p>
-        </div>
+      {/* Main Grid: Left is Form Wizard, Right is Real-time summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
+        
+        {/* Left Column: Multi-step Wizard */}
+        <div className="lg:col-span-7 bg-[#0a0f12]/60 backdrop-blur-3xl border border-white/5 shadow-2xl rounded-[3rem] p-8 md:p-10 text-left space-y-8">
+          
+          <div className="flex justify-between items-center border-b border-white/5 pb-5">
+            <div>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-kashmir-gold">Bespoke Curation Desk</span>
+              <h2 className="text-2xl font-black uppercase tracking-tight mt-1 text-white">
+                AI Journey <span className="text-kashmir-gold italic">Studio</span>
+              </h2>
+            </div>
+            <div className="h-2 w-32 bg-white/5 rounded-full overflow-hidden border border-white/5">
+              <div 
+                className="h-full bg-gradient-to-r from-kashmir-gold to-amber-500 rounded-full transition-all duration-500"
+                style={{ width: `${(step / 3) * 100}%` }}
+              />
+            </div>
+          </div>
 
-        <div className="p-8 md:p-12">
-          {step < 4 && (
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-white/5 pb-6">
-              <div className="flex-1">
-                <StepIndicator />
+          {/* STEP 1: Profile & Duration */}
+          {step === 1 && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">1. Select Travel Profile</h3>
+                <p className="text-xs text-white/40 leading-snug">Choose your traveler class to fine-tune activity and hotel recommendations.</p>
               </div>
-              <div className="flex items-center gap-2.5 self-center bg-white/5 border border-white/10 rounded-xl p-1">
-                <span className="text-[9px] font-black uppercase tracking-widest text-white/40 pl-2">Currency</span>
-                {(['INR', 'USD', 'AED'] as const).map((curr) => (
+
+              {/* Grid of travel profiles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {TRAVEL_TYPES.map(t => (
                   <button
-                    key={curr}
-                    type="button"
-                    onClick={() => setCurrency(curr)}
+                    key={t.value}
+                    onClick={() => setProfile(prev => ({ ...prev, travelType: t.value }))}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
-                      currency === curr 
-                        ? "bg-kashmir-gold text-black font-bold shadow-[0_2px_10px_rgba(212,175,55,0.2)]" 
-                        : "text-white/40 hover:text-white"
+                      "p-4 rounded-2xl border text-left transition-all duration-300 hover:scale-[1.02]",
+                      profile.travelType === t.value
+                        ? "border-kashmir-gold bg-kashmir-gold/5 text-white shadow-[0_0_15px_rgba(212,175,55,0.05)]"
+                        : "border-white/5 bg-white/[0.01] text-white/50 hover:border-white/10 hover:text-white"
                     )}
                   >
-                    {curr}
+                    <span className="block text-xs font-black uppercase tracking-wider mb-1">{t.label}</span>
+                    <span className="block text-[10px] text-white/30 leading-none">{t.desc}</span>
                   </button>
                 ))}
               </div>
-            </div>
-          )}
 
-          {/* Step 1: Dates & Guests */}
-          {step === 1 && (
-            <div className="space-y-10 animate-in slide-in-from-right fade-in duration-500 max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-light text-white">When do you wish to travel?</h3>
-                <p className="text-white/40 mt-2">Pick your dates and party size.</p>
-              </div>
-
-              {/* Calendar Date Pickers */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <DatePickerField
-                  date={formData.departureDate}
-                  onSelect={(d) => setFormData(prev => ({ ...prev, departureDate: d }))}
-                  label="Departure Date"
-                  placeholder="Pick departure"
-                />
-                <DatePickerField
-                  date={formData.returnDate}
-                  onSelect={(d) => setFormData(prev => ({ ...prev, returnDate: d }))}
-                  label="Return Date"
-                  placeholder="Pick return (optional)"
-                  minDate={formData.departureDate ? addDays(formData.departureDate, 1) : addDays(new Date(), 1)}
-                />
-              </div>
-
-              {/* Guest Counter */}
-              <div className="relative">
-                <div className="flex items-center justify-between h-16 px-5 rounded-xl border border-white/10 bg-[#0a0f12]">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-kashmir-gold" />
-                    <span className="text-white/60 text-sm">Travellers</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setFormData(prev => ({ ...prev, adults: Math.max(1, prev.adults - 1) }))}
-                      className="w-9 h-9 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/50 hover:bg-kashmir-gold/10 hover:border-kashmir-gold/40 hover:text-white transition-all active:scale-90"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <span className="text-white font-bold text-2xl w-8 text-center tabular-nums">{formData.adults}</span>
-                    <button
-                      onClick={() => setFormData(prev => ({ ...prev, adults: Math.min(12, prev.adults + 1) }))}
-                      className="w-9 h-9 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/50 hover:bg-kashmir-gold/10 hover:border-kashmir-gold/40 hover:text-white transition-all active:scale-90"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider z-10">Guests</Label>
-              </div>
-
-
-            </div>
-          )}
-
-          {/* Step 2: Flights */}
-          {step === 2 && (
-            <div className="space-y-8 animate-in slide-in-from-right fade-in duration-500 max-w-3xl mx-auto">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-light text-white">Bespoke Flight Enquiry</h3>
-                <p className="text-white/40 mt-2">Select your package structure and flight preferences.</p>
-              </div>
-
-              {/* Two Option Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, includeFlights: false }))}
-                  className={cn(
-                    "p-6 rounded-[2rem] border text-left transition-all duration-500 relative overflow-hidden group hover:scale-[1.02]",
-                    !formData.includeFlights 
-                      ? "border-kashmir-gold bg-kashmir-gold/[0.03] shadow-[0_0_30px_rgba(212,175,55,0.08)]" 
-                      : "border-white/5 bg-white/[0.01] hover:border-white/20"
-                  )}
-                >
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-kashmir-gold/5 blur-2xl group-hover:scale-150 transition-all duration-700" />
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all duration-500",
-                      !formData.includeFlights ? "border-kashmir-gold bg-kashmir-gold/10 text-kashmir-gold" : "border-white/10 text-white/40"
-                    )}>
-                      <Compass className="w-6 h-6" />
-                    </div>
-                    {!formData.includeFlights && (
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-kashmir-gold text-black px-2.5 py-0.5 rounded-full">Selected</span>
-                    )}
-                  </div>
-                  <h4 className="font-bold text-white text-lg mb-1.5 uppercase tracking-wide">Ground Package Only</h4>
-                  <p className="text-xs text-white/40 leading-relaxed font-medium">
-                    Excludes flights. Includes 5-star hotels, luxury houseboats, private chauffeurs, spa credits, and local VIP access passes.
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, includeFlights: true }))}
-                  className={cn(
-                    "p-6 rounded-[2rem] border text-left transition-all duration-500 relative overflow-hidden group hover:scale-[1.02]",
-                    formData.includeFlights 
-                      ? "border-kashmir-gold bg-kashmir-gold/[0.03] shadow-[0_0_30px_rgba(212,175,55,0.08)]" 
-                      : "border-white/5 bg-white/[0.01] hover:border-white/20"
-                  )}
-                >
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-kashmir-gold/5 blur-2xl group-hover:scale-150 transition-all duration-700" />
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all duration-500",
-                      formData.includeFlights ? "border-kashmir-gold bg-kashmir-gold/10 text-kashmir-gold" : "border-white/10 text-white/40"
-                    )}>
-                      <Plane className="w-6 h-6" />
-                    </div>
-                    {formData.includeFlights && (
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-kashmir-gold text-black px-2.5 py-0.5 rounded-full">Selected</span>
-                    )}
-                  </div>
-                  <h4 className="font-bold text-white text-lg mb-1.5 uppercase tracking-wide">Land + Air Package</h4>
-                  <p className="text-xs text-white/40 leading-relaxed font-medium">
-                    Includes premium flight tickets coordinated directly with your tour itinerary, private transfers, and luxury accommodations.
-                  </p>
-                </button>
-              </div>
-
-              {formData.includeFlights && (
-                <div className="space-y-6 pt-4 border-t border-white/5 animate-in fade-in duration-500">
-                  {/* Trip Type Selector */}
-                  <div className="flex bg-white/[0.03] rounded-xl border border-white/5 p-1 w-fit">
-                    {(['oneway', 'roundtrip'] as const).map((type) => (
+              {/* Duration and Calendar Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+                <div className="relative">
+                  <div className="flex items-center justify-between h-16 px-5 rounded-xl border border-white/10 bg-black/40">
+                    <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Nights Stay</span>
+                    <div className="flex items-center gap-3">
                       <button
-                        key={type}
-                        type="button"
-                        className={cn(
-                          "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all",
-                          formData.tripType === type 
-                            ? "bg-kashmir-gold text-black font-bold shadow-md" 
-                            : "text-white/40 hover:text-white"
-                        )}
-                        onClick={() => setFormData(prev => ({ ...prev, tripType: type }))}
+                        onClick={() => setProfile(prev => ({ ...prev, duration: Math.max(3, prev.duration - 1) }))}
+                        className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/50 hover:bg-kashmir-gold hover:text-black transition-all"
                       >
-                        {type === 'oneway' ? 'One Way' : 'Round Trip'}
+                        <Minus className="w-3.5 h-3.5" />
                       </button>
-                    ))}
+                      <span className="text-white font-bold text-xl w-6 text-center">{profile.duration}</span>
+                      <button
+                        onClick={() => setProfile(prev => ({ ...prev, duration: Math.min(14, prev.duration + 1) }))}
+                        className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/50 hover:bg-kashmir-gold hover:text-black transition-all"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
+                  <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-[9px] font-black text-white/40 uppercase tracking-widest">Duration</Label>
+                </div>
 
-                  {/* Airport Search Fields */}
-                  <div className="flex flex-col md:flex-row items-center gap-4">
-                    <AirportSearchInput
-                      value={formData.origin}
-                      onChange={(code) => setFormData(prev => ({ ...prev, origin: code }))}
-                      label="Departure Airport"
-                      icon={Plane}
-                      placeholder="Departure City (e.g. DEL)"
-                      excludeCode={formData.destination}
-                    />
+                <DatePickerField
+                  date={profile.departureDate}
+                  onSelect={(d) => setProfile(prev => ({ ...prev, departureDate: d || new Date() }))}
+                  label="Departure Date"
+                  placeholder="Select Date"
+                />
+              </div>
+            </div>
+          )}
 
+          {/* STEP 2: Destinations & Comfort */}
+          {step === 2 && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">2. Territy & Comfort Tier</h3>
+                <p className="text-xs text-white/40 leading-snug">Select territories to traverse and your expected accommodation comfort class.</p>
+              </div>
+
+              {/* Destination tags grid */}
+              <div className="space-y-3">
+                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Preferred Destinations</span>
+                <div className="flex flex-wrap gap-2">
+                  {DESTINATIONS.map(d => {
+                    const active = profile.destinations.includes(d.id);
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => toggleDestination(d.id)}
+                        className={cn(
+                          "px-4 py-2.5 rounded-full border text-xs font-extrabold uppercase tracking-wider transition-all duration-300",
+                          active 
+                            ? "bg-kashmir-gold text-black border-kashmir-gold shadow-lg shadow-kashmir-gold/10" 
+                            : "bg-white/5 border-white/5 text-white/50 hover:border-white/10 hover:text-white"
+                        )}
+                      >
+                        {d.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Accommodation Class selection */}
+              <div className="space-y-3 pt-4">
+                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Comfort & Budget Class</span>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { value: 'Budget', label: 'Comfort stay', price: 'Standard boutique' },
+                    { value: 'Premium', label: 'Premium Class', price: 'High-end comfort' },
+                    { value: 'Luxury', label: 'VIP Palatial', price: 'Taj / Khyber Luxury' }
+                  ].map(b => (
                     <button
-                      type="button"
-                      onClick={swapAirports}
-                      className="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center hover:bg-kashmir-gold/10 hover:border-kashmir-gold/40 transition-all duration-300 active:scale-95 group"
-                      title="Swap cities"
+                      key={b.value}
+                      onClick={() => setProfile(prev => ({ ...prev, budget: b.value }))}
+                      className={cn(
+                        "p-4 rounded-xl border text-center transition-all duration-300",
+                        profile.budget === b.value
+                          ? "border-kashmir-gold bg-kashmir-gold/5 text-white shadow-lg"
+                          : "border-white/5 bg-white/[0.01] text-white/40 hover:border-white/10 hover:text-white"
+                      )}
                     >
-                      <ArrowLeftRight className="w-5 h-5 text-white/40 group-hover:text-kashmir-gold" />
+                      <p className="text-[10px] font-black uppercase tracking-wider mb-1">{b.label}</p>
+                      <p className="text-[9px] text-white/30 leading-none">{b.price}</p>
                     </button>
-
-                    <AirportSearchInput
-                      value={formData.destination}
-                      onChange={(code) => setFormData(prev => ({ ...prev, destination: code }))}
-                      label="Arrival Airport"
-                      icon={MapPin}
-                      placeholder="Arrival City (e.g. SXR)"
-                      excludeCode={formData.origin}
-                    />
-                  </div>
-
-                  {/* Cabin Class Selection Grid */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Cabin Class Preference</label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {[
-                        { value: 'economy', label: 'Economy Class', desc: 'Standard tourist class' },
-                        { value: 'premium_economy', label: 'Premium Economy', desc: 'Added legroom & comfort' },
-                        { value: 'business', label: 'Business Class', desc: 'Elite flat-bed / premium lounge' }
-                      ].map(cls => (
-                        <button
-                          key={cls.value}
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, cabinClass: cls.value }))}
-                          className={cn(
-                            "p-4 rounded-2xl border text-left transition-all duration-300 hover:scale-[1.02]",
-                            formData.cabinClass === cls.value
-                              ? "border-kashmir-gold bg-kashmir-gold/5 shadow-[0_0_15px_rgba(212,175,55,0.05)] text-white"
-                              : "border-white/5 bg-[#0a0f12]/40 text-white/60 hover:border-white/10 hover:text-white"
-                          )}
-                        >
-                          <p className="text-xs font-black uppercase tracking-wider mb-1">{cls.label}</p>
-                          <p className="text-[10px] text-white/30 leading-none">{cls.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Timing Preference Options */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Preferred Departure Time</label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {[
-                        { value: 'any', label: 'Anytime', desc: 'Best fare' },
-                        { value: 'morning', label: 'Morning', desc: '6 AM - 12 PM' },
-                        { value: 'afternoon', label: 'Afternoon', desc: '12 PM - 6 PM' },
-                        { value: 'evening', label: 'Evening', desc: '6 PM - 12 AM' }
-                      ].map(t => (
-                        <button
-                          key={t.value}
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, departureTimePref: t.value }))}
-                          className={cn(
-                            "py-3 px-4 rounded-xl border text-center transition-all duration-300",
-                            formData.departureTimePref === t.value
-                              ? "border-kashmir-gold bg-kashmir-gold/5 text-white"
-                              : "border-white/5 bg-[#0a0f12]/40 text-white/40 hover:border-white/10 hover:text-white"
-                          )}
-                        >
-                          <p className="text-[10px] font-black uppercase tracking-wider leading-none mb-0.5">{t.label}</p>
-                          <p className="text-[9px] text-white/30 leading-none">{t.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Direct Flights Switch */}
-                  <div className="p-4 rounded-2xl bg-[#0a0f12]/40 border border-white/5 flex items-center justify-between">
-                    <div>
-                      <h5 className="text-xs font-bold text-white uppercase tracking-wider">Direct Flights Only</h5>
-                      <p className="text-[10px] text-white/30">Exclude flights with layovers / stops</p>
-                    </div>
-                    <Switch
-                      checked={formData.directOnly}
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, directOnly: checked }))}
-                      className="data-[state=checked]:bg-kashmir-gold"
-                    />
-                  </div>
-
-                  {/* Concierge Guarantee Info Box */}
-                  <div className="p-5 rounded-3xl bg-kashmir-gold/5 border border-kashmir-gold/10 flex gap-4 items-start text-left">
-                    <Sparkles className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
-                    <div>
-                      <h5 className="text-[10px] font-black text-white uppercase tracking-wider mb-1">Direct Flight Inventory Sync</h5>
-                      <p className="text-[10px] text-white/50 leading-relaxed">
-                        Instead of instant online tickets that have high markup margins and booking fees, our operations desk curates B2B air fares directly. We will match flights from premier airlines (such as Air India, Vistara, and IndiGo) tailored to your exact timings and budget.
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
-          {/* Step 3: Contact */}
+          {/* STEP 3: Interests & Addons */}
           {step === 3 && (
-            <div className="space-y-8 animate-in slide-in-from-right fade-in duration-500 max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-light text-white">Curator Contact</h3>
-                <p className="text-white/40 mt-2">Where should we send your personalized itinerary?</p>
+            <div className="space-y-6 animate-fade-in">
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">3. Interests & Signature Experiences</h3>
+                <p className="text-xs text-white/40 leading-snug">Personalize your daily itineraries with interest-based activities and optional VIP services.</p>
               </div>
 
-              <div className="space-y-6">
-                <div className="group relative">
-                  <Input 
-                    value={formData.name} 
-                    onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                    className="h-14 bg-white/5 border-white/10 rounded-xl text-white text-lg focus-visible:ring-kashmir-gold transition-all px-4" 
-                    placeholder="E.g. James Kensington"
-                  />
-                  <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider">Full Name</Label>
-                </div>
-                
-                <div className="group relative">
-                  <Input 
-                    type="email" 
-                    value={formData.email} 
-                    onChange={e => setFormData({ ...formData, email: e.target.value })} 
-                    className="h-14 bg-white/5 border-white/10 rounded-xl text-white text-lg focus-visible:ring-kashmir-gold transition-all px-4"
-                    placeholder="james@example.com"
-                  />
-                  <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider">Email Address</Label>
-                </div>
-
-                <div className="group relative">
-                  <Input 
-                    type="tel" 
-                    value={formData.phone} 
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                    className="h-14 bg-white/5 border-white/10 rounded-xl text-white text-lg focus-visible:ring-kashmir-gold transition-all px-4"
-                    placeholder="+91 98765 43210"
-                  />
-                  <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider">WhatsApp Number</Label>
+              {/* Interests Grid */}
+              <div className="space-y-3">
+                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Interests</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {INTERESTS.map(item => {
+                    const active = profile.interests.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => toggleInterest(item.id)}
+                        className={cn(
+                          "py-3 px-4 rounded-xl border text-center flex flex-col items-center justify-center gap-2 transition-all duration-300",
+                          active 
+                            ? "border-kashmir-gold bg-kashmir-gold/5 text-white" 
+                            : "border-white/5 bg-white/[0.01] text-white/40 hover:border-white/10 hover:text-white"
+                        )}
+                      >
+                        <item.icon className="w-5 h-5 text-kashmir-gold" />
+                        <span className="text-[9px] font-black uppercase tracking-wider leading-none">{item.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
+              {/* Addons Section */}
+              <div className="space-y-3 pt-2">
+                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Add-on Amenities</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { id: 'transfers', label: 'Airport Pick & Drop', desc: 'Private luxury cab transfers.' },
+                    { id: 'gondola', label: 'Gulmarg Gondola Passes', desc: 'Skip the line VIP tickets.' },
+                    { id: 'photographer', label: 'Artisan Photographer', desc: 'Bespoke holiday photography.' },
+                    { id: 'dinner', label: 'Candlelight Dinner Night', desc: 'Romantic Lidder riverside setup.' }
+                  ].map(a => (
+                    <div 
+                      key={a.id}
+                      onClick={() => toggleAddon(a.id as any)}
+                      className={cn(
+                        "p-4 rounded-xl border text-left flex items-center justify-between cursor-pointer transition-all duration-300",
+                        profile.addons[a.id as keyof typeof profile.addons]
+                          ? "border-kashmir-gold bg-kashmir-gold/5 text-white"
+                          : "border-white/5 bg-white/[0.01] text-white/50"
+                      )}
+                    >
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wider mb-0.5">{a.label}</p>
+                        <p className="text-[9px] text-white/30 leading-none">{a.desc}</p>
+                      </div>
+                      <Switch 
+                        checked={profile.addons[a.id as keyof typeof profile.addons]} 
+                        className="data-[state=checked]:bg-kashmir-gold pointer-events-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
 
+              {/* Contact Information block */}
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Curator Liaison Contact</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Input 
+                    value={profile.name} 
+                    onChange={e => setProfile({...profile, name: e.target.value})} 
+                    placeholder="Full Name" 
+                    className="h-12 bg-white/5 border-white/5 rounded-xl text-xs font-semibold"
+                  />
+                  <Input 
+                    type="email"
+                    value={profile.email} 
+                    onChange={e => setProfile({...profile, email: e.target.value})} 
+                    placeholder="Email" 
+                    className="h-12 bg-white/5 border-white/5 rounded-xl text-xs font-semibold"
+                  />
+                  <Input 
+                    type="tel"
+                    value={profile.phone} 
+                    onChange={e => setProfile({...profile, phone: e.target.value})} 
+                    placeholder="WhatsApp Number" 
+                    className="h-12 bg-white/5 border-white/5 rounded-xl text-xs font-semibold"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Step 4: Success */}
-          {step === 4 && (
-            <div className="text-center py-16 animate-in zoom-in duration-700">
-              <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/20">
-                <CheckCircle className="w-12 h-12 text-emerald-400" />
-              </div>
-              <h2 className="text-4xl font-light text-white mb-4">Request Received</h2>
-              <p className="text-lg text-white/60 max-w-md mx-auto leading-relaxed">
-                Our luxury travel curators are meticulously analyzing your preferences and securing the best rates. You will receive a WhatsApp message shortly.
-              </p>
-
-              <div className="mt-8">
-                <Button onClick={() => window.location.reload()} variant="outline" className="rounded-full px-8 h-12 border-white/10 text-white hover:bg-white/5">
-                  Plan Another Trip
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {step < 4 && (
-          <div className="flex justify-between items-center px-8 md:px-12 py-6 bg-[#0a0f12]/40 backdrop-blur-3xl border-t border-white/5 mt-4">
-            <Button 
-              variant="ghost" 
-              onClick={handleBack} 
+          {/* Controls Bar */}
+          <div className="flex justify-between items-center pt-6 border-t border-white/5 mt-4">
+            <Button
+              onClick={handleBack}
               disabled={step === 1}
-              className={`text-white/40 hover:text-white hover:bg-white/5 transition-colors ${step === 1 ? 'opacity-0' : 'opacity-100'}`}
+              variant="ghost"
+              className={cn("text-white/40 hover:text-white hover:bg-white/5 rounded-xl", step === 1 && "opacity-0")}
             >
               Back
             </Button>
 
-
-            
             {step < 3 ? (
-              <Button 
-                onClick={handleNext} 
-                className="bg-white text-black hover:bg-kashmir-gold hover:text-black rounded-full px-8 h-12 transition-all shadow-lg font-bold"
+              <Button
+                onClick={handleNext}
+                className="bg-white text-black hover:bg-kashmir-gold hover:text-black rounded-xl font-bold px-6 h-12 flex items-center gap-2"
               >
-                Continue <ArrowRight className="w-4 h-4 ml-2" />
+                Continue <ArrowRight className="w-4 h-4" />
               </Button>
             ) : (
-              <Button 
-                onClick={handleSubmit} 
-                disabled={!formData.name || !formData.phone} 
-                className="bg-kashmir-gold hover:bg-amber-600 text-black rounded-full px-8 h-12 transition-all shadow-lg shadow-kashmir-gold/20 font-bold tracking-wide"
+              <Button
+                onClick={handleSubmit}
+                disabled={isGenerating || !profile.name || !profile.phone}
+                className="bg-kashmir-gold text-black hover:bg-amber-600 rounded-xl font-black text-xs uppercase tracking-widest px-8 h-12 flex items-center gap-2 shadow-lg shadow-kashmir-gold/20"
               >
-                Submit Request <CheckCircle className="w-4 h-4 ml-2" />
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Securing...
+                  </>
+                ) : (
+                  <>
+                    Generate Journey <Sparkles className="w-4 h-4 text-black" />
+                  </>
+                )}
               </Button>
             )}
           </div>
-        )}
+
+        </div>
+
+        {/* Right Column: Real-time Journey Summary & AI Curator (5 Cols) */}
+        <div className="lg:col-span-5 space-y-6 text-left">
+          
+          {/* Summary Panel */}
+          <div className="bg-[#0a0f12]/60 backdrop-blur-3xl border border-white/5 shadow-2xl rounded-[3rem] p-6 md:p-8 space-y-6">
+            <h3 className="text-sm font-black uppercase tracking-wider border-b border-white/5 pb-3">Journey Blueprint</h3>
+            
+            {/* Live Pricing Estimation */}
+            <div className="space-y-1.5 border-b border-white/5 pb-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Estimated Cost</span>
+              <div className="flex justify-between items-baseline">
+                <span className="text-3xl font-display font-black text-kashmir-gold">{formatPrice(pricingBreakdown.total)}</span>
+                <span className="text-[10px] text-white/40 tracking-wider">All Taxes & Allowances Inc.</span>
+              </div>
+            </div>
+
+            {/* Travel Specs */}
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="bg-white/[0.02] border border-white/5 p-3.5 rounded-xl flex items-center gap-3">
+                <CalendarDays className="w-5 h-5 text-kashmir-gold" />
+                <div>
+                  <span className="block text-[8px] font-black text-white/30 uppercase tracking-widest">Dates</span>
+                  <span className="font-bold text-white">{profile.departureDate ? format(profile.departureDate, 'dd MMM') : 'TBD'} ({profile.duration}N)</span>
+                </div>
+              </div>
+              <div className="bg-white/[0.02] border border-white/5 p-3.5 rounded-xl flex items-center gap-3">
+                <Users className="w-5 h-5 text-kashmir-gold" />
+                <div>
+                  <span className="block text-[8px] font-black text-white/30 uppercase tracking-widest">Profile</span>
+                  <span className="font-bold text-white">{profile.travelType}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Curator Recommendations */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-lg bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20 shrink-0">
+                  <Building className="w-4.5 h-4.5 text-kashmir-gold" />
+                </div>
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-white/30 tracking-widest mb-0.5">Recommended Estate</span>
+                  <h5 className="text-xs font-bold text-white">{recommendedHotel.name}</h5>
+                  <p className="text-[9px] text-white/40 mt-0.5">{recommendedHotel.location} • {recommendedHotel.rating}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-lg bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20 shrink-0">
+                  <Car className="w-4.5 h-4.5 text-kashmir-gold" />
+                </div>
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-white/30 tracking-widest mb-0.5">Allocated Transport</span>
+                  <h5 className="text-xs font-bold text-white">{recommendedCab.model}</h5>
+                  <p className="text-[9px] text-white/40 mt-0.5">{recommendedCab.type}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-lg bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20 shrink-0">
+                  <weatherInsight.icon className="w-4.5 h-4.5 text-kashmir-gold" />
+                </div>
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-white/30 tracking-widest mb-0.5">Seasonal Weather advisory</span>
+                  <h5 className="text-xs font-bold text-white">{weatherInsight.temp} ({weatherInsight.desc})</h5>
+                  <p className="text-[9px] text-white/40 mt-0.5">Departure tenure forecast based on date</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* AI Curator Panel */}
+          <div className="bg-gradient-to-br from-kashmir-gold/5 via-amber-500/[0.02] to-transparent border border-kashmir-gold/20 rounded-[2.5rem] p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-kashmir-gold/5 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex gap-4 items-start">
+              <Sparkles className="w-6 h-6 text-kashmir-gold shrink-0 mt-1" />
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-widest text-white">AI Curator Analysis</h4>
+                <p className="text-xs text-white/60 leading-relaxed">
+                  {curatorInsight}
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </div>
   );
