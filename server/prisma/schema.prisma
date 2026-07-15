@@ -344,12 +344,24 @@ model AgentProfile {
 }
 
 model DriverProfile {
-  id             String   @id @default(uuid())
-  licenseNumber  String
-  vehicleRegNo   String
-  status         String   @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String   @id @default(uuid())
+  licenseNumber      String
+  vehicleRegNo       String
+  status             String   @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
+  rating             Float    @default(4.8)
+  tripsCompleted     Int      @default(0)
+  earnings           Float    @default(0)
+  attendance         String   @default("Present") // Present, Absent, Off Duty
+  licenseExpiry      String   @default("2027-12-31")
+  policeVerification String   @default("Verified") // Verified, Pending, Expired
+  aadhaar            String   @default("0000-0000-0000")
+  experience         Int      @default(3)
+  languages          String   @default("English, Kashmiri, Urdu")
+  emergencyContact   String   @default("+919876543219")
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
 }
 
 model Supplier {

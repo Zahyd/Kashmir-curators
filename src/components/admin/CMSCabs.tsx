@@ -164,12 +164,7 @@ export default function CMSCabs() {
   
   const [cabs, setCabs] = useState<Cab[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [driversList, setDriversList] = useState<any[]>([
-    { id: 'drv-1', name: 'Shabir Ahmad', phone: '+919876543210', rating: 4.9, license: 'JK01-2015000329', status: 'Online', attendance: 'Present', earnings: 18450, trips: 28 },
-    { id: 'drv-2', name: 'Fayaz Rather', phone: '+919876543212', rating: 4.8, license: 'JK01-2017002492', status: 'On Trip', attendance: 'Present', earnings: 24600, trips: 34 },
-    { id: 'drv-3', name: 'Tariq Mir', phone: '+919876543215', rating: 4.7, license: 'JK03-2019001221', status: 'Offline', attendance: 'Absent', earnings: 12100, trips: 15 },
-    { id: 'drv-4', name: 'Hilal Dar', phone: '+919876543218', rating: 4.9, license: 'JK05-2014003284', status: 'Online', attendance: 'Present', earnings: 21900, trips: 31 }
-  ]);
+  const [driversList, setDriversList] = useState<any[]>([]);
   
   const [operationsData, setOperationsData] = useState<OperationsData>({
     manualBlockings: [],
@@ -240,6 +235,132 @@ export default function CMSCabs() {
   const [runningAI, setRunningAI] = useState(false);
   const [aiMatchOutput, setAiMatchOutput] = useState<string[]>([]);
   const [showAIMatchResult, setShowAIMatchResult] = useState(false);
+
+  // Driver CRUD dialog states
+  const [driverDialogOpen, setDriverDialogOpen] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<any | null>(null);
+  const [driverFormData, setDriverFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    licenseNumber: '',
+    vehicleRegNo: '',
+    status: 'AVAILABLE',
+    rating: 4.8,
+    tripsCompleted: 0,
+    earnings: 0,
+    attendance: 'Present',
+    licenseExpiry: '2027-12-31',
+    policeVerification: 'Verified',
+    aadhaar: '0000-0000-0000',
+    experience: 3,
+    languages: 'English, Kashmiri, Urdu',
+    emergencyContact: '+919876543219'
+  });
+  const [savingDriver, setSavingDriver] = useState(false);
+
+  const openCreateDriverDialog = () => {
+    setEditingDriver(null);
+    setDriverFormData({
+      name: '',
+      email: '',
+      phone: '',
+      licenseNumber: '',
+      vehicleRegNo: '',
+      status: 'AVAILABLE',
+      rating: 4.8,
+      tripsCompleted: 0,
+      earnings: 0,
+      attendance: 'Present',
+      licenseExpiry: '2027-12-31',
+      policeVerification: 'Verified',
+      aadhaar: '0000-0000-0000',
+      experience: 3,
+      languages: 'English, Kashmiri, Urdu',
+      emergencyContact: '+919876543219'
+    });
+    setDriverDialogOpen(true);
+  };
+
+  const openEditDriverDialog = (drv: any) => {
+    setEditingDriver(drv);
+    setDriverFormData({
+      name: drv.name,
+      email: drv.email,
+      phone: drv.phone,
+      licenseNumber: drv.license,
+      vehicleRegNo: drv.vehicleRegNo,
+      status: drv.status,
+      rating: drv.rating,
+      tripsCompleted: drv.trips,
+      earnings: drv.earnings,
+      attendance: drv.attendance,
+      licenseExpiry: drv.licenseExpiry,
+      policeVerification: drv.policeVerification,
+      aadhaar: drv.aadhaar,
+      experience: drv.experience,
+      languages: drv.languages,
+      emergencyContact: drv.emergencyContact
+    });
+    setDriverDialogOpen(true);
+  };
+
+  const handleSaveDriver = async () => {
+    if (!driverFormData.name || !driverFormData.email || !driverFormData.licenseNumber || !driverFormData.vehicleRegNo) {
+      toast.error('Driver name, email, license number, and vehicle registration number are required');
+      return;
+    }
+
+    setSavingDriver(true);
+    const token = localStorage.getItem('teamToken');
+    const method = editingDriver ? 'PATCH' : 'POST';
+    const url = editingDriver 
+      ? `${API_BASE_URL}/cabs/operations/drivers/${editingDriver.id}` 
+      : `${API_BASE_URL}/cabs/operations/drivers`;
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(driverFormData)
+      });
+
+      if (response.ok) {
+        toast.success(editingDriver ? 'Driver profile updated' : 'New driver registered successfully');
+        setDriverDialogOpen(false);
+        fetchOperationsData();
+      } else {
+        const err = await response.json();
+        toast.error(err.error || 'Failed to save driver');
+      }
+    } catch (e: any) {
+      toast.error(`Network error: ${e.message}`);
+    } finally {
+      setSavingDriver(false);
+    }
+  };
+
+  const handleDeleteDriver = async (id: string) => {
+    if (!confirm('Are you sure you want to suspend and remove this driver?')) return;
+    const token = localStorage.getItem('teamToken');
+    try {
+      const response = await fetch(`${API_BASE_URL}/cabs/operations/drivers/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        toast.success('Driver removed successfully');
+        fetchOperationsData();
+      } else {
+        toast.error('Failed to remove driver');
+      }
+    } catch (e) {
+      toast.error('Network connection error');
+    }
+  };
 
   // Pricing rules engine
   const [pricingRules, setPricingRules] = useState({
@@ -337,6 +458,31 @@ export default function CMSCabs() {
       const data = await response.json();
       setOperationsData(data.operationsData);
       setBookings(data.bookings || []);
+      
+      const rawDrivers = data.drivers || [];
+      const formattedDrivers = rawDrivers.map((d: any) => {
+        const profile = d.driverProfile || {};
+        return {
+          id: d.id,
+          name: d.name,
+          email: d.email,
+          phone: d.phone || '',
+          rating: profile.rating || 4.8,
+          license: profile.licenseNumber || 'N/A',
+          vehicleRegNo: profile.vehicleRegNo || '',
+          status: profile.status || 'AVAILABLE',
+          attendance: profile.attendance || 'Present',
+          earnings: profile.earnings || 0,
+          trips: profile.tripsCompleted || 0,
+          licenseExpiry: profile.licenseExpiry || '2027-12-31',
+          policeVerification: profile.policeVerification || 'Verified',
+          aadhaar: profile.aadhaar || '0000-0000-0000',
+          experience: profile.experience || 3,
+          languages: profile.languages || 'English, Kashmiri, Urdu',
+          emergencyContact: profile.emergencyContact || '+919876543219'
+        };
+      });
+      setDriversList(formattedDrivers);
     } catch (error: any) {
       console.error('[CMSCabs] Error fetching operations data:', error);
       toast.error('Failed to load command center operations logs');
@@ -1220,61 +1366,125 @@ export default function CMSCabs() {
               <h3 className="text-xl font-display font-black text-white">CHAUFFEUR HUB</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Track driver duty rosters, license verifications, ratings, and incentive structures</p>
             </div>
-            <Button 
-              className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
-              onClick={() => {
-                toast.success('Licensing API validation portal opened.');
-              }}
-            >
-              <Shield className="w-4 h-4 text-black" /> Verify Licenses
-            </Button>
+            <div className="flex items-center gap-3">
+              {activeRole === 'Director' && (
+                <Button 
+                  className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
+                  onClick={openCreateDriverDialog}
+                >
+                  <Plus className="w-4 h-4" /> Register Chauffeur
+                </Button>
+              )}
+              <Button 
+                variant="outline"
+                className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
+                onClick={() => {
+                  toast.success('Licensing API validation portal opened.');
+                }}
+              >
+                <Shield className="w-4 h-4 text-kashmir-gold" /> Verify Licenses
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {driversList.map(drv => (
-              <Card key={drv.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
-                <div className="absolute top-4 right-4">
-                  <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
-                    drv.status === 'Online' ? 'bg-emerald-500/10 text-emerald-400' : 
-                    drv.status === 'On Trip' ? 'bg-red-500/10 text-red-400' : 'bg-neutral-500/10 text-neutral-400'
-                  )}>
-                    {drv.status}
-                  </Badge>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-                      <User className="w-5 h-5 text-kashmir-gold" />
+            {driversList.map(drv => {
+              const isLicExpiring = new Date(drv.licenseExpiry) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+              return (
+                <Card key={drv.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                  {/* Action Overlays */}
+                  {activeRole === 'Director' && (
+                    <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/5 z-10">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7 hover:bg-white/10 text-white" 
+                        onClick={() => openEditDriverDialog(drv)}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7 hover:bg-red-500/20 text-red-400" 
+                        onClick={() => handleDeleteDriver(drv.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
-                    <div>
-                      <h4 className="text-xs font-black uppercase text-white leading-tight">{drv.name}</h4>
-                      <span className="text-[9px] text-white/30 font-bold uppercase">{drv.phone}</span>
-                    </div>
-                  </div>
+                  )}
 
-                  <div className="grid grid-cols-2 gap-4 border-t border-b border-white/5 py-3 text-[10px]">
-                    <div>
-                      <span className="block text-[8px] text-white/20 uppercase tracking-wider">Trips Completed</span>
-                      <span className="font-bold text-white text-xs">{drv.trips}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[8px] text-white/20 uppercase tracking-wider">Rating Score</span>
-                      <span className="font-bold text-kashmir-gold text-xs">{drv.rating} ★</span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center text-[10px]">
-                    <div>
-                      <span className="block text-[8px] text-white/20 uppercase">Driver Earnings</span>
-                      <span className="font-bold text-emerald-400">₹{drv.earnings.toLocaleString()}</span>
-                    </div>
-                    <Badge className="bg-white/5 text-white/50 border-none text-[8px] uppercase">
-                      DL: {drv.license.slice(0, 7)}
+                  <div className="absolute top-4 right-4">
+                    <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
+                      drv.status === 'ONLINE' || drv.status === 'Online' ? 'bg-emerald-500/10 text-emerald-400' : 
+                      drv.status === 'ON TRIP' || drv.status === 'On Trip' ? 'bg-red-500/10 text-red-400' : 'bg-neutral-500/10 text-neutral-400'
+                    )}>
+                      {drv.status}
                     </Badge>
                   </div>
-                </div>
-              </Card>
-            ))}
+
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                        <User className="w-5 h-5 text-kashmir-gold" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-white leading-tight">{drv.name}</h4>
+                        <span className="text-[9px] text-white/30 font-bold uppercase">{drv.phone}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 border-t border-b border-white/5 py-3 text-[10px]">
+                      <div>
+                        <span className="block text-[8px] text-white/20 uppercase tracking-wider">Trips Completed</span>
+                        <span className="font-bold text-white text-xs">{drv.trips}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] text-white/20 uppercase tracking-wider">Rating Score</span>
+                        <span className="font-bold text-kashmir-gold text-xs">{drv.rating} ★</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-[9px] text-white/40 uppercase font-semibold">
+                      <div className="flex justify-between">
+                        <span>Aadhaar No:</span>
+                        <span className="text-white font-mono">{drv.aadhaar}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Experience:</span>
+                        <span className="text-white">{drv.experience} Years</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Languages:</span>
+                        <span className="text-white truncate max-w-[120px]">{drv.languages}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] border-t border-white/5 pt-3">
+                      <div>
+                        <span className="block text-[8px] text-white/20 uppercase">Driver Earnings</span>
+                        <span className="font-bold text-emerald-400">₹{drv.earnings.toLocaleString()}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-[8px] text-white/20 uppercase">Verification</span>
+                        <Badge className={cn("border-none text-[8px] px-2 py-0.5",
+                          drv.policeVerification === 'Verified' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                        )}>
+                          {drv.policeVerification}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {isLicExpiring && (
+                      <div className="p-2 bg-red-500/15 border border-red-500/20 rounded-xl flex items-center gap-2 mt-2">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                        <span className="text-[8px] text-red-300 font-bold uppercase tracking-wider">DL Expiry: {drv.licenseExpiry}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
@@ -2236,6 +2446,198 @@ export default function CMSCabs() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Deploy / Edit Driver Dialog */}
+      <Dialog open={driverDialogOpen} onOpenChange={setDriverDialogOpen}>
+        <DialogContent className="max-w-2xl bg-[#0a0f12] border-white/10 text-white rounded-[2rem] overflow-y-auto max-h-[90vh]">
+          <DialogHeader className="p-8 pb-0">
+            <DialogTitle className="text-2xl font-display font-black tracking-tight text-white">
+              {editingDriver ? 'Modify Chauffeur Profile' : 'Register Chauffeur Profile'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-8 space-y-6 text-left">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Chauffeur Full Name</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                  value={driverFormData.name}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, name: e.target.value })}
+                  placeholder="e.g. Shabir Ahmad"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Official Email Address</label>
+                <Input
+                  type="email"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                  value={driverFormData.email}
+                  disabled={!!editingDriver}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, email: e.target.value })}
+                  placeholder="e.g. shabir@kashmircurators.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">WhatsApp Phone Contact</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                  value={driverFormData.phone}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, phone: e.target.value })}
+                  placeholder="e.g. +919876543210"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Commercial License Number</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold uppercase"
+                  value={driverFormData.licenseNumber}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, licenseNumber: e.target.value.toUpperCase() })}
+                  placeholder="e.g. JK01-2015000329"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Vehicle License Plate</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold uppercase"
+                  value={driverFormData.vehicleRegNo}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, vehicleRegNo: e.target.value.toUpperCase() })}
+                  placeholder="e.g. JK-01-A-1234"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Duty Status</label>
+                <select
+                  value={driverFormData.status}
+                  onChange={e => setDriverFormData({ ...driverFormData, status: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
+                >
+                  <option value="AVAILABLE" className="bg-[#0a0f12]">Available</option>
+                  <option value="ON TRIP" className="bg-[#0a0f12]">On Trip</option>
+                  <option value="OFFLINE" className="bg-[#0a0f12]">Offline</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Attendance</label>
+                <select
+                  value={driverFormData.attendance}
+                  onChange={e => setDriverFormData({ ...driverFormData, attendance: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
+                >
+                  <option value="Present" className="bg-[#0a0f12]">Present</option>
+                  <option value="Absent" className="bg-[#0a0f12]">Absent</option>
+                  <option value="Off Duty" className="bg-[#0a0f12]">Off Duty</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Police Verification</label>
+                <select
+                  value={driverFormData.policeVerification}
+                  onChange={e => setDriverFormData({ ...driverFormData, policeVerification: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
+                >
+                  <option value="Verified" className="bg-[#0a0f12]">Verified</option>
+                  <option value="Pending" className="bg-[#0a0f12]">Pending</option>
+                  <option value="Expired" className="bg-[#0a0f12]">Expired</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Total Trips</label>
+                <Input
+                  type="number"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 font-bold"
+                  value={driverFormData.tripsCompleted}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, tripsCompleted: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Earnings Today (₹)</label>
+                <Input
+                  type="number"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 font-bold text-emerald-400"
+                  value={driverFormData.earnings}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, earnings: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Aadhaar Card No</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                  value={driverFormData.aadhaar}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, aadhaar: e.target.value })}
+                  placeholder="e.g. 5400-3200-9800"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">License Expiry Date</label>
+                <Input
+                  type="date"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
+                  value={driverFormData.licenseExpiry}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, licenseExpiry: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Emergency Phone Contact</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs font-bold"
+                  value={driverFormData.emergencyContact}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, emergencyContact: e.target.value })}
+                  placeholder="e.g. +919876543219"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Experience (Years)</label>
+                <Input
+                  type="number"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 font-bold"
+                  value={driverFormData.experience}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, experience: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Languages Spoken</label>
+                <Input
+                  className="bg-white/5 border-white/10 rounded-xl h-12 text-xs"
+                  value={driverFormData.languages}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, languages: e.target.value })}
+                  placeholder="e.g. English, Kashmiri, Urdu"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Rating Score</label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="5"
+                  className="bg-white/5 border-white/10 rounded-xl h-12 font-bold text-kashmir-gold"
+                  value={driverFormData.rating}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, rating: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            <Button onClick={handleSaveDriver} className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-2xl transition-all shadow-xl shadow-kashmir-gold/10" disabled={savingDriver}>
+              {savingDriver ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingDriver ? 'Save Roster Profile' : 'Register Chauffeur Profile')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

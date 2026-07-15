@@ -9,7 +9,10 @@ import {
   blockCabDates,
   unblockCabDates,
   notifyDriver,
-  addOperationsLog
+  addOperationsLog,
+  createDriver,
+  updateDriver,
+  deleteDriver
 } from '../controllers/cabController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -22,6 +25,11 @@ router.post('/operations/block', authenticateToken, blockCabDates);
 router.delete('/operations/block/:blockId', authenticateToken, unblockCabDates);
 router.post('/operations/notify-driver', authenticateToken, notifyDriver);
 router.post('/operations/logs', authenticateToken, addOperationsLog);
+
+// Driver Management CRUD endpoints
+router.post('/operations/drivers', authenticateToken, createDriver);
+router.patch('/operations/drivers/:id', authenticateToken, updateDriver);
+router.delete('/operations/drivers/:id', authenticateToken, deleteDriver);
 
 // Fleet registry
 router.get('/', getCabs);

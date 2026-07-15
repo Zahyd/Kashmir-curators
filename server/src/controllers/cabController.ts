@@ -191,7 +191,7 @@ export const getOperationsData = async (req: Request, res: Response) => {
       };
     });
 
-    const drivers = await prisma.user.findMany({
+    let drivers = await prisma.user.findMany({
       where: {
         role: { in: ['driver', 'DRIVER'] }
       },
@@ -199,6 +199,53 @@ export const getOperationsData = async (req: Request, res: Response) => {
         driverProfile: true
       }
     });
+
+    if (drivers.length === 0) {
+      const defaultDriversData = [
+        { name: 'Shabir Ahmad', email: 'shabir@kashmircurators.com', phone: '+919876543210', licenseNumber: 'JK01-2015000329', vehicleRegNo: 'JK-01-A-5678', status: 'Online', attendance: 'Present', earnings: 18450, tripsCompleted: 28, rating: 4.9 },
+        { name: 'Fayaz Rather', email: 'fayaz@kashmircurators.com', phone: '+919876543212', licenseNumber: 'JK01-2017002492', vehicleRegNo: 'JK-03-B-4321', status: 'On Trip', attendance: 'Present', earnings: 24600, tripsCompleted: 34, rating: 4.8 },
+        { name: 'Tariq Mir', email: 'tariq@kashmircurators.com', phone: '+919876543215', licenseNumber: 'JK03-2019001221', vehicleRegNo: 'JK-01-D-3344', status: 'Offline', attendance: 'Absent', earnings: 12100, tripsCompleted: 15, rating: 4.7 },
+        { name: 'Hilal Dar', email: 'hilal@kashmircurators.com', phone: '+919876543218', licenseNumber: 'JK05-2014003284', vehicleRegNo: 'JK-01-E-7777', status: 'Online', attendance: 'Present', earnings: 21900, tripsCompleted: 31, rating: 4.9 }
+      ];
+
+      for (const d of defaultDriversData) {
+        await prisma.user.create({
+          data: {
+            name: d.name,
+            email: d.email,
+            phone: d.phone,
+            role: 'driver',
+            employeeCode: `DRV-${Math.floor(1000 + Math.random() * 9000)}`,
+            driverProfile: {
+              create: {
+                licenseNumber: d.licenseNumber,
+                vehicleRegNo: d.vehicleRegNo,
+                status: d.status.toUpperCase(),
+                rating: d.rating,
+                tripsCompleted: d.tripsCompleted,
+                earnings: d.earnings,
+                attendance: d.attendance,
+                licenseExpiry: '2027-12-31',
+                policeVerification: 'Verified',
+                aadhaar: '5400-3200-9800',
+                experience: 5,
+                languages: 'English, Kashmiri, Urdu',
+                emergencyContact: '+919876543219'
+              }
+            }
+          }
+        });
+      }
+
+      drivers = await prisma.user.findMany({
+        where: {
+          role: { in: ['driver', 'DRIVER'] }
+        },
+        include: {
+          driverProfile: true
+        }
+      });
+    }
 
     res.json({
       operationsData: data,
@@ -437,5 +484,146 @@ export const addOperationsLog = async (req: any, res: Response) => {
   } catch (error) {
     console.error('Failed to add log:', error);
     res.status(500).json({ error: 'Failed to add log' });
+  }
+};
+
+export const createDriver = async (req: any, res: Response) => {
+  const { name, email, phone, licenseNumber, vehicleRegNo, status, rating, tripsCompleted, earnings, attendance, licenseExpiry, policeVerification, aadhaar, experience, languages, emergencyContact } = req.body;
+
+  if (!name || !email || !licenseNumber || !vehicleRegNo) {
+    return res.status(400).json({ error: 'Name, email, license number, and vehicle registration number are required' });
+  }
+
+  try {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'A driver with this email already exists' });
+    }
+
+    const driver = await prisma.user.create({
+      data: {
+        name,
+        email,
+        phone: phone || null,
+        role: 'driver',
+        employeeCode: `DRV-${Math.floor(1000 + Math.random() * 9000)}`,
+        driverProfile: {
+          create: {
+            licenseNumber,
+            vehicleRegNo,
+            status: status || 'AVAILABLE',
+            rating: rating !== undefined ? Number(rating) : 4.8,
+            tripsCompleted: tripsCompleted !== undefined ? Number(tripsCompleted) : 0,
+            earnings: earnings !== undefined ? Number(earnings) : 0,
+            attendance: attendance || 'Present',
+            licenseExpiry: licenseExpiry || '2027-12-31',
+            policeVerification: policeVerification || 'Verified',
+            aadhaar: aadhaar || '0000-0000-0000',
+            experience: experience !== undefined ? Number(experience) : 3,
+            languages: languages || 'English, Kashmiri, Urdu',
+            emergencyContact: emergencyContact || '+919876543219'
+          }
+        }
+      },
+      include: {
+        driverProfile: true
+      }
+    });
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'CREATE',
+        message: `Driver profile registered: ${driver.name}`,
+        driver
+      });
+    }
+
+    res.status(201).json(driver);
+  } catch (error: any) {
+    console.error('Failed to create driver:', error);
+    res.status(500).json({ error: error.message || 'Failed to register driver' });
+  }
+};
+
+export const updateDriver = async (req: any, res: Response) => {
+  const { id } = req.params;
+  const { name, phone, licenseNumber, vehicleRegNo, status, rating, tripsCompleted, earnings, attendance, licenseExpiry, policeVerification, aadhaar, experience, languages, emergencyContact } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { driverProfile: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Driver not found' });
+    }
+
+    const updateUserData: any = {};
+    if (name !== undefined) updateUserData.name = name;
+    if (phone !== undefined) updateUserData.phone = phone;
+
+    const updateProfileData: any = {};
+    if (licenseNumber !== undefined) updateProfileData.licenseNumber = licenseNumber;
+    if (vehicleRegNo !== undefined) updateProfileData.vehicleRegNo = vehicleRegNo;
+    if (status !== undefined) updateProfileData.status = status;
+    if (rating !== undefined) updateProfileData.rating = Number(rating);
+    if (tripsCompleted !== undefined) updateProfileData.tripsCompleted = Number(tripsCompleted);
+    if (earnings !== undefined) updateProfileData.earnings = Number(earnings);
+    if (attendance !== undefined) updateProfileData.attendance = attendance;
+    if (licenseExpiry !== undefined) updateProfileData.licenseExpiry = licenseExpiry;
+    if (policeVerification !== undefined) updateProfileData.policeVerification = policeVerification;
+    if (aadhaar !== undefined) updateProfileData.aadhaar = aadhaar;
+    if (experience !== undefined) updateProfileData.experience = Number(experience);
+    if (languages !== undefined) updateProfileData.languages = languages;
+    if (emergencyContact !== undefined) updateProfileData.emergencyContact = emergencyContact;
+
+    const updatedDriver = await prisma.user.update({
+      where: { id },
+      data: {
+        ...updateUserData,
+        driverProfile: {
+          update: updateProfileData
+        }
+      },
+      include: {
+        driverProfile: true
+      }
+    });
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'UPDATE',
+        message: `Driver profile updated: ${updatedDriver.name}`,
+        driver: updatedDriver
+      });
+    }
+
+    res.json(updatedDriver);
+  } catch (error: any) {
+    console.error('Failed to update driver:', error);
+    res.status(500).json({ error: error.message || 'Failed to update driver' });
+  }
+};
+
+export const deleteDriver = async (req: any, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    await prisma.user.delete({
+      where: { id }
+    });
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'DELETE',
+        message: `Driver profile removed: ${id}`
+      });
+    }
+
+    res.status(204).send();
+  } catch (error: any) {
+    console.error('Failed to delete driver:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete driver' });
   }
 };
