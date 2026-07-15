@@ -76,6 +76,11 @@ model Hotel {
   commissionStructure String?
   seasonalPricing     String?            // JSON string
   reservations        HotelReservation[]
+  roomCategories      RoomCategory[]
+  rooms               HotelRoom[]
+  maintenance         MaintenanceRequest[]
+  settlements         VendorSettlement[]
+  reviews             HotelReview[]
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 }
@@ -394,4 +399,87 @@ model Notification {
   link      String?  // Redirect link (e.g. /admin)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model RoomCategory {
+  id             String         @id @default(uuid())
+  hotelId        String
+  hotel          Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  name           String         // e.g. Deluxe Room, Super Deluxe, Presidential Suite
+  basePrice      Float
+  capacity       Int            @default(2)
+  maxOccupancy   Int            @default(3)
+  amenities      String         // JSON list of room amenities
+  imageUrl       String?
+  rooms          HotelRoom[]
+  seasonalRates  SeasonalRate[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model HotelRoom {
+  id             String         @id @default(uuid())
+  hotelId        String
+  hotel          Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  categoryId     String
+  category       RoomCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  roomNumber     String
+  floor          String?
+  status         String         @default("AVAILABLE") // AVAILABLE, OCCUPIED, MAINTENANCE
+  housekeeping   String         @default("CLEAN")     // DIRTY, CLEAN, INSPECTED
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model SeasonalRate {
+  id             String         @id @default(uuid())
+  categoryId     String
+  category       RoomCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  seasonName     String         // Summer High, Winter Gold, etc.
+  startDate      DateTime
+  endDate        DateTime
+  multiplier     Float          @default(1.0)
+  flatRate       Float?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model MaintenanceRequest {
+  id             String         @id @default(uuid())
+  hotelId        String
+  hotel          Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomNumber     String
+  task           String
+  priority       String         @default("MEDIUM") // LOW, MEDIUM, HIGH
+  status         String         @default("PENDING") // PENDING, IN_PROGRESS, RESOLVED
+  cost           Float          @default(0)
+  loggedBy       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model VendorSettlement {
+  id             String         @id @default(uuid())
+  hotelId        String
+  hotel          Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  amount         Float
+  commissionDues Float
+  netPaid        Float
+  payoutDate     DateTime       @default(now())
+  status         String         @default("COMPLETED") // COMPLETED, PENDING, REJECTED
+  transactionRef String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model HotelReview {
+  id             String         @id @default(uuid())
+  hotelId        String
+  hotel          Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  guestName      String
+  rating         Float
+  comment        String
+  sentiment      String         @default("POSITIVE") // POSITIVE, NEUTRAL, NEGATIVE
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
