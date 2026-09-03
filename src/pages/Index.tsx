@@ -12,6 +12,7 @@ import HowItWorks from '@/components/home/HowItWorks';
 import Testimonials from '@/components/home/Testimonials';
 import FAQSection from '@/components/home/FAQSection';
 import NewsletterSignup from '@/components/home/NewsletterSignup';
+import ContactSection from '@/components/home/ContactSection';
 import DynamicCurationTicker from '@/components/home/DynamicCurationTicker';
 import TravelStatusWidget from '@/components/home/TravelStatusWidget';
 import SeoMeta from '@/components/SeoMeta';
