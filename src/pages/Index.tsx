@@ -152,29 +152,29 @@ const Index = () => {
           
           {/* Frosted Glass Backdrop Overlay */}
           <div 
-            className="absolute inset-0 bg-[#111439]/60 backdrop-blur-md transition-opacity duration-500 animate-fade-in" 
+            className="absolute inset-0 bg-[#05080a]/80 backdrop-blur-md transition-opacity duration-500 animate-fade-in" 
             onClick={handleClose}
           />
           
           {/* Modal content block */}
-          <div className="bg-white border border-slate-200 rounded-[3rem] p-8 md:p-10 w-full max-w-lg text-left shadow-2xl relative z-10 overflow-hidden animate-in zoom-in duration-500 text-[#111439]">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="bg-[#0a0f12]/95 border border-white/10 rounded-[3rem] p-8 md:p-10 w-full max-w-lg text-left shadow-2xl relative z-10 overflow-hidden animate-in zoom-in duration-500">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-kashmir-gold/5 rounded-full blur-3xl pointer-events-none" />
             
             <button
               onClick={handleClose}
-              className="absolute top-6 right-6 w-9 h-9 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center hover:bg-slate-200 text-slate-500 hover:text-[#111439] transition-all active:scale-95"
+              className="absolute top-6 right-6 w-9 h-9 rounded-full border border-white/5 bg-white/5 flex items-center justify-center hover:bg-white/10 text-white/50 hover:text-white transition-all active:scale-95"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="text-center space-y-3 mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-[9px] font-black uppercase tracking-widest mx-auto">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Elite Access Protocol
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-kashmir-gold/10 border border-kashmir-gold/20 text-kashmir-gold text-[9px] font-black uppercase tracking-widest mx-auto">
+                <Sparkles className="w-3.5 h-3.5" /> Elite Access Protocol
               </div>
-              <h3 className="font-display text-2xl md:text-3xl font-black text-[#111439] uppercase tracking-tight">
-                Unlock <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">Member Privileges</span>
+              <h3 className="font-display text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                Unlock <span className="text-kashmir-gold italic">Member Privileges</span>
               </h3>
-              <p className="text-xs text-[#4A5568] max-w-sm mx-auto leading-relaxed">
+              <p className="text-xs text-white/40 max-w-sm mx-auto leading-relaxed">
                 Join Kashmir Curators to save up to 20% on custom packages, track dispatches, and get 24/7 VIP Concierge support.
               </p>
             </div>
@@ -182,37 +182,37 @@ const Index = () => {
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               {authMode === 'signup' && (
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                   <Input
                     value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder="Full Name"
-                    className="h-12 bg-slate-50 border-slate-200 rounded-xl pl-12 text-xs font-semibold text-[#111439] focus:bg-white"
+                    className="h-12 bg-white/5 border-white/5 rounded-xl pl-12 text-xs font-semibold"
                     required
                   />
                 </div>
               )}
 
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                 <Input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="Email Address"
-                  className="h-12 bg-slate-50 border-slate-200 rounded-xl pl-12 text-xs font-semibold text-[#111439] focus:bg-white"
+                  className="h-12 bg-white/5 border-white/5 rounded-xl pl-12 text-xs font-semibold"
                   required
                 />
               </div>
 
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                 <Input
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Secret Password"
-                  className="h-12 bg-slate-50 border-slate-200 rounded-xl pl-12 text-xs font-semibold text-[#111439] focus:bg-white"
+                  className="h-12 bg-white/5 border-white/5 rounded-xl pl-12 text-xs font-semibold"
                   required
                 />
               </div>
@@ -220,7 +220,7 @@ const Index = () => {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-12 bg-[#111439] text-white hover:bg-[#1c225a] font-black text-xs uppercase tracking-widest rounded-xl transition-all duration-300 shadow-lg mt-2 flex items-center justify-center gap-2"
+                className="w-full h-12 bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-xs uppercase tracking-widest rounded-xl transition-all duration-300 shadow-lg mt-2 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -234,18 +234,18 @@ const Index = () => {
               </Button>
             </form>
 
-            <div className="text-center mt-6 text-xs text-[#4A5568]">
+            <div className="text-center mt-6 text-xs text-white/40">
               {authMode === 'signup' ? (
                 <span>
                   Already a VIP Member?{' '}
-                  <button onClick={() => setAuthMode('login')} className="text-amber-600 font-bold hover:underline">
+                  <button onClick={() => setAuthMode('login')} className="text-kashmir-gold font-bold hover:underline">
                     Sign In here
                   </button>
                 </span>
               ) : (
                 <span>
                   New to Kashmir Curators?{' '}
-                  <button onClick={() => setAuthMode('signup')} className="text-amber-600 font-bold hover:underline">
+                  <button onClick={() => setAuthMode('signup')} className="text-kashmir-gold font-bold hover:underline">
                     Create Account
                   </button>
                 </span>

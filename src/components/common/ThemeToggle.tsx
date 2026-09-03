@@ -11,16 +11,23 @@ export default function ThemeToggle() {
     if (savedTheme === 'light') {
       setIsLight(true);
       document.body.classList.add('light-theme');
+      document.documentElement.classList.remove('dark');
+    } else {
+      setIsLight(false);
+      document.body.classList.remove('light-theme');
+      document.documentElement.classList.add('dark');
     }
   }, []);
 
   const toggleTheme = () => {
     if (isLight) {
       document.body.classList.remove('light-theme');
+      document.documentElement.classList.add('dark');
       localStorage.setItem('KC_THEME', 'dark');
       setIsLight(false);
     } else {
       document.body.classList.add('light-theme');
+      document.documentElement.classList.remove('dark');
       localStorage.setItem('KC_THEME', 'light');
       setIsLight(true);
     }

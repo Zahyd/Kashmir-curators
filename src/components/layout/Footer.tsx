@@ -46,7 +46,7 @@ export default function Footer() {
     };
   }, []);
   return (
-    <footer className="bg-[#111439] text-white border-t border-white/10 relative overflow-hidden">
+    <footer className="bg-[#05080a] text-white border-t border-white/5 relative overflow-hidden">
       {/* Background Subtle Gradient */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-kashmir-gold/5 blur-[120px] opacity-30 pointer-events-none" />
 
@@ -55,7 +55,7 @@ export default function Footer() {
           {/* Heritage Brand */}
           <div className="space-y-8">
             <Link to="/" className="flex items-center group">
-              <Logo className="h-14 w-auto transition-transform duration-500 group-hover:scale-105" isDarkBg={true} />
+              <Logo className="h-14 w-auto transition-transform duration-500 group-hover:scale-105" />
             </Link>
             <p className="text-white/40 font-medium leading-relaxed max-w-xs">
               The premier registry for high-fidelity travel experiences across the Kashmir valley. Curating excellence since 2012.
