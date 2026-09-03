@@ -67,6 +67,10 @@ const App = () => {
               <Route path="/agent" element={<AgentPortal />} />
               <Route path="/travel-status" element={<TravelStatusPage />} />
               <Route path="/vendor" element={<VendorPortal />} />
+              <Route path="/vendor/auth" element={<VendorPortal />} />
+              <Route path="/vendor/onboard" element={<VendorPortal />} />
+              <Route path="/vendor/portal" element={<VendorPortal />} />
+              <Route path="/partner" element={<VendorPortal />} />
               <Route path="/safety-card/:token" element={<TravelStatusPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

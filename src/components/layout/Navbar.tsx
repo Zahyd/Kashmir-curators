@@ -21,7 +21,6 @@ const navLinks = [
   { href: '/hotels', label: 'Estates' },
   { href: '/cabs', label: 'Fleet' },
   { href: '/travel-status', label: 'Travel Status' },
-  { href: '/vendor', label: 'Vendor Hub' },
 ];
 
 export default function Navbar() {
@@ -97,6 +96,14 @@ export default function Navbar() {
                       <Link to="/profile" className="flex items-center gap-3">
                         <Sparkles className="w-4 h-4 text-kashmir-gold" />
                         <span className="text-xs font-bold text-white/80">Guest Sanctuary</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {isAuthenticated && (user?.role === 'supplier' || user?.role === 'admin') && (
+                    <DropdownMenuItem asChild className="rounded-xl py-3 focus:bg-white/5 cursor-pointer">
+                      <Link to="/vendor" className="flex items-center gap-3">
+                        <Building className="w-4 h-4 text-amber-400" />
+                        <span className="text-xs font-bold text-white/80">Vendor Operations Hub</span>
                       </Link>
                     </DropdownMenuItem>
                   )}
