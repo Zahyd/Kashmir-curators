@@ -170,30 +170,30 @@ export default function VisualItinerary() {
   const currentDay = itineraryDays[activeDay - 1] || itineraryDays[0] || ITINERARY_DAYS[0];
 
   return (
-    <section className="py-32 bg-[#05080a] relative overflow-hidden">
+    <section className="py-32 bg-[#F8F8F9] relative overflow-hidden border-t border-slate-200">
       {/* Decorative Orbs */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-kashmir-gold/5 rounded-full blur-[100px]" />
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500/5 rounded-full blur-[130px]" />
+      <div className="absolute top-10 left-10 w-80 h-80 bg-amber-400/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-10 right-10 w-96 h-96 bg-blue-400/10 rounded-full blur-[140px]" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-6xl mx-auto">
           {/* Section Header */}
           <div className="flex flex-col items-center text-center mb-20">
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-6">
-              <Compass className="w-3.5 h-3.5 text-kashmir-gold animate-spin-slow" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/60">Bespoke Experience Route</span>
+            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm mb-6">
+              <Compass className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439]">Bespoke Experience Route</span>
             </div>
-            <h2 className="font-display text-5xl md:text-7xl font-black text-white tracking-tighter uppercase mb-6">
+            <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] tracking-tight uppercase mb-6">
               {sectionTitle.toUpperCase().includes('ITINERARY') ? (
                 <>
                   {sectionTitle.toUpperCase().replace('ITINERARY', '')}
-                  <span className="text-kashmir-gold italic">ITINERARY</span>
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">ITINERARY</span>
                 </>
               ) : (
                 sectionTitle
               )}
             </h2>
-            <p className="text-white/40 text-lg max-w-xl mx-auto font-medium leading-relaxed">
+            <p className="text-[#4A5568] text-lg max-w-xl mx-auto font-medium leading-relaxed">
               {sectionSubtitle}
             </p>
           </div>
@@ -208,36 +208,36 @@ export default function VisualItinerary() {
                   className={cn(
                     "flex-shrink-0 flex items-center gap-4 text-left p-5 rounded-2xl border transition-all duration-500 w-64 lg:w-full",
                     activeDay === dayObj.day
-                      ? "border-kashmir-gold/30 bg-kashmir-gold/5 shadow-[0_0_20px_rgba(212,175,55,0.06)]"
-                      : "border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-white/10"
+                      ? "border-[#111439] bg-white shadow-xl shadow-slate-900/5 scale-[1.02]"
+                      : "border-slate-200 bg-white/70 hover:bg-white hover:border-slate-300"
                   )}
                 >
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center font-display font-black text-sm transition-all duration-500",
                     activeDay === dayObj.day
-                      ? "bg-kashmir-gold text-black shadow-[0_0_12px_rgba(212,175,55,0.25)]"
-                      : "bg-white/5 text-white/40"
+                      ? "bg-[#111439] text-white shadow-md"
+                      : "bg-slate-100 text-slate-500"
                   )}>
                     D0{dayObj.day}
                   </div>
                   <div className="min-w-0">
                     <p className={cn(
                       "text-xs font-bold transition-all",
-                      activeDay === dayObj.day ? "text-white" : "text-white/40"
+                      activeDay === dayObj.day ? "text-[#111439]" : "text-[#4A5568]"
                     )}>
                       {dayObj.title ? dayObj.title.split(" & ")[0] : `Day ${dayObj.day}`}
                     </p>
-                    <span className="text-[9px] text-white/30 uppercase tracking-widest">{dayObj.subtitle ? dayObj.subtitle.split(" & ")[0] : ''}</span>
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest">{dayObj.subtitle ? dayObj.subtitle.split(" & ")[0] : ''}</span>
                   </div>
                   {activeDay === dayObj.day && (
-                    <ChevronRight className="hidden lg:block w-4 h-4 text-kashmir-gold ml-auto animate-bounce-horizontal" />
+                    <ChevronRight className="hidden lg:block w-4 h-4 text-[#111439] ml-auto animate-bounce-horizontal" />
                   )}
                 </button>
               ))}
             </div>
 
             {/* Right Column: Display Window */}
-            <div className="lg:col-span-8 bg-[#070b0d] border border-white/5 rounded-[3rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group">
+            <div className="lg:col-span-8 bg-white border border-slate-200/90 rounded-[3rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group shadow-slate-900/5">
               {/* Image Hub */}
               <div className="relative h-64 md:h-96 rounded-2xl md:rounded-[2rem] overflow-hidden mb-8">
                 {currentDay.image && (
@@ -247,16 +247,16 @@ export default function VisualItinerary() {
                     className="w-full h-full object-cover transition-transform duration-[3000ms] group-hover:scale-105"
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#070b0d] via-transparent to-transparent opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
                 
                 {/* Float badges on image */}
                 <div className="absolute bottom-6 left-6 right-6 flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 bg-[#05080a]/80 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl text-white">
-                    <MapPin className="w-4 h-4 text-kashmir-gold" />
+                  <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2 rounded-xl text-[#111439] shadow-md">
+                    <MapPin className="w-4 h-4 text-amber-500" />
                     <span className="text-xs font-black uppercase tracking-widest">{currentDay.route}</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-[#05080a]/80 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl text-white">
-                    <Clock className="w-4 h-4 text-kashmir-gold" />
+                  <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2 rounded-xl text-[#111439] shadow-md">
+                    <Clock className="w-4 h-4 text-amber-500" />
                     <span className="text-xs font-black uppercase tracking-widest">{currentDay.duration}</span>
                   </div>
                 </div>
@@ -265,24 +265,24 @@ export default function VisualItinerary() {
               {/* Text Content */}
               <div className="space-y-6">
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-kashmir-gold/70">{currentDay.subtitle}</span>
-                  <h3 className="font-display text-3xl md:text-4xl font-black text-white mt-1 uppercase">
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-600">{currentDay.subtitle}</span>
+                  <h3 className="font-display text-3xl md:text-4xl font-black text-[#111439] mt-1 uppercase">
                     {currentDay.title}
                   </h3>
                 </div>
 
-                <p className="text-white/50 text-sm md:text-base leading-relaxed font-medium">
+                <p className="text-[#4A5568] text-sm md:text-base leading-relaxed font-medium">
                   {currentDay.description}
                 </p>
 
                 {/* Highlights List */}
                 {currentDay.highlights && currentDay.highlights.length > 0 && (
                   <div className="space-y-2 pt-2">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">Luxury Highlights</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Luxury Highlights</p>
                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {currentDay.highlights.map((highlight, i) => (
-                        <li key={i} className="flex items-start gap-2.5 text-xs text-white/70 font-semibold">
-                          <CheckCircle className="w-4 h-4 text-kashmir-gold flex-shrink-0 mt-0.5" />
+                        <li key={i} className="flex items-start gap-2.5 text-xs text-[#111439] font-semibold">
+                          <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                           <span>{highlight}</span>
                         </li>
                       ))}
@@ -292,12 +292,12 @@ export default function VisualItinerary() {
 
                 {/* Inclusions Row */}
                 {currentDay.inclusions && currentDay.inclusions.length > 0 && (
-                  <div className="border-t border-white/5 pt-6 mt-6">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 mb-4">Day Inclusions</p>
+                  <div className="border-t border-slate-100 pt-6 mt-6">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4">Day Inclusions</p>
                     <div className="flex flex-wrap gap-3">
                       {currentDay.inclusions.map((inclusion: any, i: number) => (
-                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] font-bold text-white/60">
-                          <span className="text-kashmir-gold">
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-bold text-[#111439]">
+                          <span className="text-amber-600">
                             {typeof inclusion.icon === 'string' ? getInclusionIcon(inclusion.icon) : inclusion.icon}
                           </span>
                           <span>{inclusion.label}</span>

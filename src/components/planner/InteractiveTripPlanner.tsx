@@ -72,27 +72,27 @@ function DatePickerField({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className={`w-full h-16 pl-12 pr-4 rounded-xl border bg-[#0a0f12] text-left flex items-center transition-all duration-300 group ${
+            className={`w-full h-16 pl-12 pr-4 rounded-xl border bg-slate-50 text-left flex items-center transition-all duration-300 group ${
               open 
-                ? 'border-kashmir-gold/60 ring-1 ring-kashmir-gold/30 shadow-[0_0_20px_rgba(212,175,55,0.08)]' 
-                : 'border-white/10 hover:border-white/20'
+                ? 'border-[#111439] ring-1 ring-[#111439]/20 shadow-md' 
+                : 'border-slate-200 hover:border-slate-300'
             }`}
           >
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <CalendarDays className={`h-5 w-5 transition-colors duration-300 ${open ? 'text-kashmir-gold' : 'text-kashmir-gold/70'}`} />
+              <CalendarDays className={`h-5 w-5 transition-colors duration-300 ${open ? 'text-[#111439]' : 'text-amber-500'}`} />
             </div>
             {date ? (
               <div className="flex flex-col">
-                <span className="text-white font-semibold text-lg leading-tight">{format(date, 'dd MMM')}</span>
-                <span className="text-white/30 text-xs">{format(date, 'EEEE, yyyy')}</span>
+                <span className="text-[#111439] font-bold text-lg leading-tight">{format(date, 'dd MMM')}</span>
+                <span className="text-[#4A5568] text-xs font-medium">{format(date, 'EEEE, yyyy')}</span>
               </div>
             ) : (
-              <span className="text-white/30 text-lg">{placeholder}</span>
+              <span className="text-slate-400 text-sm font-medium">{placeholder}</span>
             )}
           </button>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-auto p-0 bg-[#0d1317] border-white/10 shadow-2xl shadow-black/60 rounded-2xl overflow-hidden" 
+          className="w-auto p-0 bg-white border-slate-200 shadow-2xl rounded-2xl overflow-hidden" 
           align="start"
           sideOffset={8}
         >
@@ -103,36 +103,13 @@ function DatePickerField({
               onSelect(d);
               setOpen(false);
             }}
-            disabled={(d) => minDate ? isBefore(d, minDate) : isBefore(d, startOfToday())}
+            disabled={(d) => isBefore(d, minDate || startOfToday())}
             initialFocus
-            className="bg-[#0d1317] text-white"
-            classNames={{
-              months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-              month: "space-y-4",
-              caption: "flex justify-center pt-1 relative items-center text-white",
-              caption_label: "text-sm font-semibold text-white",
-              nav: "space-x-1 flex items-center",
-              nav_button: "h-8 w-8 bg-white/5 border border-white/10 rounded-lg p-0 hover:bg-kashmir-gold/20 hover:border-kashmir-gold/40 text-white/60 hover:text-white inline-flex items-center justify-center transition-all",
-              nav_button_previous: "absolute left-1",
-              nav_button_next: "absolute right-1",
-              table: "w-full border-collapse space-y-1",
-              head_row: "flex",
-              head_cell: "text-white/30 rounded-md w-10 font-medium text-[0.75rem] uppercase",
-              row: "flex w-full mt-1",
-              cell: "h-10 w-10 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-              day: "h-10 w-10 p-0 font-normal text-white/70 hover:bg-kashmir-gold/20 hover:text-white rounded-lg transition-all inline-flex items-center justify-center",
-              day_range_end: "day-range-end",
-              day_selected: "bg-kashmir-gold text-black hover:bg-kashmir-gold hover:text-black focus:bg-kashmir-gold focus:text-black font-bold shadow-[0_0_12px_rgba(212,175,55,0.3)]",
-              day_today: "bg-white/10 text-white font-bold ring-1 ring-white/20",
-              day_outside: "text-white/15 opacity-50",
-              day_disabled: "text-white/10 opacity-30 cursor-not-allowed",
-              day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-              day_hidden: "invisible",
-            }}
+            className="p-3 pointer-events-auto bg-white text-[#111439]"
           />
         </PopoverContent>
       </Popover>
-      <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-xs font-semibold text-white/40 uppercase tracking-wider z-10">{label}</Label>
+      <Label className="absolute -top-3 left-4 bg-white border border-slate-200 px-2 py-0.5 rounded text-[9px] font-black text-[#111439] uppercase tracking-widest z-10">{label}</Label>
     </div>
   );
 }
@@ -337,25 +314,25 @@ export function InteractiveTripPlanner() {
 
   return (
     <div className="w-full max-w-6xl mx-auto py-8 relative">
-      <div className="absolute top-0 -left-10 w-40 h-40 bg-kashmir-gold/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 -right-10 w-60 h-60 bg-blue-900/5 rounded-full blur-3xl" />
+      <div className="absolute top-0 -left-10 w-40 h-40 bg-amber-400/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 -right-10 w-60 h-60 bg-blue-400/10 rounded-full blur-3xl" />
 
       {/* Main Grid: Left is Form Wizard, Right is Real-time summary */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
         
         {/* Left Column: Multi-step Wizard */}
-        <div className="lg:col-span-7 bg-[#0a0f12]/60 backdrop-blur-3xl border border-white/5 shadow-2xl rounded-[3rem] p-8 md:p-10 text-left space-y-8">
+        <div className="lg:col-span-7 bg-white border border-slate-200/90 shadow-xl shadow-slate-900/5 rounded-[3rem] p-8 md:p-10 text-left space-y-8">
           
-          <div className="flex justify-between items-center border-b border-white/5 pb-5">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-5">
             <div>
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-kashmir-gold">Bespoke Curation Desk</span>
-              <h2 className="text-2xl font-black uppercase tracking-tight mt-1 text-white">
-                AI Journey <span className="text-kashmir-gold italic">Studio</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-700">Bespoke Curation Desk</span>
+              <h2 className="text-2xl font-black uppercase tracking-tight mt-1 text-[#111439]">
+                AI Journey <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">Studio</span>
               </h2>
             </div>
-            <div className="h-2 w-32 bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <div className="h-2 w-32 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
               <div 
-                className="h-full bg-gradient-to-r from-kashmir-gold to-amber-500 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-amber-500 to-[#111439] rounded-full transition-all duration-500"
                 style={{ width: `${(step / 3) * 100}%` }}
               />
             </div>
@@ -365,8 +342,8 @@ export function InteractiveTripPlanner() {
           {step === 1 && (
             <div className="space-y-6 animate-fade-in">
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-white uppercase tracking-wider">1. Select Travel Profile</h3>
-                <p className="text-xs text-white/40 leading-snug">Choose your traveler class to fine-tune activity and hotel recommendations.</p>
+                <h3 className="text-lg font-bold text-[#111439] uppercase tracking-wider">1. Select Travel Profile</h3>
+                <p className="text-xs text-[#4A5568] leading-snug">Choose your traveler class to fine-tune activity and hotel recommendations.</p>
               </div>
 
               {/* Grid of travel profiles */}
@@ -378,12 +355,12 @@ export function InteractiveTripPlanner() {
                     className={cn(
                       "p-4 rounded-2xl border text-left transition-all duration-300 hover:scale-[1.02]",
                       profile.travelType === t.value
-                        ? "border-kashmir-gold bg-kashmir-gold/5 text-white shadow-[0_0_15px_rgba(212,175,55,0.05)]"
-                        : "border-white/5 bg-white/[0.01] text-white/50 hover:border-white/10 hover:text-white"
+                        ? "border-[#111439] bg-[#111439]/5 text-[#111439] shadow-sm"
+                        : "border-slate-200 bg-slate-50 text-[#4A5568] hover:border-slate-300 hover:text-[#111439] hover:bg-slate-100"
                     )}
                   >
-                    <span className="block text-xs font-black uppercase tracking-wider mb-1">{t.label}</span>
-                    <span className="block text-[10px] text-white/30 leading-none">{t.desc}</span>
+                    <span className="block text-xs font-black uppercase tracking-wider mb-1 text-[#111439]">{t.label}</span>
+                    <span className="block text-[10px] text-slate-500 leading-none">{t.desc}</span>
                   </button>
                 ))}
               </div>
@@ -391,25 +368,25 @@ export function InteractiveTripPlanner() {
               {/* Duration and Calendar Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
                 <div className="relative">
-                  <div className="flex items-center justify-between h-16 px-5 rounded-xl border border-white/10 bg-black/40">
-                    <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Nights Stay</span>
+                  <div className="flex items-center justify-between h-16 px-5 rounded-xl border border-slate-200 bg-slate-50">
+                    <span className="text-[#111439] text-xs font-bold uppercase tracking-wider">Nights Stay</span>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => setProfile(prev => ({ ...prev, duration: Math.max(3, prev.duration - 1) }))}
-                        className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/50 hover:bg-kashmir-gold hover:text-black transition-all"
+                        className="w-8 h-8 rounded-full border border-slate-200 bg-white flex items-center justify-center text-[#111439] hover:bg-[#111439] hover:text-white transition-all shadow-sm"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
-                      <span className="text-white font-bold text-xl w-6 text-center">{profile.duration}</span>
+                      <span className="text-[#111439] font-black text-xl w-6 text-center">{profile.duration}</span>
                       <button
                         onClick={() => setProfile(prev => ({ ...prev, duration: Math.min(14, prev.duration + 1) }))}
-                        className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/50 hover:bg-kashmir-gold hover:text-black transition-all"
+                        className="w-8 h-8 rounded-full border border-slate-200 bg-white flex items-center justify-center text-[#111439] hover:bg-[#111439] hover:text-white transition-all shadow-sm"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-                  <Label className="absolute -top-3 left-4 bg-[#0a0f12] px-2 text-[9px] font-black text-white/40 uppercase tracking-widest">Duration</Label>
+                  <Label className="absolute -top-3 left-4 bg-white border border-slate-200 px-2 py-0.5 rounded text-[9px] font-black text-[#111439] uppercase tracking-widest">Duration</Label>
                 </div>
 
                 <DatePickerField
@@ -426,13 +403,13 @@ export function InteractiveTripPlanner() {
           {step === 2 && (
             <div className="space-y-6 animate-fade-in">
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-white uppercase tracking-wider">2. Territy & Comfort Tier</h3>
-                <p className="text-xs text-white/40 leading-snug">Select territories to traverse and your expected accommodation comfort class.</p>
+                <h3 className="text-lg font-bold text-[#111439] uppercase tracking-wider">2. Territory & Comfort Tier</h3>
+                <p className="text-xs text-[#4A5568] leading-snug">Select territories to traverse and your expected accommodation comfort class.</p>
               </div>
 
               {/* Destination tags grid */}
               <div className="space-y-3">
-                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Preferred Destinations</span>
+                <span className="block text-[9px] font-black uppercase tracking-widest text-[#111439] ml-1">Preferred Destinations</span>
                 <div className="flex flex-wrap gap-2">
                   {DESTINATIONS.map(d => {
                     const active = profile.destinations.includes(d.id);
@@ -443,8 +420,8 @@ export function InteractiveTripPlanner() {
                         className={cn(
                           "px-4 py-2.5 rounded-full border text-xs font-extrabold uppercase tracking-wider transition-all duration-300",
                           active 
-                            ? "bg-kashmir-gold text-black border-kashmir-gold shadow-lg shadow-kashmir-gold/10" 
-                            : "bg-white/5 border-white/5 text-white/50 hover:border-white/10 hover:text-white"
+                            ? "bg-[#111439] text-white border-[#111439] shadow-md" 
+                            : "bg-slate-50 border-slate-200 text-[#4A5568] hover:border-slate-300 hover:text-[#111439]"
                         )}
                       >
                         {d.name}
@@ -456,7 +433,7 @@ export function InteractiveTripPlanner() {
 
               {/* Accommodation Class selection */}
               <div className="space-y-3 pt-4">
-                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Comfort & Budget Class</span>
+                <span className="block text-[9px] font-black uppercase tracking-widest text-[#111439] ml-1">Comfort & Budget Class</span>
                 <div className="grid grid-cols-3 gap-4">
                   {[
                     { value: 'Budget', label: 'Comfort stay', price: 'Standard boutique' },
@@ -469,12 +446,12 @@ export function InteractiveTripPlanner() {
                       className={cn(
                         "p-4 rounded-xl border text-center transition-all duration-300",
                         profile.budget === b.value
-                          ? "border-kashmir-gold bg-kashmir-gold/5 text-white shadow-lg"
-                          : "border-white/5 bg-white/[0.01] text-white/40 hover:border-white/10 hover:text-white"
+                          ? "border-[#111439] bg-[#111439]/5 text-[#111439] shadow-sm"
+                          : "border-slate-200 bg-slate-50 text-[#4A5568] hover:border-slate-300 hover:text-[#111439]"
                       )}
                     >
-                      <p className="text-[10px] font-black uppercase tracking-wider mb-1">{b.label}</p>
-                      <p className="text-[9px] text-white/30 leading-none">{b.price}</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider mb-1 text-[#111439]">{b.label}</p>
+                      <p className="text-[9px] text-slate-500 leading-none">{b.price}</p>
                     </button>
                   ))}
                 </div>
@@ -486,13 +463,13 @@ export function InteractiveTripPlanner() {
           {step === 3 && (
             <div className="space-y-6 animate-fade-in">
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-white uppercase tracking-wider">3. Interests & Signature Experiences</h3>
-                <p className="text-xs text-white/40 leading-snug">Personalize your daily itineraries with interest-based activities and optional VIP services.</p>
+                <h3 className="text-lg font-bold text-[#111439] uppercase tracking-wider">3. Interests & Signature Experiences</h3>
+                <p className="text-xs text-[#4A5568] leading-snug">Personalize your daily itineraries with interest-based activities and optional VIP services.</p>
               </div>
 
               {/* Interests Grid */}
               <div className="space-y-3">
-                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Interests</span>
+                <span className="block text-[9px] font-black uppercase tracking-widest text-[#111439] ml-1">Interests</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {INTERESTS.map(item => {
                     const active = profile.interests.includes(item.id);
@@ -503,11 +480,11 @@ export function InteractiveTripPlanner() {
                         className={cn(
                           "py-3 px-4 rounded-xl border text-center flex flex-col items-center justify-center gap-2 transition-all duration-300",
                           active 
-                            ? "border-kashmir-gold bg-kashmir-gold/5 text-white" 
-                            : "border-white/5 bg-white/[0.01] text-white/40 hover:border-white/10 hover:text-white"
+                            ? "border-[#111439] bg-[#111439]/5 text-[#111439] shadow-sm" 
+                            : "border-slate-200 bg-slate-50 text-[#4A5568] hover:border-slate-300 hover:text-[#111439]"
                         )}
                       >
-                        <item.icon className="w-5 h-5 text-kashmir-gold" />
+                        <item.icon className="w-5 h-5 text-amber-600" />
                         <span className="text-[9px] font-black uppercase tracking-wider leading-none">{item.label}</span>
                       </button>
                     );
@@ -517,7 +494,7 @@ export function InteractiveTripPlanner() {
 
               {/* Addons Section */}
               <div className="space-y-3 pt-2">
-                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Add-on Amenities</span>
+                <span className="block text-[9px] font-black uppercase tracking-widest text-[#111439] ml-1">Add-on Amenities</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
                     { id: 'transfers', label: 'Airport Pick & Drop', desc: 'Private luxury cab transfers.' },
@@ -531,17 +508,17 @@ export function InteractiveTripPlanner() {
                       className={cn(
                         "p-4 rounded-xl border text-left flex items-center justify-between cursor-pointer transition-all duration-300",
                         profile.addons[a.id as keyof typeof profile.addons]
-                          ? "border-kashmir-gold bg-kashmir-gold/5 text-white"
-                          : "border-white/5 bg-white/[0.01] text-white/50"
+                          ? "border-[#111439] bg-[#111439]/5 text-[#111439]"
+                          : "border-slate-200 bg-slate-50 text-[#4A5568]"
                       )}
                     >
                       <div>
-                        <p className="text-xs font-black uppercase tracking-wider mb-0.5">{a.label}</p>
-                        <p className="text-[9px] text-white/30 leading-none">{a.desc}</p>
+                        <p className="text-xs font-black uppercase tracking-wider mb-0.5 text-[#111439]">{a.label}</p>
+                        <p className="text-[9px] text-slate-500 leading-none">{a.desc}</p>
                       </div>
                       <Switch 
                         checked={profile.addons[a.id as keyof typeof profile.addons]} 
-                        className="data-[state=checked]:bg-kashmir-gold pointer-events-none"
+                        className="data-[state=checked]:bg-[#111439] pointer-events-none"
                       />
                     </div>
                   ))}
@@ -549,28 +526,28 @@ export function InteractiveTripPlanner() {
               </div>
 
               {/* Contact Information block */}
-              <div className="space-y-4 pt-4 border-t border-white/5">
-                <span className="block text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">Curator Liaison Contact</span>
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <span className="block text-[9px] font-black uppercase tracking-widest text-[#111439] ml-1">Curator Liaison Contact</span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Input 
                     value={profile.name} 
                     onChange={e => setProfile({...profile, name: e.target.value})} 
                     placeholder="Full Name" 
-                    className="h-12 bg-white/5 border-white/5 rounded-xl text-xs font-semibold"
+                    className="h-12 bg-slate-50 border-slate-200 rounded-xl text-xs font-semibold text-[#111439] focus:bg-white"
                   />
                   <Input 
                     type="email"
                     value={profile.email} 
                     onChange={e => setProfile({...profile, email: e.target.value})} 
                     placeholder="Email" 
-                    className="h-12 bg-white/5 border-white/5 rounded-xl text-xs font-semibold"
+                    className="h-12 bg-slate-50 border-slate-200 rounded-xl text-xs font-semibold text-[#111439] focus:bg-white"
                   />
                   <Input 
                     type="tel"
                     value={profile.phone} 
                     onChange={e => setProfile({...profile, phone: e.target.value})} 
                     placeholder="WhatsApp Number" 
-                    className="h-12 bg-white/5 border-white/5 rounded-xl text-xs font-semibold"
+                    className="h-12 bg-slate-50 border-slate-200 rounded-xl text-xs font-semibold text-[#111439] focus:bg-white"
                   />
                 </div>
               </div>
@@ -578,12 +555,12 @@ export function InteractiveTripPlanner() {
           )}
 
           {/* Controls Bar */}
-          <div className="flex justify-between items-center pt-6 border-t border-white/5 mt-4">
+          <div className="flex justify-between items-center pt-6 border-t border-slate-100 mt-4">
             <Button
               onClick={handleBack}
               disabled={step === 1}
               variant="ghost"
-              className={cn("text-white/40 hover:text-white hover:bg-white/5 rounded-xl", step === 1 && "opacity-0")}
+              className={cn("text-slate-500 hover:text-[#111439] hover:bg-slate-100 rounded-xl", step === 1 && "opacity-0")}
             >
               Back
             </Button>
@@ -591,7 +568,7 @@ export function InteractiveTripPlanner() {
             {step < 3 ? (
               <Button
                 onClick={handleNext}
-                className="bg-white text-black hover:bg-kashmir-gold hover:text-black rounded-xl font-bold px-6 h-12 flex items-center gap-2"
+                className="bg-[#111439] text-white hover:bg-[#1c225a] rounded-xl font-bold px-6 h-12 flex items-center gap-2 shadow-sm"
               >
                 Continue <ArrowRight className="w-4 h-4" />
               </Button>
@@ -599,7 +576,7 @@ export function InteractiveTripPlanner() {
               <Button
                 onClick={handleSubmit}
                 disabled={isGenerating || !profile.name || !profile.phone}
-                className="bg-kashmir-gold text-black hover:bg-amber-600 rounded-xl font-black text-xs uppercase tracking-widest px-8 h-12 flex items-center gap-2 shadow-lg shadow-kashmir-gold/20"
+                className="bg-[#111439] text-white hover:bg-[#1c225a] rounded-xl font-black text-xs uppercase tracking-widest px-8 h-12 flex items-center gap-2 shadow-lg shadow-[#111439]/20"
               >
                 {isGenerating ? (
                   <>
@@ -607,7 +584,7 @@ export function InteractiveTripPlanner() {
                   </>
                 ) : (
                   <>
-                    Generate Journey <Sparkles className="w-4 h-4 text-black" />
+                    Generate Journey <Sparkles className="w-4 h-4 text-amber-400" />
                   </>
                 )}
               </Button>
@@ -620,32 +597,32 @@ export function InteractiveTripPlanner() {
         <div className="lg:col-span-5 space-y-6 text-left">
           
           {/* Summary Panel */}
-          <div className="bg-[#0a0f12]/60 backdrop-blur-3xl border border-white/5 shadow-2xl rounded-[3rem] p-6 md:p-8 space-y-6">
-            <h3 className="text-sm font-black uppercase tracking-wider border-b border-white/5 pb-3">Journey Blueprint</h3>
+          <div className="bg-white border border-slate-200/90 shadow-xl shadow-slate-900/5 rounded-[3rem] p-6 md:p-8 space-y-6 text-[#111439]">
+            <h3 className="text-sm font-black uppercase tracking-wider border-b border-slate-100 pb-3 text-[#111439]">Journey Blueprint</h3>
             
             {/* Live Pricing Estimation */}
-            <div className="space-y-1.5 border-b border-white/5 pb-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Estimated Cost</span>
+            <div className="space-y-1.5 border-b border-slate-100 pb-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Estimated Cost</span>
               <div className="flex justify-between items-baseline">
-                <span className="text-3xl font-display font-black text-kashmir-gold">{formatPrice(pricingBreakdown.total)}</span>
-                <span className="text-[10px] text-white/40 tracking-wider">All Taxes & Allowances Inc.</span>
+                <span className="text-3xl font-display font-black text-[#111439]">{formatPrice(pricingBreakdown.total)}</span>
+                <span className="text-[10px] text-slate-500 tracking-wider">All Taxes & Allowances Inc.</span>
               </div>
             </div>
 
             {/* Travel Specs */}
             <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="bg-white/[0.02] border border-white/5 p-3.5 rounded-xl flex items-center gap-3">
-                <CalendarDays className="w-5 h-5 text-kashmir-gold" />
+              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
+                <CalendarDays className="w-5 h-5 text-amber-600" />
                 <div>
-                  <span className="block text-[8px] font-black text-white/30 uppercase tracking-widest">Dates</span>
-                  <span className="font-bold text-white">{profile.departureDate ? format(profile.departureDate, 'dd MMM') : 'TBD'} ({profile.duration}N)</span>
+                  <span className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">Dates</span>
+                  <span className="font-bold text-[#111439]">{profile.departureDate ? format(profile.departureDate, 'dd MMM') : 'TBD'} ({profile.duration}N)</span>
                 </div>
               </div>
-              <div className="bg-white/[0.02] border border-white/5 p-3.5 rounded-xl flex items-center gap-3">
-                <Users className="w-5 h-5 text-kashmir-gold" />
+              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
+                <Users className="w-5 h-5 text-amber-600" />
                 <div>
-                  <span className="block text-[8px] font-black text-white/30 uppercase tracking-widest">Profile</span>
-                  <span className="font-bold text-white">{profile.travelType}</span>
+                  <span className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">Profile</span>
+                  <span className="font-bold text-[#111439]">{profile.travelType}</span>
                 </div>
               </div>
             </div>
@@ -653,35 +630,35 @@ export function InteractiveTripPlanner() {
             {/* AI Curator Recommendations */}
             <div className="space-y-4">
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-lg bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20 shrink-0">
-                  <Building className="w-4.5 h-4.5 text-kashmir-gold" />
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
+                  <Building className="w-4.5 h-4.5 text-amber-600" />
                 </div>
                 <div>
-                  <span className="block text-[8px] font-black uppercase text-white/30 tracking-widest mb-0.5">Recommended Estate</span>
-                  <h5 className="text-xs font-bold text-white">{recommendedHotel.name}</h5>
-                  <p className="text-[9px] text-white/40 mt-0.5">{recommendedHotel.location} • {recommendedHotel.rating}</p>
+                  <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Recommended Estate</span>
+                  <h5 className="text-xs font-bold text-[#111439]">{recommendedHotel.name}</h5>
+                  <p className="text-[9px] text-[#4A5568] mt-0.5">{recommendedHotel.location} • {recommendedHotel.rating}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-lg bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20 shrink-0">
-                  <Car className="w-4.5 h-4.5 text-kashmir-gold" />
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
+                  <Car className="w-4.5 h-4.5 text-amber-600" />
                 </div>
                 <div>
-                  <span className="block text-[8px] font-black uppercase text-white/30 tracking-widest mb-0.5">Allocated Transport</span>
-                  <h5 className="text-xs font-bold text-white">{recommendedCab.model}</h5>
-                  <p className="text-[9px] text-white/40 mt-0.5">{recommendedCab.type}</p>
+                  <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Allocated Transport</span>
+                  <h5 className="text-xs font-bold text-[#111439]">{recommendedCab.model}</h5>
+                  <p className="text-[9px] text-[#4A5568] mt-0.5">{recommendedCab.type}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-lg bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20 shrink-0">
-                  <weatherInsight.icon className="w-4.5 h-4.5 text-kashmir-gold" />
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
+                  <weatherInsight.icon className="w-4.5 h-4.5 text-amber-600" />
                 </div>
                 <div>
-                  <span className="block text-[8px] font-black uppercase text-white/30 tracking-widest mb-0.5">Seasonal Weather advisory</span>
-                  <h5 className="text-xs font-bold text-white">{weatherInsight.temp} ({weatherInsight.desc})</h5>
-                  <p className="text-[9px] text-white/40 mt-0.5">Departure tenure forecast based on date</p>
+                  <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Seasonal Weather advisory</span>
+                  <h5 className="text-xs font-bold text-[#111439]">{weatherInsight.temp} ({weatherInsight.desc})</h5>
+                  <p className="text-[9px] text-[#4A5568] mt-0.5">Departure tenure forecast based on date</p>
                 </div>
               </div>
             </div>
@@ -689,14 +666,14 @@ export function InteractiveTripPlanner() {
           </div>
 
           {/* AI Curator Panel */}
-          <div className="bg-gradient-to-br from-kashmir-gold/5 via-amber-500/[0.02] to-transparent border border-kashmir-gold/20 rounded-[2.5rem] p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-kashmir-gold/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="bg-gradient-to-br from-amber-50 via-white to-slate-50 border border-amber-400/30 rounded-[2.5rem] p-6 shadow-md shadow-slate-900/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
             
             <div className="flex gap-4 items-start">
-              <Sparkles className="w-6 h-6 text-kashmir-gold shrink-0 mt-1" />
+              <Sparkles className="w-6 h-6 text-amber-600 shrink-0 mt-1" />
               <div className="space-y-2">
-                <h4 className="text-xs font-black uppercase tracking-widest text-white">AI Curator Analysis</h4>
-                <p className="text-xs text-white/60 leading-relaxed">
+                <h4 className="text-xs font-black uppercase tracking-widest text-[#111439]">AI Curator Analysis</h4>
+                <p className="text-xs text-[#4A5568] leading-relaxed font-medium">
                   {curatorInsight}
                 </p>
               </div>

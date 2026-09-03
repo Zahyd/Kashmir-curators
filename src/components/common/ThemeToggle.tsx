@@ -4,32 +4,32 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export default function ThemeToggle() {
-  const [isLight, setIsLight] = useState(false);
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('KC_THEME');
-    if (savedTheme === 'light') {
-      setIsLight(true);
-      document.body.classList.add('light-theme');
-      document.documentElement.classList.remove('dark');
-    } else {
-      setIsLight(false);
-      document.body.classList.remove('light-theme');
+    if (savedTheme === 'dark') {
+      setIsDark(true);
       document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      setIsDark(false);
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
     }
   }, []);
 
   const toggleTheme = () => {
-    if (isLight) {
-      document.body.classList.remove('light-theme');
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('KC_THEME', 'dark');
-      setIsLight(false);
-    } else {
-      document.body.classList.add('light-theme');
+    if (isDark) {
       document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
       localStorage.setItem('KC_THEME', 'light');
-      setIsLight(true);
+      setIsDark(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+      localStorage.setItem('KC_THEME', 'dark');
+      setIsDark(true);
     }
   };
 
@@ -40,13 +40,13 @@ export default function ThemeToggle() {
       size="icon"
       className={cn(
         "fixed bottom-24 right-6 z-50 w-12 h-12 rounded-full border shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110",
-        isLight 
-          ? "bg-white border-slate-200 text-amber-500 hover:bg-slate-100" 
-          : "bg-[#0b1317]/90 border-white/10 text-kashmir-gold hover:bg-white/10"
+        isDark 
+          ? "bg-[#0b1317]/90 border-white/10 text-amber-400 hover:bg-white/10" 
+          : "bg-white border-slate-200 text-[#111439] hover:bg-slate-100"
       )}
-      title={isLight ? "Activate Night Mode" : "Activate Daylight Mode"}
+      title={isDark ? "Activate Daylight Mode" : "Activate Night Mode"}
     >
-      {isLight ? <Moon className="w-5 h-5 animate-bounce" /> : <Sun className="w-5 h-5 animate-spin-slow" />}
+      {isDark ? <Sun className="w-5 h-5 text-amber-400 animate-spin-slow" /> : <Moon className="w-5 h-5 text-[#111439] animate-bounce" />}
     </Button>
   );
 }

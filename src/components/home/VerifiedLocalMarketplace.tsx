@@ -293,24 +293,24 @@ export default function VerifiedLocalMarketplace() {
   };
 
   return (
-    <section className="py-28 bg-[#06090c] relative overflow-hidden border-t border-white/5" id="marketplace">
+    <section className="py-28 bg-[#F8F8F9] relative overflow-hidden border-t border-slate-200" id="marketplace">
       {/* Background Ambient Glow */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-400/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="container mx-auto px-6 max-w-7xl relative z-10">
         
         {/* Section Header */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16">
           <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-400 text-[10px] font-black uppercase tracking-[0.25em] mb-4">
-              <ShieldCheck className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-[10px] font-black uppercase tracking-[0.25em] mb-4">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
               <span>Direct Tourism Operator Network</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-              HIRE VERIFIED <span className="text-kashmir-gold italic font-medium">LOCAL SPECIALISTS</span>
+            <h2 className="text-3xl md:text-5xl font-black text-[#111439] tracking-tight">
+              HIRE VERIFIED <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">LOCAL SPECIALISTS</span>
             </h2>
-            <p className="text-white/50 text-sm md:text-base max-w-2xl mt-3 leading-relaxed">
+            <p className="text-[#4A5568] text-sm md:text-base max-w-2xl mt-3 leading-relaxed">
               Skip intermediaries. Connect directly with Department of Tourism certified alpine guides, 4x4 snow chauffeurs, and private heritage houseboats at verified direct rates.
             </p>
           </div>
@@ -318,9 +318,9 @@ export default function VerifiedLocalMarketplace() {
           <div className="flex items-center gap-3">
             <Button
               onClick={() => setIsQuoteModalOpen(true)}
-              className="bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase tracking-wider h-12 px-6 rounded-2xl shadow-xl shadow-amber-400/15 flex items-center gap-2"
+              className="bg-[#111439] hover:bg-[#1c225a] text-white font-black text-xs uppercase tracking-wider h-12 px-6 rounded-2xl shadow-xl shadow-[#111439]/15 flex items-center gap-2"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 text-amber-400" />
               <span>Get Best Local Quote</span>
             </Button>
           </div>
@@ -343,8 +343,8 @@ export default function VerifiedLocalMarketplace() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 border ${
                   isSelected
-                    ? 'bg-amber-400 text-black border-amber-400 shadow-lg shadow-amber-400/20 scale-105'
-                    : 'bg-white/[0.02] border-white/5 text-white/60 hover:text-white hover:bg-white/5 hover:border-white/15'
+                    ? 'bg-[#111439] text-white border-[#111439] shadow-lg shadow-[#111439]/15 scale-105'
+                    : 'bg-white border-slate-200 text-[#4A5568] hover:text-[#111439] hover:bg-slate-50'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -359,7 +359,7 @@ export default function VerifiedLocalMarketplace() {
           {filteredSpecialists.map((item) => (
             <div 
               key={item.id}
-              className="group rounded-[2rem] bg-[#0c1217] border border-white/5 hover:border-amber-400/30 transition-all duration-500 overflow-hidden flex flex-col justify-between shadow-2xl hover:shadow-amber-500/5 hover:-translate-y-1"
+              className="group rounded-[2rem] bg-white border border-slate-200/90 hover:border-slate-300 transition-all duration-500 overflow-hidden flex flex-col justify-between shadow-xl shadow-slate-900/5 hover:shadow-2xl hover:-translate-y-1"
             >
               <div>
                 {/* Image Container with Badges */}
@@ -369,23 +369,23 @@ export default function VerifiedLocalMarketplace() {
                     alt={item.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0c1217] via-transparent to-black/40" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
                   {/* Top Badges */}
                   <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-                    <Badge className="bg-black/60 backdrop-blur-md text-amber-400 border border-amber-400/30 text-[10px] font-mono uppercase tracking-widest px-3 py-1">
+                    <Badge className="bg-white/95 backdrop-blur-md text-[#111439] border border-slate-200 text-[10px] font-bold uppercase tracking-widest px-3 py-1 shadow-sm">
                       {item.badge}
                     </Badge>
 
-                    <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-white border border-white/10">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-[#111439] border border-slate-200 shadow-sm">
+                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                       <span>{item.rating}</span>
-                      <span className="text-white/40 text-[10px]">({item.reviewCount})</span>
+                      <span className="text-slate-500 text-[10px]">({item.reviewCount})</span>
                     </div>
                   </div>
 
                   {/* Location Tag */}
-                  <div className="absolute bottom-4 left-4 flex items-center gap-1.5 text-xs text-white/80 font-medium">
+                  <div className="absolute bottom-4 left-4 flex items-center gap-1.5 text-xs text-white font-semibold drop-shadow-md">
                     <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <span>{item.location}</span>
                   </div>
@@ -393,18 +393,18 @@ export default function VerifiedLocalMarketplace() {
 
                 {/* Body Content */}
                 <div className="p-6">
-                  <h3 className="text-lg font-bold text-white mb-2 leading-snug group-hover:text-amber-400 transition-colors">
+                  <h3 className="text-lg font-bold text-[#111439] mb-2 leading-snug group-hover:text-amber-600 transition-colors">
                     {item.title}
                   </h3>
-                  <p className="text-xs text-white/50 leading-relaxed line-clamp-2 mb-6">
+                  <p className="text-xs text-[#4A5568] leading-relaxed line-clamp-2 mb-6">
                     {item.description}
                   </p>
 
                   {/* Verified Features Pills */}
                   <div className="space-y-2 mb-6">
                     {item.features.slice(0, 3).map((feat, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-white/70">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <div key={i} className="flex items-center gap-2 text-xs text-[#111439] font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         <span className="truncate">{feat}</span>
                       </div>
                     ))}
@@ -413,12 +413,12 @@ export default function VerifiedLocalMarketplace() {
               </div>
 
               {/* Card Footer: Price & Hire CTA */}
-              <div className="p-6 bg-white/[0.01] border-t border-white/5 flex items-center justify-between gap-4">
+              <div className="p-6 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between gap-4">
                 <div>
-                  <span className="text-[10px] font-black uppercase text-white/40 tracking-widest block">Direct Verified Rate</span>
+                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest block">Direct Verified Rate</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-black text-amber-400">₹{item.basePrice.toLocaleString()}</span>
-                    <span className="text-xs text-white/40 font-mono">/{item.priceUnit}</span>
+                    <span className="text-xl font-black text-[#111439]">₹{item.basePrice.toLocaleString()}</span>
+                    <span className="text-xs text-slate-500 font-medium">/{item.priceUnit}</span>
                   </div>
                 </div>
 
@@ -427,7 +427,7 @@ export default function VerifiedLocalMarketplace() {
                     setHireSpecialist(item);
                     setBookingRef(null);
                   }}
-                  className="bg-white/10 hover:bg-amber-400 hover:text-black text-white text-xs font-black uppercase tracking-wider rounded-xl h-11 px-5 transition-all duration-300"
+                  className="bg-[#111439] hover:bg-[#1c225a] text-white text-xs font-black uppercase tracking-wider rounded-xl h-11 px-5 transition-all duration-300 shadow-md"
                 >
                   <span>{item.category === 'GUIDE' ? 'Hire Guide' : item.category === 'CAB' ? 'Book Cab' : 'Reserve Stay'}</span>
                   <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
@@ -437,15 +437,15 @@ export default function VerifiedLocalMarketplace() {
           ))}
 
           {/* Special Feature Card: Custom Quote Tile */}
-          <div className="rounded-[2rem] bg-gradient-to-br from-[#121922] via-[#0c1217] to-black border border-amber-400/20 p-8 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+          <div className="rounded-[2rem] bg-gradient-to-br from-[#111439] via-[#1a205a] to-[#0c0e27] border border-[#111439] p-8 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white">
             <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/10 rounded-full blur-[80px] pointer-events-none" />
 
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-amber-400/10 text-amber-400 flex items-center justify-center mb-6 border border-amber-400/30 shadow-lg shadow-amber-400/10">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 text-amber-400 flex items-center justify-center mb-6 border border-white/20 shadow-lg">
                 <Sparkles className="w-6 h-6" />
               </div>
 
-              <Badge className="bg-amber-400/10 text-amber-400 border border-amber-400/20 text-[10px] font-mono uppercase tracking-widest mb-3">
+              <Badge className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] font-mono uppercase tracking-widest mb-3">
                 FAST DIRECT BIDDING
               </Badge>
 
@@ -453,11 +453,11 @@ export default function VerifiedLocalMarketplace() {
                 Need a Full Custom Kashmir Itinerary?
               </h3>
 
-              <p className="text-xs text-white/50 leading-relaxed mb-6">
+              <p className="text-xs text-white/70 leading-relaxed mb-6">
                 Tell us your dates and requirements. Verified local drivers, certified guides, and heritage chalets submit their best direct quotes within 30 minutes.
               </p>
 
-              <div className="space-y-2 text-xs text-white/70 mb-8">
+              <div className="space-y-2 text-xs text-white/80 mb-8">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   <span>100% Kashmir Flex Disruption Protection</span>
@@ -475,7 +475,7 @@ export default function VerifiedLocalMarketplace() {
 
             <Button
               onClick={() => setIsQuoteModalOpen(true)}
-              className="w-full bg-amber-400 hover:bg-amber-300 text-black font-black uppercase tracking-wider text-xs h-12 rounded-xl shadow-lg shadow-amber-400/20"
+              className="w-full bg-amber-400 hover:bg-amber-300 text-[#111439] font-black uppercase tracking-wider text-xs h-12 rounded-xl shadow-lg shadow-amber-400/20"
             >
               Get Instant Multi-Vendor Quote &rarr;
             </Button>
@@ -483,34 +483,34 @@ export default function VerifiedLocalMarketplace() {
         </div>
 
         {/* Trust Protocol Strip */}
-        <div className="p-8 rounded-3xl bg-[#090e13] border border-white/5 grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
+        <div className="p-8 rounded-3xl bg-white border border-slate-200/90 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-400/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-400/20">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 border border-amber-500/20">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-white text-sm">Police & Tourism Department Audited</h4>
-              <p className="text-xs text-white/40 mt-1">Every chauffeur, guide, and houseboat undergoes mandatory verification.</p>
+              <h4 className="font-bold text-[#111439] text-sm">Police & Tourism Department Audited</h4>
+              <p className="text-xs text-[#4A5568] mt-1">Every chauffeur, guide, and houseboat undergoes mandatory verification.</p>
             </div>
           </div>
 
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-500/20">
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-white text-sm">Zero Middleman Surcharges</h4>
-              <p className="text-xs text-white/40 mt-1">Direct transparent rates negotiated with indigenous operators.</p>
+              <h4 className="font-bold text-[#111439] text-sm">Zero Middleman Surcharges</h4>
+              <p className="text-xs text-[#4A5568] mt-1">Direct transparent rates negotiated with indigenous operators.</p>
             </div>
           </div>
 
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-500/20">
               <Phone className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-white text-sm">24/7 On-Ground Emergency SOS</h4>
-              <p className="text-xs text-white/40 mt-1">Connected with J&K Police 112, Tourist Police, and SDRF rescue squads.</p>
+              <h4 className="font-bold text-[#111439] text-sm">24/7 On-Ground Emergency SOS</h4>
+              <p className="text-xs text-[#4A5568] mt-1">Connected with J&K Police 112, Tourist Police, and SDRF rescue squads.</p>
             </div>
           </div>
         </div>
@@ -522,91 +522,91 @@ export default function VerifiedLocalMarketplace() {
       {/* =================================================== */}
       <Dialog open={!!hireSpecialist} onOpenChange={(open) => !open && setHireSpecialist(null)}>
         {hireSpecialist && (
-          <DialogContent className="rounded-3xl bg-[#0c1217] text-white border-white/10 p-6 md:p-8 max-w-lg shadow-2xl">
-            <DialogHeader className="text-left border-b border-white/5 pb-4">
+          <DialogContent className="rounded-3xl bg-white text-[#111439] border border-slate-200 p-6 md:p-8 max-w-lg shadow-2xl">
+            <DialogHeader className="text-left border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-amber-400/10 text-amber-400 border border-amber-400/20 text-[9px] font-mono uppercase tracking-widest">
+                <Badge className="bg-amber-500/10 text-amber-700 border border-amber-500/20 text-[9px] font-mono uppercase tracking-widest">
                   {hireSpecialist.badge}
                 </Badge>
               </div>
-              <DialogTitle className="text-xl font-bold text-white leading-snug">
+              <DialogTitle className="text-xl font-bold text-[#111439] leading-snug">
                 {hireSpecialist.title}
               </DialogTitle>
-              <p className="text-xs text-white/40">{hireSpecialist.location} • ₹{hireSpecialist.basePrice.toLocaleString()}/{hireSpecialist.priceUnit}</p>
+              <p className="text-xs text-[#4A5568] font-medium">{hireSpecialist.location} • ₹{hireSpecialist.basePrice.toLocaleString()}/{hireSpecialist.priceUnit}</p>
             </DialogHeader>
 
             {!bookingRef ? (
               <form onSubmit={handleHireSubmit} className="space-y-4 py-4 text-xs">
                 <div>
-                  <span className="text-white/60 block mb-1">Full Name *</span>
+                  <span className="text-[#111439] font-bold block mb-1">Full Name *</span>
                   <Input
                     required
                     placeholder="e.g. Rohini Sharma"
                     value={hireForm.name}
                     onChange={(e) => setHireForm({ ...hireForm, name: e.target.value })}
-                    className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                    className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-white/60 block mb-1">WhatsApp Mobile *</span>
+                    <span className="text-[#111439] font-bold block mb-1">WhatsApp Mobile *</span>
                     <Input
                       required
                       placeholder="+91 98765 43210"
                       value={hireForm.phone}
                       onChange={(e) => setHireForm({ ...hireForm, phone: e.target.value })}
-                      className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                      className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                     />
                   </div>
 
                   <div>
-                    <span className="text-white/60 block mb-1">Email Address</span>
+                    <span className="text-[#111439] font-bold block mb-1">Email Address</span>
                     <Input
                       type="email"
                       placeholder="guest@example.com"
                       value={hireForm.email}
                       onChange={(e) => setHireForm({ ...hireForm, email: e.target.value })}
-                      className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                      className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-white/60 block mb-1">Service / Start Date *</span>
+                    <span className="text-[#111439] font-bold block mb-1">Service / Start Date *</span>
                     <Input
                       required
                       type="date"
                       value={hireForm.date}
                       onChange={(e) => setHireForm({ ...hireForm, date: e.target.value })}
-                      className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                      className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                     />
                   </div>
 
                   <div>
-                    <span className="text-white/60 block mb-1">Travelers Count</span>
+                    <span className="text-[#111439] font-bold block mb-1">Travelers Count</span>
                     <Input
                       type="number"
                       value={hireForm.travelers}
                       onChange={(e) => setHireForm({ ...hireForm, travelers: e.target.value })}
-                      className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                      className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <span className="text-white/60 block mb-1">Special Requests / Notes</span>
+                  <span className="text-[#111439] font-bold block mb-1">Special Requests / Notes</span>
                   <Textarea
                     placeholder="e.g. Need ski equipment fitting in Gulmarg / Srinagar Airport pickup at 11 AM..."
                     value={hireForm.notes}
                     onChange={(e) => setHireForm({ ...hireForm, notes: e.target.value })}
-                    className="bg-black/40 border-white/10 rounded-xl text-white text-xs min-h-[70px]"
+                    className="bg-slate-50 border-slate-200 rounded-xl text-[#111439] text-xs min-h-[70px] focus:bg-white"
                   />
                 </div>
 
-                <div className="p-3 rounded-2xl bg-amber-400/5 border border-amber-400/20 text-[11px] text-white/60 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>Direct booking dispatch. Zero upfront credit card charges required.</span>
                 </div>
 
@@ -614,7 +614,7 @@ export default function VerifiedLocalMarketplace() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-amber-400 hover:bg-amber-300 text-black font-black uppercase tracking-wider text-xs h-11 rounded-xl shadow-lg shadow-amber-400/20"
+                    className="w-full bg-[#111439] hover:bg-[#1c225a] text-white font-black uppercase tracking-wider text-xs h-11 rounded-xl shadow-lg shadow-[#111439]/20"
                   >
                     {isSubmitting ? (
                       <>
@@ -630,20 +630,20 @@ export default function VerifiedLocalMarketplace() {
             ) : (
               /* Success Screen */
               <div className="py-6 text-center space-y-5">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/20">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-500/20">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
 
                 <div>
-                  <h4 className="text-xl font-bold text-white">Booking Request Dispatched!</h4>
-                  <p className="text-xs text-white/50 mt-1">
-                    Your request has been routed directly to <span className="text-amber-400 font-bold">{hireSpecialist.title}</span>.
+                  <h4 className="text-xl font-bold text-[#111439]">Booking Request Dispatched!</h4>
+                  <p className="text-xs text-[#4A5568] mt-1">
+                    Your request has been routed directly to <span className="text-amber-600 font-bold">{hireSpecialist.title}</span>.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 font-mono text-xs">
-                  <span className="text-[10px] text-white/40 uppercase block mb-1">Booking Reference Code</span>
-                  <span className="text-lg font-black text-amber-400 tracking-widest">{bookingRef}</span>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs">
+                  <span className="text-[10px] text-slate-500 uppercase block mb-1">Booking Reference Code</span>
+                  <span className="text-lg font-black text-amber-600 tracking-widest">{bookingRef}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -653,14 +653,14 @@ export default function VerifiedLocalMarketplace() {
                     rel="noreferrer"
                     className="flex-1"
                   >
-                    <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs h-11 rounded-xl flex items-center justify-center gap-2">
+                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-11 rounded-xl flex items-center justify-center gap-2">
                       <MessageSquare className="w-4 h-4" />
                       <span>Chat on WhatsApp</span>
                     </Button>
                   </a>
 
                   <a href={`tel:${hireSpecialist.contactPhone}`} className="flex-1">
-                    <Button variant="outline" className="w-full border-white/10 hover:border-amber-400 text-white font-bold text-xs h-11 rounded-xl flex items-center justify-center gap-2">
+                    <Button variant="outline" className="w-full border-slate-200 hover:border-slate-300 text-[#111439] bg-white font-bold text-xs h-11 rounded-xl flex items-center justify-center gap-2">
                       <Phone className="w-4 h-4" />
                       <span>Direct Call</span>
                     </Button>
@@ -670,7 +670,7 @@ export default function VerifiedLocalMarketplace() {
                 <Button 
                   variant="ghost" 
                   onClick={() => setHireSpecialist(null)}
-                  className="text-xs text-white/40 hover:text-white"
+                  className="text-xs text-slate-500 hover:text-[#111439]"
                 >
                   Close
                 </Button>
@@ -684,62 +684,62 @@ export default function VerifiedLocalMarketplace() {
       {/* MODAL 2: GET BEST LOCAL QUOTE */}
       {/* =================================================== */}
       <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
-        <DialogContent className="rounded-3xl bg-[#0c1217] text-white border-white/10 p-6 md:p-8 max-w-lg shadow-2xl">
-          <DialogHeader className="text-left border-b border-white/5 pb-4">
-            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-400" />
+        <DialogContent className="rounded-3xl bg-white text-[#111439] border border-slate-200 p-6 md:p-8 max-w-lg shadow-2xl">
+          <DialogHeader className="text-left border-b border-slate-100 pb-4">
+            <DialogTitle className="text-xl font-bold text-[#111439] flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
               <span>Request Instant Bespoke Kashmir Quote</span>
             </DialogTitle>
-            <p className="text-xs text-white/40">Verified local operators submit competitive bids directly to your phone.</p>
+            <p className="text-xs text-[#4A5568]">Verified local operators submit competitive bids directly to your phone.</p>
           </DialogHeader>
 
           <form onSubmit={handleQuoteSubmit} className="space-y-4 py-4 text-xs">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-white/60 block mb-1">Your Name *</span>
+                <span className="text-[#111439] font-bold block mb-1">Your Name *</span>
                 <Input
                   required
                   placeholder="e.g. Aarav Kapoor"
                   value={quoteForm.name}
                   onChange={(e) => setQuoteForm({ ...quoteForm, name: e.target.value })}
-                  className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                  className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                 />
               </div>
 
               <div>
-                <span className="text-white/60 block mb-1">WhatsApp Phone *</span>
+                <span className="text-[#111439] font-bold block mb-1">WhatsApp Phone *</span>
                 <Input
                   required
                   placeholder="+91 98765 43210"
                   value={quoteForm.phone}
                   onChange={(e) => setQuoteForm({ ...quoteForm, phone: e.target.value })}
-                  className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                  className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-white/60 block mb-1">Target Destinations</span>
+                <span className="text-[#111439] font-bold block mb-1">Target Destinations</span>
                 <Input
                   value={quoteForm.destination}
                   onChange={(e) => setQuoteForm({ ...quoteForm, destination: e.target.value })}
-                  className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                  className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                 />
               </div>
 
               <div>
-                <span className="text-white/60 block mb-1">Trip Duration</span>
+                <span className="text-[#111439] font-bold block mb-1">Trip Duration</span>
                 <Input
                   value={quoteForm.duration}
                   onChange={(e) => setQuoteForm({ ...quoteForm, duration: e.target.value })}
-                  className="bg-black/40 border-white/10 rounded-xl h-11 text-white text-xs"
+                  className="bg-slate-50 border-slate-200 rounded-xl h-11 text-[#111439] text-xs focus:bg-white"
                 />
               </div>
             </div>
 
             <div>
-              <span className="text-white/60 block mb-2">Services You Need (Select all that apply)</span>
+              <span className="text-[#111439] font-bold block mb-2">Services You Need (Select all that apply)</span>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   '4x4 Chauffeur & Snow SUV',
@@ -763,19 +763,19 @@ export default function VerifiedLocalMarketplace() {
                       }}
                       className={`p-2.5 rounded-xl border text-left text-[11px] font-bold transition flex items-center justify-between ${
                         isChecked 
-                          ? 'bg-amber-400/10 border-amber-400 text-amber-400' 
-                          : 'bg-white/[0.02] border-white/5 text-white/60 hover:text-white'
+                          ? 'bg-[#111439]/5 border-[#111439] text-[#111439]' 
+                          : 'bg-slate-50 border-slate-200 text-[#4A5568] hover:text-[#111439]'
                       }`}
                     >
                       <span className="truncate">{srv}</span>
-                      {isChecked && <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
+                      {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-[#111439] shrink-0" />}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-[11px] text-white/50">
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-[11px] text-[#4A5568]">
               Quotes delivered via WhatsApp / SMS within 30 minutes with transparent pricing breakdown.
             </div>
 
@@ -783,7 +783,7 @@ export default function VerifiedLocalMarketplace() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-amber-400 hover:bg-amber-300 text-black font-black uppercase tracking-wider text-xs h-11 rounded-xl shadow-lg shadow-amber-400/20"
+                className="w-full bg-[#111439] hover:bg-[#1c225a] text-white font-black uppercase tracking-wider text-xs h-11 rounded-xl shadow-lg shadow-[#111439]/20"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Dispatch Quote Request to Operators'}
               </Button>

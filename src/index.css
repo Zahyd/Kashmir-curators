@@ -6,25 +6,25 @@
 
 @layer base {
   :root {
-    --background: 210 20% 4%;
-    --foreground: 210 20% 98%;
-    --card: 210 20% 6%;
-    --card-foreground: 210 20% 98%;
-    --popover: 210 20% 4%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 43 70% 50%;
-    --primary-foreground: 210 20% 4%;
-    --secondary: 210 20% 12%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 210 20% 12%;
-    --muted-foreground: 210 20% 65%;
-    --accent: 43 70% 50%;
-    --accent-foreground: 210 20% 4%;
+    --background: 240 7% 97.5%;
+    --foreground: 236 54% 14.5%;
+    --card: 0 0% 100%;
+    --card-foreground: 236 54% 14.5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 236 54% 14.5%;
+    --primary: 236 54% 14.5%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 93%;
+    --secondary-foreground: 236 54% 14.5%;
+    --muted: 240 5% 94%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 38 70% 55%;
+    --accent-foreground: 236 54% 14.5%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 210 20% 12%;
-    --input: 210 20% 12%;
-    --ring: 43 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 236 54% 14.5%;
     --radius: 1.5rem;
     
     --kashmir-gold: 38 70% 55%;
@@ -34,24 +34,42 @@
   .dark {
     --background: 210 20% 4%;
     --foreground: 210 20% 98%;
+    --card: 210 20% 6%;
+    --card-foreground: 210 20% 98%;
   }
 }
 
 @layer utilities {
+  .daylight-canvas {
+    background-color: #F8F8F9;
+  }
+  .daylight-card {
+    @apply bg-white border border-slate-200/80 shadow-xl shadow-slate-900/5 rounded-3xl;
+  }
+  .daylight-glass {
+    @apply bg-white/85 backdrop-blur-2xl border border-slate-200/60 shadow-sm;
+  }
+  .stripe-aurora-mesh {
+    background: radial-gradient(circle at 12% 18%, rgba(255, 184, 0, 0.28) 0%, transparent 45%),
+                radial-gradient(circle at 85% 15%, rgba(0, 212, 255, 0.24) 0%, transparent 50%),
+                radial-gradient(circle at 50% 55%, rgba(121, 40, 202, 0.18) 0%, transparent 55%),
+                radial-gradient(circle at 80% 80%, rgba(255, 101, 132, 0.22) 0%, transparent 45%),
+                #F8F8F9;
+  }
   .glass {
-    @apply bg-white/5 backdrop-blur-2xl border border-white/10;
+    @apply bg-white/80 backdrop-blur-2xl border border-slate-200/80;
   }
   .glass-card {
-    @apply bg-[#0a0f12]/60 backdrop-blur-3xl border border-white/5 shadow-2xl;
+    @apply bg-white border border-slate-200/80 shadow-xl shadow-slate-900/5;
   }
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/50;
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-[#111439] via-[#111439] to-[#3a4078];
   }
   .gold-gradient {
-    @apply bg-gradient-to-br from-amber-300 via-kashmir-gold to-amber-700;
+    @apply bg-gradient-to-br from-amber-400 via-kashmir-gold to-amber-600;
   }
   .luxury-shadow {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 40px -15px rgba(17, 20, 57, 0.08);
   }
   .bg-obsidian {
     background: radial-gradient(circle at top right, #0a141a, #05080a);
@@ -59,12 +77,12 @@
 }
 
 * {
-  @apply selection:bg-kashmir-gold/30 selection:text-white;
+  @apply selection:bg-kashmir-gold/30 selection:text-[#111439];
   scroll-behavior: smooth;
 }
 
 body {
-  @apply bg-[#05080a] text-white antialiased font-sans overflow-x-hidden;
+  @apply bg-[#F8F8F9] text-[#111439] antialiased font-sans overflow-x-hidden;
 }
 
 .font-display {
@@ -345,227 +363,153 @@ body {
 }
 
 /* ==========================================================================
-   Daylight Mode (Stripe Aesthetic) Overrides - White Lilac, Dark Blue, Pure White Cards, Aurora Mesh
+   Night Mode (Authentic Deep Black & Obsidian Luxury)
+   Only active when .dark is present on html or body
    ========================================================================== */
-body.light-theme {
-  --background: 240 7% 97.5%; /* #F8F8F9 White Lilac */
-  --foreground: 236 54% 14.5%; /* #111439 Dark Blue Navy */
-  --card: 0 0% 100%;
-  --card-foreground: 236 54% 14.5%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 236 54% 14.5%;
-  --border: 220 13% 91%; /* #E2E8F0 */
-  --input: 220 13% 91%;
-  --muted: 240 5% 94%;
-  --muted-foreground: 220 9% 46%;
-  
-  background-color: #F8F8F9 !important; /* White Lilac Canvas */
-  color: #111439 !important; /* Solid Visible Dark Blue / Black */
-}
-
-/* Custom selection for daylight mode */
-body.light-theme *::selection {
-  background-color: rgba(255, 184, 0, 0.25) !important;
-  color: #111439 !important;
-}
-
-body.light-theme *:not(footer):not(footer *):not(nav):not(nav *) {
-  border-color: #E2E8F0;
-}
-
-/* Section backgrounds - Set to White Lilac in Daylight View */
-body.light-theme section[class*="bg-[#"],
-body.light-theme section[class*="bg-black"],
-body.light-theme [class*="bg-[#05080a]"]:not(footer):not(footer *):not(header):not(header *):not(nav):not(nav *):not([class*="rounded"]):not(.glass-card):not(.glass):not(label):not(.absolute),
-body.light-theme [class*="bg-[#080c0f]"]:not(footer):not(footer *):not(header):not(header *):not(nav):not(nav *):not([class*="rounded"]):not(.glass-card):not(.glass):not(label):not(.absolute),
-body.light-theme [class*="bg-[#0a0f12]"]:not(footer):not(footer *):not(header):not(header *):not(nav):not(nav *):not([class*="rounded"]):not(.glass-card):not(.glass):not(label):not(.absolute),
-body.light-theme [class*="bg-[#0b1317]"]:not(footer):not(footer *):not(header):not(header *):not(nav):not(nav *):not([class*="rounded"]):not(.glass-card):not(.glass):not(label):not(.absolute),
-body.light-theme [class*="bg-[#0c1215]"]:not(footer):not(footer *):not(header):not(header *):not(nav):not(nav *):not([class*="rounded"]):not(.glass-card):not(.glass):not(label):not(.absolute),
-body.light-theme [class*="bg-[#070b0e]"]:not(footer):not(footer *):not(header):not(header *):not(nav):not(nav *):not([class*="rounded"]):not(.glass-card):not(.glass):not(label):not(.absolute),
-body.light-theme [class*="bg-[#080d10]"]:not(footer):not(footer *):not(header):not(header *):not(nav):not(nav *):not([class*="rounded"]):not(.glass-card):not(.glass):not(label):not(.absolute),
-body.light-theme [class*="bg-[#090e11]"]:not(footer):not(footer *):not(header):not(header *):not(nav):not(nav *):not([class*="rounded"]):not(.glass-card):not(.glass):not(label):not(.absolute) {
-  background-color: #F8F8F9 !important;
-  border-color: #E2E8F0 !important;
-}
-
-/* Hero Section Stripe Aurora Mesh in Daylight View */
-body.light-theme div[class*="min-h-[92vh]"],
-body.light-theme section:first-of-type {
-  background: radial-gradient(circle at 12% 18%, rgba(255, 184, 0, 0.28) 0%, transparent 45%),
-              radial-gradient(circle at 85% 15%, rgba(0, 212, 255, 0.24) 0%, transparent 50%),
-              radial-gradient(circle at 50% 55%, rgba(121, 40, 202, 0.18) 0%, transparent 55%),
-              radial-gradient(circle at 80% 80%, rgba(255, 101, 132, 0.22) 0%, transparent 45%),
-              #F8F8F9 !important;
-}
-
-/* Light overlay for hero background image */
-body.light-theme div[class*="min-h-[92vh]"] [class*="from-[#05080a]"],
-body.light-theme div[class*="min-h-[92vh]"] [class*="to-[#05080a]"],
-body.light-theme div[class*="min-h-[92vh]"] .bg-gradient-to-t {
-  background-image: linear-gradient(to top, #F8F8F9, rgba(248, 248, 249, 0.7), transparent) !important;
-  opacity: 0.95 !important;
-}
-
-/* Pure White Cards & Floating Panels in Daylight View */
-body.light-theme [class*="bg-white/5"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme [class*="bg-white/[0.01]"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme [class*="bg-white/[0.02]"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme [class*="bg-white/[0.03]"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme [class*="bg-white/[0.04]"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme [class*="bg-white/[0.05]"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme [class*="bg-white/[0.08]"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme .glass-card:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme .glass:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme div[class*="bg-[#0a0f12]"][class*="rounded"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme div[class*="bg-[#0b1317]"][class*="rounded"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme div[class*="bg-[#070b0d]"][class*="rounded"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme div[class*="bg-[#0c1216]"][class*="rounded"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme div[class*="bg-[#0c1217]"][class*="rounded"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme div[class*="bg-[#080c0e]"][class*="rounded"]:not(nav):not(nav *):not(footer):not(footer *),
-body.light-theme div[class*="bg-[#080d10]"][class*="rounded"]:not(nav):not(nav *):not(footer):not(footer *) {
-  background-color: #FFFFFF !important;
-  border-color: #E2E8F0 !important;
-  box-shadow: 0 10px 25px -5px rgba(17, 20, 57, 0.06), 0 8px 10px -6px rgba(17, 20, 57, 0.03) !important;
-}
-
-/* Floating Search Command Module in Daylight View */
-body.light-theme div[class*="backdrop-blur-3xl"][class*="rounded"] {
-  background-color: #FFFFFF !important;
-  border-color: #E2E8F0 !important;
-  box-shadow: 0 20px 45px -10px rgba(17, 20, 57, 0.1) !important;
-}
-
-body.light-theme div[class*="bg-black/40"],
-body.light-theme div[class*="bg-black/30"] {
-  background-color: #F8F8F9 !important;
-  border-color: #E2E8F0 !important;
-}
-
-/* Dynamic Ticker & Corridor Strip in Daylight View */
-body.light-theme div[class*="bg-[#070b0e]"] {
-  background-color: #FFFFFF !important;
-  border-color: #E2E8F0 !important;
-}
-body.light-theme section[class*="bg-[#06090c]"] {
-  background-color: #FFFFFF !important;
-  border-color: #E2E8F0 !important;
-}
-body.light-theme .ticker-fade-left {
-  background-image: linear-gradient(to right, #FFFFFF, transparent) !important;
-}
-body.light-theme .ticker-fade-right {
-  background-image: linear-gradient(to left, #FFFFFF, transparent) !important;
-}
-
-/* Navbar in Daylight View */
-body.light-theme header {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-  border-color: #E2E8F0 !important;
-  box-shadow: 0 1px 3px rgba(17, 20, 57, 0.05) !important;
-  backdrop-filter: blur(16px) !important;
-}
-body.light-theme header a {
-  color: #111439 !important;
-}
-body.light-theme header a:hover {
-  color: #D97706 !important;
-}
-body.light-theme header svg text {
-  fill: #111439 !important;
-}
-
-/* Global Typography - Solid Visible Dark Blue #111439 */
-body.light-theme .text-white:not(footer *):not(footer):not(button[type="submit"] *):not(button[type="submit"]):not([class*="bg-emerald-"] *):not([class*="bg-emerald-"]):not([class*="bg-amber-500"] *):not([class*="bg-amber-600"] *):not([class*="bg-[#111439]"] *):not([class*="bg-[#111439]"]) {
-  color: #111439 !important;
-}
-body.light-theme [class*="text-white/90"]:not(footer *),
-body.light-theme [class*="text-white/80"]:not(footer *) {
-  color: #111439 !important;
-}
-body.light-theme [class*="text-white/70"]:not(footer *),
-body.light-theme [class*="text-white/60"]:not(footer *),
-body.light-theme [class*="text-white/50"]:not(footer *),
-body.light-theme [class*="text-white/40"]:not(footer *) {
-  color: #4A5568 !important; /* Solid Slate for subtitles */
-}
-body.light-theme [class*="text-white/30"]:not(footer *),
-body.light-theme [class*="text-white/20"]:not(footer *),
-body.light-theme [class*="text-white/10"]:not(footer *) {
-  color: #94A3B8 !important;
-}
-
-/* Text Gradient in Daylight View */
-body.light-theme .text-gradient {
-  background-image: linear-gradient(to bottom right, #111439, #111439, #3a4078) !important;
-}
-
-/* Border overrides */
-body.light-theme [class*="border-white/10"]:not(footer *):not(nav *),
-body.light-theme [class*="border-white/5"]:not(footer *):not(nav *),
-body.light-theme [class*="border-white/20"]:not(footer *):not(nav *) {
-  border-color: #E2E8F0 !important;
-}
-
-/* Inputs, Textareas, and Dropdown Selects in Daylight View */
-body.light-theme input:not(footer *),
-body.light-theme textarea:not(footer *),
-body.light-theme select:not(footer *) {
-  background-color: #F8F8F9 !important;
-  color: #111439 !important;
-  border-color: #E2E8F0 !important;
-}
-body.light-theme input::placeholder,
-body.light-theme textarea::placeholder {
-  color: #94A3B8 !important;
-}
-body.light-theme label[class*="bg-[#0a0f12]"],
-body.light-theme .absolute[class*="bg-[#0a0f12]"],
-body.light-theme label[class*="bg-black"],
-body.light-theme .absolute[class*="bg-black"] {
-  background-color: #FFFFFF !important;
-  color: #111439 !important;
-  border-color: #E2E8F0 !important;
-}
-
-/* Action Buttons in Daylight View */
-body.light-theme button[type="submit"],
-body.light-theme [class*="from-kashmir-gold"][class*="to-amber-500"]:not(footer *) {
-  background: #111439 !important;
+html.dark body,
+body.dark {
+  background-color: #05080a !important;
   color: #FFFFFF !important;
-  box-shadow: 0 4px 14px rgba(17, 20, 57, 0.2) !important;
-}
-body.light-theme button[type="submit"]:hover {
-  background: #1c225a !important;
-}
-body.light-theme [class*="bg-white/5"][class*="rounded-full"]:not(footer *):not(header *) {
-  background-color: #FFFFFF !important;
-  border-color: #E2E8F0 !important;
-  color: #111439 !important;
 }
 
-/* Modals & Dialogs in Daylight View */
-body.light-theme [role="dialog"],
-body.light-theme [class*="bg-[#0c1217]"][role="dialog"],
-body.light-theme [class*="bg-[#0c1216]"][role="dialog"] {
-  background-color: #FFFFFF !important;
-  color: #111439 !important;
-  border-color: #E2E8F0 !important;
-  box-shadow: 0 25px 50px -12px rgba(17, 20, 57, 0.25) !important;
+/* Background canvas in Night Mode */
+html.dark section[class*="bg-[#F8F8F9]"],
+html.dark div[class*="bg-[#F8F8F9]"],
+html.dark [class*="bg-[#F8F8F9]"]:not(footer):not(footer *) {
+  background-color: #05080a !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
 }
 
-/* Gold Accents in Daylight View */
-body.light-theme .text-kashmir-gold:not(footer *):not(nav *),
-body.light-theme [class*="text-kashmir-gold"]:not(footer *):not(nav *) {
-  color: #B88E2F !important;
-}
-body.light-theme svg.fill-kashmir-gold:not(footer *) {
-  fill: #F59E0B !important;
-  color: #F59E0B !important;
+/* Aurora mesh fades to dark in Night Mode */
+html.dark .stripe-aurora-mesh {
+  background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 60%), #05080a !important;
 }
 
-/* Grounding footer remains deep dark navy in all views */
+/* Cards & Surfaces turn to deep Obsidian in Night Mode */
+html.dark .daylight-card,
+html.dark .glass-card,
+html.dark div[class*="bg-white"]:not(footer *):not(button[type="submit"]):not([class*="bg-emerald-"]):not([class*="bg-amber-"]) {
+  background-color: #0a0f12 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Translucent glass in Night Mode */
+html.dark .daylight-glass,
+html.dark .glass {
+  background-color: rgba(10, 15, 18, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Inputs & Form Fields in Night Mode */
+html.dark [class*="bg-slate-50"],
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Floating labels in Night Mode */
+html.dark label[class*="bg-white"],
+html.dark .absolute[class*="bg-white"] {
+  background-color: #0a0f12 !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Typography in Night Mode */
+html.dark .text-\[\#111439\],
+html.dark [class*="text-[#111439]"] {
+  color: #FFFFFF !important;
+}
+html.dark [class*="text-[#4A5568]"],
+html.dark [class*="text-slate-600"],
+html.dark [class*="text-slate-500"] {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+html.dark [class*="text-slate-400"] {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+html.dark .text-gradient {
+  background-image: linear-gradient(to bottom right, #FFFFFF, #FFFFFF, rgba(255, 255, 255, 0.5)) !important;
+}
+
+/* Borders in Night Mode */
+html.dark [class*="border-slate-200"],
+html.dark [class*="border-slate-100"] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Navbar in Night Mode */
+html.dark header {
+  background-color: rgba(5, 8, 10, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px) !important;
+}
+html.dark header a {
+  color: #FFFFFF !important;
+}
+html.dark header a:hover {
+  color: #D4AF37 !important;
+}
+html.dark header svg text {
+  fill: #FFFFFF !important;
+}
+
+/* Primary Action Buttons in Night Mode */
+html.dark button.bg-\[\#111439\],
+html.dark button[class*="bg-[#111439]"]:not(footer *):not([class*="bg-[#111439]/5"]),
+html.dark [class*="bg-[#111439]"]:not(footer *):not([class*="bg-[#111439]/5"]):not(svg *):not(path) {
+  background: linear-gradient(to right, #D4AF37, #f59e0b) !important;
+  color: #000000 !important;
+  box-shadow: 0 10px 25px -5px rgba(212, 175, 55, 0.35) !important;
+}
+html.dark button.bg-\[\#111439\]:hover,
+html.dark button[class*="bg-[#111439]"]:not(footer *):hover {
+  background: linear-gradient(to right, #fbbf24, #f59e0b) !important;
+}
+html.dark [class*="bg-[#111439]/5"] {
+  background-color: rgba(212, 175, 55, 0.1) !important;
+  border-color: rgba(212, 175, 55, 0.3) !important;
+  color: #D4AF37 !important;
+}
+
+/* Modals & Dialogs in Night Mode */
+html.dark [role="dialog"],
+html.dark .dialog-content {
+  background-color: #0c1216 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Dynamic Ticker in Night Mode */
+html.dark div[class*="bg-white"][class*="border-y"] {
+  background-color: #070b0e !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+html.dark .ticker-fade-left {
+  background-image: linear-gradient(to right, #070b0e, transparent) !important;
+}
+html.dark .ticker-fade-right {
+  background-image: linear-gradient(to left, #070b0e, transparent) !important;
+}
+
+/* Selection in Night Mode */
+html.dark *::selection {
+  background-color: rgba(212, 175, 55, 0.3) !important;
+  color: #FFFFFF !important;
+}
+
+/* Footer remains deep pitch dark */
 footer,
-footer[class*="bg-[#05080a]"] {
-  background-color: #111439 !important;
+footer[class*="bg-[#111439]"] {
+  background-color: #05080a !important;
   color: #FFFFFF !important;
 }
