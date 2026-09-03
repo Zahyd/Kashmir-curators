@@ -15,6 +15,7 @@ import NewsletterSignup from '@/components/home/NewsletterSignup';
 import ContactSection from '@/components/home/ContactSection';
 import DynamicCurationTicker from '@/components/home/DynamicCurationTicker';
 import TravelStatusWidget from '@/components/home/TravelStatusWidget';
+import VerifiedLocalMarketplace from '@/components/home/VerifiedLocalMarketplace';
 import SeoMeta from '@/components/SeoMeta';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -132,6 +133,7 @@ const Index = () => {
         </section>
 
         <DestinationsGrid />
+        <VerifiedLocalMarketplace />
         <AuthenticityFeatures />
         <FeaturedPackages />
         <VisualItinerary />
