@@ -20,6 +20,8 @@ const navLinks = [
   { href: '/packages', label: 'Portfolio' },
   { href: '/hotels', label: 'Estates' },
   { href: '/cabs', label: 'Fleet' },
+  { href: '/travel-status', label: 'Travel Status' },
+  { href: '/vendor', label: 'Vendor Hub' },
 ];
 
 export default function Navbar() {

@@ -281,12 +281,23 @@ model Curator {
 }
 
 model TravelAdvisory {
-  id           String    @id @default(uuid())
-  location     String
-  status       String
-  message      String
-  lastUpdated  DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                  String             @id @default(uuid())
+  location            String
+  status              String             // Open, Caution, Closed, Restricted
+  message             String
+  severity            String             @default("NORMAL") // NORMAL, ADVISORY, WARNING, SEVERE, CRITICAL_EMERGENCY
+  category            String             @default("GENERAL") // ROAD_HIGHWAY, WEATHER_SNOW, AVALANCHE, FLIGHT_AIRPORT, DESTINATION_RESTRICTION, GOVERNMENT
+  corridors           String?            // JSON array of affected routes/corridors
+  source              String             @default("J&K Tourism & Administration")
+  sourceUrl           String?
+  validFrom           DateTime?          @default(now())
+  validUntil          DateTime?
+  recommendedAction   String?
+  isVerified          Boolean            @default(true)
+  emergencyModeActive Boolean            @default(false)
+  disruptionImpacts   DisruptionImpact[]
+  lastUpdated         DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 }
 
 model PackageReview {
@@ -482,4 +493,101 @@ model HotelReview {
   sentiment      String         @default("POSITIVE") // POSITIVE, NEUTRAL, NEGATIVE
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+}
+
+model DisruptionImpact {
+  id                    String          @id @default(uuid())
+  advisoryId            String
+  advisory              TravelAdvisory  @relation(fields: [advisoryId], references: [id], onDelete: Cascade)
+  bookingId             String?
+  inquiryId             String?
+  affectedDestination   String
+  affectedDateFrom      DateTime?
+  affectedDateTo        DateTime?
+  impactLevel           String          @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  suggestedAlternative String?         // JSON: alternate destination, hotels, cab reroute
+  status                String          @default("DETECTED") // DETECTED, NOTIFIED, ALTERNATIVE_PROPOSED, RESOLVED, CANCELLED
+  resolutionType        String?         // REROUTED, RESCHEDULED, WALLET_CREDITED, REFUNDED
+  customerNotified      Boolean         @default(false)
+  agentNotified         Boolean         @default(false)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+}
+
+model BookingProtectionPolicy {
+  id                    String   @id @default(uuid())
+  name                  String   // e.g. "Kashmir Flex Protection", "Standard Protection"
+  code                  String   @unique
+  description           String
+  feePercentage         Float    @default(5.0) // 5% of booking value
+  freeRescheduleDays    Int      @default(30)
+  cancellationRefundPct Float    @default(100.0) // In platform wallet credits
+  disruptionAutoCredit  Boolean  @default(true)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model VendorListing {
+  id                  String    @id @default(uuid())
+  vendorId            String    // references User.id or Supplier.id
+  title               String
+  category            String    // HOTEL, HOMESTAY, CAB, GUIDE, ACTIVITY, RESTAURANT
+  location            String
+  description         String
+  basePrice           Float
+  images              String    // JSON array of URLs
+  amenitiesOrFeatures String    // JSON array
+  inventoryCount      Int       @default(1)
+  blackoutDates       String?   // JSON array of ISO dates
+  verificationStatus  String    @default("PENDING") // PENDING, VERIFIED, REJECTED, SUSPENDED
+  kycDocuments        String?   // JSON object with govt ids, trade licenses
+  rating              Float     @default(5.0)
+  reviewCount         Int       @default(0)
+  contactPhone        String?
+  contactEmail        String?
+  payoutUpiOrBank     String?   // JSON payout details
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model Wallet {
+  id        String              @id @default(uuid())
+  userId    String              @unique
+  balance   Float               @default(0.0)
+  currency  String              @default("INR")
+  history   WalletTransaction[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount      Float
+  type        String   // CREDIT, DEBIT
+  source      String   // DISRUPTION_REFUND, CANCELLATION_CREDIT, PROMOTIONAL, BOOKING_PAYMENT
+  referenceId String?  // bookingId or disruptionImpactId
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model TripSafetyCard {
+  id                String   @id @default(uuid())
+  bookingId         String?  @unique
+  inquiryId         String?  @unique
+  shareToken        String   @unique
+  passengerName     String
+  passengerPhone    String
+  travelerCount     Int      @default(1)
+  assignedDriver    String?  // JSON: { name, phone, vehicleNo, vehicleType }
+  assignedHotelSos  String?  // JSON: { hotelName, location, managerPhone, frontDeskPhone }
+  emergencyContacts String?  // JSON array: [ { name, relation, phone } ]
+  bloodGroup        String?
+  medicalNotes      String?
+  safetyStatus      String   @default("SAFE") // SAFE, ROUTE_MONITORED, ASSISTANCE_REQUESTED
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }

@@ -19,12 +19,15 @@ import BlogList from "./pages/BlogList";
 import BlogPost from "./pages/BlogPost";
 import HotelConfirm from "./pages/HotelConfirm";
 import AgentPortal from "./pages/AgentPortal";
+import TravelStatusPage from "./pages/TravelStatusPage";
+import VendorPortal from "./pages/VendorPortal";
 
 import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
 import PaymentRequest from "./pages/PaymentRequest";
 import PublicItinerary from "./pages/PublicItinerary";
 import ThemeToggle from "./components/common/ThemeToggle";
+import EmergencyBanner from "./components/layout/EmergencyBanner";
 import { useAntiTheft } from "./hooks/useAntiTheft";
 
 const queryClient = new QueryClient();
@@ -40,6 +43,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <EmergencyBanner />
             <ThemeToggle />
             <Routes>
               <Route path="/" element={<Index />} />
@@ -61,6 +65,9 @@ const App = () => {
               <Route path="/payment-request/:paymentId" element={<PaymentRequest />} />
               <Route path="/hotel/confirm/:reservationId" element={<HotelConfirm />} />
               <Route path="/agent" element={<AgentPortal />} />
+              <Route path="/travel-status" element={<TravelStatusPage />} />
+              <Route path="/vendor" element={<VendorPortal />} />
+              <Route path="/safety-card/:token" element={<TravelStatusPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

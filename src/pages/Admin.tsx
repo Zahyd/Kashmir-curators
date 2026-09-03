@@ -49,6 +49,7 @@ import CMSPayments from '@/components/admin/CMSPayments';
 import CMSJourney from '@/components/admin/CMSJourney';
 import CMSProfile from '@/components/admin/CMSProfile';
 import CMSReservations from '@/components/admin/CMSReservations';
+import CMSDisruptions from '@/components/admin/CMSDisruptions';
 import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
 
 const ROLE_STATS: Record<string, any[]> = {
@@ -369,6 +370,7 @@ export default function Admin() {
             </div>
           </div>
         );
+      case 'disruptions': return <div className="animate-in fade-in duration-500"><CMSDisruptions /></div>;
       case 'inquiries': return <div className="animate-in fade-in duration-500"><CMSInquiries /></div>;
       case 'reservations': return <div className="animate-in fade-in duration-500"><CMSReservations /></div>;
       case 'bookings': return <div className="animate-in fade-in duration-500"><CMSBookings /></div>;

@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { API_BASE_URL } from '@/lib/api';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import TripSafetyCardModal from '@/components/common/TripSafetyCardModal';
 
 const typeIcons = {
   package: Package,
@@ -652,6 +653,7 @@ export default function Profile() {
 
   // Slips/Vouchers display
   const [activeSlip, setActiveSlip] = useState<{ type: 'hotel' | 'flight' | 'cab', booking: any } | null>(null);
+  const [safetyCardToken, setSafetyCardToken] = useState<string | null>(null);
   const [activeInvoice, setActiveInvoice] = useState<any | null>(null);
   const [showDriverTracking, setShowDriverTracking] = useState(false);
   const [trackingProgress, setTrackingProgress] = useState(0);
@@ -1353,7 +1355,7 @@ export default function Profile() {
                       </div>
                       <div className="grid gap-6">
                         {activeBookings.slice(0, 2).map((booking) => (
-                          <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} />
+                          <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} onShowSafetyCard={(id) => setSafetyCardToken(id)} />
                         ))}
                       </div>
                     </div>
@@ -1395,7 +1397,7 @@ export default function Profile() {
                           <h3 className="text-lg font-bold text-white/80 text-left pl-1">Active & Upcoming</h3>
                           <div className="grid gap-6">
                             {activeBookings.map((booking) => (
-                              <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} />
+                              <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} onShowSafetyCard={(id) => setSafetyCardToken(id)} />
                             ))}
                           </div>
                         </div>
@@ -1405,7 +1407,7 @@ export default function Profile() {
                           <h3 className="text-lg font-bold text-white/55 text-left pl-1">Past History</h3>
                           <div className="grid gap-6 opacity-60 hover:opacity-100 transition-opacity duration-300">
                             {pastBookings.map((booking) => (
-                              <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} />
+                              <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} onShowSafetyCard={(id) => setSafetyCardToken(id)} />
                             ))}
                           </div>
                         </div>
@@ -2684,6 +2686,14 @@ export default function Profile() {
         )}
       </Dialog>
 
+      {safetyCardToken && (
+        <TripSafetyCardModal
+          shareToken={safetyCardToken}
+          isOpen={!!safetyCardToken}
+          onClose={() => setSafetyCardToken(null)}
+        />
+      )}
+
       <Footer />
     </div>
   );
@@ -2740,7 +2750,7 @@ function MobileTabButton({ icon: Icon, label, active, onClick, className, badge 
 }
 
 // Sub-component for rendering a luxury Ticket
-function BookingTicket({ booking, onCancel, cancellingId, onShowSlip }: { booking: any, onCancel: (id: string) => void, cancellingId: string | null, onShowSlip: (slip: any) => void }) {
+function BookingTicket({ booking, onCancel, cancellingId, onShowSlip, onShowSafetyCard }: { booking: any, onCancel: (id: string) => void, cancellingId: string | null, onShowSlip: (slip: any) => void, onShowSafetyCard?: (id: string) => void }) {
   const Icon = typeIcons[booking.type as keyof typeof typeIcons] || Package;
   
   return (
@@ -2888,6 +2898,17 @@ function BookingTicket({ booking, onCancel, cancellingId, onShowSlip }: { bookin
           >
             <Sparkles className="w-3.5 h-3.5" />
             {booking.type === 'hotel' ? 'Preview Voucher' : booking.type === 'cab' ? 'Preview Details' : 'Preview Voucher'}
+          </Button>
+        )}
+
+        {(booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'completed') && (
+          <Button 
+            onClick={() => onShowSafetyCard ? onShowSafetyCard(booking.id) : null}
+            variant="outline"
+            className="w-full mb-3 rounded-xl bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 font-bold text-xs h-10 flex items-center justify-center gap-2"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Trip Safety Card
           </Button>
         )}
 

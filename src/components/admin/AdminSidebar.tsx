@@ -18,6 +18,7 @@ import {
   Sparkles,
   CreditCard,
   CalendarCheck,
+  ShieldAlert,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,7 @@ interface AdminSidebarProps {
 
 const allMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'disruptions', label: 'Disruptions & Safety', icon: ShieldAlert, badge: 'Live' },
   { id: 'inquiries', label: 'Trip Inquiries', icon: MessageSquare, badge: 'New' },
   { id: 'reservations', label: 'Hotel Reservations', icon: CalendarCheck },
   { id: 'bookings', label: 'Bookings Engine', icon: Package },
