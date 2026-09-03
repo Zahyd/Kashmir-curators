@@ -424,6 +424,16 @@ html.dark .ticker-fade-right {
   background-image: linear-gradient(to left, #070b0e, transparent) !important;
 }
 
+/* Logo Brand Title: Solid Navy in Daylight, Pure White in Night Mode */
+.logo-brand-title {
+  fill: #111439;
+}
+.logo-brand-title.fill-white,
+html.dark .logo-brand-title,
+body.dark .logo-brand-title {
+  fill: #FFFFFF !important;
+}
+
 /* Selection in Night Mode */
 html.dark *::selection {
   background-color: rgba(212, 175, 55, 0.3) !important;

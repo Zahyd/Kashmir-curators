@@ -154,7 +154,7 @@ export function Logo({ className, isHero, isDarkBg = false, ...props }: LogoProp
         >
           KASHMIR CURATORS
         </text>
-        {/* Main Brand Title: Luxury Roman Serif (Cinzel) in White */}
+        {/* Main Brand Title: Luxury Roman Serif (Cinzel) */}
         <text
           x="0"
           y="75"
@@ -162,7 +162,10 @@ export function Logo({ className, isHero, isDarkBg = false, ...props }: LogoProp
           fontSize="36"
           fontWeight="700"
           letterSpacing="2"
-          fill={brandTextColor}
+          className={cn(
+            "logo-brand-title transition-colors duration-300",
+            isDarkBg ? "fill-white" : "fill-[#111439] dark:fill-white"
+          )}
         >
           KASHMIR CURATORS
         </text>
