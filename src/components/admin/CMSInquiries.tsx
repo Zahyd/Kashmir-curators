@@ -383,17 +383,17 @@ export default function CMSInquiries() {
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         
         <div className="overflow-x-auto relative z-10 custom-scrollbar">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[980px]">
             <thead>
               <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-6 font-black text-white/20 text-[9px] uppercase tracking-[0.4em]">Inquiry ID</th>
-                <th className="px-6 py-6 font-black text-white/20 text-[9px] uppercase tracking-[0.4em]">Intelligence Profile</th>
-                <th className="px-6 py-6 font-black text-white/20 text-[9px] uppercase tracking-[0.4em]">Trip Parameters</th>
-                <th className="px-6 py-6 font-black text-white/20 text-[9px] uppercase tracking-[0.4em]">Status</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] w-36">Inquiry ID</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[220px]">Intelligence Profile</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[260px]">Trip Parameters</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] w-44">Status</th>
                 {canAssign && (
-                  <th className="px-6 py-6 font-black text-white/20 text-[9px] uppercase tracking-[0.4em]">Assigned Agent</th>
+                  <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[180px]">Assigned Agent</th>
                 )}
-                <th className="px-6 py-6 font-black text-white/20 text-[9px] uppercase tracking-[0.4em] text-right">Controls</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] text-right w-28">Controls</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -410,31 +410,38 @@ export default function CMSInquiries() {
                   </td>
                   <td className="px-6 py-6">
                     <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-kashmir-gold font-black text-lg relative shadow-xl overflow-hidden group/avatar">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-kashmir-gold font-black text-lg relative shadow-xl overflow-hidden group/avatar shrink-0">
                         <div className="absolute inset-0 bg-kashmir-gold/10 opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
                         <span className="relative z-10">{inq.customerName.charAt(0)}</span>
                       </div>
-                      <div className="space-y-1">
-                        <span className="text-white font-bold text-sm block tracking-tight">{inq.customerName}</span>
-                        <div className="flex items-center gap-2 text-[10px] text-white/30 font-bold uppercase tracking-tighter">
-                          <Mail className="w-3 h-3 text-kashmir-gold/40" />
-                          {inq.email}
+                      <div className="space-y-1 min-w-0">
+                        <span className="text-white font-bold text-sm block tracking-tight truncate">{inq.customerName}</span>
+                        <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-tighter truncate">
+                          <Mail className="w-3 h-3 text-kashmir-gold/40 shrink-0" />
+                          <span className="truncate">{inq.email}</span>
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-6">
+                  <td className="px-6 py-6 max-w-[280px]">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-white/80 text-sm font-bold tracking-tight">{inq.destination}</span>
-                        <div className="w-1 h-1 rounded-full bg-white/20" />
-                        <span className="text-[10px] text-white/40 font-black uppercase tracking-widest">{inq.duration}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-white/90 text-sm font-bold tracking-tight">{inq.destination}</span>
+                        <div className="w-1 h-1 rounded-full bg-white/20 shrink-0" />
+                        <span className="text-[10px] text-white/40 font-black uppercase tracking-widest shrink-0">{inq.duration}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="bg-white/5 border-white/10 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 text-white/30">
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        <Badge 
+                          variant="outline" 
+                          className="bg-white/5 border-white/10 text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 text-white/60 max-w-[200px] truncate block"
+                          title={inq.accommodation}
+                        >
                           {inq.accommodation}
                         </Badge>
-                        <Badge variant="outline" className="bg-kashmir-gold/5 border-kashmir-gold/20 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 text-kashmir-gold/60">
+                        <Badge 
+                          variant="outline" 
+                          className="bg-kashmir-gold/5 border-kashmir-gold/20 text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 text-kashmir-gold/70 shrink-0"
+                        >
                           {inq.budget}
                         </Badge>
                       </div>
@@ -662,17 +669,19 @@ export default function CMSInquiries() {
       {/* Details Intelligence Modal */}
       {selectedInquiry && !isUploadModalOpen && (
         <Dialog open={!!selectedInquiry} onOpenChange={() => setSelectedInquiry(null)}>
-          <DialogContent className="max-w-4xl bg-[#0a0f12]/95 backdrop-blur-3xl border-white/5 text-white p-0 overflow-hidden rounded-[3rem] shadow-2xl">
+          <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] bg-[#0a0f12]/98 backdrop-blur-3xl border border-white/10 text-white p-0 overflow-hidden rounded-3xl sm:rounded-[2.5rem] shadow-2xl flex flex-col my-auto">
             <div className="absolute top-0 right-0 w-96 h-96 bg-kashmir-gold/5 blur-[120px] -mr-48 -mt-48 pointer-events-none" />
             
-            <div className="p-12 relative z-10">
-              <div className="flex items-center justify-between mb-12 border-b border-white/5 pb-8">
+            <div className="p-6 sm:p-8 lg:p-10 relative z-10 overflow-y-auto max-h-[calc(90vh-1rem)] custom-scrollbar">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-white/5 pb-6">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-kashmir-gold/60">Strategic Inquiry Detail</p>
-                  <h2 className="text-4xl font-display font-black text-white leading-tight">Node <span className="text-kashmir-gold">{formatId(selectedInquiry.id)}</span></h2>
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white leading-tight break-all">
+                    Node <span className="text-kashmir-gold">{formatId(selectedInquiry.id)}</span>
+                  </h2>
                 </div>
                 <Badge className={cn(
-                  "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border-none shadow-xl",
+                  "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border-none shadow-xl self-start sm:self-auto shrink-0",
                   selectedInquiry.status === 'New' ? 'bg-blue-500/20 text-blue-400' :
                   selectedInquiry.status === 'Pending Curation' ? 'bg-amber-500/20 text-amber-500' :
                   'bg-emerald-500/20 text-emerald-400'
@@ -681,36 +690,51 @@ export default function CMSInquiries() {
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                <div className="space-y-10">
-                  <div className="space-y-6 p-8 rounded-[2rem] bg-white/[0.02] border border-white/5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                <div className="space-y-6">
+                  <div className="space-y-6 p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] bg-white/[0.02] border border-white/5">
                     <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-kashmir-gold" />
                       Client Intelligence Profile
                     </h4>
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-5 group/info">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center group-hover/info:bg-white/10 transition-colors"><Users className="w-5 h-5 text-white/40" /></div>
-                        <div><p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Entity Name</p><p className="font-bold text-lg text-white">{selectedInquiry.customerName}</p></div>
+                    <div className="space-y-5">
+                      <div className="flex items-center gap-4 sm:gap-5 group/info">
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center shrink-0 group-hover/info:bg-white/10 transition-colors">
+                          <Users className="w-5 h-5 text-white/40" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Entity Name</p>
+                          <p className="font-bold text-base sm:text-lg text-white truncate">{selectedInquiry.customerName}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-5 group/info">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center group-hover/info:bg-white/10 transition-colors"><Mail className="w-5 h-5 text-white/40" /></div>
-                        <div><p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Verified Email</p><p className="font-bold text-lg text-white">{selectedInquiry.email}</p></div>
+                      <div className="flex items-center gap-4 sm:gap-5 group/info">
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center shrink-0 group-hover/info:bg-white/10 transition-colors">
+                          <Mail className="w-5 h-5 text-white/40" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Verified Email</p>
+                          <p className="font-bold text-sm sm:text-base text-white break-all">{selectedInquiry.email}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-5 group/info">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center group-hover/info:bg-white/10 transition-colors"><Phone className="w-5 h-5 text-white/40" /></div>
-                        <div><p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Contact Synchronized</p><p className="font-bold text-lg text-white">{selectedInquiry.phone}</p></div>
+                      <div className="flex items-center gap-4 sm:gap-5 group/info">
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center shrink-0 group-hover/info:bg-white/10 transition-colors">
+                          <Phone className="w-5 h-5 text-white/40" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Contact Synchronized</p>
+                          <p className="font-bold text-sm sm:text-base text-white">{selectedInquiry.phone}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* CRM Pipeline Operations */}
-                  <div className="space-y-6 p-8 rounded-[2rem] bg-white/[0.02] border border-white/5">
+                  <div className="space-y-4 p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] bg-white/[0.02] border border-white/5">
                     <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       CRM Pipeline Operations
                     </h4>
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <span className="text-[10px] font-black uppercase tracking-wider text-white/50">Lead Stage State</span>
                       <select
                         value={selectedInquiry.leadStage || 'NEW_LEAD'}
@@ -738,7 +762,7 @@ export default function CMSInquiries() {
                             toast.error('Failed to communicate with CRM server');
                           }
                         }}
-                        className="bg-[#0a0f12] border border-white/10 text-white rounded-xl px-4 py-2 text-xs font-bold focus:border-kashmir-gold outline-none cursor-pointer"
+                        className="bg-[#0a0f12] border border-white/10 text-white rounded-xl px-4 py-2 text-xs font-bold focus:border-kashmir-gold outline-none cursor-pointer w-full sm:w-auto"
                       >
                         {[
                           { code: 'NEW_LEAD', label: 'New Lead' },
@@ -760,27 +784,27 @@ export default function CMSInquiries() {
                   </div>
                 </div>
 
-                <div className="space-y-10">
-                  <div className="space-y-6 p-8 rounded-[2rem] bg-kashmir-gold/[0.02] border border-kashmir-gold/5">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-kashmir-gold/40 flex items-center gap-3">
+                <div className="space-y-6">
+                  <div className="space-y-5 p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] bg-kashmir-gold/[0.02] border border-kashmir-gold/10">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-kashmir-gold/60 flex items-center gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
                       Trip Configuration Parameters
                     </h4>
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Operational Target</span>
-                        <span className="font-bold text-sm text-white">{selectedInquiry.destination}</span>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Operational Target</span>
+                        <span className="font-bold text-sm text-white text-right break-words">{selectedInquiry.destination}</span>
                       </div>
-                      <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Temporal Frame</span>
-                        <span className="font-bold text-sm text-white">{selectedInquiry.duration}</span>
+                      <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Temporal Frame</span>
+                        <span className="font-bold text-sm text-white text-right">{selectedInquiry.duration}</span>
                       </div>
-                      <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Asset Preference</span>
-                        <span className="font-bold text-sm text-white">{selectedInquiry.accommodation}</span>
+                      <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Asset Preference</span>
+                        <span className="font-bold text-sm text-white text-right break-words max-w-[65%]">{selectedInquiry.accommodation}</span>
                       </div>
-                      <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Fiscal Constraint</span>
+                      <div className="flex justify-between items-center gap-4 border-b border-white/5 pb-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0">Fiscal Constraint</span>
                         <Badge className="bg-kashmir-gold text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">{selectedInquiry.budget}</Badge>
                       </div>
                     </div>
@@ -791,23 +815,23 @@ export default function CMSInquiries() {
                       const flight = JSON.parse(selectedInquiry.flightDetails);
                       if (!flight || !flight.includeFlights) return null;
                       return (
-                        <div className="space-y-6 p-8 rounded-[2rem] bg-blue-500/[0.02] border border-blue-500/10 mt-6 animate-in fade-in duration-500 text-left">
+                        <div className="space-y-4 p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] bg-blue-500/[0.02] border border-blue-500/10 animate-in fade-in duration-500 text-left">
                           <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 flex items-center gap-3">
                             <Plane className="w-4 h-4 text-blue-400 animate-pulse" />
                             Requested Flight Enquiry
                           </h4>
-                          <div className="space-y-4 text-sm">
-                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                          <div className="space-y-3 text-sm">
+                            <div className="flex justify-between items-center border-b border-white/5 pb-2.5">
                               <span className="text-[10px] font-black uppercase tracking-widest text-white/25">Route</span>
-                              <span className="font-bold text-white uppercase">{flight.originCity || flight.origin} ({flight.origin}) &rarr; {flight.destinationCity || flight.destination} ({flight.destination})</span>
+                              <span className="font-bold text-white uppercase text-xs sm:text-sm">{flight.originCity || flight.origin} &rarr; {flight.destinationCity || flight.destination}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                            <div className="flex justify-between items-center border-b border-white/5 pb-2.5">
                               <span className="text-[10px] font-black uppercase tracking-widest text-white/25">Trip Class</span>
-                              <span className="font-bold text-white capitalize">{flight.tripType === 'roundtrip' ? 'Round Trip' : 'One Way'} • {flight.cabinClass ? flight.cabinClass.replace('_', ' ') : 'Economy'}</span>
+                              <span className="font-bold text-white capitalize text-xs sm:text-sm">{flight.tripType === 'roundtrip' ? 'Round Trip' : 'One Way'} • {flight.cabinClass ? flight.cabinClass.replace('_', ' ') : 'Economy'}</span>
                             </div>
                             <div className="flex justify-between items-center pb-1">
                               <span className="text-[10px] font-black uppercase tracking-widest text-white/25">Timing / Direct</span>
-                              <span className="font-bold text-white capitalize">Departure: {flight.departureTimePref} • {flight.directOnly ? 'Direct Only' : 'Layovers OK'}</span>
+                              <span className="font-bold text-white capitalize text-xs sm:text-sm">Departure: {flight.departureTimePref} • {flight.directOnly ? 'Direct Only' : 'Layovers OK'}</span>
                             </div>
                           </div>
                         </div>
@@ -819,24 +843,21 @@ export default function CMSInquiries() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mt-16 pt-10 border-t border-white/5">
-                <Button variant="ghost" onClick={() => setSelectedInquiry(null)} className="h-14 px-8 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white hover:bg-white/5">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-white/5">
+                <Button variant="ghost" onClick={() => setSelectedInquiry(null)} className="w-full sm:w-auto h-12 px-6 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white hover:bg-white/5">
                   Terminate View
                 </Button>
-                 <div className="flex gap-4">
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
                   <Button 
                     onClick={() => {
                       navigate(`/sales/portal?inquiryId=${selectedInquiry.id}`);
                     }}
-                    className="h-14 px-8 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 hover:bg-blue-500 hover:text-white"
+                    className="flex-1 sm:flex-initial h-12 px-5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 hover:bg-blue-500 hover:text-white"
                   >
-                    <Sparkles className="w-4 h-4 mr-3" /> Itinerary Builder
+                    <Sparkles className="w-4 h-4 mr-2" /> Itinerary Builder
                   </Button>
-                  <Button variant="outline" className="h-14 px-8 rounded-2xl bg-white/5 border-white/5 text-[10px] font-black uppercase tracking-[0.3em] text-white/60 hover:text-white hover:bg-white/10">
-                    <CheckCircle2 className="w-4 h-4 mr-3" /> Mark Verified
-                  </Button>
-                  <Button onClick={() => setIsUploadModalOpen(true)} className="h-14 px-10 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-kashmir-gold/20">
-                    <FileUp className="w-4 h-4 mr-3" /> Deploy Proposal
+                  <Button onClick={() => setIsUploadModalOpen(true)} className="flex-1 sm:flex-initial h-12 px-6 rounded-xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-kashmir-gold/20">
+                    <FileUp className="w-4 h-4 mr-2" /> Deploy Proposal
                   </Button>
                 </div>
               </div>
@@ -848,19 +869,19 @@ export default function CMSInquiries() {
       {/* Deployment Modal (Proposal Upload) */}
       {isUploadModalOpen && (
         <Dialog open={isUploadModalOpen} onOpenChange={(o) => !o && setIsUploadModalOpen(false)}>
-          <DialogContent className="max-w-2xl bg-[#0a0f12]/95 backdrop-blur-3xl border-white/5 text-white p-12 overflow-hidden rounded-[3rem] shadow-2xl">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] bg-[#0a0f12]/98 backdrop-blur-3xl border border-white/10 text-white p-6 sm:p-10 overflow-y-auto rounded-3xl sm:rounded-[2.5rem] shadow-2xl custom-scrollbar my-auto">
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
             
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
               <Badge className="bg-emerald-500/10 text-emerald-400 border-none px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.3em] mb-4">
                 Node Deployment Ready
               </Badge>
-              <h2 className="text-4xl font-display font-black text-white leading-tight">Publish <span className="text-kashmir-gold">Enterprise</span> Proposal</h2>
+              <h2 className="text-2xl sm:text-4xl font-display font-black text-white leading-tight">Publish <span className="text-kashmir-gold">Enterprise</span> Proposal</h2>
             </div>
 
-            <div className="space-y-10 relative z-10">
+            <div className="space-y-6 sm:space-y-8 relative z-10">
               <div 
-                className="group relative p-16 border-2 border-dashed border-white/5 rounded-[2.5rem] bg-white/[0.01] hover:bg-white/[0.03] hover:border-kashmir-gold/30 transition-all duration-700 cursor-pointer overflow-hidden"
+                className="group relative p-8 sm:p-12 border-2 border-dashed border-white/10 rounded-2xl sm:rounded-[2rem] bg-white/[0.01] hover:bg-white/[0.03] hover:border-kashmir-gold/30 transition-all duration-700 cursor-pointer overflow-hidden"
                 onClick={() => document.getElementById('proposal-upload')?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { 
@@ -881,41 +902,41 @@ export default function CMSInquiries() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 <div className="relative z-10 text-center flex flex-col items-center">
-                  <div className="w-24 h-24 rounded-[2rem] bg-kashmir-gold/10 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 shadow-2xl shadow-kashmir-gold/5">
-                    <FileUp className="w-10 h-10 text-kashmir-gold" />
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-kashmir-gold/10 flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 shadow-2xl shadow-kashmir-gold/5">
+                    <FileUp className="w-8 h-8 text-kashmir-gold" />
                   </div>
-                  <h3 className="text-2xl font-display font-bold text-white mb-3">Sync Bespoke Itinerary</h3>
-                  <p className="text-white/20 text-xs font-black uppercase tracking-[0.2em] max-w-[240px]">Drag & Drop Encrypted PDF or Click to Select</p>
+                  <h3 className="text-lg sm:text-2xl font-display font-bold text-white mb-2">Sync Bespoke Itinerary</h3>
+                  <p className="text-white/30 text-xs font-black uppercase tracking-[0.15em] max-w-[240px]">Drag & Drop Encrypted PDF or Click to Select</p>
                 </div>
               </div>
 
-              <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 space-y-4">
-                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
+              <div className="p-5 sm:p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3 text-xs">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
                   <span>Notification Protocol</span>
                   <span className="text-emerald-500">Automated SMS/Email</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
                   <span>Dashboard Access</span>
                   <span className="text-emerald-500">Instant Sync</span>
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button variant="ghost" onClick={() => setIsUploadModalOpen(false)} className="flex-1 h-16 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setIsUploadModalOpen(false)} className="w-full sm:flex-1 h-12 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white">
                   Abort Deployment
                 </Button>
                 <Button 
                   onClick={() => document.getElementById('proposal-upload')?.click()} 
-                  className="flex-[2] h-16 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-kashmir-gold/20"
+                  className="w-full sm:flex-[2] h-12 rounded-xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-kashmir-gold/20"
                 >
                   {isUploading ? (
-                    <div className="flex items-center gap-3">
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Synchronizing...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="w-5 h-5" />
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
                       <span>Select File to Publish</span>
                     </div>
                   )}
@@ -929,7 +950,7 @@ export default function CMSInquiries() {
       {/* Manual Entry Modal */}
       {isManualModalOpen && (
         <Dialog open={isManualModalOpen} onOpenChange={setIsManualModalOpen}>
-          <DialogContent className="max-w-2xl bg-[#0a0f12]/95 backdrop-blur-3xl border-white/5 text-white p-12 overflow-hidden rounded-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] bg-[#0a0f12]/98 backdrop-blur-3xl border border-white/10 text-white p-6 sm:p-10 overflow-y-auto rounded-3xl sm:rounded-[2.5rem] shadow-2xl custom-scrollbar my-auto">
             <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
             
             <div className="text-center mb-8">
