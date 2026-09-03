@@ -3,11 +3,11 @@ import { cn } from '@/lib/utils';
 
 interface LogoProps extends React.SVGProps<SVGSVGElement> {
   isHero?: boolean;
+  isDarkBg?: boolean;
 }
 
-export function Logo({ className, isHero, ...props }: LogoProps) {
-  // We use adaptive text coloring for the main brand text if it's not strictly 3D gold
-  const textColor = isHero ? "text-white" : "text-[#020617] dark:text-white";
+export function Logo({ className, isHero, isDarkBg = false, ...props }: LogoProps) {
+  const brandTextColor = isDarkBg ? "#FFFFFF" : "#111439";
 
   return (
     <svg
@@ -162,7 +162,7 @@ export function Logo({ className, isHero, ...props }: LogoProps) {
           fontSize="36"
           fontWeight="700"
           letterSpacing="2"
-          fill="#FFFFFF"
+          fill={brandTextColor}
         >
           KASHMIR CURATORS
         </text>

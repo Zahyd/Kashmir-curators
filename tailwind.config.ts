@@ -84,6 +84,14 @@ export default {
           lake: "hsl(var(--kashmir-lake))",
           earth: "hsl(var(--kashmir-earth))",
         },
+        daylight: {
+          canvas: "#F8F8F9",
+          card: "#FFFFFF",
+          navy: "#111439",
+          slate: "#4A5568",
+          muted: "#718096",
+          border: "#E2E8F0",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -6,25 +6,25 @@
 
 @layer base {
   :root {
-    --background: 210 20% 4%;
-    --foreground: 210 20% 98%;
-    --card: 210 20% 6%;
-    --card-foreground: 210 20% 98%;
-    --popover: 210 20% 4%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 43 70% 50%;
-    --primary-foreground: 210 20% 4%;
-    --secondary: 210 20% 12%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 210 20% 12%;
-    --muted-foreground: 210 20% 65%;
-    --accent: 43 70% 50%;
-    --accent-foreground: 210 20% 4%;
+    --background: 240 7% 97.5%;
+    --foreground: 236 54% 14.5%;
+    --card: 0 0% 100%;
+    --card-foreground: 236 54% 14.5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 236 54% 14.5%;
+    --primary: 236 54% 14.5%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 93%;
+    --secondary-foreground: 236 54% 14.5%;
+    --muted: 240 5% 94%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 38 70% 55%;
+    --accent-foreground: 236 54% 14.5%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 210 20% 12%;
-    --input: 210 20% 12%;
-    --ring: 43 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 236 54% 14.5%;
     --radius: 1.5rem;
     
     --kashmir-gold: 38 70% 55%;
@@ -34,24 +34,42 @@
   .dark {
     --background: 210 20% 4%;
     --foreground: 210 20% 98%;
+    --card: 210 20% 6%;
+    --card-foreground: 210 20% 98%;
   }
 }
 
 @layer utilities {
+  .daylight-canvas {
+    background-color: #F8F8F9;
+  }
+  .daylight-card {
+    @apply bg-white border border-slate-200/80 shadow-xl shadow-slate-900/5 rounded-3xl;
+  }
+  .daylight-glass {
+    @apply bg-white/85 backdrop-blur-2xl border border-slate-200/60 shadow-sm;
+  }
+  .stripe-aurora-mesh {
+    background: radial-gradient(circle at 12% 18%, rgba(255, 184, 0, 0.28) 0%, transparent 45%),
+                radial-gradient(circle at 85% 15%, rgba(0, 212, 255, 0.24) 0%, transparent 50%),
+                radial-gradient(circle at 50% 55%, rgba(121, 40, 202, 0.18) 0%, transparent 55%),
+                radial-gradient(circle at 80% 80%, rgba(255, 101, 132, 0.22) 0%, transparent 45%),
+                #F8F8F9;
+  }
   .glass {
-    @apply bg-white/5 backdrop-blur-2xl border border-white/10;
+    @apply bg-white/80 backdrop-blur-2xl border border-slate-200/80;
   }
   .glass-card {
-    @apply bg-[#0a0f12]/60 backdrop-blur-3xl border border-white/5 shadow-2xl;
+    @apply bg-white border border-slate-200/80 shadow-xl shadow-slate-900/5;
   }
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/50;
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-[#111439] via-[#111439] to-[#3a4078];
   }
   .gold-gradient {
-    @apply bg-gradient-to-br from-amber-300 via-kashmir-gold to-amber-700;
+    @apply bg-gradient-to-br from-amber-400 via-kashmir-gold to-amber-600;
   }
   .luxury-shadow {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 40px -15px rgba(17, 20, 57, 0.08);
   }
   .bg-obsidian {
     background: radial-gradient(circle at top right, #0a141a, #05080a);
@@ -59,12 +77,12 @@
 }
 
 * {
-  @apply selection:bg-kashmir-gold/30 selection:text-white;
+  @apply selection:bg-kashmir-gold/30 selection:text-[#111439];
   scroll-behavior: smooth;
 }
 
 body {
-  @apply bg-[#05080a] text-white antialiased font-sans overflow-x-hidden;
+  @apply bg-[#F8F8F9] text-[#111439] antialiased font-sans overflow-x-hidden;
 }
 
 .font-display {

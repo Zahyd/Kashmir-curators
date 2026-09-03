@@ -44,10 +44,10 @@ export default function DynamicCurationTicker() {
   }, []);
 
   return (
-    <div className="w-full bg-[#070b0e] border-y border-white/5 py-4 overflow-hidden relative z-20">
+    <div className="w-full bg-white border-y border-slate-200 py-3.5 overflow-hidden relative z-20 shadow-sm">
       {/* Decorative side fades */}
-      <div className="absolute left-0 top-0 bottom-0 w-24 ticker-fade-left z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-24 ticker-fade-right z-10 pointer-events-none" />
+      <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
 
       {/* CSS Infinite Marquee */}
       <style>{`
@@ -66,13 +66,13 @@ export default function DynamicCurationTicker() {
       <div className="flex w-[200%] animate-marquee whitespace-nowrap gap-16 items-center">
         {/* Double the list to create a seamless infinite loop */}
         {[...items, ...items].map((item, idx) => (
-          <div key={idx} className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors duration-300 cursor-default">
-            {item.type === 'booking' && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
-            {item.type === 'curation' && <Sparkles className="w-3.5 h-3.5 text-kashmir-gold animate-pulse" />}
-            {item.type === 'fleet' && <Compass className="w-3.5 h-3.5 text-blue-400" />}
+          <div key={idx} className="inline-flex items-center gap-3 text-[11px] font-bold uppercase tracking-wider text-[#4A5568] hover:text-[#111439] transition-colors duration-300 cursor-default">
+            {item.type === 'booking' && <ShieldCheck className="w-4 h-4 text-emerald-600" />}
+            {item.type === 'curation' && <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />}
+            {item.type === 'fleet' && <Compass className="w-4 h-4 text-indigo-600" />}
             
-            <span>{item.message}</span>
-            <span className="text-[8px] text-white/20 bg-white/5 px-2 py-0.5 rounded-full">{item.time}</span>
+            <span className="text-[#111439] font-bold">{item.message}</span>
+            <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">{item.time}</span>
           </div>
         ))}
       </div>

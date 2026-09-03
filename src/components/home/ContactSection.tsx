@@ -38,84 +38,84 @@ export default function ContactSection() {
   };
 
   return (
-    <section className="py-32 bg-[#05080a] relative overflow-hidden">
+    <section className="py-32 bg-[#F8F8F9] relative overflow-hidden border-t border-slate-200">
       {/* Royal Gradients */}
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-kashmir-gold/5 blur-[120px] -ml-64 -mb-64" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-amber-400/10 blur-[140px] -ml-64 -mb-64" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-24 items-start">
           {/* Info Hub */}
           <div className="lg:w-1/3 animate-fade-up">
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-8">
-              <Headphones className="w-3.5 h-3.5 text-kashmir-gold" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/60">Concierge Desk</span>
+            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm mb-8">
+              <Headphones className="w-3.5 h-3.5 text-amber-600" />
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439]">Concierge Desk</span>
             </div>
             
-            <h2 className="font-display text-5xl md:text-6xl font-black text-white tracking-tighter mb-10 leading-[0.9] uppercase">
+            <h2 className="font-display text-5xl md:text-6xl font-black text-[#111439] tracking-tight mb-10 leading-[0.9] uppercase">
               SECURE YOUR <br />
-              <span className="text-kashmir-gold italic">CONSULTATION</span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">CONSULTATION</span>
             </h2>
             
-            <p className="text-white/40 text-lg font-medium leading-relaxed mb-12">
+            <p className="text-[#4A5568] text-lg font-medium leading-relaxed mb-12">
               Our curators are ready to engineer your private expedition. Whether you seek a hidden valley retreat or a high-altitude adventure, we provide the ultimate liaison.
             </p>
 
             <div className="space-y-6">
-              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-6 group hover:border-kashmir-gold/30 transition-all duration-500">
-                <div className="w-12 h-12 rounded-xl bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20">
-                  <Sparkles className="w-5 h-5 text-kashmir-gold" />
+              <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center gap-6 group hover:border-slate-300 transition-all duration-500">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <Sparkles className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-white uppercase tracking-widest">Private Briefing</h4>
-                  <p className="text-[10px] font-medium text-white/30">Customized itineraries within 24 hours.</p>
+                  <h4 className="text-sm font-black text-[#111439] uppercase tracking-widest">Private Briefing</h4>
+                  <p className="text-[10px] font-medium text-slate-500">Customized itineraries within 24 hours.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Form Hub */}
-          <div className="flex-1 w-full bg-white/[0.02] border border-white/5 rounded-[3rem] p-10 md:p-16 relative overflow-hidden animate-fade-up" style={{ animationDelay: '200ms' }}>
+          <div className="flex-1 w-full bg-white border border-slate-200/90 rounded-[3rem] p-10 md:p-16 relative overflow-hidden animate-fade-up shadow-xl shadow-slate-900/5" style={{ animationDelay: '200ms' }}>
             <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4">Full Identity</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111439] ml-4">Full Identity</label>
                   <Input
                     placeholder="Enter your name"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="h-16 bg-white/[0.03] border-white/5 rounded-2xl text-white placeholder:text-white/10 focus-visible:ring-kashmir-gold/50 focus-visible:border-kashmir-gold px-6 font-bold"
+                    className="h-16 bg-slate-50 border-slate-200 rounded-2xl text-[#111439] placeholder:text-slate-400 focus-visible:bg-white focus-visible:border-[#111439] px-6 font-bold"
                   />
                 </div>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4">Secure Email</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111439] ml-4">Secure Email</label>
                   <Input
                     type="email"
                     placeholder="your@exclusive.com"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="h-16 bg-white/[0.03] border-white/5 rounded-2xl text-white placeholder:text-white/10 focus-visible:ring-kashmir-gold/50 focus-visible:border-kashmir-gold px-6 font-bold"
+                    className="h-16 bg-slate-50 border-slate-200 rounded-2xl text-[#111439] placeholder:text-slate-400 focus-visible:bg-white focus-visible:border-[#111439] px-6 font-bold"
                   />
                 </div>
               </div>
               
               <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4">Direct Line</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111439] ml-4">Direct Line</label>
                 <Input
                   type="tel"
                   placeholder="+91 000 000 0000"
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  className="h-16 bg-white/[0.03] border-white/5 rounded-2xl text-white placeholder:text-white/10 focus-visible:ring-kashmir-gold/50 focus-visible:border-kashmir-gold px-6 font-bold"
+                  className="h-16 bg-slate-50 border-slate-200 rounded-2xl text-[#111439] placeholder:text-slate-400 focus-visible:bg-white focus-visible:border-[#111439] px-6 font-bold"
                 />
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4">The Brief</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111439] ml-4">The Brief</label>
                 <Textarea
                   placeholder="Describe your vision for the expedition..."
                   value={formData.message}
                   onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-                  className="min-h-[180px] bg-white/[0.03] border-white/5 rounded-[2rem] text-white placeholder:text-white/10 focus-visible:ring-kashmir-gold/50 focus-visible:border-kashmir-gold p-8 font-bold resize-none"
+                  className="min-h-[180px] bg-slate-50 border-slate-200 rounded-[2rem] text-[#111439] placeholder:text-slate-400 focus-visible:bg-white focus-visible:border-[#111439] p-8 font-bold resize-none"
                 />
               </div>
 
@@ -123,10 +123,10 @@ export default function ContactSection() {
                 type="submit" 
                 disabled={isSubmitting || isSubmitted}
                 className={cn(
-                  "w-full h-18 py-6 rounded-2xl font-black text-xs uppercase tracking-[0.3em] transition-all duration-700 active:scale-95 shadow-2xl",
+                  "w-full h-18 py-6 rounded-2xl font-black text-xs uppercase tracking-[0.3em] transition-all duration-700 active:scale-95 shadow-xl",
                   isSubmitted 
-                    ? "bg-green-500 text-white" 
-                    : "bg-kashmir-gold text-black hover:bg-amber-500 hover:scale-[1.02] shadow-kashmir-gold/10"
+                    ? "bg-emerald-600 text-white" 
+                    : "bg-[#111439] hover:bg-[#1c225a] text-white shadow-[#111439]/20"
                 )}
               >
                 {isSubmitting ? (
