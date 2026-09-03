@@ -4,7 +4,10 @@ import prisma from '../lib/prisma';
 
 export const getSafetyCardByToken = async (req: Request, res: Response) => {
   try {
-    const { token } = req.params;
+    const token = String(req.params.token || '');
+    if (!token) {
+      return res.status(400).json({ error: 'Token parameter is required' });
+    }
     const card = await prisma.tripSafetyCard.findUnique({
       where: { shareToken: token }
     });
@@ -102,7 +105,10 @@ export const createOrGetSafetyCard = async (req: any, res: Response) => {
 
 export const reportTravellerSos = async (req: Request, res: Response) => {
   try {
-    const { token } = req.params;
+    const token = String(req.params.token || '');
+    if (!token) {
+      return res.status(400).json({ error: 'Token parameter is required' });
+    }
     const { notes, liveGps } = req.body;
 
     const card = await prisma.tripSafetyCard.findUnique({
