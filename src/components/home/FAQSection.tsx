@@ -24,7 +24,7 @@ export default function FAQSection() {
   const faqs = [...staticFAQs, ...(Array.isArray(cmsFaqs) ? cmsFaqs : [])];
 
   return (
-    <section className="py-32 bg-[#F8F8F9] relative overflow-hidden border-t border-slate-200">
+    <section className="py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
       {/* Decorative Orbs */}
       <div className="absolute top-1/2 right-0 w-96 h-96 bg-amber-400/10 blur-[140px] -mr-48 -translate-y-1/2" />
       
@@ -32,14 +32,14 @@ export default function FAQSection() {
         <div className="max-w-4xl mx-auto">
           {/* Header - Elite Style */}
           <div className="flex flex-col items-center text-center mb-20 animate-fade-up">
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm mb-6">
-              <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439]">Registry Queries</span>
+            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm mb-6">
+              <HelpCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">Registry Queries</span>
             </div>
-            <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] tracking-tight mb-8 uppercase">
+            <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] dark:text-white tracking-tight mb-8 uppercase">
               KNOWLEDGE <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">BASE</span>
             </h2>
-            <p className="text-[#4A5568] text-lg max-w-xl mx-auto font-medium leading-relaxed">
+            <p className="text-[#4A5568] dark:text-white/60 text-lg max-w-xl mx-auto font-medium leading-relaxed">
               Essential intelligence for navigating the sublime valleys of Kashmir.
             </p>
           </div>
@@ -48,8 +48,8 @@ export default function FAQSection() {
           {isLoading ? (
             <div className="space-y-6">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-2xl px-8 py-6 shadow-sm">
-                  <Skeleton className="h-8 w-3/4 bg-slate-100" />
+                <div key={i} className="bg-white dark:bg-[#0a0f12] border border-slate-200 dark:border-white/10 rounded-2xl px-8 py-6 shadow-sm">
+                  <Skeleton className="h-8 w-3/4 bg-slate-100 dark:bg-white/10" />
                 </div>
               ))}
             </div>
@@ -59,15 +59,17 @@ export default function FAQSection() {
                 <AccordionItem
                   key={index}
                   value={`item-${index}`}
-                  className="bg-white border border-slate-200/90 rounded-[2rem] px-8 transition-all duration-500 data-[state=open]:border-slate-300 data-[state=open]:shadow-lg group overflow-hidden shadow-sm shadow-slate-900/5"
+                  className="bg-white dark:bg-[#0a0f12] border border-slate-200/90 dark:border-white/10 rounded-[2rem] px-8 transition-all duration-500 data-[state=open]:border-slate-300 dark:data-[state=open]:border-amber-400/40 data-[state=open]:shadow-lg group overflow-hidden shadow-sm shadow-slate-900/5"
                 >
-                  <AccordionTrigger className="text-left font-display text-xl md:text-2xl font-black text-[#111439] hover:no-underline py-8 group-data-[state=open]:text-amber-600 transition-colors">
+                  <AccordionTrigger className="text-left font-display text-xl md:text-2xl font-black text-[#111439] dark:text-white hover:no-underline py-8 group-data-[state=open]:text-amber-500 transition-colors">
                     <div className="flex items-center gap-6">
-                      <span className="text-amber-600/50 font-black text-sm">0{index + 1}</span>
-                      {faq.question}
+                      <span className="text-[10px] font-mono text-slate-500 dark:text-white/40 group-data-[state=open]:text-amber-500 transition-colors">
+                        0{index + 1}
+                      </span>
+                      <span>{faq.question}</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="text-[#4A5568] text-base md:text-lg font-medium pb-8 leading-relaxed border-t border-slate-100 pt-6">
+                  <AccordionContent className="text-[#4A5568] dark:text-white/70 text-base leading-relaxed pb-8 pl-12 font-medium">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>

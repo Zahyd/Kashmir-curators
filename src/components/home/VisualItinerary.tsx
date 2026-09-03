@@ -179,11 +179,11 @@ export default function VisualItinerary() {
         <div className="max-w-6xl mx-auto">
           {/* Section Header */}
           <div className="flex flex-col items-center text-center mb-20">
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm mb-6">
-              <Compass className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439]">Bespoke Experience Route</span>
+            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm mb-6">
+              <Compass className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-spin-slow" />
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">Bespoke Experience Route</span>
             </div>
-            <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] tracking-tight uppercase mb-6">
+            <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] dark:text-white tracking-tight uppercase mb-6">
               {sectionTitle.toUpperCase().includes('ITINERARY') ? (
                 <>
                   {sectionTitle.toUpperCase().replace('ITINERARY', '')}
@@ -193,7 +193,7 @@ export default function VisualItinerary() {
                 sectionTitle
               )}
             </h2>
-            <p className="text-[#4A5568] text-lg max-w-xl mx-auto font-medium leading-relaxed">
+            <p className="text-[#4A5568] dark:text-white/60 text-lg max-w-xl mx-auto font-medium leading-relaxed">
               {sectionSubtitle}
             </p>
           </div>
@@ -208,36 +208,36 @@ export default function VisualItinerary() {
                   className={cn(
                     "flex-shrink-0 flex items-center gap-4 text-left p-5 rounded-2xl border transition-all duration-500 w-64 lg:w-full",
                     activeDay === dayObj.day
-                      ? "border-[#111439] bg-white shadow-xl shadow-slate-900/5 scale-[1.02]"
-                      : "border-slate-200 bg-white/70 hover:bg-white hover:border-slate-300"
+                      ? "border-[#111439] bg-white shadow-xl shadow-slate-900/5 scale-[1.02] dark:border-amber-400 dark:bg-[#0a0f12] dark:shadow-amber-400/5"
+                      : "border-slate-200 bg-white/70 hover:bg-white hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.02] dark:hover:bg-white/5 dark:hover:border-white/20"
                   )}
                 >
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center font-display font-black text-sm transition-all duration-500",
                     activeDay === dayObj.day
-                      ? "bg-[#111439] text-white shadow-md"
-                      : "bg-slate-100 text-slate-500"
+                      ? "bg-[#111439] text-white shadow-md dark:bg-amber-400 dark:text-black"
+                      : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/70"
                   )}>
                     D0{dayObj.day}
                   </div>
                   <div className="min-w-0">
                     <p className={cn(
                       "text-xs font-bold transition-all",
-                      activeDay === dayObj.day ? "text-[#111439]" : "text-[#4A5568]"
+                      activeDay === dayObj.day ? "text-[#111439] dark:text-white" : "text-[#4A5568] dark:text-white/60"
                     )}>
                       {dayObj.title ? dayObj.title.split(" & ")[0] : `Day ${dayObj.day}`}
                     </p>
-                    <span className="text-[9px] text-slate-500 uppercase tracking-widest">{dayObj.subtitle ? dayObj.subtitle.split(" & ")[0] : ''}</span>
+                    <span className="text-[9px] text-slate-500 dark:text-white/40 uppercase tracking-widest">{dayObj.subtitle ? dayObj.subtitle.split(" & ")[0] : ''}</span>
                   </div>
                   {activeDay === dayObj.day && (
-                    <ChevronRight className="hidden lg:block w-4 h-4 text-[#111439] ml-auto animate-bounce-horizontal" />
+                    <ChevronRight className="hidden lg:block w-4 h-4 text-[#111439] dark:text-amber-400 ml-auto animate-bounce-horizontal" />
                   )}
                 </button>
               ))}
             </div>
 
             {/* Right Column: Display Window */}
-            <div className="lg:col-span-8 bg-white border border-slate-200/90 rounded-[3rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group shadow-slate-900/5">
+            <div className="lg:col-span-8 bg-white dark:bg-[#0a0f12] border border-slate-200/90 dark:border-white/10 rounded-[3rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group shadow-slate-900/5">
               {/* Image Hub */}
               <div className="relative h-64 md:h-96 rounded-2xl md:rounded-[2rem] overflow-hidden mb-8">
                 {currentDay.image && (
@@ -251,11 +251,11 @@ export default function VisualItinerary() {
                 
                 {/* Float badges on image */}
                 <div className="absolute bottom-6 left-6 right-6 flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2 rounded-xl text-[#111439] shadow-md">
+                  <div className="flex items-center gap-2 bg-white/95 dark:bg-[#0c1216]/95 backdrop-blur-md border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl text-[#111439] dark:text-white shadow-md">
                     <MapPin className="w-4 h-4 text-amber-500" />
                     <span className="text-xs font-black uppercase tracking-widest">{currentDay.route}</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2 rounded-xl text-[#111439] shadow-md">
+                  <div className="flex items-center gap-2 bg-white/95 dark:bg-[#0c1216]/95 backdrop-blur-md border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl text-[#111439] dark:text-white shadow-md">
                     <Clock className="w-4 h-4 text-amber-500" />
                     <span className="text-xs font-black uppercase tracking-widest">{currentDay.duration}</span>
                   </div>
@@ -265,24 +265,24 @@ export default function VisualItinerary() {
               {/* Text Content */}
               <div className="space-y-6">
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-600">{currentDay.subtitle}</span>
-                  <h3 className="font-display text-3xl md:text-4xl font-black text-[#111439] mt-1 uppercase">
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-600 dark:text-amber-400">{currentDay.subtitle}</span>
+                  <h3 className="font-display text-3xl md:text-4xl font-black text-[#111439] dark:text-white mt-1 uppercase">
                     {currentDay.title}
                   </h3>
                 </div>
 
-                <p className="text-[#4A5568] text-sm md:text-base leading-relaxed font-medium">
+                <p className="text-[#4A5568] dark:text-white/70 text-sm md:text-base leading-relaxed font-medium">
                   {currentDay.description}
                 </p>
 
                 {/* Highlights List */}
                 {currentDay.highlights && currentDay.highlights.length > 0 && (
                   <div className="space-y-2 pt-2">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Luxury Highlights</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-white/40">Luxury Highlights</p>
                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {currentDay.highlights.map((highlight, i) => (
-                        <li key={i} className="flex items-start gap-2.5 text-xs text-[#111439] font-semibold">
-                          <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <li key={i} className="flex items-start gap-2.5 text-xs text-[#111439] dark:text-white font-semibold">
+                          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                           <span>{highlight}</span>
                         </li>
                       ))}
@@ -292,12 +292,12 @@ export default function VisualItinerary() {
 
                 {/* Inclusions Row */}
                 {currentDay.inclusions && currentDay.inclusions.length > 0 && (
-                  <div className="border-t border-slate-100 pt-6 mt-6">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4">Day Inclusions</p>
+                  <div className="border-t border-slate-100 dark:border-white/10 pt-6 mt-6">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-white/40 mb-4">Day Inclusions</p>
                     <div className="flex flex-wrap gap-3">
                       {currentDay.inclusions.map((inclusion: any, i: number) => (
-                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-bold text-[#111439]">
-                          <span className="text-amber-600">
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-bold text-[#111439] dark:text-white">
+                          <span className="text-amber-600 dark:text-amber-400">
                             {typeof inclusion.icon === 'string' ? getInclusionIcon(inclusion.icon) : inclusion.icon}
                           </span>
                           <span>{inclusion.label}</span>

@@ -221,19 +221,19 @@ export default function HeroSection() {
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-16 pb-12">
         <div className="flex flex-col items-center text-center">
           {/* Elite Badge */}
-          <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm mb-8 animate-fade-up group hover:border-slate-300 transition-all duration-500 cursor-default">
+          <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/90 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 shadow-sm mb-8 animate-fade-up group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-500 cursor-default">
             <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#111439]">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#111439] dark:text-white">
               The Signature Kashmir Collection 2026
             </span>
           </div>
 
           {/* Headline - Editorial Style in Solid Dark Blue #111439 */}
           <div className="max-w-5xl mb-8 space-y-4">
-            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-[#111439] leading-[1.0] tracking-tight animate-fade-up transition-all duration-700 uppercase" style={{ animationDelay: '100ms' }}>
+            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-[#111439] dark:text-white leading-[1.0] tracking-tight animate-fade-up transition-all duration-700 uppercase" style={{ animationDelay: '100ms' }}>
               {renderStyledTitle(heroData.title)}
             </h1>
-            <p className="text-base sm:text-lg md:text-xl text-[#4A5568] font-medium max-w-2xl mx-auto tracking-normal animate-fade-up transition-all duration-700" style={{ animationDelay: '200ms' }}>
+            <p className="text-base sm:text-lg md:text-xl text-[#4A5568] dark:text-white/60 font-medium max-w-2xl mx-auto tracking-normal animate-fade-up transition-all duration-700" style={{ animationDelay: '200ms' }}>
               {heroData.subtitle}
             </p>
           </div>
@@ -248,8 +248,8 @@ export default function HeroSection() {
                 className={cn(
                   "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
                   searchTab === 'packages' 
-                    ? "border-[#111439] text-[#111439] scale-105" 
-                    : "border-transparent text-[#4A5568] hover:text-[#111439]"
+                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
+                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
                 )}
               >
                 <Luggage className="w-4 h-4 text-amber-500" />
@@ -262,8 +262,8 @@ export default function HeroSection() {
                 className={cn(
                   "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
                   searchTab === 'hotels' 
-                    ? "border-[#111439] text-[#111439] scale-105" 
-                    : "border-transparent text-[#4A5568] hover:text-[#111439]"
+                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
+                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
                 )}
               >
                 <Bed className="w-4 h-4 text-amber-500" />
@@ -276,8 +276,8 @@ export default function HeroSection() {
                 className={cn(
                   "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
                   searchTab === 'cabs' 
-                    ? "border-[#111439] text-[#111439] scale-105" 
-                    : "border-transparent text-[#4A5568] hover:text-[#111439]"
+                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
+                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
                 )}
               >
                 <Car className="w-4 h-4 text-amber-500" />
@@ -290,8 +290,8 @@ export default function HeroSection() {
                 className={cn(
                   "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
                   searchTab === 'flights' 
-                    ? "border-[#111439] text-[#111439] scale-105" 
-                    : "border-transparent text-[#4A5568] hover:text-[#111439]"
+                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
+                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
                 )}
               >
                 <Plane className="w-4 h-4 text-amber-500" />
@@ -304,8 +304,8 @@ export default function HeroSection() {
                 className={cn(
                   "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
                   searchTab === 'bus' 
-                    ? "border-[#111439] text-[#111439] scale-105" 
-                    : "border-transparent text-[#4A5568] hover:text-[#111439]"
+                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
+                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
                 )}
               >
                 <Bus className="w-4 h-4 text-amber-500" />
@@ -315,7 +315,7 @@ export default function HeroSection() {
 
             <form 
               onSubmit={handleSearch}
-              className="bg-white/95 backdrop-blur-2xl border border-slate-200/90 rounded-[2.5rem] md:rounded-full p-2.5 md:p-3.5 shadow-2xl shadow-slate-900/8 flex flex-col md:flex-row gap-2 md:gap-0 relative group transition-all duration-500 hover:border-slate-300 hover:shadow-[0_25px_60px_-15px_rgba(17,20,57,0.12)]"
+              className="bg-white/95 dark:bg-[#0a0f12]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/10 rounded-[2.5rem] md:rounded-full p-2.5 md:p-3.5 shadow-2xl shadow-slate-900/8 flex flex-col md:flex-row gap-2 md:gap-0 relative group transition-all duration-500 hover:border-slate-300 dark:hover:border-white/20 hover:shadow-[0_25px_60px_-15px_rgba(17,20,57,0.12)]"
             >
               {searchTab === 'packages' && (
                 <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-0">
@@ -881,26 +881,26 @@ export default function HeroSection() {
 
           {/* Trust & Authority Banner */}
           <div 
-            className="w-full max-w-4xl mt-12 px-6 py-4 rounded-2xl bg-white/80 border border-slate-200/90 shadow-sm backdrop-blur-md flex flex-wrap items-center justify-center gap-6 md:gap-16 text-[#111439] text-xs font-semibold animate-fade-up"
+            className="w-full max-w-4xl mt-12 px-6 py-4 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 shadow-sm backdrop-blur-md flex flex-wrap items-center justify-center gap-6 md:gap-16 text-[#111439] dark:text-white text-xs font-semibold animate-fade-up"
             style={{ animationDelay: '350ms' }}
           >
             <div className="flex items-center gap-2.5 hover:text-amber-600 transition-all duration-300 cursor-default group">
               <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:border-amber-500/40 transition-all">
-                <CheckCircle className="w-4 h-4 text-amber-600" />
+                <CheckCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               </div>
-              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439]">J&K Tourism Approved</span>
+              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439] dark:text-white">J&K Tourism Approved</span>
             </div>
             <div className="flex items-center gap-2.5 hover:text-amber-600 transition-all duration-300 cursor-default group">
               <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:border-amber-500/40 transition-all">
-                <Award className="w-4 h-4 text-amber-600" />
+                <Award className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               </div>
-              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439]">IATO Certified Member</span>
+              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439] dark:text-white">IATO Certified Member</span>
             </div>
             <div className="flex items-center gap-2.5 hover:text-amber-600 transition-all duration-300 cursor-default group">
               <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:border-amber-500/40 transition-all">
-                <ShieldCheck className="w-4 h-4 text-amber-600" />
+                <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               </div>
-              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439]">TAAI Member</span>
+              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439] dark:text-white">TAAI Member</span>
             </div>
           </div>
 
@@ -908,10 +908,10 @@ export default function HeroSection() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mt-16 w-full max-w-4xl animate-fade-up" style={{ animationDelay: '400ms' }}>
             {heroData.stats.map((stat) => (
               <div key={stat.label} className="text-center group cursor-default">
-                <div className="font-display text-4xl font-black text-[#111439] mb-2 tracking-tight group-hover:text-amber-600 transition-colors duration-500">
+                <div className="font-display text-4xl font-black text-[#111439] dark:text-white mb-2 tracking-tight group-hover:text-amber-500 transition-colors duration-500">
                   {stat.value}
                 </div>
-                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-[#4A5568] group-hover:text-[#111439] transition-colors duration-500">
+                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-[#4A5568] dark:text-white/60 group-hover:text-[#111439] dark:group-hover:text-white transition-colors duration-500">
                   {stat.label}
                 </div>
               </div>

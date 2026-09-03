@@ -293,24 +293,24 @@ export default function VerifiedLocalMarketplace() {
   };
 
   return (
-    <section className="py-28 bg-[#F8F8F9] relative overflow-hidden border-t border-slate-200" id="marketplace">
+    <section className="py-28 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors" id="marketplace">
       {/* Background Ambient Glow */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-400/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-400/10 blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-400/10 blur-[140px] pointer-events-none" />
 
       <div className="container mx-auto px-6 max-w-7xl relative z-10">
         
         {/* Section Header */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16">
           <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-[10px] font-black uppercase tracking-[0.25em] mb-4">
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-[0.25em] mb-4">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
               <span>Direct Tourism Operator Network</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-black text-[#111439] tracking-tight">
+            <h2 className="text-3xl md:text-5xl font-black text-[#111439] dark:text-white tracking-tight">
               HIRE VERIFIED <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">LOCAL SPECIALISTS</span>
             </h2>
-            <p className="text-[#4A5568] text-sm md:text-base max-w-2xl mt-3 leading-relaxed">
+            <p className="text-[#4A5568] dark:text-white/60 text-sm md:text-base max-w-2xl mt-3 leading-relaxed">
               Skip intermediaries. Connect directly with Department of Tourism certified alpine guides, 4x4 snow chauffeurs, and private heritage houseboats at verified direct rates.
             </p>
           </div>
@@ -318,9 +318,9 @@ export default function VerifiedLocalMarketplace() {
           <div className="flex items-center gap-3">
             <Button
               onClick={() => setIsQuoteModalOpen(true)}
-              className="bg-[#111439] hover:bg-[#1c225a] text-white font-black text-xs uppercase tracking-wider h-12 px-6 rounded-2xl shadow-xl shadow-[#111439]/15 flex items-center gap-2"
+              className="bg-[#111439] hover:bg-[#1c225a] dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-black font-black text-xs uppercase tracking-wider h-12 px-6 rounded-2xl shadow-xl shadow-[#111439]/15 flex items-center gap-2"
             >
-              <Sparkles className="w-4 h-4 text-amber-400" />
+              <Sparkles className="w-4 h-4 text-amber-400 dark:text-black" />
               <span>Get Best Local Quote</span>
             </Button>
           </div>
@@ -343,8 +343,8 @@ export default function VerifiedLocalMarketplace() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 border ${
                   isSelected
-                    ? 'bg-[#111439] text-white border-[#111439] shadow-lg shadow-[#111439]/15 scale-105'
-                    : 'bg-white border-slate-200 text-[#4A5568] hover:text-[#111439] hover:bg-slate-50'
+                    ? 'bg-[#111439] text-white border-[#111439] dark:bg-amber-400 dark:text-black dark:border-amber-400 shadow-lg shadow-[#111439]/15 scale-105'
+                    : 'bg-white border-slate-200 text-[#4A5568] hover:text-[#111439] hover:bg-slate-50 dark:bg-[#0a0f12] dark:border-white/10 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/5'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -359,7 +359,7 @@ export default function VerifiedLocalMarketplace() {
           {filteredSpecialists.map((item) => (
             <div 
               key={item.id}
-              className="group rounded-[2rem] bg-white border border-slate-200/90 hover:border-slate-300 transition-all duration-500 overflow-hidden flex flex-col justify-between shadow-xl shadow-slate-900/5 hover:shadow-2xl hover:-translate-y-1"
+              className="group rounded-[2rem] bg-white dark:bg-[#0a0f12] border border-slate-200/90 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 transition-all duration-500 overflow-hidden flex flex-col justify-between shadow-xl shadow-slate-900/5 hover:shadow-2xl hover:-translate-y-1"
             >
               <div>
                 {/* Image Container with Badges */}
@@ -373,14 +373,14 @@ export default function VerifiedLocalMarketplace() {
 
                   {/* Top Badges */}
                   <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-                    <Badge className="bg-white/95 backdrop-blur-md text-[#111439] border border-slate-200 text-[10px] font-bold uppercase tracking-widest px-3 py-1 shadow-sm">
+                    <Badge className="bg-white/95 dark:bg-[#0c1216]/95 backdrop-blur-md text-[#111439] dark:text-white border border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest px-3 py-1 shadow-sm">
                       {item.badge}
                     </Badge>
 
-                    <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-[#111439] border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-1 bg-white/95 dark:bg-[#0c1216]/95 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-[#111439] dark:text-white border border-slate-200 dark:border-white/10 shadow-sm">
                       <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                       <span>{item.rating}</span>
-                      <span className="text-slate-500 text-[10px]">({item.reviewCount})</span>
+                      <span className="text-slate-500 dark:text-white/40 text-[10px]">({item.reviewCount})</span>
                     </div>
                   </div>
 
@@ -393,18 +393,18 @@ export default function VerifiedLocalMarketplace() {
 
                 {/* Body Content */}
                 <div className="p-6">
-                  <h3 className="text-lg font-bold text-[#111439] mb-2 leading-snug group-hover:text-amber-600 transition-colors">
+                  <h3 className="text-lg font-bold text-[#111439] dark:text-white mb-2 leading-snug group-hover:text-amber-500 transition-colors">
                     {item.title}
                   </h3>
-                  <p className="text-xs text-[#4A5568] leading-relaxed line-clamp-2 mb-6">
+                  <p className="text-xs text-[#4A5568] dark:text-white/60 leading-relaxed line-clamp-2 mb-6">
                     {item.description}
                   </p>
 
                   {/* Verified Features Pills */}
                   <div className="space-y-2 mb-6">
                     {item.features.slice(0, 3).map((feat, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-[#111439] font-medium">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <div key={i} className="flex items-center gap-2 text-xs text-[#111439] dark:text-white font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                         <span className="truncate">{feat}</span>
                       </div>
                     ))}
@@ -413,12 +413,12 @@ export default function VerifiedLocalMarketplace() {
               </div>
 
               {/* Card Footer: Price & Hire CTA */}
-              <div className="p-6 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between gap-4">
+              <div className="p-6 bg-slate-50/80 dark:bg-white/[0.02] border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-4">
                 <div>
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest block">Direct Verified Rate</span>
+                  <span className="text-[10px] font-black uppercase text-slate-500 dark:text-white/40 tracking-widest block">Direct Verified Rate</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-black text-[#111439]">₹{item.basePrice.toLocaleString()}</span>
-                    <span className="text-xs text-slate-500 font-medium">/{item.priceUnit}</span>
+                    <span className="text-xl font-black text-[#111439] dark:text-amber-400">₹{item.basePrice.toLocaleString()}</span>
+                    <span className="text-xs text-slate-500 dark:text-white/40 font-medium">/{item.priceUnit}</span>
                   </div>
                 </div>
 
@@ -427,7 +427,7 @@ export default function VerifiedLocalMarketplace() {
                     setHireSpecialist(item);
                     setBookingRef(null);
                   }}
-                  className="bg-[#111439] hover:bg-[#1c225a] text-white text-xs font-black uppercase tracking-wider rounded-xl h-11 px-5 transition-all duration-300 shadow-md"
+                  className="bg-[#111439] hover:bg-[#1c225a] dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-black text-xs font-black uppercase tracking-wider rounded-xl h-11 px-5 transition-all duration-300 shadow-md"
                 >
                   <span>{item.category === 'GUIDE' ? 'Hire Guide' : item.category === 'CAB' ? 'Book Cab' : 'Reserve Stay'}</span>
                   <ArrowRight className="w-3.5 h-3.5 ml-1.5" />

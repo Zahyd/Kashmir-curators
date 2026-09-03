@@ -385,87 +385,24 @@ html.dark .stripe-aurora-mesh {
   background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 60%), #05080a !important;
 }
 
-/* Cards & Surfaces turn to deep Obsidian in Night Mode */
-html.dark .daylight-card,
-html.dark .glass-card,
-html.dark div[class*="bg-white"]:not(footer *):not(button[type="submit"]):not([class*="bg-emerald-"]):not([class*="bg-amber-"]) {
-  background-color: #0a0f12 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
-}
-
-/* Translucent glass in Night Mode */
-html.dark .daylight-glass,
-html.dark .glass {
-  background-color: rgba(10, 15, 18, 0.8) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* Inputs & Form Fields in Night Mode */
-html.dark [class*="bg-slate-50"],
-html.dark input,
-html.dark textarea,
-html.dark select {
-  background-color: rgba(0, 0, 0, 0.45) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+/* Ensure footer NEVER receives gold/yellow gradient */
+footer,
+footer[class*="bg-"],
+html.dark footer,
+html.dark footer[class*="bg-"],
+body.dark footer {
+  background: #05080a !important;
+  background-color: #05080a !important;
+  background-image: none !important;
   color: #FFFFFF !important;
-}
-html.dark input::placeholder,
-html.dark textarea::placeholder {
-  color: rgba(255, 255, 255, 0.35) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Floating labels in Night Mode */
-html.dark label[class*="bg-white"],
-html.dark .absolute[class*="bg-white"] {
-  background-color: #0a0f12 !important;
-  color: rgba(255, 255, 255, 0.5) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Typography in Night Mode */
-html.dark .text-\[\#111439\],
-html.dark [class*="text-[#111439]"] {
-  color: #FFFFFF !important;
-}
-html.dark [class*="text-[#4A5568]"],
-html.dark [class*="text-slate-600"],
-html.dark [class*="text-slate-500"] {
-  color: rgba(255, 255, 255, 0.6) !important;
-}
-html.dark [class*="text-slate-400"] {
-  color: rgba(255, 255, 255, 0.4) !important;
-}
-html.dark .text-gradient {
-  background-image: linear-gradient(to bottom right, #FFFFFF, #FFFFFF, rgba(255, 255, 255, 0.5)) !important;
-}
-
-/* Borders in Night Mode */
-html.dark [class*="border-slate-200"],
-html.dark [class*="border-slate-100"] {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* Navbar in Night Mode */
-html.dark header {
-  background-color: rgba(5, 8, 10, 0.85) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(20px) !important;
-}
-html.dark header a {
-  color: #FFFFFF !important;
-}
-html.dark header a:hover {
-  color: #D4AF37 !important;
-}
-html.dark header svg text {
-  fill: #FFFFFF !important;
-}
-
-/* Primary Action Buttons in Night Mode */
+/* Primary Action Buttons in Night Mode (scoped only to buttons/links, never footer) */
 html.dark button.bg-\[\#111439\],
-html.dark button[class*="bg-[#111439]"]:not(footer *):not([class*="bg-[#111439]/5"]),
-html.dark [class*="bg-[#111439]"]:not(footer *):not([class*="bg-[#111439]/5"]):not(svg *):not(path) {
+html.dark button[class*="bg-[#111439]"]:not(footer *),
+html.dark a.bg-\[\#111439\],
+html.dark a[class*="bg-[#111439]"]:not(footer *) {
   background: linear-gradient(to right, #D4AF37, #f59e0b) !important;
   color: #000000 !important;
   box-shadow: 0 10px 25px -5px rgba(212, 175, 55, 0.35) !important;
@@ -473,20 +410,6 @@ html.dark [class*="bg-[#111439]"]:not(footer *):not([class*="bg-[#111439]/5"]):n
 html.dark button.bg-\[\#111439\]:hover,
 html.dark button[class*="bg-[#111439]"]:not(footer *):hover {
   background: linear-gradient(to right, #fbbf24, #f59e0b) !important;
-}
-html.dark [class*="bg-[#111439]/5"] {
-  background-color: rgba(212, 175, 55, 0.1) !important;
-  border-color: rgba(212, 175, 55, 0.3) !important;
-  color: #D4AF37 !important;
-}
-
-/* Modals & Dialogs in Night Mode */
-html.dark [role="dialog"],
-html.dark .dialog-content {
-  background-color: #0c1216 !important;
-  color: #FFFFFF !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
 }
 
 /* Dynamic Ticker in Night Mode */
@@ -504,12 +427,5 @@ html.dark .ticker-fade-right {
 /* Selection in Night Mode */
 html.dark *::selection {
   background-color: rgba(212, 175, 55, 0.3) !important;
-  color: #FFFFFF !important;
-}
-
-/* Footer remains deep pitch dark */
-footer,
-footer[class*="bg-[#111439]"] {
-  background-color: #05080a !important;
   color: #FFFFFF !important;
 }

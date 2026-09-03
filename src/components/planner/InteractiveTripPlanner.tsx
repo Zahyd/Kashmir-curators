@@ -321,18 +321,18 @@ export function InteractiveTripPlanner() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
         
         {/* Left Column: Multi-step Wizard */}
-        <div className="lg:col-span-7 bg-white border border-slate-200/90 shadow-xl shadow-slate-900/5 rounded-[3rem] p-8 md:p-10 text-left space-y-8">
+        <div className="lg:col-span-7 bg-white dark:bg-[#0a0f12] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-900/5 rounded-[3rem] p-8 md:p-10 text-left space-y-8">
           
-          <div className="flex justify-between items-center border-b border-slate-100 pb-5">
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/10 pb-5">
             <div>
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-700">Bespoke Curation Desk</span>
-              <h2 className="text-2xl font-black uppercase tracking-tight mt-1 text-[#111439]">
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400">Bespoke Curation Desk</span>
+              <h2 className="text-2xl font-black uppercase tracking-tight mt-1 text-[#111439] dark:text-white">
                 AI Journey <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">Studio</span>
               </h2>
             </div>
-            <div className="h-2 w-32 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+            <div className="h-2 w-32 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden border border-slate-200 dark:border-white/10">
               <div 
-                className="h-full bg-gradient-to-r from-amber-500 to-[#111439] rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-amber-500 to-[#111439] dark:to-amber-400 rounded-full transition-all duration-500"
                 style={{ width: `${(step / 3) * 100}%` }}
               />
             </div>
@@ -342,8 +342,8 @@ export function InteractiveTripPlanner() {
           {step === 1 && (
             <div className="space-y-6 animate-fade-in">
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-[#111439] uppercase tracking-wider">1. Select Travel Profile</h3>
-                <p className="text-xs text-[#4A5568] leading-snug">Choose your traveler class to fine-tune activity and hotel recommendations.</p>
+                <h3 className="text-lg font-bold text-[#111439] dark:text-white uppercase tracking-wider">1. Select Travel Profile</h3>
+                <p className="text-xs text-[#4A5568] dark:text-white/60 leading-snug">Choose your traveler class to fine-tune activity and hotel recommendations.</p>
               </div>
 
               {/* Grid of travel profiles */}
@@ -355,12 +355,12 @@ export function InteractiveTripPlanner() {
                     className={cn(
                       "p-4 rounded-2xl border text-left transition-all duration-300 hover:scale-[1.02]",
                       profile.travelType === t.value
-                        ? "border-[#111439] bg-[#111439]/5 text-[#111439] shadow-sm"
-                        : "border-slate-200 bg-slate-50 text-[#4A5568] hover:border-slate-300 hover:text-[#111439] hover:bg-slate-100"
+                        ? "border-[#111439] bg-[#111439]/5 text-[#111439] dark:border-amber-400 dark:bg-amber-400/10 dark:text-amber-400 shadow-sm"
+                        : "border-slate-200 bg-slate-50 text-[#4A5568] dark:border-white/10 dark:bg-white/5 dark:text-white/60 hover:border-slate-300 dark:hover:border-white/20 hover:text-[#111439] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10"
                     )}
                   >
-                    <span className="block text-xs font-black uppercase tracking-wider mb-1 text-[#111439]">{t.label}</span>
-                    <span className="block text-[10px] text-slate-500 leading-none">{t.desc}</span>
+                    <span className="block text-xs font-black uppercase tracking-wider mb-1 text-[#111439] dark:text-white">{t.label}</span>
+                    <span className="block text-[10px] text-slate-500 dark:text-white/40 leading-none">{t.desc}</span>
                   </button>
                 ))}
               </div>
@@ -597,32 +597,32 @@ export function InteractiveTripPlanner() {
         <div className="lg:col-span-5 space-y-6 text-left">
           
           {/* Summary Panel */}
-          <div className="bg-white border border-slate-200/90 shadow-xl shadow-slate-900/5 rounded-[3rem] p-6 md:p-8 space-y-6 text-[#111439]">
-            <h3 className="text-sm font-black uppercase tracking-wider border-b border-slate-100 pb-3 text-[#111439]">Journey Blueprint</h3>
+          <div className="bg-white dark:bg-[#0a0f12] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-900/5 rounded-[3rem] p-6 md:p-8 space-y-6 text-[#111439] dark:text-white">
+            <h3 className="text-sm font-black uppercase tracking-wider border-b border-slate-100 dark:border-white/10 pb-3 text-[#111439] dark:text-white">Journey Blueprint</h3>
             
             {/* Live Pricing Estimation */}
-            <div className="space-y-1.5 border-b border-slate-100 pb-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Estimated Cost</span>
+            <div className="space-y-1.5 border-b border-slate-100 dark:border-white/10 pb-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40">Estimated Cost</span>
               <div className="flex justify-between items-baseline">
-                <span className="text-3xl font-display font-black text-[#111439]">{formatPrice(pricingBreakdown.total)}</span>
-                <span className="text-[10px] text-slate-500 tracking-wider">All Taxes & Allowances Inc.</span>
+                <span className="text-3xl font-display font-black text-[#111439] dark:text-amber-400">{formatPrice(pricingBreakdown.total)}</span>
+                <span className="text-[10px] text-slate-500 dark:text-white/40 tracking-wider">All Taxes & Allowances Inc.</span>
               </div>
             </div>
 
             {/* Travel Specs */}
             <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
-                <CalendarDays className="w-5 h-5 text-amber-600" />
+              <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3.5 rounded-xl flex items-center gap-3">
+                <CalendarDays className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 <div>
-                  <span className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">Dates</span>
-                  <span className="font-bold text-[#111439]">{profile.departureDate ? format(profile.departureDate, 'dd MMM') : 'TBD'} ({profile.duration}N)</span>
+                  <span className="block text-[8px] font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">Dates</span>
+                  <span className="font-bold text-[#111439] dark:text-white">{profile.departureDate ? format(profile.departureDate, 'dd MMM') : 'TBD'} ({profile.duration}N)</span>
                 </div>
               </div>
-              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
-                <Users className="w-5 h-5 text-amber-600" />
+              <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3.5 rounded-xl flex items-center gap-3">
+                <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 <div>
-                  <span className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">Profile</span>
-                  <span className="font-bold text-[#111439]">{profile.travelType}</span>
+                  <span className="block text-[8px] font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">Profile</span>
+                  <span className="font-bold text-[#111439] dark:text-white">{profile.travelType}</span>
                 </div>
               </div>
             </div>
@@ -631,34 +631,34 @@ export function InteractiveTripPlanner() {
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
-                  <Building className="w-4.5 h-4.5 text-amber-600" />
+                  <Building className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Recommended Estate</span>
-                  <h5 className="text-xs font-bold text-[#111439]">{recommendedHotel.name}</h5>
-                  <p className="text-[9px] text-[#4A5568] mt-0.5">{recommendedHotel.location} • {recommendedHotel.rating}</p>
+                  <span className="block text-[8px] font-black uppercase text-slate-500 dark:text-white/40 tracking-widest mb-0.5">Recommended Estate</span>
+                  <h5 className="text-xs font-bold text-[#111439] dark:text-white">{recommendedHotel.name}</h5>
+                  <p className="text-[9px] text-[#4A5568] dark:text-white/60 mt-0.5">{recommendedHotel.location} • {recommendedHotel.rating}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
-                  <Car className="w-4.5 h-4.5 text-amber-600" />
+                  <Car className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Allocated Transport</span>
-                  <h5 className="text-xs font-bold text-[#111439]">{recommendedCab.model}</h5>
-                  <p className="text-[9px] text-[#4A5568] mt-0.5">{recommendedCab.type}</p>
+                  <span className="block text-[8px] font-black uppercase text-slate-500 dark:text-white/40 tracking-widest mb-0.5">Allocated Transport</span>
+                  <h5 className="text-xs font-bold text-[#111439] dark:text-white">{recommendedCab.model}</h5>
+                  <p className="text-[9px] text-[#4A5568] dark:text-white/60 mt-0.5">{recommendedCab.type}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
-                  <weatherInsight.icon className="w-4.5 h-4.5 text-amber-600" />
+                  <weatherInsight.icon className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Seasonal Weather advisory</span>
-                  <h5 className="text-xs font-bold text-[#111439]">{weatherInsight.temp} ({weatherInsight.desc})</h5>
-                  <p className="text-[9px] text-[#4A5568] mt-0.5">Departure tenure forecast based on date</p>
+                  <span className="block text-[8px] font-black uppercase text-slate-500 dark:text-white/40 tracking-widest mb-0.5">Seasonal Weather advisory</span>
+                  <h5 className="text-xs font-bold text-[#111439] dark:text-white">{weatherInsight.temp} ({weatherInsight.desc})</h5>
+                  <p className="text-[9px] text-[#4A5568] dark:text-white/60 mt-0.5">Departure tenure forecast based on date</p>
                 </div>
               </div>
             </div>
@@ -666,14 +666,14 @@ export function InteractiveTripPlanner() {
           </div>
 
           {/* AI Curator Panel */}
-          <div className="bg-gradient-to-br from-amber-50 via-white to-slate-50 border border-amber-400/30 rounded-[2.5rem] p-6 shadow-md shadow-slate-900/5 relative overflow-hidden group">
+          <div className="bg-gradient-to-br from-amber-50 via-white to-slate-50 dark:from-[#0c1216] dark:via-[#0c1216] dark:to-[#0a0f12] border border-amber-400/30 dark:border-amber-400/20 rounded-[2.5rem] p-6 shadow-md shadow-slate-900/5 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
             
             <div className="flex gap-4 items-start">
-              <Sparkles className="w-6 h-6 text-amber-600 shrink-0 mt-1" />
+              <Sparkles className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-1" />
               <div className="space-y-2">
-                <h4 className="text-xs font-black uppercase tracking-widest text-[#111439]">AI Curator Analysis</h4>
-                <p className="text-xs text-[#4A5568] leading-relaxed font-medium">
+                <h4 className="text-xs font-black uppercase tracking-widest text-[#111439] dark:text-white">AI Curator Analysis</h4>
+                <p className="text-xs text-[#4A5568] dark:text-white/70 leading-relaxed font-medium">
                   {curatorInsight}
                 </p>
               </div>

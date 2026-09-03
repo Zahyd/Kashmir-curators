@@ -46,7 +46,7 @@ export default function Footer() {
     };
   }, []);
   return (
-    <footer className="bg-[#111439] text-white border-t border-white/10 relative overflow-hidden">
+    <footer className="bg-[#111439] dark:bg-[#05080a] text-white border-t border-white/10 relative overflow-hidden transition-colors">
       {/* Background Subtle Gradient */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-kashmir-gold/5 blur-[120px] opacity-30 pointer-events-none" />
 
