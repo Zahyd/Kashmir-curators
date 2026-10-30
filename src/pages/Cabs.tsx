@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Car, MapPin, Calendar, Clock, Users, Plane, MapIcon, Navigation, 
-  Loader2, CheckCircle, Shield, AlertCircle, ArrowRight, Smartphone, Sparkles, Send, IndianRupee, Sliders,
+  Loader2, CheckCircle, CheckCircle2, Shield, AlertCircle, ArrowRight, Smartphone, Sparkles, Send, IndianRupee, Sliders,
   MessageSquare, Star, User, Phone, Check, ShieldCheck, Map
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
@@ -412,7 +412,7 @@ export default function Cabs() {
 
   // Load Google Maps script dynamically
   useEffect(() => {
-    if (window.google && window.google.maps) {
+    if ((window as any).google && (window as any).google.maps) {
       setGoogleMapsLoaded(true);
       return;
     }
@@ -436,8 +436,8 @@ export default function Cabs() {
       fields: ['address_components', 'geometry', 'formatted_address', 'name'],
     };
 
-    const autocompletePickup = new window.google.maps.places.Autocomplete(pickupInputRef.current, options);
-    const autocompleteDrop = new window.google.maps.places.Autocomplete(dropInputRef.current, options);
+    const autocompletePickup = new (window as any).google.maps.places.Autocomplete(pickupInputRef.current, options);
+    const autocompleteDrop = new (window as any).google.maps.places.Autocomplete(dropInputRef.current, options);
 
     autocompletePickup.addListener('place_changed', () => {
       const place = autocompletePickup.getPlace();

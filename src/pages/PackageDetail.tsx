@@ -175,7 +175,7 @@ export default function PackageDetail() {
     handleBooking();
   };
 
-  const handlePaymentFailure = (error: string) => {
+  const handlePaymentFailure = (error?: string) => {
     setShowPayment(false);
     toast.error(`Payment failed: ${error}`);
   };

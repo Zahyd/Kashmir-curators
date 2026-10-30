@@ -291,7 +291,9 @@ export default function TravelStatusPage() {
                       <h4 className="text-base font-bold text-white flex items-center gap-1.5">
                         {advisory.location}
                         {advisory.isVerified !== false && (
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" title="Verified Authority Bulletin" />
+                          <span title="Verified Authority Bulletin">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          </span>
                         )}
                       </h4>
                       <p className="text-[11px] text-white/40 flex items-center gap-1 mt-0.5">

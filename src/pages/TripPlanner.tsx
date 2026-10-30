@@ -4,7 +4,7 @@ import {
   Plane, CalendarDays, Wallet, Users, Loader2, Sparkles, Compass, 
   Building, CheckCircle2, ArrowRight, Camera, Video, Heart, Utensils,
   ChevronRight, ArrowLeft, ShieldCheck, MapPin, BadgePercent, Check,
-  Headphones, Phone, MessageCircle
+  Headphones, Phone, MessageCircle, Car
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';

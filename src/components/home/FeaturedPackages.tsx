@@ -362,7 +362,10 @@ export default function FeaturedPackages() {
                     onClick={() => {
                       const selected = quickPeekPackage;
                       setQuickPeekPackage(null);
-                      openWhatsAppLead(`Hi, I'm interested in the ${selected.name} (${selected.destination}) package. Can you share availability and details?`);
+                      openWhatsAppLead({
+                        packageTitle: selected.name,
+                        destination: selected.destination
+                      });
                     }}
                     className="flex-1 h-11 border-white/20 text-white hover:bg-white/10 text-xs rounded-xl"
                   >

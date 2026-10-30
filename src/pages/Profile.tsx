@@ -5,7 +5,7 @@ import {
   Loader2, Compass, LayoutDashboard, CreditCard, Settings, LogOut, 
   Ticket, Sparkles, Map, CloudSun, Phone, MessageSquare, Download, 
   FileText, Crown, Gift, ExternalLink, ShieldCheck, Star, Send, 
-  Paperclip, UserCheck, Check, Copy, ChevronRight, Share2, Plane, Trash2, Upload, Lock
+  Paperclip, UserCheck, Check, CheckCircle2, Copy, ChevronRight, Share2, Plane, Trash2, Upload, Lock
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
