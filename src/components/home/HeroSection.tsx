@@ -4,7 +4,7 @@ import {
   MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, 
   ArrowRight, Search, CheckCircle, Award, ShieldCheck, 
   Compass, Building, Car, Navigation, Clock,
-  Bed, Plane, Bus, Luggage
+  Bed, Plane, Bus, Luggage, MessageCircle, Headphones, Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,9 +17,11 @@ import heroImage from '@/assets/kashmir-hero-new.jpg';
 import { useDestinations } from '@/hooks/useCMSData';
 import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
 import { io } from 'socket.io-client';
+import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 
 export default function HeroSection() {
   const navigate = useNavigate();
+  const { openLeadModal, openCallbackModal, openWhatsAppLead } = useLeadCapture();
   const { data: destinations = [] } = useDestinations();
   const [isSearching, setIsSearching] = useState(false);
   const [searchTab, setSearchTab] = useState<'packages' | 'hotels' | 'cabs' | 'flights' | 'bus'>('packages');
@@ -236,6 +238,43 @@ export default function HeroSection() {
             <p className="text-base sm:text-lg md:text-xl text-[#4A5568] dark:text-white/60 font-medium max-w-2xl mx-auto tracking-normal animate-fade-up transition-all duration-700" style={{ animationDelay: '200ms' }}>
               {heroData.subtitle}
             </p>
+          </div>
+
+          {/* Direct Lead Capture Action Strip */}
+          <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mb-10 animate-fade-up" style={{ animationDelay: '250ms' }}>
+            <Button
+              onClick={() => openLeadModal({ sourceCta: 'BUILD_ITINERARY', intent: 'Bespoke Itinerary' })}
+              className="h-12 sm:h-13 px-7 sm:px-8 rounded-full bg-[#111439] hover:bg-[#1a205a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-black font-black text-[11px] sm:text-xs uppercase tracking-widest shadow-xl shadow-[#111439]/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400 dark:text-black" />
+              <span>Build My Itinerary</span>
+            </Button>
+            
+            <Button
+              onClick={() => openLeadModal({ sourceCta: 'CUSTOM_PACKAGE', intent: 'Custom Package' })}
+              variant="outline"
+              className="h-12 sm:h-13 px-6 sm:px-7 rounded-full border-slate-300 dark:border-white/20 bg-white/80 dark:bg-white/5 hover:bg-white text-[#111439] dark:text-white font-black text-[11px] sm:text-xs uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <span>Get Custom Package</span>
+            </Button>
+
+            <Button
+              onClick={() => openCallbackModal({ sourceCta: 'HERO_EXPERT' })}
+              variant="ghost"
+              className="h-12 sm:h-13 px-5 sm:px-6 rounded-full text-[#111439] dark:text-white hover:bg-white/80 dark:hover:bg-white/10 font-bold text-[11px] sm:text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
+            >
+              <Headphones className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span>Talk to a Local Expert</span>
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => openWhatsAppLead({ intent: 'General Curation' })}
+              className="h-12 sm:h-13 px-5 rounded-full bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] sm:text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
+            >
+              <MessageCircle className="w-4 h-4 text-[#25D366]" />
+              <span>WhatsApp Us</span>
+            </button>
           </div>
 
           {/* Daylight Command Module (Search) */}

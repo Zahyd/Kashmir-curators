@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Plane, CalendarDays, Wallet, Users, Loader2, Sparkles, Compass, 
   Building, CheckCircle2, ArrowRight, Camera, Video, Heart, Utensils,
-  ChevronRight, ArrowLeft, ShieldCheck, MapPin, BadgePercent, Check
+  ChevronRight, ArrowLeft, ShieldCheck, MapPin, BadgePercent, Check,
+  Headphones, Phone, MessageCircle
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +65,7 @@ const ITINERARY_PRESETS: Record<string, { title: string; days: { title: string; 
 export default function TripPlanner() {
   const navigate = useNavigate();
   const { user, isAuthenticated, token } = useAuth();
+  const { openLeadModal, openCallbackModal } = useLeadCapture();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [activeTab, setActiveTab] = useState<'itinerary' | 'hotels' | 'cabs' | 'addons'>('itinerary');
@@ -143,16 +146,20 @@ export default function TripPlanner() {
   };
 
   const handleBookPackage = async () => {
+    const selectedPreset = ITINERARY_PRESETS[formData.destination] || ITINERARY_PRESETS['full-tour'];
+
     if (!isAuthenticated) {
-      toast.error('Authentication required. Redirecting to access profile...');
-      navigate('/auth?redirect=/planner');
+      // Capture lead smoothly with progressive profiling prefilled with their customized journey
+      openLeadModal({
+        destination: formData.destination,
+        packageTitle: `Custom ${formData.duration}-Day ${selectedPreset.title}`,
+        sourceCta: 'TRIP_PLANNER_CAPTURE'
+      });
       return;
     }
 
     setIsBooking(true);
     try {
-      const selectedPreset = ITINERARY_PRESETS[formData.destination] || ITINERARY_PRESETS['full-tour'];
-      
       const response = await fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
         headers: {
@@ -523,21 +530,46 @@ export default function TripPlanner() {
                     </div>
                   </div>
 
-                  <Button
-                    onClick={handleBookPackage}
-                    disabled={isBooking}
-                    className="w-full h-14 bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-xs uppercase tracking-[0.25em] rounded-xl shadow-lg transition-all duration-300 mt-2 flex items-center justify-center gap-2"
-                  >
-                    {isBooking ? (
-                      <>
-                        <Loader2 className="w-4.5 h-4.5 animate-spin" /> Securing Package...
-                      </>
-                    ) : (
-                      <>
-                        Secure Curation & Book <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
+                  <div className="space-y-2.5 pt-1">
+                    <Button
+                      onClick={handleBookPackage}
+                      disabled={isBooking}
+                      className="w-full h-14 bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-xs uppercase tracking-[0.2em] rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+                    >
+                      {isBooking ? (
+                        <>
+                          <Loader2 className="w-4.5 h-4.5 animate-spin" /> Securing Package...
+                        </>
+                      ) : (
+                        <>
+                          Secure Curation & Book <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => openLeadModal({
+                        destination: formData.destination,
+                        packageTitle: `Custom ${formData.duration}-Day ${selectedPreset.title}`,
+                        sourceCta: 'PLANNER_GET_CUSTOM_PKG'
+                      })}
+                      className="w-full h-12 border-amber-500/30 text-amber-400 hover:bg-amber-400/10 font-black text-[11px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>Get Custom Package & PDF Itinerary</span>
+                    </Button>
+
+                    <button
+                      type="button"
+                      onClick={() => openCallbackModal({ sourceCta: 'PLANNER_EXPERT_TALK' })}
+                      className="w-full text-center text-xs font-bold text-white/50 hover:text-white pt-1 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Headphones className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Questions? Talk to a Local Kashmir Expert</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

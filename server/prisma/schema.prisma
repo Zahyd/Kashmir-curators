@@ -162,6 +162,29 @@ model Inquiry {
   agentId           String?
   agent             User?              @relation("AgentInquiries", fields: [agentId], references: [id])
   hotelReservations HotelReservation[]
+  
+  // Phase 1: Lead Capture, Scoring & Progressive Profiling Engine
+  leadId                 String?            @unique // e.g. "KC-2026-8942"
+  leadScore              Int                @default(0) // 0 to 100
+  leadCategory           String?            // HONEYMOON_LUXURY, NORTH_KASHMIR_OFFBEAT, FAMILY_EXPEDITION, etc.
+  intentQuery            String?            // What visitor searched or requested
+  travelStartDate        DateTime?
+  travelEndDate          DateTime?
+  adultsCount            Int                @default(2)
+  childrenCount          Int                @default(0)
+  arrivalCity            String?            // "Srinagar (SXR)", "Jammu (IXJ)"
+  nightsCount            Int?
+  budgetRange            String?            // Standard, Premium, Luxury VIP
+  preferredAccommodation String?
+  transportPreference    String?            // Sedan, SUV, Innova Crysta, Coach
+  placesVisited          String?            // First-time or list of visited places
+  travelStyle            String?            // Romantic, Offbeat Explorer, Family Leisure, Adventure
+  wantOffbeat            String?            // Yes / No / Mix
+  sourceCta              String?            // HERO_ITINERARY, PLAN_MY_TRIP, CUSTOM_PACKAGE, EXPERT_TALK, CALLBACK_MODAL
+  scoringBreakdown       String?            // JSON string breakdown of score points
+  profileCompleteness    Int                @default(25) // 25% to 100%
+  notes                  String?
+
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 }

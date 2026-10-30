@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, Phone, X, Sparkles } from 'lucide-react';
+import { MessageCircle, Phone, X, Sparkles, Headphones, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { io } from 'socket.io-client';
 import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 
 const formatRelativeTime = (dateString: string) => {
   try {
@@ -24,6 +25,7 @@ const formatRelativeTime = (dateString: string) => {
 };
 
 export default function FloatingActions() {
+  const { openLeadModal, openCallbackModal, openWhatsAppLead } = useLeadCapture();
   const [isOpen, setIsOpen] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
   const [socialIdx, setSocialIdx] = useState(0);
@@ -130,23 +132,50 @@ export default function FloatingActions() {
       <div className="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-3">
         {/* Action Buttons */}
         {isOpen && (
-          <div className="flex flex-col gap-3 animate-fade-up">
-            {actions.map((action, index) => (
-              <a
-                key={action.label}
-                href={action.href}
-                target={action.href.startsWith('http') ? '_blank' : undefined}
-                rel="noopener noreferrer"
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-full text-primary-foreground shadow-lg transition-all hover:scale-105",
-                  action.color
-                )}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                {action.icon}
-                <span className="font-medium">{action.label}</span>
-              </a>
-            ))}
+          <div className="flex flex-col gap-2.5 animate-fade-up items-end">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                openLeadModal({ sourceCta: 'FLOATING_PLAN_TRIP' });
+              }}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xl hover:scale-105 transition-all text-xs font-black uppercase tracking-wider"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Plan My Kashmir Trip</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                openCallbackModal({ sourceCta: 'FLOATING_CALLBACK' });
+              }}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-[#111439] text-white border border-white/20 shadow-xl hover:scale-105 transition-all text-xs font-black uppercase tracking-wider"
+            >
+              <Phone className="w-4 h-4 text-amber-400" />
+              <span>Request a Callback</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                openLeadModal({ sourceCta: 'FLOATING_EXPERT', intent: 'Talk to a Local Kashmir Specialist' });
+              }}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-slate-900 text-white border border-slate-700 shadow-xl hover:scale-105 transition-all text-xs font-black uppercase tracking-wider"
+            >
+              <Headphones className="w-4 h-4 text-blue-400" />
+              <span>Talk to a Local Expert</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                openWhatsAppLead({ intent: 'Direct Concierge Chat' });
+              }}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-[#25D366] hover:bg-[#20ba5a] text-white shadow-xl hover:scale-105 transition-all text-xs font-black uppercase tracking-wider"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>WhatsApp Us</span>
+            </button>
           </div>
         )}
 

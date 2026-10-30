@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, LogOut, ChevronDown, Sparkles, LayoutDashboard, Building, Car, Compass, Map } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Sparkles, LayoutDashboard, Building, Building2, Car, Compass, Map, Phone, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
+import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ const navLinks = [
   { href: '/hotels', label: 'Estates' },
   { href: '/cabs', label: 'Fleet' },
   { href: '/travel-status', label: 'Travel Status' },
+  { href: '/agent', label: 'B2B Partners' },
 ];
 
 export default function Navbar() {
@@ -29,6 +31,7 @@ export default function Navbar() {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { teamUser } = useTeamAuth();
+  const { openLeadModal, openCallbackModal } = useLeadCapture();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -93,6 +96,14 @@ export default function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 bg-white/95 dark:bg-[#0c1216]/95 backdrop-blur-3xl border-slate-200 dark:border-white/10 text-[#111439] dark:text-white rounded-2xl p-2 mt-4 shadow-2xl">
+                  {isAuthenticated && (
+                    <DropdownMenuItem asChild className="rounded-xl py-3 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                      <Link to="/agent" className="flex items-center gap-3">
+                        <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs font-bold text-[#111439] dark:text-white">Agent Workspace</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   {isAuthenticated && (
                     <DropdownMenuItem asChild className="rounded-xl py-3 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
                       <Link to="/profile" className="flex items-center gap-3">
@@ -165,16 +176,25 @@ export default function Navbar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => openCallbackModal({ sourceCta: 'NAVBAR_EXPERT' })}
+                  className="hidden xl:flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[#111439]/70 dark:text-white/70 hover:text-[#111439] dark:hover:text-white transition-colors"
+                >
+                  <Headphones className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>Talk to Expert</span>
+                </button>
+                <Button 
+                  onClick={() => openLeadModal({ sourceCta: 'PLAN_MY_TRIP_NAVBAR' })}
+                  className="h-11 px-6 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-2"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Plan My Kashmir Trip</span>
+                </Button>
                 <Link to="/auth">
-                  <span className="text-[11px] font-black uppercase tracking-widest text-[#111439]/70 dark:text-white/70 hover:text-[#111439] dark:hover:text-white transition-colors cursor-pointer px-3">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-[#111439]/70 dark:text-white/70 hover:text-[#111439] dark:hover:text-white transition-colors cursor-pointer px-2">
                     Sign In
                   </span>
-                </Link>
-                <Link to="/auth?mode=signup">
-                  <Button className="h-11 px-7 rounded-full bg-[#111439] hover:bg-[#1c225a] dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-black font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[#111439]/15 transition-all duration-300 hover:scale-105 active:scale-95">
-                    Become a Member
-                  </Button>
                 </Link>
               </div>
             )}
@@ -193,6 +213,30 @@ export default function Navbar() {
         {isOpen && (
           <div className="md:hidden mt-6 pb-6 animate-fade-in">
             <div className="flex flex-col gap-2 p-2">
+              <div className="grid grid-cols-1 gap-2 pb-2">
+                <Button 
+                  onClick={() => {
+                    setIsOpen(false);
+                    openLeadModal({ sourceCta: 'PLAN_MY_TRIP_NAVBAR_MOBILE' });
+                  }}
+                  className="w-full h-12 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black text-[11px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Plan My Kashmir Trip</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsOpen(false);
+                    openCallbackModal({ sourceCta: 'MOBILE_MENU_CALLBACK' });
+                  }}
+                  className="w-full h-12 rounded-2xl border-slate-300 dark:border-white/20 text-[#111439] dark:text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                >
+                  <Headphones className="w-4 h-4 text-amber-500" />
+                  <span>Talk to a Local Expert</span>
+                </Button>
+              </div>
+
               {navLinks.map((link) => (
                 <Link
                   key={link.href}

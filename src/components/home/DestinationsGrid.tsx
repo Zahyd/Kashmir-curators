@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles, MapPin } from 'lucide-react';
+import { ArrowRight, Sparkles, MapPin, Compass, Headphones } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 import srinagarImg from '@/assets/kashmir-hero-new.jpg';
 import gulmargImg from '@/assets/gulmarg.jpg';
 import pahalgamImg from '@/assets/pahalgam.jpg';
@@ -40,6 +42,7 @@ const destinations = [
 ];
 
 export default function DestinationsGrid() {
+  const { openLeadModal, openCallbackModal } = useLeadCapture();
   return (
     <section className="py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
       {/* Background Orbs */}
@@ -108,6 +111,44 @@ export default function DestinationsGrid() {
               </div>
             </Link>
           ))}
+        </div>
+
+        {/* Offbeat Destinations Lead Capture Banner */}
+        <div className="mt-16 p-8 md:p-10 rounded-[2.5rem] bg-white dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 animate-fade-up">
+          <div className="space-y-1.5 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest">
+              <Compass className="w-3.5 h-3.5" /> Untouched Borderlands & Secret Meadows
+            </div>
+            <h4 className="text-xl md:text-2xl font-black uppercase text-[#111439] dark:text-white tracking-tight">
+              Craving Offbeat Kashmir? <span className="text-amber-600 dark:text-amber-400">Gurez, Bangus & Warwan</span>
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-white/50 max-w-xl">
+              Escape the crowds. Our native guides specialize in high-altitude frontier passes, shepherd trails, and alpine permits.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => openLeadModal({ 
+                sourceCta: 'DESTINATIONS_OFFBEAT', 
+                intent: 'North Kashmir Offbeat Places (Gurez & Bangus)' 
+              })}
+              className="h-12 px-7 rounded-full bg-[#111439] hover:bg-[#1c225a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-black font-black text-xs uppercase tracking-widest shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400 dark:text-black" />
+              <span>Plan My Kashmir Trip</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => openCallbackModal({ 
+                sourceCta: 'DESTINATIONS_CALLBACK',
+                intent: 'Offbeat Kashmir Inquiry'
+              })}
+              className="h-12 px-6 rounded-full border-slate-300 dark:border-white/20 text-[#111439] dark:text-white font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <Headphones className="w-4 h-4 text-amber-500" />
+              <span>Talk to a Local Expert</span>
+            </Button>
+          </div>
         </div>
       </div>
     </section>

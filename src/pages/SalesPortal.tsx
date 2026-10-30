@@ -193,17 +193,20 @@ export default function SalesPortal() {
 
   if (isTeamLoading || !isTeamAuthenticated || !teamUser) return null;
 
-  const formatId = (id: string) => {
+  const formatId = (id: string, leadId?: string) => {
+    if (leadId) return leadId;
     if (!id) return '';
     return id.includes('-') ? `KC-${id.split('-')[0].toUpperCase()}` : `KC-${id.substring(0, 8).toUpperCase()}`;
   };
 
   const myInquiries = inquiries.filter(inq => {
     const isAssigned = inq.assignedTo === teamUser.code || !inq.assignedTo;
-    const displayId = formatId(inq.id);
+    const displayId = formatId(inq.id, inq.leadId);
     const matchesSearch = inq.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           displayId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          inq.id.toLowerCase().includes(searchTerm.toLowerCase());
+                          inq.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (inq.leadId && inq.leadId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (inq.leadCategory && inq.leadCategory.toLowerCase().includes(searchTerm.toLowerCase()));
     return isAssigned && matchesSearch;
   });
 
@@ -214,10 +217,12 @@ export default function SalesPortal() {
       const isAssigned = inq.assignedTo === teamUser?.code || !inq.assignedTo;
       if (!isAssigned) return false;
 
-      const displayId = formatId(inq.id);
+      const displayId = formatId(inq.id, inq.leadId);
       const matchesSearch = inq.customerName.toLowerCase().includes(leadSearch.toLowerCase()) || 
                             displayId.toLowerCase().includes(leadSearch.toLowerCase()) ||
-                            inq.destination.toLowerCase().includes(leadSearch.toLowerCase());
+                            (inq.leadId && inq.leadId.toLowerCase().includes(leadSearch.toLowerCase())) ||
+                            inq.destination.toLowerCase().includes(leadSearch.toLowerCase()) ||
+                            (inq.leadCategory && inq.leadCategory.toLowerCase().includes(leadSearch.toLowerCase()));
       if (!matchesSearch) return false;
 
       if (priorityFilter !== 'All') {
@@ -456,7 +461,7 @@ export default function SalesPortal() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {liveLeads.map((inq, index) => {
-                  const displayId = formatId(inq.id);
+                  const displayId = formatId(inq.id, inq.leadId);
                   const prio = inq.priority || 'Low';
                   
                   return (
@@ -481,8 +486,26 @@ export default function SalesPortal() {
                               {inq.customerName.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                              <h3 className="font-display text-lg font-bold text-white group-hover:text-kashmir-gold transition-colors truncate">{inq.customerName}</h3>
-                              <p className="text-[9px] font-mono font-bold text-white/30 uppercase tracking-wider">{displayId}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-display text-lg font-bold text-white group-hover:text-kashmir-gold transition-colors truncate">{inq.customerName}</h3>
+                                {typeof inq.leadScore === 'number' && inq.leadScore > 0 && (
+                                  <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${
+                                    inq.leadScore >= 75 ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-[0_0_8px_rgba(239,68,68,0.3)]' :
+                                    inq.leadScore >= 50 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                    'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                  }`}>
+                                    {inq.leadScore >= 75 ? '🔥' : inq.leadScore >= 50 ? '⚡' : '🌱'} {inq.leadScore} SCORE
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <p className="text-[9px] font-mono font-bold text-white/40 uppercase tracking-wider">{displayId}</p>
+                                {inq.leadCategory && (
+                                  <span className="text-[8px] text-kashmir-gold/90 bg-kashmir-gold/10 px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
+                                    {inq.leadCategory.replace(/_/g, ' ')}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           
@@ -496,7 +519,7 @@ export default function SalesPortal() {
                               {prio}
                             </Badge>
                             <span className="text-[8px] text-white/20 uppercase font-black tracking-wider flex items-center gap-1">
-                              <Clock className="w-2.5 h-2.5" /> 12m ago
+                              <Clock className="w-2.5 h-2.5" /> Recent
                             </span>
                           </div>
                         </div>
@@ -514,6 +537,26 @@ export default function SalesPortal() {
                               <p className="text-xs font-bold text-white/90 truncate">{stat.value}</p>
                             </div>
                           ))}
+
+                          {(inq.arrivalCity || inq.wantOffbeat || inq.adultsCount) && (
+                            <div className="col-span-2 pt-2 border-t border-white/5 flex flex-wrap gap-2 text-[9px] text-white/60">
+                              {inq.arrivalCity && (
+                                <span className="bg-white/5 px-2 py-0.5 rounded font-mono">
+                                  From: <strong className="text-white">{inq.arrivalCity}</strong>
+                                </span>
+                              )}
+                              {inq.wantOffbeat && (
+                                <span className="bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded font-mono">
+                                  Offbeat: {inq.wantOffbeat}
+                                </span>
+                              )}
+                              {inq.adultsCount && (
+                                <span className="bg-white/5 px-2 py-0.5 rounded font-mono">
+                                  Party: {inq.adultsCount} Adults {inq.childrenCount ? `+ ${inq.childrenCount} Kids` : ''}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -610,7 +653,7 @@ export default function SalesPortal() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {myInquiries.length > 0 ? (
                   myInquiries.map((inq, index) => {
-                    const displayId = formatId(inq.id);
+                    const displayId = formatId(inq.id, inq.leadId);
                     const prio = inq.priority || 'Low';
                     
                     return (
@@ -635,8 +678,26 @@ export default function SalesPortal() {
                                 {inq.customerName.charAt(0)}
                               </div>
                               <div className="min-w-0">
-                                <h3 className="font-display text-base font-bold text-white group-hover:text-kashmir-gold transition-colors truncate">{inq.customerName}</h3>
-                                <p className="text-[9px] font-mono font-bold text-white/30 uppercase tracking-wider">{displayId}</p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-display text-base font-bold text-white group-hover:text-kashmir-gold transition-colors truncate">{inq.customerName}</h3>
+                                  {typeof inq.leadScore === 'number' && inq.leadScore > 0 && (
+                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${
+                                      inq.leadScore >= 75 ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                      inq.leadScore >= 50 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                      'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                    }`}>
+                                      {inq.leadScore >= 75 ? '🔥' : inq.leadScore >= 50 ? '⚡' : '🌱'} {inq.leadScore}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                  <p className="text-[9px] font-mono font-bold text-white/30 uppercase tracking-wider">{displayId}</p>
+                                  {inq.leadCategory && (
+                                    <span className="text-[8px] text-kashmir-gold/90 bg-kashmir-gold/10 px-1.5 py-0.5 rounded font-mono uppercase">
+                                      {inq.leadCategory.replace(/_/g, ' ')}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             

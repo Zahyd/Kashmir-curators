@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Star, Clock, MapPin, Filter, X, Search, ArrowUpDown, Compass, ArrowRight } from 'lucide-react';
+import { Star, Clock, MapPin, Filter, X, Search, ArrowUpDown, Compass, ArrowRight, Sparkles, Headphones } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import FloatingActions from '@/components/layout/FloatingActions';
@@ -15,9 +15,11 @@ import { usePackages, useDestinations, useCabs } from '@/hooks/useCMSData';
 import { cn } from '@/lib/utils';
 import { io } from 'socket.io-client';
 import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 
 export default function Packages() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { openLeadModal, openCallbackModal } = useLeadCapture();
   const { data: packages = [], isLoading } = usePackages();
   const { data: cabOptions = [], isLoading: isLoadingCabs } = useCabs();
   const { data: destinations = [] } = useDestinations();
@@ -350,11 +352,28 @@ export default function Packages() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-3 pt-2">
                           <div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 block mb-2">Portfolio Value</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 block mb-1">Portfolio Value</span>
                             <span className="text-2xl font-black text-kashmir-gold uppercase tracking-wider">On Request</span>
                           </div>
+
+                          <Button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openLeadModal({
+                                packageTitle: pkg.name,
+                                destination: pkg.destination,
+                                sourceCta: 'PACKAGES_PAGE_CARD'
+                              });
+                            }}
+                            className="h-11 px-5 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-400 font-black text-[10px] uppercase tracking-widest shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Get Custom Package</span>
+                          </Button>
                         </div>
                       </div>
                     </div>

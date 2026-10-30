@@ -60,6 +60,14 @@ interface Inquiry {
   budget?: string;
   duration?: string;
   priority?: string;
+  leadId?: string;
+  leadScore?: number;
+  leadCategory?: string;
+  arrivalCity?: string;
+  wantOffbeat?: string;
+  sourceCta?: string;
+  adultsCount?: number;
+  childrenCount?: number;
 }
 
 interface LeadBoardProps {
@@ -102,6 +110,7 @@ function SortableLeadCard({ inquiry, onClick }: { inquiry: Inquiry; onClick?: ()
   const stage = getLeadStage(inquiry);
   const colorClass = STAGE_COLORS[stage] || 'border-l-slate-500 bg-slate-500/5';
   const prio = inquiry.priority || 'Low';
+  const displayLeadId = inquiry.leadId || `KC-${inquiry.id.substring(0, 8).toUpperCase()}`;
 
   return (
     <div 
@@ -116,10 +125,28 @@ function SortableLeadCard({ inquiry, onClick }: { inquiry: Inquiry; onClick?: ()
           {/* Header */}
           <div className="flex justify-between items-start gap-2">
             <div className="min-w-0 flex-1">
-              <h4 className="font-bold text-xs text-white truncate group-hover:text-kashmir-gold transition-colors">{inquiry.customerName}</h4>
-              <span className="text-[9px] text-white/30 font-mono">
-                {inquiry.id.substring(0, 8).toUpperCase()}
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h4 className="font-bold text-xs text-white truncate group-hover:text-kashmir-gold transition-colors">{inquiry.customerName}</h4>
+                {typeof inquiry.leadScore === 'number' && inquiry.leadScore > 0 && (
+                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                    inquiry.leadScore >= 75 ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                    inquiry.leadScore >= 50 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                    'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  }`}>
+                    {inquiry.leadScore >= 75 ? '🔥' : inquiry.leadScore >= 50 ? '⚡' : '🌱'} {inquiry.leadScore}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <span className="text-[9px] text-white/40 font-mono font-bold">
+                  {displayLeadId}
+                </span>
+                {inquiry.leadCategory && (
+                  <span className="text-[8px] text-kashmir-gold/90 bg-kashmir-gold/10 px-1.5 py-0.5 rounded font-mono truncate max-w-[130px]">
+                    {inquiry.leadCategory.replace(/_/g, ' ')}
+                  </span>
+                )}
+              </div>
             </div>
             <div 
               {...attributes} 
@@ -156,6 +183,27 @@ function SortableLeadCard({ inquiry, onClick }: { inquiry: Inquiry; onClick?: ()
               <span className="text-[9px] font-bold text-white/40">{prio} Prio</span>
             </div>
           </div>
+
+          {/* Additional Lead Intelligence Badges if present */}
+          {(inquiry.arrivalCity || inquiry.wantOffbeat || inquiry.adultsCount) && (
+            <div className="flex flex-wrap gap-1 text-[8px] text-white/60">
+              {inquiry.arrivalCity && (
+                <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 font-mono">
+                  From: {inquiry.arrivalCity}
+                </span>
+              )}
+              {inquiry.wantOffbeat && (
+                <span className="bg-purple-500/10 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/20 font-mono">
+                  Offbeat: {inquiry.wantOffbeat}
+                </span>
+              )}
+              {inquiry.adultsCount && (
+                <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 font-mono">
+                  {inquiry.adultsCount}A {inquiry.childrenCount ? `+ ${inquiry.childrenCount}C` : ''}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Footer controls */}
           <div className="flex justify-between items-center border-t border-white/5 pt-2 mt-1">

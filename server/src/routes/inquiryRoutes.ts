@@ -1,8 +1,24 @@
 import { Router } from 'express';
-import { getInquiries, createInquiry, updateInquiry, sendProposal, getDynamicQuote, getPublicInquiryItinerary, deleteInquiry } from '../controllers/inquiryController';
+import { 
+  getInquiries, 
+  createInquiry, 
+  updateInquiry, 
+  sendProposal, 
+  getDynamicQuote, 
+  getPublicInquiryItinerary, 
+  deleteInquiry,
+  captureQuickLead,
+  enrichLeadProfile,
+  requestInstantCallback
+} from '../controllers/inquiryController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
+
+// Public Lead Capture Engine Routes (Frictionless, No Auth Wall)
+router.post('/quick-capture', captureQuickLead);
+router.patch('/:id/enrich', enrichLeadProfile);
+router.post('/callback-request', requestInstantCallback);
 
 router.get('/public/:id', getPublicInquiryItinerary);
 router.get('/', authenticateToken, getInquiries);

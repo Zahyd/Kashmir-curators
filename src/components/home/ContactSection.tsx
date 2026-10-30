@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Send, Loader2, CheckCircle, Headphones, Sparkles } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Headphones, Sparkles, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function ContactSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,22 +21,44 @@ export default function ContactSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.message) {
-      toast.error('Identity and intent are required for consultation.');
+    if (!formData.name || (!formData.email && !formData.phone)) {
+      toast.error('Please provide your name and phone or email to consult with our curators.');
       return;
     }
 
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    toast.success('Consultation request received. A senior curator will contact you.');
-    
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({ name: '', email: '', phone: '', message: '' });
-    }, 4000);
+    try {
+      const res = await fetch(`${API_BASE_URL}/inquiries/quick-capture`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: formData.name,
+          email: formData.email,
+          phone: formData.phone || 'Not Provided',
+          intentQuery: formData.message || 'General Consultation Request',
+          sourceCta: 'CONTACT_SECTION',
+          notes: formData.message
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.leadId) {
+        setCreatedLeadId(data.leadId);
+        setIsSubmitted(true);
+        toast.success(`Consultation requested! Lead ID ${data.leadId} reserved.`);
+        setTimeout(() => {
+          setIsSubmitted(false);
+          setFormData({ name: '', email: '', phone: '', message: '' });
+        }, 8000);
+      } else {
+        toast.error(data.error || 'Failed to submit consultation request.');
+      }
+    } catch (error) {
+      console.error('Contact submission error:', error);
+      toast.error('Network connection error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -133,7 +157,7 @@ export default function ContactSection() {
                 ) : isSubmitted ? (
                   <div className="flex items-center gap-3">
                     <CheckCircle className="h-6 w-6" />
-                    Protocol Initiated
+                    <span>Lead Reserved: {createdLeadId || 'CONFIRMED'}</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">

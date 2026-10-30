@@ -182,15 +182,18 @@ export default function CMSInquiries() {
     }
   };
 
-  const formatId = (id: string) => {
+  const formatId = (id: string, leadId?: string) => {
+    if (leadId) return leadId;
     if (!id) return '';
     return id.includes('-') ? `KC-${id.split('-')[0].toUpperCase()}` : `KC-${id.substring(0, 8).toUpperCase()}`;
   };
 
   const filteredInquiries = inquiries.filter(inq => {
-    const displayId = formatId(inq.id);
+    const displayId = formatId(inq.id, inq.leadId);
     const matchesSearch = displayId.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          inq.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (inq.leadId && inq.leadId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (inq.leadCategory && inq.leadCategory.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          inq.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          inq.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter.length === 0 || statusFilter.includes(inq.status);
@@ -401,10 +404,26 @@ export default function CMSInquiries() {
                 <tr key={inq.id} className="hover:bg-white/[0.03] transition-all duration-500 group/row">
                   <td className="px-6 py-6">
                     <div className="space-y-1.5">
-                      <span className="text-white font-black text-sm tracking-widest group-hover/row:text-kashmir-gold transition-colors">{formatId(inq.id)}</span>
+                      <span className="text-white font-black text-sm tracking-widest group-hover/row:text-kashmir-gold transition-colors">{formatId(inq.id, inq.leadId)}</span>
                       <div className="flex items-center gap-2 text-[9px] text-white/30 uppercase tracking-[0.2em] font-black">
                         <div className="w-1.5 h-1.5 rounded-full bg-kashmir-gold/40" />
                         {inq.date}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {typeof inq.leadScore === 'number' && inq.leadScore > 0 && (
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                            inq.leadScore >= 75 ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                            inq.leadScore >= 50 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                            'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          }`}>
+                            {inq.leadScore >= 75 ? '🔥' : inq.leadScore >= 50 ? '⚡' : '🌱'} {inq.leadScore}
+                          </span>
+                        )}
+                        {inq.leadCategory && (
+                          <span className="text-[8px] text-kashmir-gold/80 bg-kashmir-gold/10 px-1.5 py-0.5 rounded font-mono truncate max-w-[120px]">
+                            {inq.leadCategory.replace(/_/g, ' ')}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -587,7 +606,23 @@ export default function CMSInquiries() {
             
             <div className="flex justify-between items-start mb-6 relative z-10">
               <div className="space-y-1">
-                <span className="text-white font-black text-sm tracking-widest">{formatId(inq.id)}</span>
+                <span className="text-white font-black text-sm tracking-widest">{formatId(inq.id, inq.leadId)}</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {typeof inq.leadScore === 'number' && inq.leadScore > 0 && (
+                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                      inq.leadScore >= 75 ? 'bg-red-500/20 text-red-400' :
+                      inq.leadScore >= 50 ? 'bg-amber-500/20 text-amber-400' :
+                      'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {inq.leadScore >= 75 ? '🔥' : inq.leadScore >= 50 ? '⚡' : '🌱'} {inq.leadScore}
+                    </span>
+                  )}
+                  {inq.leadCategory && (
+                    <span className="text-[8px] text-kashmir-gold/80 bg-kashmir-gold/10 px-1.5 py-0.5 rounded font-mono">
+                      {inq.leadCategory.replace(/_/g, ' ')}
+                    </span>
+                  )}
+                </div>
                 <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">{inq.date}</p>
               </div>
               <Badge className={cn(
@@ -674,11 +709,32 @@ export default function CMSInquiries() {
             
             <div className="p-6 sm:p-8 lg:p-10 relative z-10 overflow-y-auto max-h-[calc(90vh-1rem)] custom-scrollbar">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-white/5 pb-6">
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-kashmir-gold/60">Strategic Inquiry Detail</p>
                   <h2 className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white leading-tight break-all">
-                    Node <span className="text-kashmir-gold">{formatId(selectedInquiry.id)}</span>
+                    Node <span className="text-kashmir-gold">{formatId(selectedInquiry.id, selectedInquiry.leadId)}</span>
                   </h2>
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    {typeof selectedInquiry.leadScore === 'number' && (
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
+                        selectedInquiry.leadScore >= 75 ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                        selectedInquiry.leadScore >= 50 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                        'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                      }`}>
+                        {selectedInquiry.leadScore >= 75 ? '🔥 High Intent' : selectedInquiry.leadScore >= 50 ? '⚡ Warm Lead' : '🌱 Discovery Lead'} • Score {selectedInquiry.leadScore}/100
+                      </span>
+                    )}
+                    {selectedInquiry.leadCategory && (
+                      <span className="text-[10px] font-mono text-kashmir-gold bg-kashmir-gold/10 px-3 py-1 rounded-full border border-kashmir-gold/20">
+                        Category: {selectedInquiry.leadCategory.replace(/_/g, ' ')}
+                      </span>
+                    )}
+                    {selectedInquiry.sourceCta && (
+                      <span className="text-[10px] font-mono text-white/50 bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                        Source: {selectedInquiry.sourceCta}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <Badge className={cn(
                   "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border-none shadow-xl self-start sm:self-auto shrink-0",
@@ -799,14 +855,54 @@ export default function CMSInquiries() {
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Temporal Frame</span>
                         <span className="font-bold text-sm text-white text-right">{selectedInquiry.duration}</span>
                       </div>
+                      {selectedInquiry.arrivalCity && (
+                        <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Arrival City</span>
+                          <span className="font-bold text-sm text-white text-right">{selectedInquiry.arrivalCity}</span>
+                        </div>
+                      )}
+                      {(selectedInquiry.adultsCount || selectedInquiry.childrenCount) && (
+                        <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Party Dynamics</span>
+                          <span className="font-bold text-sm text-white text-right">
+                            {selectedInquiry.adultsCount || 0} Adults {selectedInquiry.childrenCount ? `, ${selectedInquiry.childrenCount} Children` : ''}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Asset Preference</span>
-                        <span className="font-bold text-sm text-white text-right break-words max-w-[65%]">{selectedInquiry.accommodation}</span>
+                        <span className="font-bold text-sm text-white text-right break-words max-w-[65%]">{selectedInquiry.accommodation || selectedInquiry.preferredAccommodation}</span>
                       </div>
+                      {selectedInquiry.transportPreference && (
+                        <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Transport Preference</span>
+                          <span className="font-bold text-sm text-white text-right">{selectedInquiry.transportPreference}</span>
+                        </div>
+                      )}
+                      {selectedInquiry.wantOffbeat && (
+                        <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Offbeat Interest</span>
+                          <Badge className="bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px] font-mono">
+                            {selectedInquiry.wantOffbeat}
+                          </Badge>
+                        </div>
+                      )}
+                      {selectedInquiry.travelStyle && (
+                        <div className="flex justify-between items-start gap-4 border-b border-white/5 pb-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0 mt-0.5">Travel Style</span>
+                          <span className="font-bold text-sm text-white text-right">{selectedInquiry.travelStyle}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center gap-4 border-b border-white/5 pb-3">
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/30 shrink-0">Fiscal Constraint</span>
-                        <Badge className="bg-kashmir-gold text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">{selectedInquiry.budget}</Badge>
+                        <Badge className="bg-kashmir-gold text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">{selectedInquiry.budget || selectedInquiry.budgetRange}</Badge>
                       </div>
+                      {selectedInquiry.notes && (
+                        <div className="pt-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white/30 block mb-1">Guest Notes & Special Requests</span>
+                          <p className="text-xs text-white/70 italic bg-white/5 p-3 rounded-xl border border-white/5">{selectedInquiry.notes}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 

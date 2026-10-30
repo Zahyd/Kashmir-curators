@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFeaturedPackages } from '@/hooks/useCMSData';
 import { Badge } from '@/components/ui/badge';
+import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 
 export default function FeaturedPackages() {
   const { data: featuredPackages = [], isLoading } = useFeaturedPackages();
+  const { openLeadModal } = useLeadCapture();
 
   return (
     <section className="py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
@@ -95,15 +97,28 @@ export default function FeaturedPackages() {
                       {pkg.name}
                     </h3>
 
-                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/10 pt-6">
+                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/10 pt-6 gap-3">
                       <div>
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-white/40 mb-1">Estate Value</p>
                         <span className="text-xl font-black text-[#111439] dark:text-white uppercase tracking-wider">On Request</span>
                       </div>
                       
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-[#111439] dark:text-white group-hover:bg-[#111439] dark:group-hover:bg-amber-400 dark:group-hover:text-black group-hover:text-white transition-all duration-500 shadow-sm">
-                        <ArrowRight className="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform duration-500" />
-                      </div>
+                      <Button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openLeadModal({
+                            packageTitle: pkg.name,
+                            destination: pkg.destination,
+                            sourceCta: 'PACKAGE_CARD_CUSTOM'
+                          });
+                        }}
+                        className="h-10 px-4 rounded-xl bg-[#111439] hover:bg-[#1a205a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-black text-[10px] font-black uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3 h-3 text-amber-400 dark:text-black" />
+                        <span>Get Custom Package</span>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -112,12 +127,21 @@ export default function FeaturedPackages() {
           </div>
         )}
 
-        {/* Global CTA */}
-        <div className="flex justify-center mt-24">
+        {/* Global CTA Strip */}
+        <div className="flex flex-wrap items-center justify-center gap-4 mt-24">
+          <Button 
+            onClick={() => openLeadModal({ sourceCta: 'FEATURED_PORTFOLIO_PLAN' })}
+            size="lg" 
+            className="h-auto py-5 px-10 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black text-xs uppercase tracking-[0.25em] shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Plan My Kashmir Trip</span>
+          </Button>
+
           <Link to="/packages">
-            <Button size="lg" className="h-auto py-6 px-12 rounded-full bg-[#111439] text-white font-black text-xs uppercase tracking-[0.3em] hover:bg-amber-600 transition-all duration-500 hover:scale-105 active:scale-95 group">
+            <Button size="lg" variant="outline" className="h-auto py-5 px-10 rounded-full border-slate-300 dark:border-white/20 text-[#111439] dark:text-white font-black text-xs uppercase tracking-[0.25em] hover:bg-white transition-all hover:scale-105 active:scale-95 group">
               Explore Entire Portfolio
-              <ArrowRight className="w-5 h-5 ml-4 transition-transform group-hover:translate-x-2" />
+              <ArrowRight className="w-4 h-4 ml-3 transition-transform group-hover:translate-x-1.5" />
             </Button>
           </Link>
         </div>
