@@ -992,69 +992,104 @@ export default function Cabs() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white transition-colors selection:bg-kashmir-gold/30">
+    <div className="min-h-screen bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white transition-colors duration-300 font-sans selection:bg-amber-400/30">
       <Navbar />
 
       {!isTracking ? (
         <>
-          {/* Hero Banner Section */}
-          <div className="relative pt-36 pb-24 lg:pt-48 lg:pb-36 overflow-hidden">
-            <div className="absolute inset-0 bg-cover bg-center transition-all duration-1000 scale-105" style={{ backgroundImage: `url("${heroImage}")` }}>
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#05080a] via-transparent to-black/30" />
+          {/* Dynamic Luxury Hero Banner */}
+          <div className="relative pt-36 pb-20 md:pt-44 md:pb-28 overflow-hidden border-b border-slate-200/80 dark:border-white/5">
+            <div className="absolute inset-0 z-0">
+              <img 
+                src={heroImage} 
+                alt="Kashmir 4x4 & Luxury Cabs" 
+                className="w-full h-full object-cover object-center opacity-30 dark:opacity-25 filter contrast-125 scale-105 transition-transform duration-[10000ms]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#05080a]/90 via-[#05080a]/70 to-[#05080a] dark:block hidden" />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/80 to-[#F8F8F9] dark:hidden block" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] bg-amber-400/10 blur-[130px] rounded-full pointer-events-none" />
             </div>
-            
-            <div className="container mx-auto px-6 relative z-10 text-center space-y-6">
-              <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/25 font-black px-5 py-1.5 rounded-full text-[10px] uppercase tracking-[0.25em] mx-auto w-fit">
-                VIP Chauffeur & Logistics Engine
-              </Badge>
-              <h1 className="font-display text-5xl md:text-7xl font-black text-white leading-tight tracking-tight max-w-4xl mx-auto">
-                {heroTitle}
+
+            <div className="container mx-auto px-6 relative z-10 text-center max-w-4xl">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 dark:bg-white/5 border border-amber-500/20 dark:border-white/10 mb-8 backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-spin-slow" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-800 dark:text-white/80">
+                  VIP Chauffeurs & 4x4 Winter Fleet
+                </span>
+              </div>
+              
+              <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-black tracking-tight mb-6 leading-[1.05]">
+                {heroTitle.split(' ').map((word, i) => (
+                  <span 
+                    key={i} 
+                    className={i % 2 === 1 
+                      ? "bg-clip-text text-transparent bg-gradient-to-r from-amber-600 dark:from-amber-400 via-amber-500 dark:via-amber-200 to-slate-900 dark:to-white" 
+                      : "text-slate-900 dark:text-white"
+                    }
+                  >
+                    {word}{' '}
+                  </span>
+                ))}
               </h1>
-              <p className="text-white/60 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+              
+              <p className="text-slate-600 dark:text-white/60 text-base md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
                 {heroSubtitle}
               </p>
+
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-700 dark:text-white/70">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-amber-500" /> Snow-Chained 4x4 (Innova Crysta / Urbania)
+                </span>
+                <span className="text-slate-300 dark:text-white/20">•</span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Verified Mountain Chauffeurs
+                </span>
+                <span className="text-slate-300 dark:text-white/20">•</span>
+                <span className="flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" /> Airport VIP Meet & Greet
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="container mx-auto px-6 pb-24">
+          <div className="container mx-auto px-6 py-12">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
               
               {/* Form Input Side */}
-              <div className="lg:col-span-8 space-y-12">
+              <div className="lg:col-span-8 space-y-10">
                 
-                {/* Search Configuration */}
-                <div className="bg-[#0a0f12]/60 border border-white/5 rounded-[3rem] p-8 md:p-10 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/[0.01] blur-[80px] -mr-32 -mt-32" />
+                {/* Search Configuration Card */}
+                <div className="bg-white dark:bg-[#0a0f12]/60 border border-slate-200/80 dark:border-white/5 rounded-[2.5rem] p-6 md:p-10 backdrop-blur-xl shadow-xl shadow-slate-200/40 dark:shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/[0.03] blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                   
                   <Tabs value={tripType} onValueChange={(val) => { setTripType(val); setPickupInput(''); setDropInput(''); }}>
-                    <TabsList className="grid grid-cols-1 sm:grid-cols-3 mb-10 bg-white/5 p-1 rounded-2xl h-auto border border-white/5 gap-1 sm:gap-0">
-                      <TabsTrigger value="airport" className="gap-2.5 py-4 rounded-xl data-[state=active]:bg-kashmir-gold data-[state=active]:text-black transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
+                    <TabsList className="grid grid-cols-1 sm:grid-cols-3 mb-8 bg-slate-100 dark:bg-white/5 p-1 rounded-2xl h-auto border border-slate-200/80 dark:border-white/5 gap-1 sm:gap-0">
+                      <TabsTrigger value="airport" className="gap-2.5 py-3.5 rounded-xl text-slate-600 dark:text-white/60 data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 font-black transition-all text-[10px] uppercase tracking-wider">
                         <Plane className="h-4 w-4" />
                         <span>Airport Transfer</span>
                       </TabsTrigger>
-                      <TabsTrigger value="local" className="gap-2.5 py-4 rounded-xl data-[state=active]:bg-kashmir-gold data-[state=active]:text-black transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
+                      <TabsTrigger value="local" className="gap-2.5 py-3.5 rounded-xl text-slate-600 dark:text-white/60 data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 font-black transition-all text-[10px] uppercase tracking-wider">
                         <MapIcon className="h-4 w-4" />
                         <span>Local Sightseeing</span>
                       </TabsTrigger>
-                      <TabsTrigger value="outstation" className="gap-2.5 py-4 rounded-xl data-[state=active]:bg-kashmir-gold data-[state=active]:text-black transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
+                      <TabsTrigger value="outstation" className="gap-2.5 py-3.5 rounded-xl text-slate-600 dark:text-white/60 data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 font-black transition-all text-[10px] uppercase tracking-wider">
                         <Navigation className="h-4 w-4" />
                         <span>Outstation Ride</span>
                       </TabsTrigger>
                     </TabsList>
 
-                    <div className="space-y-8 animate-in fade-in duration-500">
+                    <div className="space-y-6 animate-in fade-in duration-500">
                       
                       {/* Pick / Drop Inputs Wrapper */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         
                         {/* Pickup Input */}
                         <div className="space-y-2 relative">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-white/40 ml-2 flex items-center gap-1.5">
                             <MapPin className="h-3 w-3 text-emerald-500" /> Pickup Location
                           </label>
                           {tripType === 'airport' && airportDirection === 'arrival' ? (
-                            <div className="w-full h-14 bg-white/5 border border-white/5 rounded-2xl flex items-center px-6 font-bold text-white/50 text-sm">
+                            <div className="w-full h-14 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl flex items-center px-6 font-bold text-slate-800 dark:text-white/80 text-sm">
                               Srinagar Airport (SXR)
                             </div>
                           ) : (
@@ -1062,7 +1097,7 @@ export default function Cabs() {
                               <div className="relative">
                                 <Input
                                   ref={pickupInputRef}
-                                  className="h-14 bg-white/[0.03] border border-white/5 rounded-2xl text-white pl-6 pr-12 font-bold focus:border-kashmir-gold/45 text-sm"
+                                  className="h-14 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white pl-6 pr-12 font-bold focus:border-amber-500 text-sm"
                                   value={pickupInput}
                                   onChange={(e) => {
                                     setPickupInput(e.target.value);
@@ -1075,7 +1110,7 @@ export default function Cabs() {
                                 <button
                                   type="button"
                                   onClick={handleDetectGps}
-                                  className="absolute right-3 top-[50%] -translate-y-[50%] p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-kashmir-gold transition-all"
+                                  className="absolute right-3 top-[50%] -translate-y-[50%] p-2 rounded-xl bg-slate-200/80 dark:bg-white/5 border border-slate-300 dark:border-white/10 hover:bg-slate-300 dark:hover:bg-white/10 text-amber-600 dark:text-amber-400 transition-all"
                                   title="Detect GPS Location"
                                 >
                                   {detectingGps ? (
@@ -1086,7 +1121,7 @@ export default function Cabs() {
                                 </button>
                               </div>
                               {showPickupSuggestions && pickupSuggestions.length > 0 && (
-                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216]/95 border border-white/10 rounded-2xl mt-2 max-h-60 overflow-y-auto shadow-2xl p-2 space-y-1 backdrop-blur-md">
+                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-white dark:bg-[#0d1216]/95 border border-slate-200 dark:border-white/10 rounded-2xl mt-2 max-h-60 overflow-y-auto shadow-2xl p-2 space-y-1 backdrop-blur-md">
                                   {pickupSuggestions.map((loc, i) => (
                                     <button
                                       key={i}
@@ -1096,21 +1131,21 @@ export default function Cabs() {
                                         setPickupCoords({ lat: loc.lat, lon: loc.lon, name: loc.name });
                                         setShowPickupSuggestions(false);
                                       }}
-                                      className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-xs font-bold text-white/80 transition-colors flex items-center gap-2"
+                                      className="w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-xs font-bold text-slate-800 dark:text-white/80 transition-colors flex items-center gap-2"
                                     >
                                       <MapPin className="w-3.5 h-3.5 text-emerald-500" />
                                       <div className="flex flex-col min-w-0 text-left">
                                         <span className="truncate font-bold">{loc.name}</span>
-                                        <span className="text-[8px] text-white/30 truncate font-normal">{loc.fullName}</span>
+                                        <span className="text-[9px] text-slate-400 dark:text-white/30 truncate font-normal">{loc.fullName}</span>
                                       </div>
                                     </button>
                                   ))}
                                 </div>
                               )}
                               {showPickupSuggestions && searchingPickup && (
-                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216]/95 border border-white/10 rounded-2xl mt-2 p-4 shadow-2xl flex items-center justify-center gap-2 backdrop-blur-md">
-                                  <Loader2 className="w-4 h-4 text-kashmir-gold animate-spin" />
-                                  <span className="text-[10px] uppercase font-black tracking-wider text-white/40">Searching...</span>
+                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-white dark:bg-[#0d1216]/95 border border-slate-200 dark:border-white/10 rounded-2xl mt-2 p-4 shadow-2xl flex items-center justify-center gap-2 backdrop-blur-md">
+                                  <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
+                                  <span className="text-[10px] uppercase font-black tracking-wider text-slate-500 dark:text-white/40">Searching...</span>
                                 </div>
                               )}
                             </>
@@ -1119,18 +1154,18 @@ export default function Cabs() {
 
                         {/* Drop Input */}
                         <div className="space-y-2 relative">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
-                            <MapPin className="h-3 w-3 text-red-500" /> Drop Location
+                          <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-white/40 ml-2 flex items-center gap-1.5">
+                            <MapPin className="h-3 w-3 text-red-500" /> Drop Destination
                           </label>
                           {tripType === 'airport' && airportDirection === 'departure' ? (
-                            <div className="w-full h-14 bg-white/5 border border-white/5 rounded-2xl flex items-center px-6 font-bold text-white/50 text-sm">
+                            <div className="w-full h-14 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl flex items-center px-6 font-bold text-slate-800 dark:text-white/80 text-sm">
                               Srinagar Airport (SXR)
                             </div>
                           ) : (
                             <>
                               <Input
                                 ref={dropInputRef}
-                                className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-white px-6 font-bold focus:border-kashmir-gold/45 text-sm"
+                                className="h-14 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white px-6 font-bold focus:border-amber-500 text-sm"
                                 value={dropInput}
                                 onChange={(e) => {
                                   setDropInput(e.target.value);
@@ -1141,7 +1176,7 @@ export default function Cabs() {
                                 placeholder="Type drop-off location / hotel..."
                               />
                               {showDropSuggestions && dropSuggestions.length > 0 && (
-                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216]/95 border border-white/10 rounded-2xl mt-2 max-h-60 overflow-y-auto shadow-2xl p-2 space-y-1 backdrop-blur-md">
+                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-white dark:bg-[#0d1216]/95 border border-slate-200 dark:border-white/10 rounded-2xl mt-2 max-h-60 overflow-y-auto shadow-2xl p-2 space-y-1 backdrop-blur-md">
                                   {dropSuggestions.map((loc, i) => (
                                     <button
                                       key={i}
@@ -1151,21 +1186,21 @@ export default function Cabs() {
                                         setDropCoords({ lat: loc.lat, lon: loc.lon, name: loc.name });
                                         setShowDropSuggestions(false);
                                       }}
-                                      className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-xs font-bold text-white/80 transition-colors flex items-center gap-2"
+                                      className="w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-xs font-bold text-slate-800 dark:text-white/80 transition-colors flex items-center gap-2"
                                     >
                                       <MapPin className="w-3.5 h-3.5 text-red-500" />
                                       <div className="flex flex-col min-w-0 text-left">
                                         <span className="truncate font-bold">{loc.name}</span>
-                                        <span className="text-[8px] text-white/30 truncate font-normal">{loc.fullName}</span>
+                                        <span className="text-[9px] text-slate-400 dark:text-white/30 truncate font-normal">{loc.fullName}</span>
                                       </div>
                                     </button>
                                   ))}
                                 </div>
                               )}
                               {showDropSuggestions && searchingDrop && (
-                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-[#0d1216]/95 border border-white/10 rounded-2xl mt-2 p-4 shadow-2xl flex items-center justify-center gap-2 backdrop-blur-md">
-                                  <Loader2 className="w-4 h-4 text-kashmir-gold animate-spin" />
-                                  <span className="text-[10px] uppercase font-black tracking-wider text-white/40">Searching...</span>
+                                <div className="absolute top-[100%] left-0 right-0 z-50 bg-white dark:bg-[#0d1216]/95 border border-slate-200 dark:border-white/10 rounded-2xl mt-2 p-4 shadow-2xl flex items-center justify-center gap-2 backdrop-blur-md">
+                                  <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
+                                  <span className="text-[10px] uppercase font-black tracking-wider text-slate-500 dark:text-white/40">Searching...</span>
                                 </div>
                               )}
                             </>
@@ -1177,8 +1212,8 @@ export default function Cabs() {
                       {/* Direction Selection for Airport */}
                       {tripType === 'airport' && (
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
-                            <Sliders className="h-3 w-3 text-kashmir-gold" /> Transfer Direction
+                          <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-white/40 ml-2 flex items-center gap-1.5">
+                            <Sliders className="h-3 w-3 text-amber-500" /> Transfer Direction
                           </label>
                           <select
                             value={airportDirection}
@@ -1187,34 +1222,34 @@ export default function Cabs() {
                               setPickupInput('');
                               setDropInput('');
                             }}
-                            className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl text-white px-6 font-bold focus:outline-none focus:border-kashmir-gold/45 text-sm"
+                            className="w-full h-14 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white px-6 font-bold focus:outline-none focus:border-amber-500 text-sm"
                           >
-                            <option value="arrival" className="bg-[#0a0f12]">Arrival: Airport ➔ Hotel / Destination</option>
-                            <option value="departure" className="bg-[#0a0f12]">Departure: Hotel / Origin ➔ Airport</option>
+                            <option value="arrival" className="bg-white dark:bg-[#0a0f12] text-slate-900 dark:text-white">Arrival: Airport ➔ Hotel / Destination</option>
+                            <option value="departure" className="bg-white dark:bg-[#0a0f12] text-slate-900 dark:text-white">Departure: Hotel / Origin ➔ Airport</option>
                           </select>
                         </div>
                       )}
 
                       {/* Dates / Timing Selection */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-3 border-t border-slate-200 dark:border-white/5">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
-                            <Calendar className="h-3 w-3 text-kashmir-gold" /> Trip Date
+                          <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-white/40 ml-2 flex items-center gap-1.5">
+                            <Calendar className="h-3 w-3 text-amber-500" /> Trip Date
                           </label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
                                 className={cn(
-                                  "w-full h-14 bg-white/[0.03] border-white/5 rounded-2xl text-left font-bold text-white px-6 justify-between hover:bg-white/[0.08] hover:text-white transition-all",
-                                  !bookingDate && "text-white/40"
+                                  "w-full h-14 bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/10 rounded-2xl text-left font-bold text-slate-900 dark:text-white px-6 justify-between hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-all",
+                                  !bookingDate && "text-slate-400 dark:text-white/40"
                                 )}
                               >
                                 <span>{formatDisplayDate(bookingDate)}</span>
-                                <Calendar className="h-4 w-4 text-white/40" />
+                                <Calendar className="h-4 w-4 text-amber-500" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 bg-[#0a0f12]/95 border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
+                            <PopoverContent className="w-auto p-0 bg-white dark:bg-[#0a0f12]/95 border-slate-200 dark:border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
                               <UICalendar
                                 mode="single"
                                 selected={parseDateString(bookingDate)}
@@ -1237,35 +1272,35 @@ export default function Cabs() {
                           </Popover>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
-                            <Clock className="h-3 w-3" /> Pickup Time
+                          <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-white/40 ml-2 flex items-center gap-1.5">
+                            <Clock className="h-3 w-3 text-amber-500" /> Pickup Time
                           </label>
                           <Input
                             type="time"
                             value={bookingTime}
                             onChange={(e) => setBookingTime(e.target.value)}
-                            className="h-14 bg-white/[0.03] border border-white/5 rounded-2xl text-white px-6 font-bold focus:border-kashmir-gold/45"
+                            className="h-14 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white px-6 font-bold focus:border-amber-500"
                           />
                         </div>
                         {tripType === 'outstation' && (
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4 flex items-center gap-2">
-                              <Calendar className="h-3 w-3 text-purple-400" /> Return Date (Optional)
+                            <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-white/40 ml-2 flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3 text-purple-500" /> Return Date (Optional)
                             </label>
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
                                   className={cn(
-                                    "w-full h-14 bg-white/[0.03] border-white/5 rounded-2xl text-left font-bold text-white px-6 justify-between hover:bg-white/[0.08] hover:text-white transition-all",
-                                    !returnDate && "text-white/40"
+                                    "w-full h-14 bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/10 rounded-2xl text-left font-bold text-slate-900 dark:text-white px-6 justify-between hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-all",
+                                    !returnDate && "text-slate-400 dark:text-white/40"
                                   )}
                                 >
                                   <span>{formatDisplayDate(returnDate)}</span>
-                                  <Calendar className="h-4 w-4 text-white/40" />
+                                  <Calendar className="h-4 w-4 text-purple-500" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 bg-[#0a0f12]/95 border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
+                              <PopoverContent className="w-auto p-0 bg-white dark:bg-[#0a0f12]/95 border-slate-200 dark:border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
                                 <UICalendar
                                   mode="single"
                                   selected={parseDateString(returnDate)}
@@ -1285,23 +1320,23 @@ export default function Cabs() {
                       </div>
 
                       {/* Interactive Map */}
-                      <div className="relative w-full h-80 rounded-[2rem] overflow-hidden border border-white/5 bg-[#0a0f12]/30 shadow-inner group mt-4">
+                      <div className="relative w-full h-80 rounded-[2rem] overflow-hidden border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-[#0a0f12]/30 shadow-inner group mt-4">
                         {/* Leaflet Map Div */}
                         <div ref={mapRef} className="w-full h-full z-10" />
                         
                         {!leafletLoaded && (
-                          <div className="absolute inset-0 bg-[#0a0f12]/95 flex flex-col items-center justify-center gap-3 z-20">
-                            <Loader2 className="w-8 h-8 text-kashmir-gold animate-spin" />
-                            <p className="text-[10px] uppercase tracking-[0.25em] font-black text-white/30">Initializing Secure GPS Mapping...</p>
+                          <div className="absolute inset-0 bg-white/95 dark:bg-[#0a0f12]/95 flex flex-col items-center justify-center gap-3 z-20">
+                            <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                            <p className="text-[10px] uppercase tracking-[0.25em] font-black text-slate-500 dark:text-white/30">Initializing Secure GPS Mapping...</p>
                           </div>
                         )}
                         
                         {leafletLoaded && !pickupCoords && !dropCoords && (
-                          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6 bg-black/50 backdrop-blur-[1px] z-20 transition-all duration-500">
-                            <div className="bg-[#0a0f12]/95 border border-white/5 p-6 rounded-3xl flex flex-col items-center gap-2.5 max-w-xs text-center shadow-2xl pointer-events-auto">
-                              <MapPin className="w-6 h-6 text-kashmir-gold animate-bounce" />
-                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">Interactive GPS Routing</span>
-                              <span className="text-[9px] font-bold text-white/40 leading-relaxed">Enter locations or use the GPS button to plot your chauffeur route.</span>
+                          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6 bg-slate-950/20 dark:bg-black/50 backdrop-blur-[1px] z-20 transition-all duration-500">
+                            <div className="bg-white/95 dark:bg-[#0a0f12]/95 border border-slate-200 dark:border-white/5 p-6 rounded-3xl flex flex-col items-center gap-2.5 max-w-xs text-center shadow-2xl pointer-events-auto">
+                              <MapPin className="w-6 h-6 text-amber-500 animate-bounce" />
+                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white/80">Interactive GPS Routing</span>
+                              <span className="text-[10px] font-bold text-slate-500 dark:text-white/40 leading-relaxed">Enter locations or use the GPS button to plot your chauffeur route.</span>
                             </div>
                           </div>
                         )}
@@ -1313,13 +1348,13 @@ export default function Cabs() {
 
                 {/* Uber-Style Live Bids Dashboard or Standard Fleet */}
                 {!isBroadcasting ? (
-                  <div className="space-y-8 animate-in fade-in duration-500">
-                    <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
-                      <div className="w-8 h-[1px] bg-white/10" />
+                  <div className="space-y-6 animate-in fade-in duration-500">
+                    <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-white/40">
+                      <div className="w-8 h-[1px] bg-slate-300 dark:bg-white/10" />
                       <span>Select Chauffeur Class Fleet</span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                       {resolvedVehicles.map((cab) => {
                         const estimatedFare = calculateFare(cab);
                         return (
@@ -1327,31 +1362,31 @@ export default function Cabs() {
                             key={cab.id}
                             onClick={() => setSelectedCab(cab)}
                             className={cn(
-                              "bg-white/[0.01] border rounded-[2.5rem] p-6 cursor-pointer transition-all duration-500 group relative overflow-hidden flex flex-col justify-between",
+                              "rounded-[2.5rem] p-6 cursor-pointer transition-all duration-500 group relative overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl hover:-translate-y-1",
                               selectedCab?.id === cab.id 
-                                ? "border-kashmir-gold/50 bg-kashmir-gold/[0.02] shadow-[0_0_50px_-12px_rgba(212,175,55,0.08)]" 
-                                : "border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
+                                ? "border-2 border-amber-500 dark:border-amber-400 bg-amber-500/5 dark:bg-amber-400/5 shadow-amber-500/10" 
+                                : "bg-white dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 hover:border-amber-400/40"
                             )}
                           >
                             <div className="space-y-5">
                               {/* Card Image with custom backdrop glow */}
-                              <div className="relative h-44 overflow-hidden rounded-2xl border border-white/5 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.12)_0%,transparent_75%)] flex items-center justify-center p-2">
+                              <div className="relative h-44 overflow-hidden rounded-2xl border border-slate-200/60 dark:border-white/5 bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center p-2">
                                 {/* Floor shadow ellipse */}
-                                <div className="absolute bottom-4 w-4/5 h-6 bg-black/60 blur-[14px] rounded-[100%]" />
+                                <div className="absolute bottom-4 w-4/5 h-6 bg-slate-950/30 dark:bg-black/60 blur-[14px] rounded-[100%]" />
                                 <img
                                   src={cab.image || ''}
                                   alt={cab.name}
-                                  className="relative max-w-full max-h-full object-contain transition-all duration-[750ms] group-hover:scale-105 group-hover:-translate-y-2 drop-shadow-[0_15px_20px_rgba(0,0,0,0.5)] group-hover:drop-shadow-[0_20px_25px_rgba(212,175,55,0.15)]"
+                                  className="relative max-w-full max-h-full object-contain transition-all duration-[750ms] group-hover:scale-105 group-hover:-translate-y-1 drop-shadow-md"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
-                                <Badge className="absolute top-4 right-4 bg-black/60 text-white border-none font-bold uppercase text-[8px] tracking-widest px-2.5 py-1 backdrop-blur-md">
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 dark:from-black/80 via-transparent to-transparent pointer-events-none" />
+                                <Badge className="absolute top-4 right-4 bg-slate-950/70 text-white border-none font-bold uppercase text-[8px] tracking-widest px-2.5 py-1 backdrop-blur-md">
                                   {cab.type}
                                 </Badge>
                                 {/* Stock status indicator */}
                                 <Badge className={cn(
                                   "absolute bottom-4 left-4 border-none font-bold uppercase text-[8px] tracking-widest px-2.5 py-1 backdrop-blur-md",
-                                  cab.availability === "Available" ? "bg-emerald-500/20 text-emerald-400" :
-                                  cab.availability === "Low Stock" ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
+                                  cab.availability === "Available" ? "bg-emerald-500/90 text-white" :
+                                  cab.availability === "Low Stock" ? "bg-amber-500/90 text-white" : "bg-red-500/90 text-white"
                                 )}>
                                   {cab.availability}
                                 </Badge>
@@ -1360,22 +1395,24 @@ export default function Cabs() {
                               {/* Details header */}
                               <div>
                                 <div className="flex justify-between items-start gap-2">
-                                  <h4 className="font-display text-2xl font-black text-white group-hover:text-kashmir-gold transition-colors truncate">{cab.name}</h4>
+                                  <h4 className="font-display text-2xl font-black text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors truncate">
+                                    {cab.name}
+                                  </h4>
                                   {selectedCab?.id === cab.id && (
-                                    <div className="w-6 h-6 rounded-full bg-kashmir-gold flex items-center justify-center shadow-lg shadow-kashmir-gold/20 shrink-0">
-                                      <Check className="h-3.5 w-3.5 text-black stroke-[3px]" />
+                                    <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+                                      <Check className="h-3.5 w-3.5 text-slate-950 stroke-[3px]" />
                                     </div>
                                   )}
                                 </div>
 
                                 {/* Specs */}
                                 <div className="flex items-center gap-4 mt-3">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
-                                    <Users className="h-3.5 w-3.5 text-kashmir-gold" /> 
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40 flex items-center gap-1.5">
+                                    <Users className="h-3.5 w-3.5 text-amber-500" /> 
                                     <span>{cab.capacity} Seats</span>
                                   </p>
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
-                                    <Sliders className="h-3.5 w-3.5 text-kashmir-gold" />
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40 flex items-center gap-1.5">
+                                    <Sliders className="h-3.5 w-3.5 text-amber-500" />
                                     <span>{cab.luggage} Bags</span>
                                   </p>
                                 </div>
@@ -1383,7 +1420,7 @@ export default function Cabs() {
                                 {/* Amenities list */}
                                 <div className="flex flex-wrap gap-1.5 mt-4">
                                   {cab.features.map((feature: string) => (
-                                    <span key={feature} className="text-[8px] font-black uppercase tracking-widest px-2.5 py-1 bg-white/5 rounded-md text-white/40 border border-white/5">
+                                    <span key={feature} className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 bg-slate-100 dark:bg-white/5 rounded-xl text-slate-700 dark:text-white/60 border border-slate-200/80 dark:border-white/5">
                                       {feature}
                                     </span>
                                   ))}
@@ -1392,18 +1429,18 @@ export default function Cabs() {
                             </div>
 
                             {/* Choose Button */}
-                            <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-6">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
+                            <div className="pt-5 border-t border-slate-100 dark:border-white/5 flex justify-between items-center mt-6">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                                 <Sparkles className="w-3.5 h-3.5" />
-                                Best Fare Rate Guaranteed
+                                Guaranteed Rate
                               </span>
                               <Button 
                                 size="sm"
                                 className={cn(
-                                  "h-10 rounded-xl font-black text-[9px] uppercase tracking-widest px-4 transition-all duration-300",
+                                  "h-10 rounded-xl font-black text-[10px] uppercase tracking-wider px-4 transition-all duration-300",
                                   selectedCab?.id === cab.id 
-                                    ? "bg-kashmir-gold text-black hover:bg-amber-500" 
-                                    : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10"
+                                    ? "bg-amber-500 text-slate-950 hover:bg-amber-600 shadow-md shadow-amber-500/20" 
+                                    : "bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-white/70 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10"
                                 )}
                               >
                                 {selectedCab?.id === cab.id ? 'Selected' : 'Choose Vehicle'}
@@ -1417,35 +1454,35 @@ export default function Cabs() {
                   </div>
                 ) : (
                   <div className="space-y-8 animate-in fade-in duration-500">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-6">
                       <div>
-                        <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/25 font-black px-4 py-1.5 rounded-full text-[9px] uppercase tracking-[0.2em] mb-2 animate-pulse">
+                        <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25 font-black px-4 py-1.5 rounded-full text-[9px] uppercase tracking-[0.2em] mb-2 animate-pulse">
                           Live Dispatch Radar
                         </Badge>
-                        <h3 className="text-2xl font-display font-black text-white">Incoming Driver Offers</h3>
-                        <p className="text-xs text-white/40 mt-1 font-semibold">We found active chauffeur guides near your pickup location.</p>
+                        <h3 className="text-2xl font-display font-black text-slate-900 dark:text-white">Incoming Driver Offers</h3>
+                        <p className="text-xs text-slate-500 dark:text-white/40 mt-1 font-semibold">We found active chauffeur guides near your pickup location.</p>
                       </div>
                       <Button 
                         variant="ghost" 
                         onClick={() => setIsBroadcasting(false)}
-                        className="text-white/40 hover:text-white text-xs font-black uppercase tracking-wider h-10 px-4 rounded-xl border border-white/5 bg-white/5"
+                        className="text-slate-600 dark:text-white/40 hover:text-slate-900 dark:hover:text-white text-xs font-black uppercase tracking-wider h-10 px-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-white/5"
                       >
                         Reset Search
                       </Button>
                     </div>
 
                     {driverOffers.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-20 bg-white/[0.01] border border-white/5 rounded-[2.5rem] space-y-6">
+                      <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-white/[0.01] border border-slate-200 dark:border-white/5 rounded-[2.5rem] space-y-6">
                         <div className="relative w-24 h-24 flex items-center justify-center">
-                          <div className="absolute inset-0 rounded-full border border-kashmir-gold/20 animate-ping" />
-                          <div className="absolute w-16 h-16 rounded-full border border-kashmir-gold/40 animate-pulse" />
-                          <div className="w-8 h-8 rounded-full bg-kashmir-gold/20 flex items-center justify-center border border-kashmir-gold/40">
-                            <Car className="w-4 h-4 text-kashmir-gold animate-bounce" />
+                          <div className="absolute inset-0 rounded-full border border-amber-500/20 animate-ping" />
+                          <div className="absolute w-16 h-16 rounded-full border border-amber-500/40 animate-pulse" />
+                          <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/40">
+                            <Car className="w-4 h-4 text-amber-500 animate-bounce" />
                           </div>
                         </div>
                         <div className="text-center space-y-2">
-                          <p className="text-xs font-black uppercase tracking-[0.2em] text-white/70">Pinging Chauffeur Grid...</p>
-                          <p className="text-[10px] text-white/30 max-w-xs leading-normal font-semibold">Broadcasting your route details to verified local drivers within 5km.</p>
+                          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white/70">Pinging Chauffeur Grid...</p>
+                          <p className="text-[11px] text-slate-500 dark:text-white/40 max-w-xs leading-normal font-semibold">Broadcasting your route details to verified local drivers within 5km.</p>
                         </div>
                       </div>
                     ) : (
@@ -1458,17 +1495,15 @@ export default function Cabs() {
                             <div 
                               key={offer.id}
                               className={cn(
-                                "p-8 rounded-[2.5rem] bg-gradient-to-br from-[#0c1215]/90 to-[#070b0d]/90 border transition-all duration-500 flex flex-col justify-between gap-6 relative overflow-hidden backdrop-blur-3xl shadow-2xl",
-                                offer.status === 'accepted' ? "border-emerald-500/25 bg-emerald-500/[0.02]" : "border-white/5 hover:border-kashmir-gold/25"
+                                "p-6 sm:p-8 rounded-[2.5rem] bg-white dark:bg-gradient-to-br dark:from-[#0c1215]/90 dark:to-[#070b0d]/90 border transition-all duration-500 flex flex-col justify-between gap-6 relative overflow-hidden backdrop-blur-3xl shadow-xl",
+                                offer.status === 'accepted' ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-200 dark:border-white/5 hover:border-amber-500/30"
                               )}
                             >
-                              <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/[0.01] blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-
                               <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center relative z-10">
                                 <div className="flex items-center gap-5">
-                                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-kashmir-gold/10 to-amber-600/10 border border-kashmir-gold/20 flex items-center justify-center font-display font-black text-kashmir-gold shrink-0 text-xl shadow-inner relative">
-                                    <Shield className="w-6 h-6 text-kashmir-gold" />
-                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#05080a] rounded-full flex items-center justify-center">
+                                  <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0 text-xl shadow-inner relative">
+                                    <Shield className="w-6 h-6 text-amber-500" />
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white dark:bg-[#05080a] rounded-full flex items-center justify-center">
                                       <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full relative flex items-center justify-center">
                                         <div className="absolute w-4 h-4 rounded-full bg-emerald-500/30 animate-ping" />
                                       </div>
@@ -1476,52 +1511,50 @@ export default function Cabs() {
                                   </div>
                                   <div>
                                     <div className="flex items-center gap-2.5">
-                                      <h4 className="font-display font-black text-white text-lg tracking-tight">{offer.driverName}</h4>
-                                      <span className="flex items-center gap-1 text-[9px] font-bold text-kashmir-gold bg-kashmir-gold/5 px-2 py-0.5 rounded-full border border-kashmir-gold/10">
+                                      <h4 className="font-display font-black text-slate-900 dark:text-white text-lg tracking-tight">{offer.driverName}</h4>
+                                      <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
                                         ★ {offer.driverRating}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-3 mt-1.5 text-xs text-white/40 font-medium">
+                                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 dark:text-white/40 font-medium">
                                       <span>{offer.driverTours} rides completed</span>
-                                      <div className="w-1 h-1 rounded-full bg-white/20" />
-                                      <span className="text-[10px] font-black uppercase tracking-wider text-kashmir-gold">{offer.registrationNo}</span>
+                                      <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-white/20" />
+                                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">{offer.registrationNo}</span>
                                     </div>
-                                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-white/30 mt-2">Vehicle: {offer.vehicleName} ({offer.vehicleType})</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-white/30 mt-2">Vehicle: {offer.vehicleName} ({offer.vehicleType})</p>
                                   </div>
                                 </div>
 
-                                <div className="relative w-44 h-24 rounded-2xl bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.1)_0%,transparent_75%)] flex items-center justify-center p-3 border border-white/5 shrink-0 self-center md:self-auto shadow-inner">
-                                  {/* Floor shadow ellipse */}
-                                  <div className="absolute bottom-2 w-4/5 h-4 bg-black/60 blur-[10px] rounded-[100%]" />
+                                <div className="relative w-44 h-24 rounded-2xl bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center p-3 border border-slate-200 dark:border-white/5 shrink-0 self-center md:self-auto shadow-inner">
                                   <img 
                                     src={offer.vehicleImage} 
                                     alt={offer.vehicleName} 
-                                    className="relative max-w-full max-h-full object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)]"
+                                    className="relative max-w-full max-h-full object-contain drop-shadow-md"
                                   />
                                 </div>
 
-                                <div className="text-right self-stretch md:self-auto flex md:flex-col justify-between md:justify-center items-center md:items-end border-t md:border-t-0 border-white/5 pt-4 md:pt-0">
+                                <div className="text-right self-stretch md:self-auto flex md:flex-col justify-between md:justify-center items-center md:items-end border-t md:border-t-0 border-slate-200 dark:border-white/5 pt-4 md:pt-0">
                                   <div>
-                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block mb-0.5">Estimated Fare</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30 block mb-0.5">Estimated Fare</span>
                                     <span className={cn(
                                       "text-3xl font-black tracking-tighter block",
-                                      offer.status === 'accepted' ? "text-emerald-400" : "text-white"
+                                      offer.status === 'accepted' ? "text-emerald-500" : "text-slate-900 dark:text-white"
                                     )}>
                                       ₹{offer.currentBid.toLocaleString()}
                                     </span>
                                   </div>
                                   {offer.status === 'countered' && (
-                                    <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
+                                    <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
                                       Counter Offer
                                     </Badge>
                                   )}
                                   {offer.status === 'accepted' && (
-                                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
+                                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
                                       Fare Confirmed
                                     </Badge>
                                   )}
                                   {offer.status === 'rejected' && (
-                                    <Badge className="bg-red-500/10 text-red-400 border border-red-500/20 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
+                                    <Badge className="bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 mt-2 rounded-md">
                                       Fare Rejected
                                     </Badge>
                                   )}
@@ -1531,21 +1564,21 @@ export default function Cabs() {
                               {offer.driverMessage && (
                                 <div className={cn(
                                   "p-4 rounded-2xl text-xs font-semibold leading-relaxed relative z-10",
-                                  offer.status === 'accepted' ? "bg-emerald-500/5 text-emerald-400 border border-emerald-500/10" :
-                                  offer.status === 'rejected' ? "bg-red-500/5 text-red-400 border border-red-500/10" :
-                                  "bg-white/5 text-amber-400 border border-white/5"
+                                  offer.status === 'accepted' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" :
+                                  offer.status === 'rejected' ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20" :
+                                  "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
                                 )}>
                                   {offer.driverMessage}
                                 </div>
                               )}
 
-                              <div className="flex gap-4 border-t border-white/5 pt-4 relative z-10">
+                              <div className="flex gap-4 border-t border-slate-200 dark:border-white/5 pt-4 relative z-10">
                                 {offer.status !== 'accepted' && (
                                   <>
                                     <Button
                                       onClick={() => handleAcceptOffer(offer)}
                                       disabled={isResponding}
-                                      className="flex-1 h-14 rounded-2xl bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-lg"
+                                      className="flex-1 h-14 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-lg"
                                     >
                                       Accept Ride (₹{offer.currentBid})
                                     </Button>
@@ -1553,7 +1586,7 @@ export default function Cabs() {
                                       onClick={() => handleNegotiatePrice(offer.id)}
                                       disabled={isResponding || isNegotiating}
                                       variant="outline"
-                                      className="flex-1 h-14 rounded-2xl border-white/10 bg-white/5 text-white hover:bg-white/10 font-black text-[10px] uppercase tracking-widest transition-all"
+                                      className="flex-1 h-14 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 font-black text-[10px] uppercase tracking-widest transition-all"
                                     >
                                       Negotiate Fare
                                     </Button>
@@ -1562,7 +1595,7 @@ export default function Cabs() {
                                 {offer.status === 'accepted' && (
                                   <Button
                                     onClick={() => handleAcceptOffer(offer)}
-                                    className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-black font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-lg shadow-emerald-500/10 animate-bounce"
+                                    className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-lg shadow-emerald-500/10"
                                   >
                                     Confirm booking at negotiated price
                                   </Button>
@@ -1570,23 +1603,23 @@ export default function Cabs() {
                               </div>
 
                               {isNegotiating && offer.status !== 'accepted' && (
-                                <div className="mt-4 p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4 animate-in slide-in-from-top-3 duration-300">
+                                <div className="mt-4 p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-4 animate-in slide-in-from-top-3 duration-300">
                                   <div className="flex items-center justify-between">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40">Enter Counter Offer (₹)</label>
-                                    <span className="text-[9px] font-bold text-white/30">Recommended counter: ₹{Math.round(offer.currentBid * 0.9)}</span>
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-white/40">Enter Counter Offer (₹)</label>
+                                    <span className="text-[10px] font-bold text-slate-400 dark:text-white/30">Recommended counter: ₹{Math.round(offer.currentBid * 0.9)}</span>
                                   </div>
                                   <div className="flex gap-3">
                                     <Input
                                       type="number"
                                       value={counterValues[offer.id] || ''}
                                       onChange={(e) => setCounterValues(prev => ({ ...prev, [offer.id]: e.target.value }))}
-                                      className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold px-4 focus:ring-kashmir-gold/20"
+                                      className="h-12 bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-bold px-4 focus:ring-amber-500/20"
                                       disabled={isResponding}
                                     />
                                     <Button
                                       onClick={() => handleSendCounter(offer.id)}
                                       disabled={isResponding || !counterValues[offer.id]}
-                                      className="h-12 rounded-xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[9px] uppercase tracking-widest px-6"
+                                      className="h-12 rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-600 font-black text-[9px] uppercase tracking-widest px-6"
                                     >
                                       {isResponding ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -1608,24 +1641,24 @@ export default function Cabs() {
 
               {/* Live Summary Sidebar */}
               <div className="lg:col-span-4">
-                <div className="bg-[#0a0f12]/60 border border-white/5 rounded-[3rem] p-8 md:p-10 backdrop-blur-3xl sticky top-32 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-32 h-32 bg-kashmir-gold/[0.01] blur-3xl rounded-full" />
+                <div className="bg-white dark:bg-[#0a0f12]/60 border border-slate-200/80 dark:border-white/5 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-xl sticky top-28 shadow-xl shadow-slate-200/40 dark:shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-32 h-32 bg-amber-400/[0.03] blur-3xl rounded-full pointer-events-none" />
                   
-                  <h3 className="font-display text-xl font-black text-white uppercase tracking-wider mb-8 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-kashmir-gold" />
+                  <h3 className="font-display text-xl font-black text-slate-900 dark:text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
                     Trip Manifest
                   </h3>
 
                   {!isBroadcasting ? (
                     pickupInput || dropInput ? (
-                      <div className="space-y-8 animate-in fade-in duration-500">
+                      <div className="space-y-6 animate-in fade-in duration-500">
                         {/* Route specs */}
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                           <div className="flex items-start gap-4">
                             <MapPin className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
                             <div>
-                              <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Pickup Location</p>
-                              <p className="font-bold text-white capitalize text-xs">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30 mb-0.5">Pickup Location</p>
+                              <p className="font-bold text-slate-900 dark:text-white capitalize text-xs">
                                 {tripType === 'airport' && airportDirection === 'arrival' ? 'Srinagar Airport (SXR)' : (pickupInput || 'Not specified')}
                               </p>
                             </div>
@@ -1634,18 +1667,18 @@ export default function Cabs() {
                           <div className="flex items-start gap-4">
                             <MapPin className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
                             <div>
-                              <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Drop Destination</p>
-                              <p className="font-bold text-white capitalize text-xs">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30 mb-0.5">Drop Destination</p>
+                              <p className="font-bold text-slate-900 dark:text-white capitalize text-xs">
                                 {tripType === 'airport' && airportDirection === 'departure' ? 'Srinagar Airport (SXR)' : (dropInput || 'Not specified')}
                               </p>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-4">
-                            <Calendar className="h-5 w-5 text-kashmir-gold mt-0.5 shrink-0" />
+                            <Calendar className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
                             <div>
-                              <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-0.5">Departure Schedule</p>
-                              <p className="font-bold text-white text-xs">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30 mb-0.5">Departure Schedule</p>
+                              <p className="font-bold text-slate-900 dark:text-white text-xs">
                                 {bookingDate ? new Date(bookingDate).toLocaleDateString('en-IN', { 
                                   day: 'numeric', 
                                   month: 'short', 
@@ -1658,26 +1691,26 @@ export default function Cabs() {
                         </div>
 
                         {/* Route Stats */}
-                        <div className="border-t border-white/5 pt-6 space-y-4">
-                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                            <span className="text-white/20">Estimated Distance</span>
-                            <span className="text-white/60">{routeStats.distance} KM</span>
+                        <div className="border-t border-slate-200 dark:border-white/5 pt-5 space-y-3">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                            <span className="text-slate-400 dark:text-white/40">Estimated Distance</span>
+                            <span className="text-slate-900 dark:text-white">{routeStats.distance} KM</span>
                           </div>
-                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                            <span className="text-white/20">Estimated Duration</span>
-                            <span className="text-white/60">~ {Math.floor(routeStats.duration / 60)}h {routeStats.duration % 60}m</span>
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                            <span className="text-slate-400 dark:text-white/40">Estimated Duration</span>
+                            <span className="text-slate-900 dark:text-white">~ {Math.floor(routeStats.duration / 60)}h {routeStats.duration % 60}m</span>
                           </div>
-                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                            <span className="text-white/20">Tolls & Fuel</span>
-                            <span className="text-emerald-400">Included in Quote</span>
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                            <span className="text-slate-400 dark:text-white/40">Tolls & Fuel</span>
+                            <span className="text-emerald-600 dark:text-emerald-400">Included in Quote</span>
                           </div>
                         </div>
 
-                        <div className="p-4 rounded-2xl bg-kashmir-gold/5 border border-kashmir-gold/10 flex gap-3 items-start text-left">
-                          <Sparkles className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
+                        <div className="p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-400/5 border border-amber-500/20 dark:border-amber-400/10 flex gap-3 items-start text-left">
+                          <Sparkles className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                           <div>
-                            <h5 className="text-[10px] font-black text-white uppercase tracking-wider mb-1">Uber-style Booking</h5>
-                            <p className="text-[9px] text-white/50 leading-relaxed font-semibold">
+                            <h5 className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-wider mb-1">Direct Driver Dispatch</h5>
+                            <p className="text-[10px] text-slate-600 dark:text-white/50 leading-relaxed font-semibold">
                               Broadcast your request to active chauffeur guides in Srinagar. You can negotiate and agree on the fare before locking it in.
                             </p>
                           </div>
@@ -1685,45 +1718,45 @@ export default function Cabs() {
 
                         <Button
                           onClick={handleStartBroadcast}
-                          className="w-full h-16 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-500 font-black text-[10px] uppercase tracking-[0.25em] shadow-xl transition-all duration-300 active:scale-95 flex items-center justify-center gap-2"
+                          className="w-full h-14 rounded-2xl bg-amber-500 text-slate-950 hover:bg-amber-600 font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20 transition-all duration-300 active:scale-95 flex items-center justify-center gap-2"
                         >
                           <span>Broadcast Ride Request</span>
                           <Send className="w-4 h-4" />
                         </Button>
                       </div>
                     ) : (
-                      <div className="text-center py-20 opacity-30">
-                        <Car className="w-12 h-12 mx-auto text-white mb-4 animate-pulse" />
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em]">Enter route to search available cabs</p>
+                      <div className="text-center py-16 opacity-40">
+                        <Car className="w-12 h-12 mx-auto text-slate-600 dark:text-white mb-3 animate-pulse" />
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-white">Enter route to search available cabs</p>
                       </div>
                     )
                   ) : (
                     /* Broadcasting Sidebar State */
-                    <div className="space-y-8 animate-in fade-in duration-500">
-                      <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center text-center space-y-4">
-                        <div className="w-12 h-12 rounded-full border-2 border-kashmir-gold border-t-transparent animate-spin flex items-center justify-center" />
+                    <div className="space-y-6 animate-in fade-in duration-500">
+                      <div className="p-6 rounded-3xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-12 h-12 rounded-full border-2 border-amber-500 border-t-transparent animate-spin flex items-center justify-center" />
                         <div>
-                          <p className="text-xs font-black uppercase tracking-wider text-kashmir-gold animate-pulse">Broadcast Active</p>
-                          <p className="text-[10px] text-white/40 mt-1">Review driver offers on the dashboard.</p>
+                          <p className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 animate-pulse">Broadcast Active</p>
+                          <p className="text-[10px] text-slate-500 dark:text-white/40 mt-1">Review driver offers on the dashboard.</p>
                         </div>
                       </div>
 
-                      <div className="space-y-4 text-xs">
-                        <div className="flex justify-between border-b border-white/5 pb-2">
-                          <span className="text-white/30">Route</span>
-                          <span className="font-bold text-white capitalize">{pickupInput.split(',')[0]} ➔ {dropInput.split(',')[0]}</span>
+                      <div className="space-y-3 text-xs">
+                        <div className="flex justify-between border-b border-slate-200 dark:border-white/5 pb-2">
+                          <span className="text-slate-400 dark:text-white/40">Route</span>
+                          <span className="font-bold text-slate-900 dark:text-white capitalize">{pickupInput.split(',')[0]} ➔ {dropInput.split(',')[0]}</span>
                         </div>
-                        <div className="flex justify-between border-b border-white/5 pb-2">
-                          <span className="text-white/30">Distance</span>
-                          <span className="font-bold text-white">{routeStats.distance} KM</span>
+                        <div className="flex justify-between border-b border-slate-200 dark:border-white/5 pb-2">
+                          <span className="text-slate-400 dark:text-white/40">Distance</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{routeStats.distance} KM</span>
                         </div>
-                        <div className="flex justify-between border-b border-white/5 pb-2">
-                          <span className="text-white/30">Schedule</span>
-                          <span className="font-bold text-white">{bookingDate} @ {bookingTime}</span>
+                        <div className="flex justify-between border-b border-slate-200 dark:border-white/5 pb-2">
+                          <span className="text-slate-400 dark:text-white/40">Schedule</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{bookingDate} @ {bookingTime}</span>
                         </div>
                       </div>
 
-                      <p className="text-[10px] text-white/40 leading-relaxed font-semibold">
+                      <p className="text-[10px] text-slate-500 dark:text-white/40 leading-relaxed font-semibold">
                         Driver offers will appear in real-time. You can select your preferred chauffeur guides and accept their offers, or choose "Negotiate" to counter-propose a different rate.
                       </p>
                     </div>
@@ -1734,43 +1767,39 @@ export default function Cabs() {
           </div>
         </>
       ) : (
-        /* Uber-style Real-time Live Tracking Panel */
+        /* Real-time Live Tracking Panel */
         <div className="container mx-auto px-6 pt-36 pb-24 max-w-4xl space-y-10 animate-in fade-in zoom-in-95 duration-500">
           
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-white/5 pb-6">
             <div>
-              <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/25 font-black px-4 py-1.5 rounded-full text-[9px] uppercase tracking-[0.2em]">
+              <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25 font-black px-4 py-1.5 rounded-full text-[9px] uppercase tracking-[0.2em]">
                 Live Dispatch Console
               </Badge>
-              <h1 className="text-4xl font-display font-black text-white mt-3">Tracking Chauffeur Dispatch</h1>
-              <p className="text-white/40 text-xs mt-1">Ref code: <span className="font-mono text-kashmir-gold font-bold">{bookingRefNo}</span></p>
+              <h1 className="text-3xl sm:text-4xl font-display font-black text-slate-900 dark:text-white mt-3">Tracking Chauffeur Dispatch</h1>
+              <p className="text-slate-500 dark:text-white/40 text-xs mt-1">Ref code: <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">{bookingRefNo}</span></p>
             </div>
             
             <div className="flex gap-4">
               <Button 
                 onClick={() => setIsTracking(false)} 
                 variant="outline" 
-                className="rounded-xl border-white/10 bg-white/5 text-[9px] font-black uppercase tracking-widest px-5 h-12"
+                className="rounded-xl border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-white text-[10px] font-black uppercase tracking-wider px-5 h-12"
               >
                 New Booking
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
             
             {/* Tracking Map Visual */}
-            <Card className="md:col-span-8 bg-[#0a0f12]/60 border border-white/5 p-8 rounded-[3rem] space-y-8 relative overflow-hidden shadow-2xl flex flex-col justify-between min-h-[450px]">
-              {/* Decorative radial gradients to look futuristic/luxurious */}
-              <div className="absolute -top-12 -left-12 w-48 h-48 bg-emerald-500/10 blur-[80px] rounded-full" />
-              <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-kashmir-gold/10 blur-[80px] rounded-full" />
-
+            <Card className="md:col-span-8 bg-white dark:bg-[#0a0f12]/60 border border-slate-200/80 dark:border-white/5 p-6 sm:p-8 rounded-[2.5rem] space-y-8 relative overflow-hidden shadow-xl flex flex-col justify-between min-h-[450px]">
               {/* Heading */}
               <div className="flex justify-between items-center z-10">
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/30 flex items-center gap-2">
-                  <Map className="w-4 h-4 text-kashmir-gold" /> Dispatch Route
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/30 flex items-center gap-2">
+                  <Map className="w-4 h-4 text-amber-500" /> Dispatch Route
                 </span>
-                <Badge className="bg-emerald-500/15 text-emerald-400 border-none px-3 py-1 font-bold text-[9px] uppercase tracking-wider">
+                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none px-3 py-1 font-bold text-[9px] uppercase tracking-wider">
                   GPS Active
                 </Badge>
               </div>
@@ -1811,13 +1840,13 @@ export default function Cabs() {
                   {/* Pickup Point */}
                   <circle cx="50" cy="75" r="7" fill="#10b981" />
                   <circle cx="50" cy="75" r="14" fill="#10b981" fillOpacity="0.15" className="animate-ping" />
-                  <text x="50" y="105" fontFamily="sans-serif" fontSize="10" fontWeight="bold" fill="#ffffff" textAnchor="middle" opacity="0.8">
+                  <text x="50" y="105" fontFamily="sans-serif" fontSize="10" fontWeight="bold" fill="#0284c7" textAnchor="middle">
                     {pickupInput.split(',')[0]}
                   </text>
 
                   {/* Drop Point */}
                   <circle cx="350" cy="75" r="7" fill="#ef4444" />
-                  <text x="350" y="105" fontFamily="sans-serif" fontSize="10" fontWeight="bold" fill="#ffffff" textAnchor="middle" opacity="0.8">
+                  <text x="350" y="105" fontFamily="sans-serif" fontSize="10" fontWeight="bold" fill="#ef4444" textAnchor="middle">
                     {dropInput.split(',')[0]}
                   </text>
 
@@ -1830,17 +1859,17 @@ export default function Cabs() {
               </div>
 
               {/* Footer info */}
-              <div className="flex justify-between items-center text-xs border-t border-white/5 pt-6 z-10">
+              <div className="flex justify-between items-center text-xs border-t border-slate-200 dark:border-white/5 pt-6 z-10">
                 <div className="text-left">
-                  <p className="text-[8px] font-black uppercase tracking-wider text-white/20">Estimated Route</p>
-                  <p className="font-bold text-white mt-0.5">{routeStats.distance} km • ~ {Math.floor(routeStats.duration / 60)}h {routeStats.duration % 60}m</p>
+                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-white/20">Estimated Route</p>
+                  <p className="font-bold text-slate-900 dark:text-white mt-0.5">{routeStats.distance} km • ~ {Math.floor(routeStats.duration / 60)}h {routeStats.duration % 60}m</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[8px] font-black uppercase tracking-wider text-white/20">Ride status</p>
-                  <p className="font-bold text-kashmir-gold mt-0.5">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-white/20">Ride status</p>
+                  <p className="font-bold text-amber-600 dark:text-amber-400 mt-0.5">
                     {trackingStep === 0 && 'Awaiting allocation...'}
                     {trackingStep === 1 && 'Chauffeur allocated!'}
-                    {trackingStep === 2 && 'Chauffeur dispatched (On route)'}
+                    {trackingStep === 2 && 'Chauffeur dispatched (En route)'}
                     {trackingStep === 3 && 'Driver arrived at pickup!'}
                   </p>
                 </div>
@@ -1849,63 +1878,63 @@ export default function Cabs() {
             </Card>
 
             {/* Stepper Timeline Panel & Driver Info */}
-            <div className="md:col-span-4 space-y-8">
+            <div className="md:col-span-4 space-y-6">
               
               {/* Stepper progress */}
-              <Card className="bg-[#0a0f12]/60 border border-white/5 p-6 rounded-[2.5rem] space-y-6 shadow-2xl">
-                <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Trip Progress</h3>
+              <Card className="bg-white dark:bg-[#0a0f12]/60 border border-slate-200/80 dark:border-white/5 p-6 rounded-[2.5rem] space-y-6 shadow-xl">
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-white/40">Trip Progress</h3>
                 
-                <div className="space-y-6 relative pl-6 before:absolute before:left-[10px] before:top-2 before:bottom-2 before:w-[2px] before:bg-white/5">
+                <div className="space-y-6 relative pl-6 before:absolute before:left-[10px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200 dark:before:bg-white/5">
                   {/* Step 1 */}
                   <div className="relative flex gap-4">
-                    <div className="absolute -left-[22px] w-4.5 h-4.5 rounded-full bg-emerald-500 border border-black flex items-center justify-center shadow-lg">
-                      <Check className="w-3 h-3 text-black stroke-[3px]" />
+                    <div className="absolute -left-[22px] w-4.5 h-4.5 rounded-full bg-emerald-500 border border-white dark:border-black flex items-center justify-center shadow-lg">
+                      <Check className="w-3 h-3 text-white stroke-[3px]" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-white">Booking Confirmed</p>
-                      <p className="text-[9px] text-white/40 mt-0.5">Ref generated: {bookingRefNo}</p>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">Booking Confirmed</p>
+                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">Ref generated: {bookingRefNo}</p>
                     </div>
                   </div>
 
                   {/* Step 2 */}
                   <div className="relative flex gap-4">
                     <div className={cn(
-                      "absolute -left-[22px] w-4.5 h-4.5 rounded-full border border-black flex items-center justify-center shadow-lg transition-colors duration-500",
-                      trackingStep >= 1 ? "bg-emerald-500" : "bg-white/5"
+                      "absolute -left-[22px] w-4.5 h-4.5 rounded-full border border-white dark:border-black flex items-center justify-center shadow-lg transition-colors duration-500",
+                      trackingStep >= 1 ? "bg-emerald-500" : "bg-slate-200 dark:bg-white/5"
                     )}>
-                      {trackingStep >= 1 ? <Check className="w-3 h-3 text-black stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
+                      {trackingStep >= 1 ? <Check className="w-3 h-3 text-white stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-white/20" />}
                     </div>
                     <div>
-                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 1 ? "text-white" : "text-white/30")}>Chauffeur Assigned</p>
-                      <p className="text-[9px] text-white/40 mt-0.5">{trackingStep >= 1 ? `${allocatedDriver?.driverName || 'Shabir Ahmad'} assigned` : 'Locating nearest driver...'}</p>
+                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 1 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>Chauffeur Assigned</p>
+                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">{trackingStep >= 1 ? `${allocatedDriver?.driverName || 'Shabir Ahmad'} assigned` : 'Locating nearest driver...'}</p>
                     </div>
                   </div>
 
                   {/* Step 3 */}
                   <div className="relative flex gap-4">
                     <div className={cn(
-                      "absolute -left-[22px] w-4.5 h-4.5 rounded-full border border-black flex items-center justify-center shadow-lg transition-colors duration-500",
-                      trackingStep >= 2 ? "bg-emerald-500" : "bg-white/5"
+                      "absolute -left-[22px] w-4.5 h-4.5 rounded-full border border-white dark:border-black flex items-center justify-center shadow-lg transition-colors duration-500",
+                      trackingStep >= 2 ? "bg-emerald-500" : "bg-slate-200 dark:bg-white/5"
                     )}>
-                      {trackingStep >= 2 ? <Check className="w-3 h-3 text-black stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
+                      {trackingStep >= 2 ? <Check className="w-3 h-3 text-white stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-white/20" />}
                     </div>
                     <div>
-                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 2 ? "text-white" : "text-white/30")}>Driver Dispatched</p>
-                      <p className="text-[9px] text-white/40 mt-0.5">{trackingStep >= 2 ? 'En route to your location' : 'Awaiting dispatch schedule'}</p>
+                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 2 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>Driver Dispatched</p>
+                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">{trackingStep >= 2 ? 'En route to your location' : 'Awaiting dispatch schedule'}</p>
                     </div>
                   </div>
 
                   {/* Step 4 */}
                   <div className="relative flex gap-4">
                     <div className={cn(
-                      "absolute -left-[22px] w-4.5 h-4.5 rounded-full border border-black flex items-center justify-center shadow-lg transition-colors duration-500",
-                      trackingStep >= 3 ? "bg-emerald-500" : "bg-white/5"
+                      "absolute -left-[22px] w-4.5 h-4.5 rounded-full border border-white dark:border-black flex items-center justify-center shadow-lg transition-colors duration-500",
+                      trackingStep >= 3 ? "bg-emerald-500" : "bg-slate-200 dark:bg-white/5"
                     )}>
-                      {trackingStep >= 3 ? <Check className="w-3 h-3 text-black stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
+                      {trackingStep >= 3 ? <Check className="w-3 h-3 text-white stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-white/20" />}
                     </div>
                     <div>
-                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 3 ? "text-white" : "text-white/30")}>Arrived at Pickup</p>
-                      <p className="text-[9px] text-white/40 mt-0.5">{trackingStep >= 3 ? 'Chauffeur waiting outside' : 'Waiting for chauffeur arrival'}</p>
+                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 3 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>Arrived at Pickup</p>
+                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">{trackingStep >= 3 ? 'Chauffeur waiting outside' : 'Waiting for chauffeur arrival'}</p>
                     </div>
                   </div>
                 </div>
@@ -1913,47 +1942,47 @@ export default function Cabs() {
 
               {/* Chauffeur Card */}
               {trackingStep >= 1 ? (
-                <Card className="bg-[#0a0f12]/60 border border-white/5 p-6 rounded-[2.5rem] space-y-6 shadow-2xl animate-in slide-in-from-bottom-5 duration-500">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Allocated Chauffeur</h3>
+                <Card className="bg-white dark:bg-[#0a0f12]/60 border border-slate-200/80 dark:border-white/5 p-6 rounded-[2.5rem] space-y-6 shadow-xl animate-in slide-in-from-bottom-5 duration-500">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-white/40">Allocated Chauffeur</h3>
                   
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 shrink-0 font-bold text-lg">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 font-bold text-lg">
                       {(allocatedDriver?.driverName || 'Shabir Ahmad').split(' ').map((n: string) => n[0]).join('')}
                     </div>
                     <div>
-                      <h4 className="font-bold text-white text-base">{allocatedDriver?.driverName || 'Shabir Ahmad'}</h4>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5 mt-1">
-                        <Star className="h-3 w-3 text-kashmir-gold fill-kashmir-gold" />
+                      <h4 className="font-bold text-slate-900 dark:text-white text-base">{allocatedDriver?.driverName || 'Shabir Ahmad'}</h4>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40 flex items-center gap-1.5 mt-1">
+                        <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
                         <span>{allocatedDriver?.driverRating || 4.8} Rating ({allocatedDriver?.driverTours || 89} Tours)</span>
                       </p>
                     </div>
                   </div>
 
-                  <div className="space-y-4 pt-4 border-t border-white/5 text-xs">
+                  <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-white/5 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-white/40">Vehicle Model</span>
-                      <span className="font-bold text-white">{selectedCab?.name}</span>
+                      <span className="text-slate-500 dark:text-white/40">Vehicle Model</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{selectedCab?.name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/40">License Plate</span>
-                      <span className="font-mono font-bold text-kashmir-gold uppercase">{allocatedDriver?.registrationNo || 'JK-01-AB-7700'}</span>
+                      <span className="text-slate-500 dark:text-white/40">License Plate</span>
+                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400 uppercase">{allocatedDriver?.registrationNo || 'JK-01-AB-7700'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/40">Driver Phone</span>
-                      <span className="font-bold text-white">{allocatedDriver?.driverPhone || '+91 9906 771122'}</span>
+                      <span className="text-slate-500 dark:text-white/40">Driver Phone</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{allocatedDriver?.driverPhone || '+91 9906 771122'}</span>
                     </div>
-                    <div className="flex justify-between border-t border-white/5 pt-3">
-                      <span className="text-white/40 font-bold">Negotiated Fare</span>
-                      <span className="font-bold text-emerald-400">₹{(finalAgreedFare || 0).toLocaleString()}</span>
+                    <div className="flex justify-between border-t border-slate-200 dark:border-white/5 pt-3">
+                      <span className="text-slate-500 dark:text-white/40 font-bold">Negotiated Fare</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">₹{(finalAgreedFare || 0).toLocaleString()}</span>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-white/5 flex gap-3">
+                  <div className="pt-2">
                     <a 
                       href={`https://wa.me/${(allocatedDriver?.driverPhone || '+919906771122').replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(allocatedDriver?.driverName || 'Shabir')},%20I%20am%20the%20guest%20for%20the%20booking%20${bookingRefNo}.`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 h-12 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg transition-all"
+                      className="w-full h-12 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all"
                     >
                       <MessageSquare className="w-4 h-4" />
                       <span>WhatsApp Chauffeur</span>
@@ -1961,9 +1990,9 @@ export default function Cabs() {
                   </div>
                 </Card>
               ) : (
-                <Card className="bg-[#0a0f12]/60 border border-white/5 p-6 rounded-[2.5rem] text-center py-12 opacity-40">
-                  <Loader2 className="w-8 h-8 mx-auto text-kashmir-gold animate-spin mb-3" />
-                  <p className="text-[9px] font-black uppercase tracking-wider">Locating chauffeur close to you...</p>
+                <Card className="bg-white dark:bg-[#0a0f12]/60 border border-slate-200 dark:border-white/5 p-6 rounded-[2.5rem] text-center py-12 opacity-50">
+                  <Loader2 className="w-8 h-8 mx-auto text-amber-500 animate-spin mb-3" />
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-white">Locating chauffeur close to you...</p>
                 </Card>
               )}
 
@@ -1974,40 +2003,40 @@ export default function Cabs() {
 
       {/* Checkout Gateway Dialog */}
       <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-        <DialogContent className="max-w-md bg-[#0a0f12] border-white/10 text-white rounded-[2rem] overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/5 via-transparent to-transparent pointer-events-none" />
-          
-          <DialogHeader className="p-8 pb-0">
-            <DialogTitle className="text-2xl font-display font-black tracking-tight text-white uppercase flex items-center gap-2">
-              <Shield className="w-6 h-6 text-kashmir-gold" />
+        <DialogContent className="max-w-md bg-white dark:bg-[#070b0e] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-[2.5rem] overflow-hidden p-6 sm:p-8">
+          <DialogHeader className="mb-4">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider w-fit mb-2">
+              <Shield className="w-3.5 h-3.5 text-amber-500" /> Confirmed Chauffeur Ride
+            </div>
+            <DialogTitle className="text-2xl font-display font-black text-slate-900 dark:text-white uppercase leading-tight">
               Confirm Negotiated Ride
             </DialogTitle>
-            <p className="text-white/40 text-[10px] uppercase font-black tracking-wider mt-1">Review finalized ride and driver details</p>
+            <p className="text-slate-500 dark:text-white/50 text-xs">Review finalized ride details before locking in the dispatch.</p>
           </DialogHeader>
 
           {checkoutStatus === 'processing' && (
-            <div className="p-8 py-20 flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="w-16 h-16 text-kashmir-gold animate-spin" />
-              <p className="text-xs font-black uppercase tracking-widest text-white/30 animate-pulse">Confirming ride with chauffeur...</p>
+            <div className="py-16 flex flex-col items-center justify-center space-y-4">
+              <Loader2 className="w-14 h-14 text-amber-500 animate-spin" />
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-white/40 animate-pulse">Confirming ride with chauffeur...</p>
             </div>
           )}
 
           {checkoutStatus === 'success' && (
-            <div className="p-8 text-center space-y-6 animate-in fade-in duration-500">
-              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-lg">
+            <div className="text-center space-y-6 py-6 animate-in fade-in duration-500">
+              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-lg">
                 <CheckCircle className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">Ride Booked Successfully!</h3>
-                <p className="text-xs text-white/40 font-medium">Your chauffeur is confirmed at the negotiated price.</p>
-                <div className="mt-4 p-4 bg-white/5 border border-white/5 rounded-2xl">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Confirmation code</span>
-                  <p className="font-mono text-sm font-black text-kashmir-gold mt-1">{bookingRefNo}</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Ride Booked Successfully!</h3>
+                <p className="text-xs text-slate-500 dark:text-white/50 font-medium">Your chauffeur is confirmed at the negotiated price.</p>
+                <div className="mt-4 p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40">Confirmation code</span>
+                  <p className="font-mono text-sm font-black text-amber-600 dark:text-amber-400 mt-1">{bookingRefNo}</p>
                 </div>
               </div>
               <Button 
                 onClick={() => { setShowCheckout(false); setIsTracking(true); }}
-                className="w-full h-14 bg-white text-black hover:bg-kashmir-gold hover:text-black font-black rounded-xl text-[10px] uppercase tracking-widest transition-all duration-300"
+                className="w-full h-14 bg-amber-500 text-slate-950 hover:bg-amber-600 font-black rounded-2xl text-[10px] uppercase tracking-widest transition-all duration-300 shadow-xl shadow-amber-500/20"
               >
                 Track Live Status
               </Button>
@@ -2015,43 +2044,43 @@ export default function Cabs() {
           )}
 
           {checkoutStatus === 'idle' && (
-            <div className="p-8 space-y-6">
+            <div className="space-y-5">
               
               {/* Checkout details */}
-              <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl flex justify-between items-center">
+              <div className="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 rounded-2xl flex justify-between items-center">
                 <div className="min-w-0">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Chauffeur Guide</span>
-                  <span className="font-bold text-sm text-white block truncate">{allocatedDriver?.driverName}</span>
-                  <span className="text-[9px] text-white/40 block mt-0.5">{selectedCab?.name}</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40 block">Chauffeur Guide</span>
+                  <span className="font-bold text-sm text-slate-900 dark:text-white block truncate">{allocatedDriver?.driverName}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-white/40 block mt-0.5">{selectedCab?.name}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 block">Agreed Fare</span>
-                  <span className="font-black text-xl text-kashmir-gold block mt-0.5">₹{(finalAgreedFare || 0).toLocaleString()}</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40 block">Agreed Fare</span>
+                  <span className="font-black text-xl text-amber-600 dark:text-amber-400 block mt-0.5">₹{(finalAgreedFare || 0).toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Special notes textarea */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block ml-1">Special Curation Notes (Optional)</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-white/40 block ml-1">Special Notes (Optional)</label>
                 <textarea 
                   value={specialNotes}
                   onChange={(e) => setSpecialNotes(e.target.value)}
-                  placeholder="e.g. child seats, excess luggage, custom itinerary stops..."
-                  className="w-full h-24 p-4 bg-white/[0.03] border border-white/5 rounded-2xl text-xs text-white placeholder-white/20 focus:outline-none focus:border-kashmir-gold/20 resize-none font-bold"
+                  placeholder="e.g. child seats, excess luggage, custom stops..."
+                  className="w-full h-20 p-3 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-2xl text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder-white/20 focus:outline-none focus:border-amber-500 resize-none font-bold"
                 />
               </div>
 
-              <div className="space-y-6">
-                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex gap-3 text-white/60">
-                  <AlertCircle className="w-5 h-5 text-kashmir-gold shrink-0 mt-0.5" />
-                  <p className="text-xs leading-normal">
+              <div className="space-y-4 pt-2">
+                <div className="p-3.5 bg-amber-500/10 dark:bg-amber-400/5 border border-amber-500/20 dark:border-amber-400/10 rounded-2xl flex gap-2.5 text-slate-700 dark:text-white/70">
+                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-normal font-medium">
                     This booking has been pre-negotiated and will be confirmed immediately at ₹{(finalAgreedFare || 0).toLocaleString()} total cost.
                   </p>
                 </div>
 
                 <Button 
                   onClick={handleConfirmPayment}
-                  className="w-full h-14 bg-kashmir-gold text-black hover:bg-amber-500 font-black rounded-xl text-[10px] uppercase tracking-widest"
+                  className="w-full h-14 bg-amber-500 text-slate-950 hover:bg-amber-600 font-black rounded-2xl text-[10px] uppercase tracking-widest shadow-xl shadow-amber-500/20"
                 >
                   Confirm & Book Chauffeur
                 </Button>
