@@ -992,7 +992,7 @@ export default function Cabs() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05080a] text-white selection:bg-kashmir-gold/30">
+    <div className="min-h-screen bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white transition-colors selection:bg-kashmir-gold/30">
       <Navbar />
 
       {!isTracking ? (

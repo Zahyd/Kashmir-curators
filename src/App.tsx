@@ -30,6 +30,7 @@ import SalesPortal from "./pages/SalesPortal";
 import PaymentRequest from "./pages/PaymentRequest";
 import PublicItinerary from "./pages/PublicItinerary";
 import ThemeToggle from "./components/common/ThemeToggle";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import EmergencyBanner from "./components/layout/EmergencyBanner";
 import { useAntiTheft } from "./hooks/useAntiTheft";
 
@@ -43,6 +44,7 @@ const App = () => {
       <TeamAuthProvider>
         <AuthProvider>
           <LeadCaptureProvider>
+            <ThemeProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -82,6 +84,7 @@ const App = () => {
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>
+          </ThemeProvider>
           </LeadCaptureProvider>
         </AuthProvider>
       </TeamAuthProvider>

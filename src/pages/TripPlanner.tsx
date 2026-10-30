@@ -202,7 +202,7 @@ export default function TripPlanner() {
   const selectedPreset = ITINERARY_PRESETS[formData.destination] || ITINERARY_PRESETS['full-tour'];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#05080a] text-white selection:bg-kashmir-gold/30">
+    <div className="min-h-screen flex flex-col bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white transition-colors selection:bg-kashmir-gold/30">
       <Navbar />
 
       <main className="flex-1 pt-24 pb-20">

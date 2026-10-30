@@ -120,7 +120,7 @@ export default function PackageDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#05080a] text-white">
+      <div className="min-h-screen bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white transition-colors">
         <Navbar />
         <div className="container mx-auto px-4 pt-24 pb-12">
           <Skeleton className="h-8 w-24 mb-4 bg-white/5" />
@@ -213,7 +213,7 @@ export default function PackageDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05080a] text-white selection:bg-kashmir-gold/30">
+    <div className="min-h-screen bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white transition-colors selection:bg-kashmir-gold/30">
       <SeoMeta 
         title={`${pkg.name} - ${pkg.duration}`}
         description={`Explore ${pkg.name} in Kashmir. Tour destination ${pkg.destination} for ${pkg.duration}. Highly rated: ${pkg.rating} stars. Book custom luxury travels with Kashmir Curators.`}

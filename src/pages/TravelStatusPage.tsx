@@ -169,7 +169,7 @@ export default function TravelStatusPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05080a] text-white flex flex-col font-sans selection:bg-kashmir-gold/30 selection:text-white">
+    <div className="min-h-screen bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white transition-colors flex flex-col font-sans selection:bg-kashmir-gold/30 selection:text-white">
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 pt-28 pb-20 max-w-6xl">

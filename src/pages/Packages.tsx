@@ -110,7 +110,7 @@ export default function Packages() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05080a] text-white flex flex-col font-sans selection:bg-kashmir-gold/30 selection:text-white">
+    <div className="min-h-screen bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white flex flex-col font-sans selection:bg-amber-400/30 transition-colors">
       <Navbar />
       
       {/* Dynamic Luxury Hero Banner */}
@@ -256,7 +256,7 @@ export default function Packages() {
                   return (
                     <div 
                       key={pkg.id} 
-                      className="group animate-fade-up flex flex-col justify-between bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden p-4 hover:border-kashmir-gold/40 transition-all duration-500 hover:-translate-y-1 shadow-xl"
+                      className="group animate-fade-up flex flex-col justify-between bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] overflow-hidden p-4 hover:border-amber-400/50 transition-all duration-500 hover:-translate-y-1 shadow-md hover:shadow-xl"
                       style={{ animationDelay: `${index * 80}ms` }}
                     >
                       {/* Image Area - Click opens Quick Peek */}
@@ -311,7 +311,7 @@ export default function Packages() {
 
                           <h3 
                             onClick={() => setQuickPeekPackage(pkg)}
-                            className="font-display text-2xl font-black text-white mb-3 hover:text-kashmir-gold cursor-pointer transition-colors leading-tight line-clamp-2"
+                            className="font-display text-2xl font-black text-slate-900 dark:text-white mb-3 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors leading-tight line-clamp-2"
                           >
                             {pkg.name}
                           </h3>
@@ -336,7 +336,7 @@ export default function Packages() {
                             <div>
                               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block mb-0.5">Starting From</span>
                               <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black text-kashmir-gold font-mono">
+                                <span className="text-2xl font-black text-[#111439] dark:text-amber-400 font-mono">
                                   ₹{displayPrice.toLocaleString()}
                                 </span>
                                 <span className="text-[10px] text-white/40">/ couple</span>
@@ -354,7 +354,7 @@ export default function Packages() {
                                   sourceCta: 'PACKAGES_PAGE_CARD'
                                 });
                               }}
-                              className="h-10 px-5 rounded-xl bg-kashmir-gold text-black hover:bg-amber-400 font-black text-[10px] uppercase tracking-widest shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                              className="h-10 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-[10px] uppercase tracking-widest shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
                             >
                               <Sparkles className="w-3.5 h-3.5" />
                               <span>Quick Quote</span>
