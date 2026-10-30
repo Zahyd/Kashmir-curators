@@ -29,7 +29,7 @@ import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
 import PaymentRequest from "./pages/PaymentRequest";
 import PublicItinerary from "./pages/PublicItinerary";
-import ThemeToggle from "./components/common/ThemeToggle";
+
 import { ThemeProvider } from "./contexts/ThemeContext";
 import EmergencyBanner from "./components/layout/EmergencyBanner";
 import { useAntiTheft } from "./hooks/useAntiTheft";
@@ -50,7 +50,6 @@ const App = () => {
               <Sonner />
               <BrowserRouter>
                 <EmergencyBanner />
-                <ThemeToggle />
                 <LeadCaptureModal />
                 <CallbackRequestModal />
                 <Routes>
