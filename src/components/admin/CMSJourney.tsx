@@ -84,7 +84,7 @@ export default function CMSJourney() {
         <p className="text-white/40 text-sm mt-1 uppercase tracking-widest font-black">Configure the Interactive Trip Planner Experience</p>
       </div>
 
-      <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
+      <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">

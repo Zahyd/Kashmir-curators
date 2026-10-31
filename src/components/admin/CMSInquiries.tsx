@@ -337,16 +337,16 @@ export default function CMSInquiries() {
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-      {/* Strategic Controls */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 xl:gap-8">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 md:gap-6 w-full xl:w-auto">
+      {/* Strategic Command & Search Bar */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 xl:gap-6">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3.5 w-full xl:w-auto flex-1 max-w-3xl">
           <div className="relative flex-1 group">
-            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-              <Search className="w-5 h-5 text-white/20 group-focus-within:text-kashmir-gold transition-colors duration-500" />
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="w-4 h-4 text-amber-400/60 group-focus-within:text-amber-400 transition-colors" />
             </div>
             <Input 
-              placeholder="Search Intelligence Queue (ID, Name, Node)..." 
-              className="pl-14 bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 h-16 rounded-[1.5rem] focus:ring-kashmir-gold/20 focus:border-kashmir-gold/20 text-lg transition-all duration-500 focus:bg-white/[0.05]"
+              placeholder="Search Inquiries (ID, Guest, Phone, Destination)..." 
+              className="pl-12 bg-white/[0.04] border border-white/15 focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10 text-white placeholder:text-white/40 h-13 rounded-2xl text-sm transition-all duration-300 shadow-inner"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -354,22 +354,22 @@ export default function CMSInquiries() {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-16 bg-white/[0.02] border-white/5 text-white/60 hover:text-white hover:bg-white/10 gap-3 px-8 rounded-[1.5rem] transition-all duration-500 group">
-                <Filter className="w-5 h-5 text-kashmir-gold/40 group-hover:text-kashmir-gold" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Operational Filters</span>
+              <Button variant="outline" className="h-13 bg-white/[0.04] border border-white/15 hover:border-amber-400/40 text-white/90 hover:text-white hover:bg-white/[0.08] gap-2.5 px-5 rounded-2xl transition-all shadow-sm">
+                <Filter className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-black uppercase tracking-wider">Filters</span>
                 {statusFilter.length > 0 && (
-                  <Badge className="bg-kashmir-gold text-black px-2 py-0.5 rounded-md font-black text-[9px]">{statusFilter.length}</Badge>
+                  <Badge className="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full font-black text-[9px] shadow-sm">{statusFilter.length}</Badge>
                 )}
-                <ChevronDown className="w-4 h-4 opacity-30" />
+                <ChevronDown className="w-3.5 h-3.5 opacity-40 ml-1" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-72 bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white p-2 rounded-2xl shadow-2xl" align="end">
-              <DropdownMenuItem onClick={() => fetchInquiries()} className="cursor-pointer p-3 rounded-xl gap-3 text-kashmir-gold font-bold">
-                <ArrowUpDown className="w-4 h-4" /> Refresh Intelligence Queue
+            <DropdownMenuContent className="w-72 bg-[#0a0f14]/98 backdrop-blur-2xl border-amber-500/20 text-white p-2 rounded-2xl shadow-2xl" align="end">
+              <DropdownMenuItem onClick={() => fetchInquiries()} className="cursor-pointer p-3 rounded-xl gap-3 text-amber-300 font-bold hover:bg-amber-400/10">
+                <ArrowUpDown className="w-4 h-4 text-amber-400" /> Refresh Intelligence Queue
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/5 mx-2" />
-              <DropdownMenuLabel className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/30">System Status Filter</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-white/5 mx-2" />
+              <DropdownMenuSeparator className="bg-white/10 mx-2" />
+              <DropdownMenuLabel className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Filter by Status</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-white/10 mx-2" />
               {[
                 { label: 'New Requests', id: 'New' },
                 { label: 'Active Curation', id: 'Pending Curation' },
@@ -379,15 +379,15 @@ export default function CMSInquiries() {
                   key={status.id}
                   checked={statusFilter.includes(status.id)}
                   onCheckedChange={() => toggleStatusFilter(status.id)}
-                  className="cursor-pointer p-3 rounded-xl focus:bg-white/5"
+                  className="cursor-pointer p-3 rounded-xl focus:bg-amber-400/10 focus:text-amber-200"
                 >
                   <span className="text-xs font-bold">{status.label}</span>
                 </DropdownMenuCheckboxItem>
               ))}
-              <DropdownMenuSeparator className="bg-white/5 mx-2" />
+              <DropdownMenuSeparator className="bg-white/10 mx-2" />
               <DropdownMenuItem 
                 onClick={() => setStatusFilter([])}
-                className="text-center justify-center text-kashmir-gold text-[10px] font-black uppercase tracking-widest p-3 cursor-pointer"
+                className="text-center justify-center text-amber-300 text-[10px] font-black uppercase tracking-widest p-2.5 cursor-pointer hover:bg-amber-400/10 rounded-xl"
               >
                 Reset All Filters
               </DropdownMenuItem>
@@ -395,159 +395,186 @@ export default function CMSInquiries() {
           </DropdownMenu>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
-          <Button variant="outline" onClick={handleExportCSV} className="flex-1 xl:flex-none h-16 bg-white/[0.02] border-white/10 text-white/70 hover:text-white hover:bg-white/10 px-8 rounded-[1.5rem] transition-all duration-500 group cursor-pointer">
-            <Download className="w-5 h-5 mr-3 group-hover:-translate-y-0.5 transition-transform" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Export Data</span>
+        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+          <Button variant="outline" onClick={handleExportCSV} className="flex-1 xl:flex-none h-13 bg-white/[0.04] border border-white/15 hover:border-amber-400/40 text-white/90 hover:text-white hover:bg-white/[0.08] px-6 rounded-2xl transition-all shadow-sm group cursor-pointer">
+            <Download className="w-4 h-4 mr-2.5 text-amber-400 group-hover:-translate-y-0.5 transition-transform" />
+            <span className="text-xs font-black uppercase tracking-wider">Export CSV</span>
           </Button>
           <Button 
             onClick={() => setIsManualModalOpen(true)}
-            className="flex-1 xl:flex-none h-16 bg-kashmir-gold text-black hover:bg-amber-500 font-black px-10 rounded-[1.5rem] shadow-2xl shadow-kashmir-gold/10 transition-all duration-500 hover:scale-[1.02]"
+            className="flex-1 xl:flex-none h-13 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 font-black px-7 rounded-2xl shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2"
           >
-            <PlusCircle className="w-5 h-5 mr-3" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Manual Entry</span>
+            <PlusCircle className="w-4 h-4 text-slate-950" />
+            <span className="text-xs font-black uppercase tracking-wider">Manual Entry</span>
           </Button>
         </div>
       </div>
 
-
-      {/* Intelligence Grid */}
+      {/* High-Fidelity Intelligence Table */}
       {/* Desktop Table View */}
-      <Card className="hidden lg:block bg-[#0a0f12]/40 bg-white/[0.01] border-white/5 backdrop-blur-3xl overflow-hidden rounded-[2.5rem] shadow-inner relative group">
-        <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
+      <Card className="hidden lg:block bg-[#0a0f14]/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl shadow-black/50 overflow-hidden relative group">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
         
         <div className="overflow-x-auto relative z-10 custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[980px]">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] w-36">Lead Reference</th>
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[220px]">Guest Profile</th>
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[260px]">Itinerary & Route</th>
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] w-44">Pipeline Status</th>
+              <tr className="border-b border-white/10 bg-white/[0.02]">
+                <th className="px-6 py-5 font-black text-amber-200/80 text-[10px] uppercase tracking-[0.25em] w-40">Lead Reference</th>
+                <th className="px-6 py-5 font-black text-amber-200/80 text-[10px] uppercase tracking-[0.25em] min-w-[240px]">Guest Profile</th>
+                <th className="px-6 py-5 font-black text-amber-200/80 text-[10px] uppercase tracking-[0.25em] min-w-[260px]">Itinerary & Route</th>
+                <th className="px-6 py-5 font-black text-amber-200/80 text-[10px] uppercase tracking-[0.25em] w-48">Pipeline Status</th>
                 {canAssign && (
-                  <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[180px]">Lead Liaison</th>
+                  <th className="px-6 py-5 font-black text-amber-200/80 text-[10px] uppercase tracking-[0.25em] min-w-[190px]">Lead Liaison</th>
                 )}
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] text-right w-36">Actions</th>
+                <th className="px-6 py-5 font-black text-amber-200/80 text-[10px] uppercase tracking-[0.25em] text-right w-44">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {filteredInquiries.map((inq) => (
-                <tr key={inq.id} className="hover:bg-white/[0.03] transition-all duration-500 group/row">
-                  <td className="px-6 py-6">
+                <tr key={inq.id} className="hover:bg-white/[0.04] transition-all duration-200 group/row">
+                  <td className="px-6 py-5 align-top">
                     <div className="space-y-1.5">
-                      <span className="text-white font-black text-sm tracking-widest group-hover/row:text-kashmir-gold transition-colors">{formatId(inq.id, inq.leadId)}</span>
-                      <div className="flex items-center gap-2 text-[9px] text-white/30 uppercase tracking-[0.2em] font-black">
-                        <div className="w-1.5 h-1.5 rounded-full bg-kashmir-gold/40" />
-                        {inq.date}
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono font-bold text-xs shadow-sm group-hover/row:border-amber-400/60 transition-colors">
+                        {formatId(inq.id, inq.leadId)}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-[10px] text-white/50 font-semibold uppercase tracking-wider">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60" />
+                        <span>{inq.date}</span>
                       </div>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {typeof inq.leadScore === 'number' && inq.leadScore > 0 && (
-                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
-                            inq.leadScore >= 75 ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                            inq.leadScore >= 50 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                            'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-sm ${
+                            inq.leadScore >= 75 ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                            inq.leadScore >= 50 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                            'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                           }`}>
-                            {inq.leadScore >= 75 ? '🔥' : inq.leadScore >= 50 ? '⚡' : '🌱'} {inq.leadScore}
+                            {inq.leadScore >= 75 ? '🔥' : inq.leadScore >= 50 ? '⚡' : '🌱'} {inq.leadScore} Score
                           </span>
                         )}
                         {inq.leadCategory && (
-                          <span className="text-[8px] text-kashmir-gold/80 bg-kashmir-gold/10 px-1.5 py-0.5 rounded font-mono truncate max-w-[120px]">
+                          <span className="text-[9px] text-amber-300/90 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-md font-mono truncate max-w-[130px]">
                             {inq.leadCategory.replace(/_/g, ' ')}
                           </span>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-6">
-                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-kashmir-gold font-black text-lg relative shadow-xl overflow-hidden group/avatar shrink-0">
-                        <div className="absolute inset-0 bg-kashmir-gold/10 opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
-                        <span className="relative z-10">{inq.customerName.charAt(0)}</span>
+                  <td className="px-6 py-5 align-top">
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500/20 via-amber-400/10 to-transparent border border-amber-400/30 flex items-center justify-center text-amber-300 font-black text-base relative shadow-md overflow-hidden shrink-0">
+                        <span>{inq.customerName.charAt(0).toUpperCase()}</span>
                       </div>
                       <div className="space-y-1 min-w-0">
-                        <span className="text-white font-bold text-sm block tracking-tight truncate">{inq.customerName}</span>
-                        <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-tighter truncate">
-                          <Mail className="w-3 h-3 text-kashmir-gold/40 shrink-0" />
-                          <span className="truncate">{inq.email}</span>
+                        <span className="text-white font-bold text-sm block tracking-tight truncate group-hover/row:text-amber-200 transition-colors">
+                          {inq.customerName}
+                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          {inq.email && (
+                            <a 
+                              href={`mailto:${inq.email}`} 
+                              className="text-white/50 hover:text-amber-300 text-xs flex items-center gap-1.5 transition-colors truncate"
+                              title={inq.email}
+                            >
+                              <Mail className="w-3 h-3 text-amber-400/60 shrink-0" />
+                              <span className="truncate">{inq.email}</span>
+                            </a>
+                          )}
+                          {inq.phone && (
+                            <a 
+                              href={`tel:${inq.phone}`} 
+                              className="text-emerald-400/80 hover:text-emerald-300 text-[11px] font-mono flex items-center gap-1.5 transition-colors"
+                            >
+                              <Phone className="w-3 h-3 text-emerald-400/60 shrink-0" />
+                              <span>{inq.phone}</span>
+                            </a>
+                          )}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-6 max-w-[280px]">
+                  <td className="px-6 py-5 align-top max-w-[280px]">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-white/90 text-sm font-bold tracking-tight">{inq.destination}</span>
-                        <div className="w-1 h-1 rounded-full bg-white/20 shrink-0" />
-                        <span className="text-[10px] text-white/40 font-black uppercase tracking-widest shrink-0">{inq.duration}</span>
+                        <span className="text-white font-bold text-sm tracking-tight flex items-center gap-1.5">
+                          <Plane className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span>{inq.destination}</span>
+                        </span>
+                        <span className="text-[10px] text-amber-300/80 font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 shrink-0">
+                          {inq.duration}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-1.5 items-center">
-                        <Badge 
-                          variant="outline" 
-                          className="bg-white/5 border-white/10 text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 text-white/60 max-w-[200px] truncate block"
-                          title={inq.accommodation}
-                        >
-                          {inq.accommodation}
-                        </Badge>
-                        <Badge 
-                          variant="outline" 
-                          className="bg-kashmir-gold/5 border-kashmir-gold/20 text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 text-kashmir-gold/70 shrink-0"
-                        >
-                          {inq.budget}
-                        </Badge>
+                        {inq.accommodation && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-white/5 border-white/15 text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 text-white/70 max-w-[190px] truncate block"
+                            title={inq.accommodation}
+                          >
+                            {inq.accommodation}
+                          </Badge>
+                        )}
+                        {inq.budget && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-amber-400/10 border-amber-400/30 text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 text-amber-300 shrink-0"
+                          >
+                            {inq.budget}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-6">
+                  <td className="px-6 py-5 align-top">
                     <Badge className={cn(
-                      "px-4 py-1.5 rounded-[10px] text-[9px] font-black uppercase tracking-[0.2em] border-none shadow-lg",
-                      inq.status === 'New' ? 'bg-blue-500/10 text-blue-400 shadow-blue-500/5' :
-                      inq.status === 'Pending Curation' ? 'bg-amber-500/10 text-amber-500 shadow-amber-500/5' :
-                      'bg-emerald-500/10 text-emerald-400 shadow-emerald-500/5'
+                      "px-3.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[0.18em] border shadow-md inline-flex items-center gap-2",
+                      inq.status === 'New' ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 shadow-[0_0_12px_rgba(59,130,246,0.15)]' :
+                      inq.status === 'Pending Curation' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.15)]' :
+                      'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
                     )}>
                       <div className={cn(
-                        "w-1.5 h-1.5 rounded-full mr-2 inline-block animate-pulse",
-                        inq.status === 'New' ? 'bg-blue-400' :
-                        inq.status === 'Pending Curation' ? 'bg-amber-400' :
-                        'bg-emerald-400'
+                        "w-2 h-2 rounded-full",
+                        inq.status === 'New' ? 'bg-blue-400 animate-pulse' :
+                        inq.status === 'Pending Curation' ? 'bg-amber-400 animate-pulse' :
+                        'bg-emerald-400 animate-pulse'
                       )} />
-                      {inq.status}
+                      <span>{inq.status}</span>
                     </Badge>
                   </td>
                   {canAssign && (
-                    <td className="px-6 py-6">
+                    <td className="px-6 py-5 align-top">
                       {inq.assignedTo ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                            <UserPlus className="w-4 h-4 text-emerald-400" />
+                        <div className="flex items-center gap-2.5 p-1.5 pr-3 rounded-xl bg-white/[0.03] border border-white/10">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                            <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
                           </div>
                           <div>
                             <p className="text-xs font-bold text-white">{SALES_AGENTS.find(a => a.code === inq.assignedTo)?.name || inq.assignedTo}</p>
-                            <p className="text-[9px] text-white/30 font-mono">{inq.assignedTo}</p>
+                            <p className="text-[9px] text-white/40 font-mono">{inq.assignedTo}</p>
                           </div>
                         </div>
                       ) : (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-9 px-4 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 gap-2 text-[10px] font-bold">
+                            <Button variant="ghost" size="sm" className="h-9 px-3.5 rounded-xl bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 border border-blue-500/25 gap-2 text-[10px] font-black uppercase tracking-wider">
                               <UserPlus className="w-3.5 h-3.5" />
-                              Assign
+                              <span>Assign</span>
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-56 bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white p-2 rounded-2xl shadow-2xl">
-                            <DropdownMenuLabel className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Select Agent</DropdownMenuLabel>
-                            <DropdownMenuSeparator className="bg-white/5 mx-2" />
+                          <DropdownMenuContent align="start" className="w-56 bg-[#0a0f14]/98 backdrop-blur-2xl border-amber-500/20 text-white p-2 rounded-2xl shadow-2xl">
+                            <DropdownMenuLabel className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Select Agent</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-white/10 mx-2" />
                             {SALES_AGENTS.map(agent => (
                               <DropdownMenuItem 
                                 key={agent.code}
                                 onClick={() => handleAssign(inq.id, agent.code)}
-                                className="cursor-pointer p-3 rounded-xl gap-3 hover:bg-white/5 focus:bg-white/5"
+                                className="cursor-pointer p-2.5 rounded-xl gap-3 hover:bg-white/10 focus:bg-white/10"
                               >
-                                <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <div className="w-6 h-6 rounded-lg bg-emerald-500/15 flex items-center justify-center">
                                   <UserPlus className="w-3 h-3 text-emerald-400" />
                                 </div>
                                 <div>
                                   <p className="text-xs font-bold">{agent.name}</p>
-                                  <p className="text-[9px] text-white/30 font-mono">{agent.code}</p>
+                                  <p className="text-[9px] text-white/40 font-mono">{agent.code}</p>
                                 </div>
                               </DropdownMenuItem>
                             ))}
@@ -556,51 +583,66 @@ export default function CMSInquiries() {
                       )}
                     </td>
                   )}
-                  <td className="px-6 py-6 text-right">
-                    <div className="flex items-center justify-end gap-3">
+                  <td className="px-6 py-5 align-top text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {/* WhatsApp Quick Connect */}
+                      {inq.phone && (
+                        <a
+                          href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${inq.customerName}, this is Kashmir Curators regarding your luxury travel inquiry (${inq.destination}, ${inq.duration}). How may our executive concierge assist with your curation?`)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="WhatsApp Quick Dispatch"
+                          className="h-10 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 text-xs font-bold transition-all shadow-sm"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span className="hidden xl:inline text-[11px]">Chat</span>
+                        </a>
+                      )}
+
                       <Button 
                         variant="ghost" 
                         size="icon" 
+                        title="View Full Lead Intelligence"
                         onClick={() => setSelectedInquiry(inq)}
-                        className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 text-white/30 hover:text-white transition-all duration-300"
+                        className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:border-amber-400/40 hover:bg-amber-400/10 text-white/70 hover:text-amber-300 transition-all duration-200"
                       >
-                        <Eye className="w-5 h-5" />
+                        <Eye className="w-4 h-4" />
                       </Button>
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 text-white/30 hover:text-white transition-all duration-300">
-                            <MoreVertical className="w-5 h-5" />
+                          <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 text-white/50 hover:text-white transition-all duration-200">
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-64 bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white p-2 rounded-2xl shadow-2xl">
-                          <DropdownMenuLabel className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Intelligence Node Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator className="bg-white/5 mx-2" />
-                          <DropdownMenuItem onClick={() => handleStatusChange(inq.id, 'New')} className="cursor-pointer p-3 rounded-xl gap-3">
+                        <DropdownMenuContent align="end" className="w-64 bg-[#0a0f14]/98 backdrop-blur-2xl border-amber-500/20 text-white p-2 rounded-2xl shadow-2xl">
+                          <DropdownMenuLabel className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Node Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator className="bg-white/10 mx-2" />
+                          <DropdownMenuItem onClick={() => handleStatusChange(inq.id, 'New')} className="cursor-pointer p-2.5 rounded-xl gap-3 hover:bg-white/5">
                             <div className="w-2 h-2 rounded-full bg-blue-400" />
                             <span className="text-xs font-bold">Synchronize as New</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusChange(inq.id, 'Pending Curation')} className="cursor-pointer p-3 rounded-xl gap-3">
+                          <DropdownMenuItem onClick={() => handleStatusChange(inq.id, 'Pending Curation')} className="cursor-pointer p-2.5 rounded-xl gap-3 hover:bg-white/5">
                             <div className="w-2 h-2 rounded-full bg-amber-400" />
                             <span className="text-xs font-bold">Initialize Curation</span>
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-white/5 mx-2" />
+                          <DropdownMenuSeparator className="bg-white/10 mx-2" />
                           <DropdownMenuItem 
                             onClick={() => { setSelectedInquiry(inq); setIsUploadModalOpen(true); }}
-                            className="text-kashmir-gold font-black p-3 rounded-xl gap-3 hover:bg-kashmir-gold/10 focus:bg-kashmir-gold/10"
+                            className="text-amber-300 font-bold p-2.5 rounded-xl gap-3 hover:bg-amber-400/10 focus:bg-amber-400/10 cursor-pointer"
                           >
-                            <FileUp className="w-4 h-4" /> 
+                            <FileUp className="w-4 h-4 text-amber-400" /> 
                             <span className="text-xs">Deploy Bespoke Proposal</span>
                           </DropdownMenuItem>
                           {canAssign && inq.assignedTo && (
                             <>
-                              <DropdownMenuSeparator className="bg-white/5 mx-2" />
-                              <DropdownMenuLabel className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Reassign Agent</DropdownMenuLabel>
+                              <DropdownMenuSeparator className="bg-white/10 mx-2" />
+                              <DropdownMenuLabel className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Reassign Agent</DropdownMenuLabel>
                               {SALES_AGENTS.filter(a => a.code !== inq.assignedTo).map(agent => (
                                 <DropdownMenuItem 
                                   key={agent.code}
                                   onClick={() => handleAssign(inq.id, agent.code)}
-                                  className="cursor-pointer p-3 rounded-xl gap-3 hover:bg-white/5 focus:bg-white/5"
+                                  className="cursor-pointer p-2.5 rounded-xl gap-3 hover:bg-white/5 focus:bg-white/5"
                                 >
                                   <UserPlus className="w-4 h-4 text-blue-400" />
                                   <span className="text-xs font-bold">{agent.name}</span>
@@ -617,116 +659,102 @@ export default function CMSInquiries() {
             </tbody>
           </table>
           {filteredInquiries.length === 0 && (
-            <div className="p-32 text-center flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
-              <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/5">
-                <Search className="w-10 h-10 text-white/10" />
+            <div className="p-24 text-center flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+              <div className="w-20 h-20 rounded-3xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center mb-6">
+                <Search className="w-8 h-8 text-amber-400" />
               </div>
-              <h3 className="text-xl font-display font-bold text-white mb-2">No Results Found</h3>
-              <p className="text-white/20 text-sm max-w-sm mb-8 font-medium">No intelligence nodes match your current filtering parameters. Adjust your search or clear filters.</p>
-              <Button variant="outline" onClick={() => { setSearchTerm(''); setStatusFilter([]); }} className="h-12 bg-kashmir-gold/10 border-kashmir-gold/20 text-kashmir-gold hover:bg-kashmir-gold hover:text-black rounded-xl font-black text-[10px] uppercase tracking-widest px-8">Reset Enterprise View</Button>
+              <h3 className="text-xl font-display font-bold text-white mb-2">No Matching Inquiries Found</h3>
+              <p className="text-white/40 text-sm max-w-sm mb-6 font-medium">No intelligence nodes match your current filtering parameters. Adjust your search keywords or clear status filters.</p>
+              <Button variant="outline" onClick={() => { setSearchTerm(''); setStatusFilter([]); }} className="h-11 bg-amber-400/15 border border-amber-400/30 text-amber-300 hover:bg-amber-400 hover:text-black rounded-xl font-black text-xs uppercase tracking-wider px-6 transition-all">
+                Reset All Filters
+              </Button>
             </div>
           )}
         </div>
       </Card>
 
       {/* Mobile Card View */}
-      <div className="grid grid-cols-1 gap-6 lg:hidden">
+      <div className="grid grid-cols-1 gap-5 lg:hidden">
         {filteredInquiries.map((inq) => (
-          <Card key={inq.id} className="bg-white/[0.02] border-white/5 backdrop-blur-xl rounded-[2rem] overflow-hidden shadow-xl p-6 relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
+          <Card key={inq.id} className="bg-[#0a0f14]/95 border border-white/10 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-2xl p-6 relative group">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent pointer-events-none" />
             
-            <div className="flex justify-between items-start mb-6 relative z-10">
+            <div className="flex justify-between items-start mb-5 relative z-10">
               <div className="space-y-1">
-                <span className="text-white font-black text-sm tracking-widest">{formatId(inq.id, inq.leadId)}</span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {typeof inq.leadScore === 'number' && inq.leadScore > 0 && (
-                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
-                      inq.leadScore >= 75 ? 'bg-red-500/20 text-red-400' :
-                      inq.leadScore >= 50 ? 'bg-amber-500/20 text-amber-400' :
-                      'bg-blue-500/20 text-blue-400'
-                    }`}>
-                      {inq.leadScore >= 75 ? '🔥' : inq.leadScore >= 50 ? '⚡' : '🌱'} {inq.leadScore}
-                    </span>
-                  )}
-                  {inq.leadCategory && (
-                    <span className="text-[8px] text-kashmir-gold/80 bg-kashmir-gold/10 px-1.5 py-0.5 rounded font-mono">
-                      {inq.leadCategory.replace(/_/g, ' ')}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">{inq.date}</p>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono font-bold text-xs">
+                  {formatId(inq.id, inq.leadId)}
+                </span>
+                <p className="text-[10px] text-white/50 uppercase tracking-wider font-bold mt-1">{inq.date}</p>
               </div>
               <Badge className={cn(
-                "px-3 py-1.5 rounded-[10px] text-[9px] font-black uppercase tracking-[0.2em] border-none shadow-lg",
-                inq.status === 'New' ? 'bg-blue-500/10 text-blue-400' :
-                inq.status === 'Pending Curation' ? 'bg-amber-500/10 text-amber-500' :
-                'bg-emerald-500/10 text-emerald-400'
+                "px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider border shadow-sm",
+                inq.status === 'New' ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' :
+                inq.status === 'Pending Curation' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
+                'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
               )}>
                 {inq.status}
               </Badge>
             </div>
             
-            <div className="flex items-center gap-5 mb-6 border-b border-white/5 pb-6 relative z-10">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-kashmir-gold font-black text-xl shadow-inner">
-                {inq.customerName.charAt(0)}
+            <div className="flex items-center gap-4 mb-5 border-b border-white/10 pb-5 relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-400/30 flex items-center justify-center text-amber-300 font-black text-lg shadow-inner">
+                {inq.customerName.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <p className="text-white font-bold text-lg">{inq.customerName}</p>
-                <div className="flex items-center gap-2 text-[10px] text-white/40 mt-1 uppercase tracking-widest font-bold">
-                  <Mail className="w-3 h-3 text-kashmir-gold/50" /> {inq.email}
+              <div className="min-w-0">
+                <p className="text-white font-bold text-base truncate">{inq.customerName}</p>
+                <div className="flex flex-col gap-0.5 mt-0.5">
+                  {inq.email && (
+                    <span className="text-[11px] text-white/50 flex items-center gap-1.5 truncate">
+                      <Mail className="w-3 h-3 text-amber-400/60 shrink-0" />
+                      <span className="truncate">{inq.email}</span>
+                    </span>
+                  )}
+                  {inq.phone && (
+                    <span className="text-[11px] text-emerald-400/80 font-mono flex items-center gap-1.5">
+                      <Phone className="w-3 h-3 text-emerald-400/60 shrink-0" />
+                      <span>{inq.phone}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4 mb-6 relative z-10">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-white/40 uppercase tracking-[0.2em] font-black text-[10px]">Target Node</span>
+            <div className="space-y-3 mb-5 relative z-10 bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-white/40 uppercase tracking-wider font-bold text-[10px]">Destination</span>
                 <span className="text-white font-bold">{inq.destination}</span>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-white/40 uppercase tracking-[0.2em] font-black text-[10px]">Temporal Frame</span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-white/40 uppercase tracking-wider font-bold text-[10px]">Duration</span>
                 <span className="text-white font-bold">{inq.duration}</span>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-white/40 uppercase tracking-[0.2em] font-black text-[10px]">Fiscal Scale</span>
-                <span className="text-kashmir-gold font-black bg-kashmir-gold/10 px-3 py-1 rounded-lg text-[10px] tracking-widest">{inq.budget}</span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-white/40 uppercase tracking-wider font-bold text-[10px]">Budget</span>
+                <span className="text-amber-300 font-bold bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-lg text-[10px]">{inq.budget}</span>
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-5 border-t border-white/5 relative z-10">
-              <div className="flex-1">
-                {inq.assignedTo && canAssign && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <UserPlus className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">{inq.assignedTo}</span>
-                  </div>
-                )}
-              </div>
+            <div className="flex items-center justify-between gap-2 pt-2 relative z-10">
+              {inq.phone ? (
+                <a
+                  href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${inq.customerName}, this is Kashmir Curators regarding your inquiry (${inq.destination}). How may we assist you?`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 h-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center justify-center gap-2 text-xs font-bold transition-all"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </a>
+              ) : null}
               
-              <div className="flex gap-3">
-                <Button variant="ghost" size="icon" onClick={() => setSelectedInquiry(inq)} className="h-12 w-12 rounded-2xl bg-white/5 border border-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300">
-                  <Eye className="w-5 h-5" />
-                </Button>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl bg-white/5 border border-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300">
-                      <MoreVertical className="w-5 h-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-[#0a0f12]/95 backdrop-blur-2xl border-white/10 text-white p-2 rounded-2xl shadow-2xl">
-                    <DropdownMenuItem onClick={() => handleStatusChange(inq.id, 'Pending Curation')} className="cursor-pointer p-3 rounded-xl gap-3 text-xs font-bold">
-                      <div className="w-2 h-2 rounded-full bg-amber-400" /> Start Curation
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-white/5 mx-2" />
-                    <DropdownMenuItem onClick={() => { setSelectedInquiry(inq); setIsUploadModalOpen(true); }} className="text-kashmir-gold font-black p-3 rounded-xl gap-3">
-                      <FileUp className="w-4 h-4" /> <span className="text-xs">Deploy Proposal</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedInquiry(inq)} 
+                className="flex-1 h-11 rounded-xl bg-white/5 border border-white/10 hover:border-amber-400/40 text-white hover:text-amber-300 transition-all text-xs font-bold gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Details</span>
+              </Button>
             </div>
           </Card>
         ))}
@@ -849,7 +877,7 @@ export default function CMSInquiries() {
                             toast.error('Failed to communicate with CRM server');
                           }
                         }}
-                        className="bg-[#0a0f12] border border-white/10 text-white rounded-xl px-4 py-2 text-xs font-bold focus:border-kashmir-gold outline-none cursor-pointer w-full sm:w-auto"
+                        className="bg-[#0a0f14] border border-white/10 text-white rounded-xl px-4 py-2 text-xs font-bold focus:border-kashmir-gold outline-none cursor-pointer w-full sm:w-auto"
                       >
                         {[
                           { code: 'NEW_LEAD', label: 'New Lead' },
@@ -862,7 +890,7 @@ export default function CMSInquiries() {
                           { code: 'COMPLETED', label: 'Trip Completed' },
                           { code: 'CANCELLED', label: 'Cancelled' }
                         ].map(stage => (
-                          <option key={stage.code} value={stage.code} className="bg-[#0a0f12] text-white">
+                          <option key={stage.code} value={stage.code} className="bg-[#0a0f14] text-white">
                             {stage.label}
                           </option>
                         ))}
@@ -1096,7 +1124,7 @@ export default function CMSInquiries() {
                     value={manualForm.customerName}
                     onChange={(e) => setManualForm({...manualForm, customerName: e.target.value})}
                     placeholder="John Doe" 
-                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
+                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/40 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1107,7 +1135,7 @@ export default function CMSInquiries() {
                     value={manualForm.email}
                     onChange={(e) => setManualForm({...manualForm, email: e.target.value})}
                     placeholder="john@example.com" 
-                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
+                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/40 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
                   />
                 </div>
               </div>
@@ -1120,7 +1148,7 @@ export default function CMSInquiries() {
                     value={manualForm.phone}
                     onChange={(e) => setManualForm({...manualForm, phone: e.target.value})}
                     placeholder="+91 98765 43210" 
-                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
+                    className="bg-white/[0.02] border-white/5 text-white placeholder:text-white/40 rounded-xl focus:ring-kashmir-gold/20 text-sm focus:border-kashmir-gold/20"
                   />
                 </div>
                 <div className="space-y-2">

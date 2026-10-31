@@ -1462,7 +1462,7 @@ Kashmir Curators`;
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-6 rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 hover:border-kashmir-gold/20">
+        <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-2xl p-6 rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 hover:border-kashmir-gold/20">
           <div className="flex justify-between items-start mb-4">
             <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
               <CalendarCheck className="h-6 w-6 text-purple-400" />
@@ -1473,7 +1473,7 @@ Kashmir Curators`;
           <div className="text-3xl font-display font-black text-white">{pendingCount} <span className="text-xs text-white/30 font-medium">B2B requests</span></div>
         </Card>
 
-        <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-6 rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 hover:border-kashmir-gold/20">
+        <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-2xl p-6 rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 hover:border-kashmir-gold/20">
           <div className="flex justify-between items-start mb-4">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <Clock className="h-6 w-6 text-amber-400" />
@@ -1484,7 +1484,7 @@ Kashmir Curators`;
           <div className="text-3xl font-display font-black text-white">{activeHolds} <span className="text-xs text-white/30 font-medium">running timers</span></div>
         </Card>
 
-        <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-6 rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 hover:border-kashmir-gold/20">
+        <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-2xl p-6 rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 hover:border-kashmir-gold/20">
           <div className="flex justify-between items-start mb-4">
             <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
               <Calendar className="h-6 w-6 text-blue-400" />
@@ -1495,7 +1495,7 @@ Kashmir Curators`;
           <div className="text-3xl font-display font-black text-white">{checkinsToday} <span className="text-xs text-white/30 font-medium">guests</span></div>
         </Card>
 
-        <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-6 rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 hover:border-kashmir-gold/20">
+        <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-2xl p-6 rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 hover:border-kashmir-gold/20">
           <div className="flex justify-between items-start mb-4">
             <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <TrendingUp className="h-6 w-6 text-emerald-400" />
@@ -1516,16 +1516,16 @@ Kashmir Curators`;
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyPress}
               placeholder="Search guest or ref..."
-              className="bg-[#0a0f12]/60 border-white/5 rounded-xl pl-10 focus:border-kashmir-gold/30 h-12"
+              className="bg-[#0a0f14]/60 border-white/5 rounded-xl pl-10 focus:border-kashmir-gold/30 h-12"
             />
             <Search className="w-4 h-4 text-white/20 absolute left-3.5 top-1/2 -translate-y-1/2" />
           </div>
           
           <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val)}>
-            <SelectTrigger className="bg-[#0a0f12]/60 border-white/5 rounded-xl h-12 text-white/60">
+            <SelectTrigger className="bg-[#0a0f14]/60 border-white/5 rounded-xl h-12 text-white/60">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
-            <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+            <SelectContent className="bg-[#0a0f14]/98 border-white/10 text-white rounded-xl">
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
               <SelectItem value="Sent">Sent</SelectItem>
@@ -1537,10 +1537,10 @@ Kashmir Curators`;
           </Select>
 
           <Select value={hotelFilter} onValueChange={(val) => setHotelFilter(val)}>
-            <SelectTrigger className="bg-[#0a0f12]/60 border-white/5 rounded-xl h-12 text-white/60">
+            <SelectTrigger className="bg-[#0a0f14]/60 border-white/5 rounded-xl h-12 text-white/60">
               <SelectValue placeholder="Filter by hotel" />
             </SelectTrigger>
-            <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+            <SelectContent className="bg-[#0a0f14]/98 border-white/10 text-white rounded-xl">
               <SelectItem value="all">All Hotels</SelectItem>
               {hotels.map(h => (
                 <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
@@ -1554,7 +1554,7 @@ Kashmir Curators`;
               value={checkInStart}
               onChange={(e) => setCheckInStart(e.target.value)}
               placeholder="Check-In Start"
-              className="bg-[#0a0f12]/60 border-white/5 rounded-xl text-white/60 h-12"
+              className="bg-[#0a0f14]/60 border-white/5 rounded-xl text-white/60 h-12"
             />
           </div>
 
@@ -1564,7 +1564,7 @@ Kashmir Curators`;
               value={checkInEnd}
               onChange={(e) => setCheckInEnd(e.target.value)}
               placeholder="Check-In End"
-              className="bg-[#0a0f12]/60 border-white/5 rounded-xl text-white/60 h-12 flex-1"
+              className="bg-[#0a0f14]/60 border-white/5 rounded-xl text-white/60 h-12 flex-1"
             />
             <Button 
               onClick={() => {
@@ -1584,7 +1584,7 @@ Kashmir Curators`;
       </Card>
 
       {/* Main Data Table */}
-      <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-xl">
+      <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-2xl rounded-[2.5rem] overflow-hidden backdrop-blur-xl">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <Loader2 className="w-8 h-8 text-kashmir-gold animate-spin" />
@@ -1786,7 +1786,7 @@ Kashmir Curators`;
 
       {/* Creation / Editing Modal Form */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-4xl bg-[#0a0f12]/95 border-white/10 text-white rounded-[2.5rem] backdrop-blur-3xl overflow-y-auto max-h-[90vh] custom-scrollbar p-10">
+        <DialogContent className="max-w-4xl bg-[#0a0f14]/98 border-white/10 text-white rounded-[2.5rem] backdrop-blur-3xl overflow-y-auto max-h-[90vh] custom-scrollbar p-10">
           <DialogHeader className="mb-6">
             <DialogTitle className="text-2xl font-display font-bold text-white flex items-center gap-3">
               <CalendarCheck className="w-6 h-6 text-kashmir-gold" />
@@ -1873,10 +1873,10 @@ Kashmir Curators`;
                         value={formData.inquiryId || "none"} 
                         onValueChange={(val) => handleInquiryChange(val === "none" ? "" : val)}
                       >
-                        <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
+                        <SelectTrigger className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white">
                           <SelectValue placeholder="Select Inquiry to Link" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl max-h-56">
+                        <SelectContent className="bg-[#0a0f14]/98 border-white/10 text-white rounded-xl max-h-56">
                           <SelectItem value="none">No Linked Inquiry</SelectItem>
                           {inquiries.map(inq => (
                             <SelectItem key={inq.id} value={inq.id}>{inq.customerName} ({inq.destination})</SelectItem>
@@ -1891,7 +1891,7 @@ Kashmir Curators`;
                         value={formData.guestName}
                         onChange={(e) => setFormData({...formData, guestName: e.target.value})}
                         placeholder="E.g. Rajesh Kumar"
-                        className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                        className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white"
                       />
                     </div>
 
@@ -1902,7 +1902,7 @@ Kashmir Curators`;
                           value={formData.guestEmail}
                           onChange={(e) => setFormData({...formData, guestEmail: e.target.value})}
                           placeholder="rajesh@example.com"
-                          className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs"
+                          className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white text-xs"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1911,7 +1911,7 @@ Kashmir Curators`;
                           value={formData.guestPhone}
                           onChange={(e) => setFormData({...formData, guestPhone: e.target.value})}
                           placeholder="+91 9876543210"
-                          className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs"
+                          className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white text-xs"
                         />
                       </div>
                     </div>
@@ -1926,10 +1926,10 @@ Kashmir Curators`;
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Payment Status</label>
                       <Select value={formData.paymentStatus} onValueChange={(val) => setFormData({...formData, paymentStatus: val})}>
-                        <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
+                        <SelectTrigger className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white">
                           <SelectValue placeholder="Payment status" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+                        <SelectContent className="bg-[#0a0f14]/98 border-white/10 text-white rounded-xl">
                           <SelectItem value="Unpaid">Unpaid</SelectItem>
                           <SelectItem value="Partially Paid">Partially Paid</SelectItem>
                           <SelectItem value="Paid">Paid</SelectItem>
@@ -1960,7 +1960,7 @@ Kashmir Curators`;
                       value={formData.specialRequests}
                       onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
                       placeholder="E.g., Honey moon decor, extra bed request, vegetarian meals only."
-                      className="bg-[#0a0f12]/80 border-white/10 rounded-xl min-h-[90px] text-xs text-white/70"
+                      className="bg-[#0a0f14]/80 border-white/10 rounded-xl min-h-[90px] text-xs text-white/70"
                     />
                   </div>
                 </div>
@@ -2019,7 +2019,7 @@ Kashmir Curators`;
                                 }}
                                 onFocus={() => updateStay(index, { showSuggestions: true })}
                                 placeholder="Search or type hotel name..."
-                                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pr-10 focus:border-kashmir-gold/30"
+                                className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white pr-10 focus:border-kashmir-gold/30"
                               />
                               <Building className="w-4 h-4 text-white/20 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                               
@@ -2029,7 +2029,7 @@ Kashmir Curators`;
                                     className="fixed inset-0 z-40" 
                                     onClick={() => updateStay(index, { showSuggestions: false })} 
                                   />
-                                  <Card className="absolute left-0 right-0 mt-2 z-50 bg-[#0a0f12]/95 border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar backdrop-blur-xl">
+                                  <Card className="absolute left-0 right-0 mt-2 z-50 bg-[#0a0f14]/98 border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar backdrop-blur-xl">
                                     <div className="p-2 space-y-1">
                                       {hotels
                                         .filter(h => h.name.toLowerCase().includes(stay.hotelSearchQuery.toLowerCase()))
@@ -2079,7 +2079,7 @@ Kashmir Curators`;
                                 type="date"
                                 value={stay.checkIn}
                                 onChange={(e) => updateStay(index, { checkIn: e.target.value })}
-                                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                                className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white"
                               />
                             </div>
                             <div className="space-y-2">
@@ -2088,7 +2088,7 @@ Kashmir Curators`;
                                 type="date"
                                 value={stay.checkOut}
                                 onChange={(e) => updateStay(index, { checkOut: e.target.value })}
-                                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                                className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white"
                               />
                             </div>
                           </div>
@@ -2108,10 +2108,10 @@ Kashmir Curators`;
                                     });
                                   }}
                                 >
-                                  <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white text-xs">
+                                  <SelectTrigger className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white text-xs">
                                     <SelectValue placeholder="Select Room Type" />
                                   </SelectTrigger>
-                                  <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+                                  <SelectContent className="bg-[#0a0f14]/98 border-white/10 text-white rounded-xl">
                                     {roomTypes.map((r: any) => (
                                       <SelectItem key={r.id || r.name} value={r.name}>{r.name} (₹{r.price.toLocaleString()})</SelectItem>
                                     ))}
@@ -2122,7 +2122,7 @@ Kashmir Curators`;
                                   value={stay.roomType}
                                   onChange={(e) => updateStay(index, { roomType: e.target.value })}
                                   placeholder="Luxury Room"
-                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                                  className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white"
                                 />
                               )}
                             </div>
@@ -2130,10 +2130,10 @@ Kashmir Curators`;
                             <div className="space-y-2">
                               <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Meal Plan</label>
                               <Select value={stay.mealPlan} onValueChange={(val) => updateStay(index, { mealPlan: val })}>
-                                <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
+                                <SelectTrigger className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white">
                                   <SelectValue placeholder="Meal Plan" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+                                <SelectContent className="bg-[#0a0f14]/98 border-white/10 text-white rounded-xl">
                                   <SelectItem value="EP">EP (Room Only)</SelectItem>
                                   <SelectItem value="CP">CP (Room + Breakfast)</SelectItem>
                                   <SelectItem value="MAP">MAP (Room + Breakfast + Dinner)</SelectItem>
@@ -2156,17 +2156,17 @@ Kashmir Curators`;
                                     totalAmount: Math.round(stay.contractRate * count * 1.25)
                                   });
                                 }}
-                                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white"
+                                className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white"
                               />
                             </div>
 
                             <div className="space-y-2">
                               <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Stay Status</label>
                               <Select value={stay.status} onValueChange={(val) => updateStay(index, { status: val })}>
-                                <SelectTrigger className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white">
+                                <SelectTrigger className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white">
                                   <SelectValue placeholder="Select Status" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#0a0f12]/95 border-white/10 text-white rounded-xl">
+                                <SelectContent className="bg-[#0a0f14]/98 border-white/10 text-white rounded-xl">
                                   <SelectItem value="Pending">Pending</SelectItem>
                                   <SelectItem value="Sent">Sent</SelectItem>
                                   <SelectItem value="Confirmed">Confirmed</SelectItem>
@@ -2185,7 +2185,7 @@ Kashmir Curators`;
                                 type="datetime-local"
                                 value={stay.holdUntil}
                                 onChange={(e) => updateStay(index, { holdUntil: e.target.value })}
-                                className="bg-[#0a0f12]/80 border-amber-500/20 focus:border-amber-400 rounded-xl h-11 text-amber-300"
+                                className="bg-[#0a0f14]/80 border-amber-500/20 focus:border-amber-400 rounded-xl h-11 text-amber-300"
                               />
                             </div>
                           )}
@@ -2204,7 +2204,7 @@ Kashmir Curators`;
                                   type="number"
                                   value={stay.contractRate === 0 ? '' : stay.contractRate}
                                   onChange={(e) => updateStay(index, { contractRate: parseFloat(e.target.value) || 0 })}
-                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8"
+                                  className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white pl-8"
                                 />
                               </div>
                             </div>
@@ -2217,7 +2217,7 @@ Kashmir Curators`;
                                   type="number"
                                   value={stay.seasonalPricing === 0 ? '' : stay.seasonalPricing}
                                   onChange={(e) => updateStay(index, { seasonalPricing: parseFloat(e.target.value) || 0 })}
-                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8"
+                                  className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white pl-8"
                                 />
                               </div>
                             </div>
@@ -2232,7 +2232,7 @@ Kashmir Curators`;
                                   type="number"
                                   value={stay.totalAmount === 0 ? '' : stay.totalAmount}
                                   onChange={(e) => updateStay(index, { totalAmount: parseFloat(e.target.value) || 0 })}
-                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pl-8 font-bold"
+                                  className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white pl-8 font-bold"
                                 />
                               </div>
                             </div>
@@ -2245,7 +2245,7 @@ Kashmir Curators`;
                                   type="number"
                                   value={stay.commissionRate === 0 ? '' : stay.commissionRate}
                                   onChange={(e) => updateStay(index, { commissionRate: parseFloat(e.target.value) || 0 })}
-                                  className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white pr-8"
+                                  className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white pr-8"
                                 />
                               </div>
                             </div>
@@ -2350,7 +2350,7 @@ Kashmir Curators`;
 
       {/* Confirmation Modal */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-md bg-[#0a0f12]/95 border-white/10 text-white rounded-3xl p-8 backdrop-blur-3xl">
+        <DialogContent className="max-w-md bg-[#0a0f14]/98 border-white/10 text-white rounded-3xl p-8 backdrop-blur-3xl">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-xl font-bold flex items-center gap-3">
               <UserCheck className="w-5 h-5 text-emerald-400" />
@@ -2368,7 +2368,7 @@ Kashmir Curators`;
                 value={confirmRefCode}
                 onChange={(e) => setConfirmRefCode(e.target.value)}
                 placeholder="E.g., KC/2026/A4918"
-                className="bg-[#0a0f12]/80 border-white/10 rounded-xl h-11 text-white font-mono"
+                className="bg-[#0a0f14]/80 border-white/10 rounded-xl h-11 text-white font-mono"
               />
             </div>
           </div>
@@ -2389,7 +2389,7 @@ Kashmir Curators`;
 
       {/* Audit timeline full dialog */}
       <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
-        <DialogContent className="max-w-2xl bg-[#0a0f12]/95 border-white/10 text-white rounded-3xl p-8 backdrop-blur-3xl overflow-y-auto max-h-[80vh] custom-scrollbar">
+        <DialogContent className="max-w-2xl bg-[#0a0f14]/98 border-white/10 text-white rounded-3xl p-8 backdrop-blur-3xl overflow-y-auto max-h-[80vh] custom-scrollbar">
           <DialogHeader className="mb-6">
             <DialogTitle className="text-xl font-bold flex items-center gap-3">
               <FileSpreadsheet className="w-5 h-5 text-kashmir-gold" />
@@ -2439,7 +2439,7 @@ Kashmir Curators`;
 
       {/* Delete Confirmation Modal */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="max-w-md bg-[#0a0f12]/95 border-white/10 text-white rounded-3xl p-8 backdrop-blur-3xl">
+        <DialogContent className="max-w-md bg-[#0a0f14]/98 border-white/10 text-white rounded-3xl p-8 backdrop-blur-3xl">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-xl font-bold flex items-center gap-3 text-red-400">
               <Trash2 className="w-5 h-5 text-red-400" />

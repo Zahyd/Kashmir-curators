@@ -315,17 +315,17 @@ export default function CMSBookings() {
         <div className="flex items-center gap-3">
           <Button 
             onClick={() => setCreateDialogOpen(true)}
-            className="rounded-xl bg-kashmir-gold text-black hover:bg-kashmir-gold/90 text-[10px] font-black uppercase tracking-widest px-6 h-12"
+            className="rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 hover:shadow-amber-500/40 hover:scale-[1.02] font-black text-xs uppercase tracking-wider px-7 h-12 shadow-xl shadow-amber-500/25 transition-all"
           >
             <Plus className="w-4 h-4 mr-2" /> New Booking
           </Button>
-          <Button variant="outline" onClick={handleExportCSV} className="rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-white/80 hover:text-white text-xs font-bold uppercase tracking-wider px-6 h-12 cursor-pointer">
+          <Button variant="outline" onClick={handleExportCSV} className="rounded-2xl bg-white/[0.04] border border-white/15 hover:border-amber-400/40 hover:bg-white/[0.08] text-white/90 hover:text-white text-xs font-black uppercase tracking-wider px-6 h-12 transition-all shadow-sm cursor-pointer">
             <Download className="w-4 h-4 mr-2 text-kashmir-gold" /> Export CSV
           </Button>
         </div>
       </div>
 
-      <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem] backdrop-blur-xl">
+      <Card className="bg-[#0a0f14]/90 border border-white/10 p-8 rounded-3xl backdrop-blur-2xl shadow-2xl relative overflow-hidden">
         <div className="flex flex-col md:flex-row gap-6 mb-10">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
@@ -333,13 +333,13 @@ export default function CMSBookings() {
               placeholder="Search by client name, ID or service..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-white/5 border-white/5 rounded-2xl h-14 text-sm focus:ring-kashmir-gold/20"
+              className="pl-12 bg-white/[0.04] border border-white/15 focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10 text-white placeholder:text-white/40 rounded-2xl h-14 text-sm transition-all shadow-inner"
             />
           </div>
           <div className="flex gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-14 px-6 rounded-2xl bg-white/5 border-white/5 gap-2 text-xs font-bold uppercase tracking-widest">
+                <Button variant="outline" className="h-14 px-6 rounded-2xl bg-white/[0.04] border border-white/15 hover:border-amber-400/40 text-white/90 gap-2 text-xs font-black uppercase tracking-wider transition-all shadow-sm">
                   <Filter className="w-4 h-4" /> {statusFilter === 'all' ? 'All Status' : statusFilter}
                 </Button>
               </DropdownMenuTrigger>
@@ -358,7 +358,7 @@ export default function CMSBookings() {
           {filteredBookings.map((booking) => (
             <div 
               key={booking.id}
-              className="p-6 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all group cursor-pointer"
+              className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-amber-400/30 transition-all duration-300 group cursor-pointer shadow-lg"
               onClick={() => setSelectedBooking(booking)}
             >
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">

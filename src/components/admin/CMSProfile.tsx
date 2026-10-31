@@ -83,7 +83,7 @@ export default function CMSProfile() {
         
         {/* Left Card: Avatar & Stats */}
         <div className="lg:col-span-1 space-y-6">
-          <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl flex flex-col items-center text-center">
+          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl flex flex-col items-center text-center">
             <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
             
             <label className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-4 block">Profile Picture</label>
@@ -125,7 +125,7 @@ export default function CMSProfile() {
         <div className="lg:col-span-2 space-y-8">
           
           {/* Form 1: General Details */}
-          <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
+          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
             
             <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
@@ -191,7 +191,7 @@ export default function CMSProfile() {
           </Card>
 
           {/* Form 2: Password Update */}
-          <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
+          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
             
             <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2 mb-6 border-b border-white/5 pb-4">

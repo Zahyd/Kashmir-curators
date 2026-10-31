@@ -345,7 +345,7 @@ export default function CMSPackages() {
       </div>
 
       {/* Packages Hero CMS Panel */}
-      <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
+      <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -420,7 +420,7 @@ export default function CMSPackages() {
       </Card>
 
       {/* Desktop Table View */}
-      <div className="hidden lg:block bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
+      <div className="hidden lg:block bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         <Table>
           <TableHeader className="bg-white/[0.02] border-b border-white/5">
@@ -704,7 +704,7 @@ export default function CMSPackages() {
       </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+        <AlertDialogContent className="bg-[#0a0f14] border-white/10 text-white rounded-[2.5rem]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black">Decommission Package?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/60">

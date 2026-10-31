@@ -631,7 +631,7 @@ export default function CMSUsers() {
           />
 
           {/* Modal Card */}
-          <Card className="relative z-10 w-full max-w-lg bg-[#0a0f12]/95 border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl animate-scale-in text-white overflow-hidden">
+          <Card className="relative z-10 w-full max-w-lg bg-[#0a0f14]/98 border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl animate-scale-in text-white overflow-hidden">
             
             {/* Header Design */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-kashmir-gold/5 blur-[50px] pointer-events-none" />
@@ -726,10 +726,10 @@ export default function CMSUsers() {
                     onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
                     className="w-full bg-white/5 border border-white/5 rounded-xl h-12 px-4 text-xs focus:border-kashmir-gold focus:outline-none text-white appearance-none"
                   >
-                    <option value="sales" className="bg-[#0a0f12]">Sales Representative</option>
-                    <option value="operations" className="bg-[#0a0f12]">Operations & Assets</option>
-                    <option value="marketing" className="bg-[#0a0f12]">Marketing Manager</option>
-                    <option value="admin" className="bg-[#0a0f12]">Enterprise Director</option>
+                    <option value="sales" className="bg-[#0a0f14]">Sales Representative</option>
+                    <option value="operations" className="bg-[#0a0f14]">Operations & Assets</option>
+                    <option value="marketing" className="bg-[#0a0f14]">Marketing Manager</option>
+                    <option value="admin" className="bg-[#0a0f14]">Enterprise Director</option>
                   </select>
                 </div>
               </div>

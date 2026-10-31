@@ -160,7 +160,7 @@ export default function NotificationBell() {
 
       {/* Glassmorphic Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-4 w-96 rounded-3xl bg-[#0a0f12]/95 border border-white/10 shadow-2xl backdrop-blur-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="absolute right-0 mt-4 w-96 rounded-3xl bg-[#0a0f14]/98 border border-white/10 shadow-2xl backdrop-blur-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
           
           {/* Header */}
           <div className="p-6 border-b border-white/5 flex items-center justify-between">
@@ -208,7 +208,7 @@ export default function NotificationBell() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search alerts by metadata..." 
-                className="w-full pl-9 bg-white/5 border-white/5 text-xs text-white rounded-xl placeholder:text-white/20 h-9"
+                className="w-full pl-9 bg-white/5 border-white/5 text-xs text-white rounded-xl placeholder:text-white/40 h-9"
               />
             </div>
             

@@ -430,7 +430,7 @@ export default function CMSSiteContent() {
       </Card>
 
       {/* Signature Itinerary Section */}
-      <Card className="bg-[#0a0f12]/40 bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
+      <Card className="bg-[#0a0f14]/40 bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         <CardHeader className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6">
           <div>
@@ -625,7 +625,7 @@ export default function CMSSiteContent() {
                                 <select
                                   value={inclusion.icon || 'plane'}
                                   onChange={(e) => updateInclusion('icon', e.target.value)}
-                                  className="bg-[#0a0f12] border border-white/10 text-white rounded-xl text-xs px-2 py-1 focus:outline-none"
+                                  className="bg-[#0a0f14] border border-white/10 text-white rounded-xl text-xs px-2 py-1 focus:outline-none"
                                 >
                                   <option value="plane">Plane</option>
                                   <option value="compass">Compass</option>

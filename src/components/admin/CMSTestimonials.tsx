@@ -231,7 +231,7 @@ export default function CMSTestimonials() {
       </div>
 
       {/* Desktop View */}
-      <div className="hidden lg:block bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
+      <div className="hidden lg:block bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         <Table>
           <TableHeader className="bg-white/[0.02] border-b border-white/5">
@@ -458,7 +458,7 @@ export default function CMSTestimonials() {
       </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+        <AlertDialogContent className="bg-[#0a0f14] border-white/10 text-white rounded-[2.5rem]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black">Discard Traveler Voice?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/60">

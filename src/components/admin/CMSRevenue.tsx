@@ -68,7 +68,7 @@ export default function CMSRevenue() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-10 rounded-[3rem] backdrop-blur-xl">
+        <Card className="lg:col-span-2 bg-[#0a0f14]/90 border border-white/10 p-10 rounded-3xl backdrop-blur-2xl shadow-2xl">
           <div className="flex justify-between items-center mb-10">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-1">Gross Revenue</p>
@@ -131,7 +131,7 @@ export default function CMSRevenue() {
           </div>
         </Card>
 
-        <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-10 rounded-[3rem] backdrop-blur-xl flex flex-col">
+        <Card className="bg-[#0a0f14]/90 border border-white/10 p-10 rounded-3xl backdrop-blur-2xl shadow-2xl flex flex-col">
           <h3 className="text-xl font-display font-bold text-white mb-8">Revenue Mix</h3>
           
           <div className="flex-1 space-y-8">

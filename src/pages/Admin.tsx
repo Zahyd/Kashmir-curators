@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Package, 
   Building, 
@@ -214,7 +214,7 @@ export default function Admin() {
             {/* Stats Grid - High Fidelity */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {getDisplayStats().map((stat, idx) => (
-                <Card key={stat.label} className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-8 rounded-[2.5rem] backdrop-blur-xl relative overflow-hidden transition-all duration-500 hover:border-kashmir-gold/30 hover:shadow-2xl hover:shadow-kashmir-gold/5 group">
+                <Card key={stat.label} className="bg-[#0a0f14]/85 bg-white/[0.02] border border-white/10 p-8 rounded-[2.5rem] backdrop-blur-xl relative overflow-hidden transition-all duration-500 hover:border-amber-400/40 hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1 group">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-kashmir-gold/5 blur-[40px] -mr-12 -mt-12 transition-all group-hover:bg-kashmir-gold/20" />
                   
                   <div className="flex justify-between items-start mb-6">
@@ -249,7 +249,7 @@ export default function Admin() {
             {/* Analytics & Performance Hub */}
             {/* Role-Specific Operation Center */}
             {(teamRole === 'operations' || teamRole === 'admin') && (
-              <Card className="bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden group">
+              <Card className="bg-[#0a0f14]/85 bg-white/[0.02] border border-white/10 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden shadow-2xl group">
                 <div className="flex justify-between items-center mb-10">
                   <div>
                     <h3 className="text-2xl font-display font-bold text-white mb-1">Operational Dispatch</h3>
@@ -289,7 +289,7 @@ export default function Admin() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Revenue Intelligence Chart Placeholder */}
-              <Card className="lg:col-span-8 bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden group">
+              <Card className="lg:col-span-8 bg-[#0a0f14]/85 bg-white/[0.02] border border-white/10 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden shadow-2xl group">
                 <div className="flex justify-between items-center mb-10">
                   <div>
                     <h3 className="text-2xl font-display font-bold text-white mb-1">Revenue Intelligence</h3>
@@ -356,7 +356,7 @@ export default function Admin() {
               </Card>
 
               {/* System Event Feed */}
-              <Card className="lg:col-span-4 bg-[#0a0f12]/40 bg-white/[0.02] border-white/5 p-10 rounded-[3rem] backdrop-blur-xl flex flex-col relative overflow-hidden">
+              <Card className="lg:col-span-4 bg-[#0a0f14]/85 bg-white/[0.02] border border-white/10 p-10 rounded-[3rem] backdrop-blur-xl flex flex-col relative overflow-hidden shadow-2xl">
                 <div className="flex items-center justify-between mb-10">
                   <div>
                     <h3 className="text-2xl font-display font-bold text-white mb-1">System Feed</h3>
@@ -421,7 +421,10 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0f12] text-white flex flex-col lg:flex-row font-sans">
+    <div className="min-h-screen bg-[#070b0e] text-slate-100 flex flex-col lg:flex-row font-sans relative overflow-x-hidden selection:bg-amber-500/30 selection:text-amber-200">
+      {/* Top Ambient Glows */}
+      <div className="fixed top-0 right-1/4 w-[650px] h-[400px] bg-gradient-to-b from-amber-500/10 via-amber-600/5 to-transparent blur-[140px] pointer-events-none z-0" />
+      <div className="fixed bottom-0 left-1/3 w-[500px] h-[350px] bg-gradient-to-t from-sky-500/5 via-blue-500/5 to-transparent blur-[140px] pointer-events-none z-0" />
       <AdminSidebar 
         activeSection={activeSection} 
         onSectionChange={(section) => {
@@ -441,27 +444,44 @@ export default function Admin() {
         />
 
         {/* Top Header Bar for Desktop */}
-        <header className="hidden lg:flex items-center justify-between px-12 h-24 border-b border-white/5 bg-[#0a0f12]/30 backdrop-blur-md sticky top-0 z-40">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-kashmir-gold">
-              {activeSection === 'dashboard' ? 'Overview' : activeSection.replace('_', ' ') + ' Command'}
-            </h2>
-            <div className="w-1.5 h-1.5 rounded-full bg-kashmir-gold animate-pulse" />
+        <header className="hidden lg:flex items-center justify-between px-8 lg:px-12 h-20 border-b border-white/10 bg-[#070b0e]/85 backdrop-blur-2xl sticky top-0 z-40 shadow-xl shadow-black/40">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/[0.04] border border-amber-500/25 shadow-inner backdrop-blur-xl">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.9)]" />
+              <h2 className="text-xs font-black uppercase tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-300">
+                {activeSection === 'dashboard' ? 'Executive Command Deck' : `${activeSection.replace('_', ' ')} Command`}
+              </h2>
+            </div>
+            <div className="hidden xl:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>REAL-TIME DISPATCH ACTIVE</span>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
+            <Link 
+              to="/"
+              className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-amber-400/40 hover:bg-white/[0.08] text-white/70 hover:text-white transition-all text-xs font-bold"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Live Website</span>
+            </Link>
+            <div className="w-px h-6 bg-white/10 hidden md:block" />
             <NotificationBell />
             <div className="w-px h-6 bg-white/10" />
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-xs font-black text-white uppercase tracking-wider">{teamUser?.name}</p>
-                <p className="text-[8px] text-kashmir-gold font-bold uppercase tracking-widest mt-0.5">{ROLE_LABELS[teamRole]}</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center">
+            <div 
+              onClick={() => setActiveSection('profile')}
+              className="flex items-center gap-3.5 p-1.5 pr-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-amber-400/30 transition-all cursor-pointer group"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-400/30 flex items-center justify-center overflow-hidden shrink-0">
                 {teamUser?.image ? (
-                  <img src={teamUser.image} alt={teamUser.name} className="w-full h-full object-cover rounded-xl" />
+                  <img src={teamUser.image} alt={teamUser.name} className="w-full h-full object-cover" />
                 ) : (
-                  <Users className="w-5 h-5 text-kashmir-gold" />
+                  <Users className="w-4 h-4 text-amber-400" />
                 )}
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-white uppercase tracking-wider group-hover:text-amber-300 transition-colors">{teamUser?.name}</p>
+                <p className="text-[8px] text-amber-400 font-black uppercase tracking-widest mt-0.5">{ROLE_LABELS[teamRole]}</p>
               </div>
             </div>
           </div>

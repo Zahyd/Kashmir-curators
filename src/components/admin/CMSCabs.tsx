@@ -1278,7 +1278,7 @@ export default function CMSCabs() {
               { label: 'In Workshop', count: cabs.filter(c => resolveCabStatusForToday(c) === 'Maintenance').length, desc: 'Preventive service' },
               { label: 'Fleet Utilization', count: `${fleetUtilizationRate}%`, desc: 'Active asset utilization' }
             ].map(counter => (
-              <Card key={counter.label} className="bg-white/[0.01] border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+              <Card key={counter.label} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{counter.label}</p>
                 <p className="text-3xl font-display font-black mt-2 text-white">{counter.count}</p>
                 <span className="block text-[8px] text-white/20 uppercase tracking-widest mt-1 font-semibold">{counter.desc}</span>
@@ -1290,7 +1290,7 @@ export default function CMSCabs() {
             
             {/* Live Map Dashboard & SOS Trigger */}
             <div className="lg:col-span-4 space-y-6">
-              <Card className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden">
+              <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
                   <div>
                     <h4 className="text-xs font-black uppercase tracking-widest text-white">Live Operations Tracker</h4>
@@ -1349,7 +1349,7 @@ export default function CMSCabs() {
 
             {/* Trip Allocations Queue */}
             <div className="lg:col-span-8">
-              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+              <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-8 rounded-[2.5rem]">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                   <div>
                     <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
@@ -1475,7 +1475,7 @@ export default function CMSCabs() {
       {currentTab === 'registry' && (
         <div className="space-y-8 animate-in fade-in duration-500">
           
-          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
             <div>
               <h3 className="text-xl font-display font-black text-white">PHYSICAL ASSETS REGISTRY</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Manage registration compliance documents, odometer limits and models</p>
@@ -1491,7 +1491,7 @@ export default function CMSCabs() {
           </div>
 
           {/* Registry Table */}
-          <Card className="bg-white/[0.01] border-white/5 p-6 rounded-[2.5rem]">
+          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-[2.5rem]">
             <Table>
               <TableHeader className="bg-white/[0.02] border-b border-white/5">
                 <TableRow className="border-none">
@@ -1566,7 +1566,7 @@ export default function CMSCabs() {
       {currentTab === 'drivers' && (
         <div className="space-y-8 animate-in fade-in duration-500">
           
-          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
             <div>
               <h3 className="text-xl font-display font-black text-white">CHAUFFEUR HUB</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Track driver duty rosters, license verifications, ratings, and incentive structures</p>
@@ -1596,7 +1596,7 @@ export default function CMSCabs() {
             {driversList.map(drv => {
               const isLicExpiring = new Date(drv.licenseExpiry) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
               return (
-                <Card key={drv.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                <Card key={drv.id} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
                   {/* Action Overlays */}
                   {activeRole === 'Director' && (
                     <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/5 z-10">
@@ -1702,7 +1702,7 @@ export default function CMSCabs() {
             
             {/* AI Dispatch Engine */}
             <div className="lg:col-span-6 space-y-6">
-              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+              <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-8 rounded-[2.5rem]">
                 <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-kashmir-gold animate-pulse" />
                   AI Dispatch Engine
@@ -1746,7 +1746,7 @@ export default function CMSCabs() {
 
             {/* Rates & Pricing Engine */}
             <div className="lg:col-span-6 space-y-6">
-              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+              <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-8 rounded-[2.5rem]">
                 <h3 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-kashmir-gold" />
                   Fleet Tariff Manager
@@ -1829,7 +1829,7 @@ export default function CMSCabs() {
       {currentTab === 'maintenance' && (
         <div className="space-y-8 animate-in fade-in duration-500">
           
-          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
             <div>
               <h3 className="text-xl font-display font-black text-white">WORKSHOP & MAINTENANCE CENTER</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Schedule servicing, track repair invoices, and verify battery/tyre lifespans</p>
@@ -1846,12 +1846,12 @@ export default function CMSCabs() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {maintenanceRecords.length === 0 ? (
-              <div className="lg:col-span-3 text-center p-12 bg-white/[0.01] border border-white/5 rounded-[2rem]">
+              <div className="lg:col-span-3 text-center p-12 bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2rem]">
                 <p className="text-xs text-white/30 uppercase tracking-wider font-bold">No active vehicle servicing entries in the database.</p>
               </div>
             ) : (
               maintenanceRecords.map(rec => (
-                <Card key={rec.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                <Card key={rec.id} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
                   {/* Action Overlays */}
                   {activeRole === 'Director' && (
                     <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/5 z-10">
@@ -1949,7 +1949,7 @@ export default function CMSCabs() {
               { label: 'Monthly Fleet Gross Revenue', amount: `₹${financeMetrics.monthlyRevenue.toLocaleString()}`, desc: 'Active commissions included' },
               { label: 'Operations Margin (Monthly)', amount: `₹${financeMetrics.monthlyMargin.toLocaleString()}`, desc: 'Calculated after driver allowances' }
             ].map(m => (
-              <Card key={m.label} className="bg-white/[0.01] border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+              <Card key={m.label} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{m.label}</p>
                 <p className="text-3xl font-display font-black mt-2 text-kashmir-gold">{m.amount}</p>
                 <span className="block text-[8px] text-white/20 uppercase tracking-widest mt-1 font-semibold">{m.desc}</span>
@@ -1958,7 +1958,7 @@ export default function CMSCabs() {
           </div>
 
           {/* Simple analytical bar display */}
-          <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-8 rounded-[2.5rem]">
             <h3 className="text-lg font-display font-black text-white uppercase tracking-tight mb-6">Driver Productivity Index</h3>
             <div className="space-y-6">
               {driverProductivity.length === 0 ? (
@@ -2048,7 +2048,7 @@ export default function CMSCabs() {
 
             {/* Direct Comms Chat Console */}
             <div className="lg:col-span-5 space-y-6">
-              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem] flex flex-col h-[500px] justify-between relative overflow-hidden">
+              <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-8 rounded-[2.5rem] flex flex-col h-[500px] justify-between relative overflow-hidden">
                 <div>
                   <h3 className="text-lg font-display font-black text-white uppercase tracking-tight flex items-center gap-2 border-b border-white/5 pb-3">
                     <MessageSquare className="w-5 h-5 text-kashmir-gold" />
@@ -2116,9 +2116,9 @@ export default function CMSCabs() {
                   onChange={e => handleCabChange(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
                 >
-                  <option value="" className="bg-[#0a0f12]">Choose Vehicle...</option>
+                  <option value="" className="bg-[#0a0f14]">Choose Vehicle...</option>
                   {cabs.map(c => (
-                    <option key={c.id} value={c.id} className="bg-[#0a0f12]">{c.name} ({c.type})</option>
+                    <option key={c.id} value={c.id} className="bg-[#0a0f14]">{c.name} ({c.type})</option>
                   ))}
                 </select>
               </div>
@@ -2308,8 +2308,8 @@ export default function CMSCabs() {
                   onChange={(e) => setMetaFormData({ ...metaFormData, ownership: e.target.value as 'company' | 'vendor' })}
                   className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
                 >
-                  <option value="company" className="bg-[#0a0f12]">Company Owned (Kashmir Curators)</option>
-                  <option value="vendor" className="bg-[#0a0f12]">Vendor Owned (Contracted)</option>
+                  <option value="company" className="bg-[#0a0f14]">Company Owned (Kashmir Curators)</option>
+                  <option value="vendor" className="bg-[#0a0f14]">Vendor Owned (Contracted)</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -2420,9 +2420,9 @@ export default function CMSCabs() {
                 onChange={e => setBlockCabId(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
               >
-                <option value="" className="bg-[#0a0f12]">Select vehicle...</option>
+                <option value="" className="bg-[#0a0f14]">Select vehicle...</option>
                 {cabs.map(c => (
-                  <option key={c.id} value={c.id} className="bg-[#0a0f12]">{c.name} ({operationsData.cabsMetadata[c.id]?.registrationNo || 'JK-01'})</option>
+                  <option key={c.id} value={c.id} className="bg-[#0a0f14]">{c.name} ({operationsData.cabsMetadata[c.id]?.registrationNo || 'JK-01'})</option>
                 ))}
               </select>
             </div>
@@ -2456,8 +2456,8 @@ export default function CMSCabs() {
                   onChange={e => setBlockStatus(e.target.value as any)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
                 >
-                  <option value="Maintenance" className="bg-[#0a0f12]">Maintenance (Workshop)</option>
-                  <option value="Offline" className="bg-[#0a0f12]">Offline / Inactive</option>
+                  <option value="Maintenance" className="bg-[#0a0f14]">Maintenance (Workshop)</option>
+                  <option value="Offline" className="bg-[#0a0f14]">Offline / Inactive</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -2669,7 +2669,7 @@ export default function CMSCabs() {
       </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem] text-left">
+        <AlertDialogContent className="bg-[#0a0f14] border-white/10 text-white rounded-[2.5rem] text-left">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black">Decommission Transport Node?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/60">
@@ -2689,7 +2689,7 @@ export default function CMSCabs() {
       </AlertDialog>
 
       <AlertDialog open={deallocateConfirmOpen} onOpenChange={setDeallocateConfirmOpen}>
-        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem] text-left">
+        <AlertDialogContent className="bg-[#0a0f14] border-white/10 text-white rounded-[2.5rem] text-left">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black text-red-500 flex items-center gap-2">
               <AlertTriangle className="w-6 h-6 text-red-500" /> Release Cab Allocation?
@@ -2780,9 +2780,9 @@ export default function CMSCabs() {
                   onChange={e => setDriverFormData({ ...driverFormData, status: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
                 >
-                  <option value="AVAILABLE" className="bg-[#0a0f12]">Available</option>
-                  <option value="ON TRIP" className="bg-[#0a0f12]">On Trip</option>
-                  <option value="OFFLINE" className="bg-[#0a0f12]">Offline</option>
+                  <option value="AVAILABLE" className="bg-[#0a0f14]">Available</option>
+                  <option value="ON TRIP" className="bg-[#0a0f14]">On Trip</option>
+                  <option value="OFFLINE" className="bg-[#0a0f14]">Offline</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -2792,9 +2792,9 @@ export default function CMSCabs() {
                   onChange={e => setDriverFormData({ ...driverFormData, attendance: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
                 >
-                  <option value="Present" className="bg-[#0a0f12]">Present</option>
-                  <option value="Absent" className="bg-[#0a0f12]">Absent</option>
-                  <option value="Off Duty" className="bg-[#0a0f12]">Off Duty</option>
+                  <option value="Present" className="bg-[#0a0f14]">Present</option>
+                  <option value="Absent" className="bg-[#0a0f14]">Absent</option>
+                  <option value="Off Duty" className="bg-[#0a0f14]">Off Duty</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -2804,9 +2804,9 @@ export default function CMSCabs() {
                   onChange={e => setDriverFormData({ ...driverFormData, policeVerification: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
                 >
-                  <option value="Verified" className="bg-[#0a0f12]">Verified</option>
-                  <option value="Pending" className="bg-[#0a0f12]">Pending</option>
-                  <option value="Expired" className="bg-[#0a0f12]">Expired</option>
+                  <option value="Verified" className="bg-[#0a0f14]">Verified</option>
+                  <option value="Pending" className="bg-[#0a0f14]">Pending</option>
+                  <option value="Expired" className="bg-[#0a0f14]">Expired</option>
                 </select>
               </div>
             </div>
@@ -2933,9 +2933,9 @@ export default function CMSCabs() {
                 }}
                 className="w-full bg-white/5 border border-white/10 rounded-xl h-12 px-4 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/50"
               >
-                <option value="" className="bg-[#0a0f12]">Choose a vehicle...</option>
+                <option value="" className="bg-[#0a0f14]">Choose a vehicle...</option>
                 {cabs.map(c => (
-                  <option key={c.id} value={JSON.stringify({ vehicle: c.name, reg: c.registrationNo || 'JK-01-A-0000' })} className="bg-[#0a0f12]">
+                  <option key={c.id} value={JSON.stringify({ vehicle: c.name, reg: c.registrationNo || 'JK-01-A-0000' })} className="bg-[#0a0f14]">
                     {c.name} ({c.registrationNo})
                   </option>
                 ))}

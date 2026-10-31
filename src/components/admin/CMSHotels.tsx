@@ -734,7 +734,7 @@ export default function CMSHotels() {
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* Role Simulator bar */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white/[0.01] border border-white/5 rounded-3xl p-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-4">
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-kashmir-gold" />
           <span className="text-[10px] font-black uppercase tracking-wider text-white/50">OPERATIONS SECURITY CONTROL</span>
@@ -776,7 +776,7 @@ export default function CMSHotels() {
               <SelectTrigger className="w-56 bg-white/5 border-white/10 text-white rounded-xl h-11 text-xs font-bold focus:border-kashmir-gold/50">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#0a0f12] border-white/10 text-white">
+              <SelectContent className="bg-[#0a0f14] border-white/10 text-white">
                 {hotels.map(h => (
                   <SelectItem key={h.id} value={h.id} className="text-xs">{h.name}</SelectItem>
                 ))}
@@ -829,7 +829,7 @@ export default function CMSHotels() {
               { label: 'Occupied Rooms', value: `${kpi.occupiedRooms} / ${kpi.availableRooms + kpi.occupiedRooms}`, color: 'text-emerald-400' },
               { label: 'Service Alerts', value: kpi.alertsCount, color: 'text-red-400' }
             ].map(card => (
-              <Card key={card.label} className="bg-white/[0.01] border-white/5 p-4 rounded-2xl flex flex-col justify-between min-h-[100px]">
+              <Card key={card.label} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-4 rounded-2xl flex flex-col justify-between min-h-[100px]">
                 <span className="text-[8px] font-black uppercase text-white/30 tracking-wider leading-tight">{card.label}</span>
                 <span className={cn("text-2xl font-display font-black mt-2", card.color)}>{card.value}</span>
               </Card>
@@ -840,7 +840,7 @@ export default function CMSHotels() {
             
             {/* Live Room Grid */}
             <div className="lg:col-span-8 space-y-6">
-              <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+              <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-8 rounded-[2.5rem]">
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">Live Room Status Grid</h3>
@@ -902,7 +902,7 @@ export default function CMSHotels() {
 
             {/* AI Room Allocator suggestions */}
             <div className="lg:col-span-4 space-y-6">
-              <Card className="bg-white/[0.01] border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+              <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-kashmir-gold/5 rounded-full blur-2xl pointer-events-none" />
                 <h3 className="text-xs font-display font-black text-white uppercase tracking-wider flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-kashmir-gold animate-pulse" />
@@ -931,7 +931,7 @@ export default function CMSHotels() {
       {currentTab === 'registry' && (
         <div className="space-y-8 animate-in fade-in duration-500">
           
-          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
             <div>
               <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">Property Registry</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Manage luxury properties, contacts, policy parameters, and page configurations</p>
@@ -944,7 +944,7 @@ export default function CMSHotels() {
           </div>
 
           {/* Hotels Hero CMS Panel */}
-          <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
+          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] p-8 backdrop-blur-3xl relative overflow-hidden shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -1019,7 +1019,7 @@ export default function CMSHotels() {
           </Card>
 
           {/* Desktop View */}
-          <div className="hidden lg:block bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
+          <div className="hidden lg:block bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
             <Table>
               <TableHeader className="bg-white/[0.02] border-b border-white/5">
@@ -1103,7 +1103,7 @@ export default function CMSHotels() {
       {/* TAB 3: ROOM MANAGER */}
       {currentTab === 'rooms' && (
         <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
             <div>
               <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">Room Manager</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Configure room categories, pricing, seasonal rules, and block dates</p>
@@ -1122,7 +1122,7 @@ export default function CMSHotels() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {roomCategories.map(cat => (
-              <Card key={cat.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+              <Card key={cat.id} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
                 <div className="absolute top-4 right-4">
                   <Badge className="bg-white/5 text-white/50 border-none text-[8px] uppercase tracking-widest font-bold">
                     Capacity: {cat.capacity} Guests
@@ -1153,7 +1153,7 @@ export default function CMSHotels() {
       {/* TAB 4: HOUSEKEEPING & REPAIRS */}
       {currentTab === 'housekeeping' && (
         <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
             <div>
               <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">Housekeeping & Repairs</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Track cleanliness audits, room servicing statuses, and maintenance logs</p>
@@ -1167,7 +1167,7 @@ export default function CMSHotels() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {maintenanceLogs.map(log => (
-              <Card key={log.id} className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+              <Card key={log.id} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
                 <div className="absolute top-4 right-4">
                   <Badge className={cn("border-none text-[8px] uppercase font-bold",
                     log.status === 'PENDING' ? 'bg-red-500/10 text-red-400' :
@@ -1210,7 +1210,7 @@ export default function CMSHotels() {
       {/* TAB 5: SETTLEMENTS & PAYOUTS */}
       {currentTab === 'settlements' && (
         <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-3xl p-6">
+          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
             <div>
               <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">Settlements & Payouts</h3>
               <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Record hotel net settlements, payouts logs, and commission dues</p>
@@ -1222,7 +1222,7 @@ export default function CMSHotels() {
             )}
           </div>
 
-          <Card className="bg-white/[0.01] border-white/5 rounded-[2.5rem] overflow-hidden">
+          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] overflow-hidden">
             <Table>
               <TableHeader className="bg-white/[0.02] border-b border-white/5">
                 <TableRow className="hover:bg-transparent border-none">
@@ -1261,7 +1261,7 @@ export default function CMSHotels() {
               { label: 'ADR (Average Daily Rate)', value: '₹5,800', desc: 'Average rate for active categories' },
               { label: 'Net Operations Margin', value: `₹${(kpi.monthlyRevenue - kpi.commissionDue).toLocaleString()}`, desc: 'Excluding service fees' }
             ].map(card => (
-              <Card key={card.label} className="bg-white/[0.01] border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+              <Card key={card.label} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{card.label}</p>
                 <p className="text-3xl font-display font-black mt-2 text-kashmir-gold">{card.value}</p>
                 <span className="block text-[8px] text-white/20 uppercase tracking-widest mt-1 font-semibold">{card.desc}</span>
@@ -1269,7 +1269,7 @@ export default function CMSHotels() {
             ))}
           </div>
 
-          <Card className="bg-white/[0.01] border-white/5 p-8 rounded-[2.5rem]">
+          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-8 rounded-[2.5rem]">
             <h3 className="text-lg font-display font-black text-white uppercase mb-6">Hospitality Occupancy Trend</h3>
             <div className="h-64 w-full bg-white/[0.02] border border-white/5 rounded-2xl flex items-end p-6 gap-2">
               {[60, 68, 72, 70, 75, 80, 85, 78, 80, 92, 85, 88].map((percent, idx) => (
@@ -1524,9 +1524,9 @@ export default function CMSHotels() {
                 onChange={e => setRoomFormData({ ...roomFormData, categoryId: e.target.value })}
                 className="w-full bg-white/5 border border-white/10 rounded-xl h-11 px-3 text-xs"
               >
-                <option value="" className="bg-[#0a0f12]">Select Category...</option>
+                <option value="" className="bg-[#0a0f14]">Select Category...</option>
                 {roomCategories.map(c => (
-                  <option key={c.id} value={c.id} className="bg-[#0a0f12]">{c.name}</option>
+                  <option key={c.id} value={c.id} className="bg-[#0a0f14]">{c.name}</option>
                 ))}
               </select>
             </div>
@@ -1561,9 +1561,9 @@ export default function CMSHotels() {
                 onChange={e => setMaintenanceFormData({ ...maintenanceFormData, roomNumber: e.target.value })}
                 className="w-full bg-white/5 border border-white/10 rounded-xl h-11 px-3 text-xs"
               >
-                <option value="" className="bg-[#0a0f12]">Choose room...</option>
+                <option value="" className="bg-[#0a0f14]">Choose room...</option>
                 {hotelRooms.map(r => (
-                  <option key={r.id} value={r.roomNumber} className="bg-[#0a0f12]">Room {r.roomNumber} ({r.category?.name})</option>
+                  <option key={r.id} value={r.roomNumber} className="bg-[#0a0f14]">Room {r.roomNumber} ({r.category?.name})</option>
                 ))}
               </select>
             </div>
@@ -1579,9 +1579,9 @@ export default function CMSHotels() {
                   onChange={e => setMaintenanceFormData({ ...maintenanceFormData, priority: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-xl h-11 px-3 text-xs"
                 >
-                  <option value="LOW" className="bg-[#0a0f12]">Low</option>
-                  <option value="MEDIUM" className="bg-[#0a0f12]">Medium</option>
-                  <option value="HIGH" className="bg-[#0a0f12]">High</option>
+                  <option value="LOW" className="bg-[#0a0f14]">Low</option>
+                  <option value="MEDIUM" className="bg-[#0a0f14]">Medium</option>
+                  <option value="HIGH" className="bg-[#0a0f14]">High</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -1629,7 +1629,7 @@ export default function CMSHotels() {
       </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent className="bg-[#0a0f12] border-white/10 text-white rounded-[2.5rem]">
+        <AlertDialogContent className="bg-[#0a0f14] border-white/10 text-white rounded-[2.5rem]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black">Decommission Asset?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/60">
