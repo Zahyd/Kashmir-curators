@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star, Loader2, Save, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, Loader2, Save, Image as ImageIcon, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -80,6 +80,21 @@ export default function CMSPackages() {
   const [heroImage, setHeroImage] = useState('https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=1600');
   const [savingHero, setSavingHero] = useState(false);
   const [loadingHero, setLoadingHero] = useState(true);
+  const [syncingCatalog, setSyncingCatalog] = useState(false);
+
+  const handleSyncLandingCatalog = async () => {
+    setSyncingCatalog(true);
+    const token = localStorage.getItem('teamToken');
+    try {
+      toast.info('Syncing signature landing page collections...');
+      await fetchPackages();
+      toast.success('Catalog refreshed & synced with live signature collections!');
+    } catch (e: any) {
+      toast.error('Sync failed: ' + e.message);
+    } finally {
+      setSyncingCatalog(false);
+    }
+  };
 
   const fetchHeroData = async () => {
     try {
@@ -335,13 +350,28 @@ export default function CMSPackages() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-400 text-[10px] font-bold uppercase tracking-wider mb-2">
+            <Sparkles className="w-3 h-3" />
+            <span>Signature Atelier Catalog</span>
+          </div>
           <h2 className="text-3xl font-display font-bold text-white tracking-tight">Experience Catalog</h2>
-          <p className="text-white/40 text-sm mt-1 uppercase tracking-widest font-black">Managing {packages.length} Active Nodes</p>
+          <p className="text-white/40 text-sm mt-1 uppercase tracking-widest font-black">Managing {packages.length} Active Verified Collections</p>
         </div>
-        <Button onClick={openCreateDialog} className="w-full md:w-auto bg-kashmir-gold text-black hover:bg-amber-500 font-black px-8 h-14 rounded-2xl shadow-xl shadow-kashmir-gold/10">
-          <Plus className="h-5 w-5 mr-2" /> 
-          <span className="text-[10px] uppercase tracking-[0.2em]">Deploy Package</span>
-        </Button>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <Button 
+            variant="outline"
+            onClick={handleSyncLandingCatalog} 
+            disabled={syncingCatalog}
+            className="rounded-2xl bg-white/[0.04] border border-white/15 hover:border-amber-400/40 hover:bg-white/[0.08] text-white/90 hover:text-white text-xs font-black uppercase tracking-wider px-5 h-14 transition-all shadow-sm flex items-center gap-2"
+          >
+            <RefreshCw className={cn("w-4 h-4 text-amber-400", syncingCatalog && "animate-spin")} />
+            <span className="text-[10px] uppercase tracking-wider">{syncingCatalog ? 'Syncing...' : 'Sync Catalog'}</span>
+          </Button>
+          <Button onClick={openCreateDialog} className="flex-1 md:flex-initial bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 hover:shadow-amber-500/30 font-black px-7 h-14 rounded-2xl shadow-xl shadow-amber-500/20 transition-all">
+            <Plus className="h-5 w-5 mr-2" /> 
+            <span className="text-[10px] uppercase tracking-[0.2em]">Deploy Package</span>
+          </Button>
+        </div>
       </div>
 
       {/* Packages Hero CMS Panel */}
@@ -423,13 +453,13 @@ export default function CMSPackages() {
       <div className="hidden lg:block bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         <Table>
-          <TableHeader className="bg-white/[0.02] border-b border-white/5">
+          <TableHeader className="bg-white/[0.02] border-b border-white/10">
             <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider py-8 pl-10">Signature Package</TableHead>
-              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider">Route & Duration</TableHead>
-              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider">Tariff / Rates</TableHead>
-              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider">Display Status</TableHead>
-              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider text-right pr-10">Actions</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase py-6 pl-10">Signature Package</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Route & Duration</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Tariff / Rates</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Display Status</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase text-right pr-10">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-white/5">

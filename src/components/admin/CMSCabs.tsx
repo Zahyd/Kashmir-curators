@@ -1369,13 +1369,13 @@ export default function CMSCabs() {
 
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader className="bg-white/[0.02] border-b border-white/5">
+                    <TableHeader className="bg-white/[0.02] border-b border-white/10">
                       <TableRow className="hover:bg-transparent border-none">
-                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest py-5 pl-6">Trip Details</TableHead>
-                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Client</TableHead>
-                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Date / Route</TableHead>
-                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Pricing & Status</TableHead>
-                        <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest text-right pr-6">Operational Actions</TableHead>
+                        <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase py-5 pl-6">Trip Details</TableHead>
+                        <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Client</TableHead>
+                        <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Date / Route</TableHead>
+                        <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Pricing & Status</TableHead>
+                        <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase text-right pr-6">Operational Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-white/5">
@@ -1493,15 +1493,15 @@ export default function CMSCabs() {
           {/* Registry Table */}
           <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-[2.5rem]">
             <Table>
-              <TableHeader className="bg-white/[0.02] border-b border-white/5">
+              <TableHeader className="bg-white/[0.02] border-b border-white/10">
                 <TableRow className="border-none">
-                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest pl-6">Vehicle</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Ownership</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Logistics Capacity</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Base Rate / KM</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Default Driver</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest">Document Status</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[8px] font-black tracking-widest text-right pr-6">Controls</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase pl-6 py-5">Vehicle</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Ownership</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Logistics Capacity</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Base Rate / KM</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Default Driver</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Document Status</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase text-right pr-6">Controls</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-white/5">

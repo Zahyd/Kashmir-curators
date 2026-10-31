@@ -1598,15 +1598,15 @@ Kashmir Curators`;
         ) : (
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-white/[0.02] border-b border-white/5">
-                <TableRow className="hover:bg-transparent border-white/5">
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/30 h-14 pl-6">Guest / Inquiry</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/30 h-14">Hotel particulars</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/30 h-14">Check-in / out</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/30 h-14">Hold countdown</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/30 h-14">Financial grid</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/30 h-14">Status</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-white/30 h-14 text-right pr-6">Quick actions</TableHead>
+              <TableHeader className="bg-white/[0.02] border-b border-white/10">
+                <TableRow className="hover:bg-transparent border-white/10">
+                  <TableHead className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-200/90 h-14 pl-6">Guest / Inquiry</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-200/90 h-14">Hotel particulars</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-200/90 h-14">Check-in / out</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-200/90 h-14">Hold countdown</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-200/90 h-14">Financial grid</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-200/90 h-14">Status</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-200/90 h-14 text-right pr-6">Quick actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

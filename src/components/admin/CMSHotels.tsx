@@ -1022,14 +1022,14 @@ export default function CMSHotels() {
           <div className="hidden lg:block bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
             <Table>
-              <TableHeader className="bg-white/[0.02] border-b border-white/5">
+              <TableHeader className="bg-white/[0.02] border-b border-white/10">
                 <TableRow className="hover:bg-transparent border-none">
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] py-8 pl-10">Property Node</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Location</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Rating</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Price Starting</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Status</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] text-right pr-10">Controls</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase py-6 pl-10">Property Node</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Location</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Rating</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Price Starting</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Status</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase text-right pr-10">Controls</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-white/5">
@@ -1224,14 +1224,14 @@ export default function CMSHotels() {
 
           <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] overflow-hidden">
             <Table>
-              <TableHeader className="bg-white/[0.02] border-b border-white/5">
+              <TableHeader className="bg-white/[0.02] border-b border-white/10">
                 <TableRow className="hover:bg-transparent border-none">
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-widest pl-6">Settlement ID</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-widest">Gross Amount</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-widest">Commission Dues</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-widest">Net Paid</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-widest">Payout Date</TableHead>
-                  <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-widest pr-6">Transaction Ref</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase pl-6 py-5">Settlement ID</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Gross Amount</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Commission Dues</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Net Paid</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Payout Date</TableHead>
+                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase pr-6">Transaction Ref</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-white/5">

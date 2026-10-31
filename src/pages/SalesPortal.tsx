@@ -41,6 +41,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import MobilePortalNav from '@/components/layout/MobilePortalNav';
+import { Logo } from '@/components/ui/Logo';
 import ItineraryBuilder from '@/components/sales/ItineraryBuilder';
 import SalesPerformance from '@/components/sales/SalesPerformance';
 import PaymentPortal from '@/components/sales/PaymentPortal';

@@ -222,25 +222,25 @@ export default function Admin() {
                       <stat.icon className="h-6 w-6 text-kashmir-gold" />
                     </div>
                     <div className="text-right">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Growth Matrix</p>
-                      <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] font-black">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-1">Growth Matrix</p>
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] font-black">
                         {stat.change}
                       </Badge>
                     </div>
                   </div>
                   
                    <div className="space-y-1">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30">{stat.label}</p>
+                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-200/70">{stat.label}</p>
                     <div className="text-4xl font-display font-black text-white">{stat.value}</div>
                   </div>
 
                   <Button 
                     variant="ghost" 
                     onClick={() => stat.section && setActiveSection(stat.section)}
-                    className="mt-6 w-full pt-6 border-t border-white/5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-white/20 hover:text-kashmir-gold transition-colors"
+                    className="mt-6 w-full pt-6 border-t border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-amber-300 transition-colors"
                   >
                     <span>View Analytics</span>
-                    <TrendingUp className="w-3 h-3 text-emerald-500" />
+                    <TrendingUp className="w-3 h-3 text-emerald-400" />
                   </Button>
                 </Card>
               ))}

@@ -234,13 +234,13 @@ export default function CMSTestimonials() {
       <div className="hidden lg:block bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-inner relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-kashmir-gold/[0.02] to-transparent pointer-events-none" />
         <Table>
-          <TableHeader className="bg-white/[0.02] border-b border-white/5">
+          <TableHeader className="bg-white/[0.02] border-b border-white/10">
             <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] py-8 pl-10">Traveler Identity</TableHead>
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Experience Snippet</TableHead>
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Sentiment</TableHead>
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Status</TableHead>
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] text-right pr-10">Controls</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase py-6 pl-10">Traveler Identity</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Experience Snippet</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Sentiment</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Status</TableHead>
+              <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase text-right pr-10">Controls</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-white/5">
