@@ -87,16 +87,37 @@ function DriverDashboard({ user, token, handleLogout }: { user: any; token: stri
   const [isToggling, setIsToggling] = useState(false);
   const [activeTab, setActiveTab] = useState<'duty' | 'history'>('duty');
   
-  // Mock trip dispatch data for driver
-  const [activeTrip, setActiveTrip] = useState<any>({
-    id: "trip-9081",
-    passengerName: "Ramesh Sharma",
-    passengers: 3,
-    pickup: "Srinagar Airport (SXR)",
-    drop: "The Khyber Resort, Gulmarg",
-    date: "18 Jul, 2026",
-    status: "PENDING_ACCEPTANCE", // PENDING_ACCEPTANCE, ACCEPTED, EN_ROUTE, COMPLETED
-  });
+  const [activeTrip, setActiveTrip] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchDriverTrip = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/bookings/my-trips`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const trips = await res.json();
+          if (Array.isArray(trips) && trips.length > 0) {
+            const current = trips.find((t: any) => t.status === 'confirmed' || t.status === 'in_progress');
+            if (current) {
+              setActiveTrip({
+                id: current.id,
+                passengerName: current.customerName || current.user?.name || 'Guest Traveler',
+                passengers: current.adults || 2,
+                pickup: current.pickupLocation || 'Srinagar Airport (SXR)',
+                drop: current.dropLocation || current.package?.title || 'Gulmarg Alpine',
+                date: new Date(current.startDate || current.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }),
+                status: current.tripStatus || 'PENDING_ACCEPTANCE'
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Driver trip live fetch silent handler');
+      }
+    };
+    if (token) fetchDriverTrip();
+  }, [token]);
 
   const toggleDuty = async () => {
     setIsToggling(true);
@@ -352,33 +373,9 @@ function HotelPartnerDashboard({ user, token, handleLogout }: { user: any; token
       });
       if (res.ok) {
         const data = await res.json();
-        setReservations(data);
+        setReservations(Array.isArray(data) ? data : []);
       } else {
-        // Mock fallback if none exist yet
-        setReservations([
-          {
-            id: "res-8871",
-            guestName: "Anand Gupta",
-            checkIn: "2026-07-20",
-            checkOut: "2026-07-24",
-            roomType: "Premium Balcony Chalet",
-            roomsCount: 1,
-            mealPlan: "MAP",
-            totalAmount: 30000,
-            status: "Pending"
-          },
-          {
-            id: "res-8872",
-            guestName: "Vikram Malhotra",
-            checkIn: "2026-07-22",
-            checkOut: "2026-07-25",
-            roomType: "Deluxe Mountain Room",
-            roomsCount: 2,
-            mealPlan: "CP",
-            totalAmount: 27000,
-            status: "Confirmed"
-          }
-        ]);
+        setReservations([]);
       }
     } catch (err) {
       console.error(err);

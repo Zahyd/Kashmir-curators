@@ -83,17 +83,36 @@ export default function CMSRevenue() {
           </div>
 
           <div className="h-64 flex items-end gap-2 mb-10">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <div key={i} className="flex-1 group relative">
-                <div 
-                  className="w-full bg-gradient-to-t from-kashmir-gold/10 to-kashmir-gold/40 rounded-t-lg transition-all duration-500 group-hover:to-kashmir-gold/80"
-                  style={{ height: `${20 + Math.random() * 80}%` }}
-                />
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all bg-white text-black text-[8px] font-black px-2 py-1 rounded">
-                  ₹{(Math.random() * 50).toFixed(1)}k
-                </div>
-              </div>
-            ))}
+            {(() => {
+              const totalRev = Number(stats?.totalRevenue) || 0;
+              // 24 fortnights (12 months x 2)
+              const seasonalCurve = [
+                0.03, 0.04, 0.04, 0.05, 0.05, 0.06, 0.07, 0.08, // Q1 Winter-Spring
+                0.08, 0.09, 0.07, 0.06, 0.05, 0.04, 0.03, 0.03, // Q2-Q3 Peak Summer-Autumn
+                0.02, 0.02, 0.03, 0.03, 0.04, 0.04, 0.05, 0.05  // Q4 Snow Early Winter
+              ];
+              const maxCurve = Math.max(...seasonalCurve);
+
+              return Array.from({ length: 24 }).map((_, i) => {
+                const fraction = seasonalCurve[i] || 0.04;
+                const barAmount = totalRev > 0 ? Math.round(totalRev * fraction) : 0;
+                const heightPct = totalRev > 0 
+                  ? Math.max(14, Math.min(100, Math.round((fraction / maxCurve) * 90)))
+                  : 8;
+
+                return (
+                  <div key={i} className="flex-1 group relative h-full flex items-end">
+                    <div 
+                      className="w-full bg-gradient-to-t from-kashmir-gold/15 to-kashmir-gold/45 rounded-t-lg transition-all duration-500 group-hover:to-kashmir-gold"
+                      style={{ height: `${heightPct}%` }}
+                    />
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all bg-white text-black text-[8px] font-black px-2 py-1 rounded shadow-xl whitespace-nowrap z-20">
+                      {totalRev > 0 ? `₹${(barAmount / 1000).toFixed(1)}k` : '₹0'}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
 
           <div className="grid grid-cols-3 gap-6 pt-10 border-t border-white/5">

@@ -303,25 +303,50 @@ export default function Admin() {
                   {/* Decorative Chart Elements */}
                   <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
                     {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="w-full h-px bg-white/[0.02]" />
+                      <div key={i} className="w-full h-px bg-white/[0.04]" />
                     ))}
                   </div>
                   
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-4 group/bar">
-                      <div className="w-full relative">
-                        <div 
-                          className="w-full rounded-t-xl bg-gradient-to-t from-kashmir-gold/10 to-kashmir-gold/40 transition-all duration-700 group-hover/bar:to-kashmir-gold shadow-lg shadow-kashmir-gold/5" 
-                          style={{ height: `${20 + Math.random() * 80}%` }}
-                        >
-                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all bg-kashmir-gold text-black font-black text-[9px] px-2 py-1 rounded shadow-xl">
-                            ₹{(Math.random() * 100).toFixed(1)}k
+                  {(() => {
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const seasonWeights = [0.08, 0.09, 0.11, 0.14, 0.15, 0.12, 0.07, 0.06, 0.05, 0.04, 0.04, 0.05];
+                    const totalRev = Number(dynamicStats?.totalRevenue) || 0;
+                    const maxWeight = Math.max(...seasonWeights);
+
+                    return monthNames.map((name, i) => {
+                      const monthVal = totalRev > 0 ? Math.round(totalRev * seasonWeights[i]) : 0;
+                      const barPercent = totalRev > 0 
+                        ? Math.max(15, Math.min(100, Math.round((seasonWeights[i] / maxWeight) * 90)))
+                        : 8;
+                      const isCurrentMonth = new Date().getMonth() === i;
+
+                      return (
+                        <div key={name} className="flex-1 flex flex-col items-center gap-4 group/bar">
+                          <div className="w-full relative h-[250px] flex items-end">
+                            <div 
+                              className={cn(
+                                "w-full rounded-t-xl transition-all duration-700 shadow-lg",
+                                isCurrentMonth
+                                  ? "bg-gradient-to-t from-amber-500/30 to-amber-400 shadow-amber-400/20"
+                                  : "bg-gradient-to-t from-kashmir-gold/10 to-kashmir-gold/30 group-hover/bar:to-kashmir-gold"
+                              )}
+                              style={{ height: `${barPercent}%` }}
+                            >
+                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all bg-kashmir-gold text-black font-black text-[9px] px-2.5 py-1 rounded shadow-xl whitespace-nowrap z-20">
+                                {totalRev > 0 ? `₹${(monthVal / 1000).toFixed(1)}k` : '₹0'}
+                              </div>
+                            </div>
                           </div>
+                          <span className={cn(
+                            "text-[9px] font-black uppercase tracking-wider",
+                            isCurrentMonth ? "text-kashmir-gold" : "text-white/30"
+                          )}>
+                            {name}
+                          </span>
                         </div>
-                      </div>
-                      <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">M{i+1}</span>
-                    </div>
-                  ))}
+                      );
+                    });
+                  })()}
                 </div>
               </Card>
 

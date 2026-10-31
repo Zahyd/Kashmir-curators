@@ -82,6 +82,8 @@ export default function AgentPortal() {
   // Dashboard state
   const [agentProfile, setAgentProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [liveMarketplace, setLiveMarketplace] = useState<any[]>([]);
+  const [agencyBrandName, setAgencyBrandName] = useState('Apex Global Travels');
   const [isFetchingStats, setIsFetchingStats] = useState(false);
   
   // Tabs: 'marketplace' | 'proposals' | 'crisis' | 'overview'
@@ -112,6 +114,93 @@ export default function AgentPortal() {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
+  
+  useEffect(() => {
+    const fetchLiveMarketplace = async () => {
+      try {
+        const [hotelsRes, pkgsRes, cabsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/hotels`).catch(() => null),
+          fetch(`${API_BASE_URL}/packages`).catch(() => null),
+          fetch(`${API_BASE_URL}/cabs`).catch(() => null)
+        ]);
+
+        const items: any[] = [];
+        if (hotelsRes && hotelsRes.ok) {
+          const hotels = await hotelsRes.json();
+          if (Array.isArray(hotels)) {
+            hotels.slice(0, 4).forEach((h: any) => {
+              const rack = h.pricePerNight || 8500;
+              const net = Math.round(rack * 0.78);
+              items.push({
+                id: `h-${h.id}`,
+                category: h.type === 'Houseboat' ? 'HOUSEBOAT' : 'HOTEL',
+                title: h.name,
+                location: h.location,
+                netRate: net,
+                retailRackRate: rack,
+                unit: 'per night (MAP)',
+                inclusions: h.amenities ? (typeof h.amenities === 'string' ? h.amenities.split(', ') : h.amenities) : ['Central Bukhari Heating', 'Breakfast & Dinner', 'Private Shikara'],
+                availability: 'Instant B2B Lock',
+                badge: 'Contracted Ground Tariff'
+              });
+            });
+          }
+        }
+
+        if (pkgsRes && pkgsRes.ok) {
+          const pkgs = await pkgsRes.json();
+          if (Array.isArray(pkgs)) {
+            pkgs.slice(0, 4).forEach((p: any) => {
+              const rack = p.price || 35000;
+              const net = Math.round(rack * 0.82);
+              items.push({
+                id: `p-${p.id}`,
+                category: 'EXPERIENCE',
+                title: p.title,
+                location: p.destination || 'All Kashmir',
+                netRate: net,
+                retailRackRate: rack,
+                unit: `${p.duration || '6D/5N'} Complete`,
+                inclusions: ['Chauffeured Mountain SUV', '5-Star Stays & Houseboat', 'VIP Gondola Passes'],
+                availability: 'Direct DMC Allocation',
+                badge: 'Flagship B2B Portfolio'
+              });
+            });
+          }
+        }
+
+        if (cabsRes && cabsRes.ok) {
+          const cabs = await cabsRes.json();
+          if (Array.isArray(cabs)) {
+            cabs.slice(0, 3).forEach((c: any) => {
+              const rack = c.basePrice || 4500;
+              const net = Math.round(rack * 0.85);
+              items.push({
+                id: `c-${c.id}`,
+                category: 'CAB',
+                title: c.name,
+                location: 'Valley Transit',
+                netRate: net,
+                retailRackRate: rack,
+                unit: 'per day (Driver & Tolls Included)',
+                inclusions: c.features || ['Police Verified Chauffeur', 'Snow Chains Equipt', 'Zero Union Surcharge'],
+                availability: 'Direct Fleet Sync',
+                badge: 'Verified Ground Fleet'
+              });
+            });
+          }
+        }
+
+        if (items.length > 0) {
+          setLiveMarketplace(items);
+        }
+      } catch (err) {
+        console.warn('Live B2B marketplace fallback to contracted rates', err);
+      }
+    };
+
+    fetchLiveMarketplace();
+  }, []);
   useEffect(() => {
     if (user && token) {
       fetchAgentDetails();
@@ -313,9 +402,10 @@ export default function AgentPortal() {
   const calculatedMargin = Math.round((baseNetCost * markupPercent) / 100);
   const grossClientPrice = baseNetCost + calculatedMargin;
 
+  const activeSupply = liveMarketplace.length > 0 ? liveMarketplace : SAMPLE_MARKETPLACE_SUPPLY;
   const filteredSupply = filterCategory === 'ALL' 
-    ? SAMPLE_MARKETPLACE_SUPPLY 
-    : SAMPLE_MARKETPLACE_SUPPLY.filter(s => s.category === filterCategory);
+    ? activeSupply 
+    : activeSupply.filter(s => s.category === filterCategory);
 
   return (
     <div className="min-h-screen bg-[#05080a] text-white flex flex-col font-sans selection:bg-amber-400/30 selection:text-white">
@@ -495,7 +585,7 @@ export default function AgentPortal() {
                 <div className="flex items-center gap-3">
                   <Button 
                     onClick={() => {
-                      navigator.clipboard.writeText('https://kashmirconnect.com/trip/malhotra-winter-classic-agt7701');
+                      navigator.clipboard.writeText(`${window.location.origin}/packages?ref=b2b-agent`);
                       toast.success('White-label client link copied to clipboard!');
                     }}
                     variant="outline" 

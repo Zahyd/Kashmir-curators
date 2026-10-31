@@ -54,8 +54,6 @@ import { LeadBoard } from '@/components/sales/LeadBoard';
 
 
 // Reminders will be dynamic in future iterations
-const mockReminders: any[] = [];
-
 export default function SalesPortal() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -244,6 +242,24 @@ export default function SalesPortal() {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return timeB - timeA;
+    });
+
+  // Real-time Priority Follow-up Queue calculated dynamically from active inquiries
+  const dynamicReminders = inquiries
+    .filter(inq => {
+      const isAssigned = inq.assignedTo === teamUser?.code || !inq.assignedTo;
+      const isPriority = inq.status === 'Pending Curation' || inq.leadStage === 'FOLLOW_UP' || inq.leadStage === 'PAYMENT_PENDING' || inq.priority === 'High';
+      return isAssigned && isPriority;
+    })
+    .slice(0, 4)
+    .map(inq => {
+      const isPayment = inq.leadStage === 'PAYMENT_PENDING';
+      const isUrgent = inq.priority === 'High';
+      const type = isPayment ? 'payment' : isUrgent ? 'urgency' : 'follow-up';
+      const time = inq.createdAt ? new Date(inq.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Today';
+      const title = inq.customerName || 'Inquiry Alert';
+      const description = `${inq.destination || 'Kashmir'} • ${inq.duration || '5'} Days • ${inq.phone || 'Phone pending'}`;
+      return { id: inq.id, inquiry: inq, type, time, title, description, phone: inq.phone };
     });
 
   const handleLogout = () => {

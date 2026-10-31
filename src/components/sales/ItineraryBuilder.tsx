@@ -193,6 +193,314 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     }
   }, [days, inquiry.id]);
 
+  
+  const loadTemplate = (templateType: 'flagship-6d' | 'romance-5d' | 'snow-4d') => {
+    let newDays: ItineraryDay[] = [];
+    if (templateType === 'flagship-6d') {
+      newDays = [
+        {
+          day: 1,
+          title: 'Srinagar Arrival & Sunset Shikara Cruise on Dal Lake',
+          activities: 'VIP Airport greeting and transfer. Check-in to Royal Cedar Houseboat on Dal Lake. Sunset private Shikara ride with authentic Kashmiri saffron Kahwa.',
+          hotelId: 'h-houseboat-1',
+          hotelName: 'Nigeen Royal Cedar Houseboat',
+          hotelImage: 'https://images.unsplash.com/photo-1566837493203-d2d46e01a5d6?auto=format&fit=crop&q=80&w=800',
+          transport: 'Toyota Innova Crysta VIP',
+          roomType: 'Heritage Suite',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 8500,
+          transportPrice: 3800,
+          extraBedPrice: 0,
+          hotelNetCost: 6200,
+          transportNetCost: 3000,
+          paxCount: '2',
+          vendorStatus: 'confirmed',
+          showDateTime: false
+        },
+        {
+          day: 2,
+          title: 'Srinagar to Pahalgam Valley of Shepherds',
+          activities: 'Drive through the saffron fields of Pampore and 10th-century Avantipura ruins. Check in to riverside mountain lodge along the gushing Lidder River.',
+          hotelId: 'h-pahalgam-1',
+          hotelName: 'Pahalgam Riverside Retreat',
+          hotelImage: 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80&w=800',
+          transport: 'Toyota Innova Crysta VIP',
+          roomType: 'Riverside Deluxe Cottage',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 9500,
+          transportPrice: 3800,
+          extraBedPrice: 0,
+          hotelNetCost: 7000,
+          transportNetCost: 3000,
+          paxCount: '2',
+          vendorStatus: 'confirmed',
+          showDateTime: false
+        },
+        {
+          day: 3,
+          title: 'Aru & Betaab Valleys High Pine Meadows',
+          activities: 'Private excursion to Betaab Valley, Aru high pastures, and crystal-clear streams. Walk with local nature guide and enjoy riverside Kashmiri lunch.',
+          hotelId: 'h-pahalgam-1',
+          hotelName: 'Pahalgam Riverside Retreat',
+          hotelImage: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&q=80&w=800',
+          transport: 'Toyota Innova Crysta VIP',
+          roomType: 'Riverside Deluxe Cottage',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 9500,
+          transportPrice: 3800,
+          extraBedPrice: 0,
+          hotelNetCost: 7000,
+          transportNetCost: 3000,
+          paxCount: '2',
+          vendorStatus: 'confirmed',
+          showDateTime: false
+        },
+        {
+          day: 4,
+          title: 'Pahalgam to Alpine Gulmarg Gondola Highlands',
+          activities: 'Ascend into the Pir Panjal range to Gulmarg. Check in to luxury pine ski chalet with central heating. Sunset pine forest walk.',
+          hotelId: 'h-gulmarg-1',
+          hotelName: 'The Highland Chalet & Alpine Spa',
+          hotelImage: 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?auto=format&fit=crop&q=80&w=800',
+          transport: 'Toyota Innova Crysta VIP',
+          roomType: 'Alpine Pine Suite',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 18500,
+          transportPrice: 4200,
+          extraBedPrice: 0,
+          hotelNetCost: 14000,
+          transportNetCost: 3400,
+          paxCount: '2',
+          vendorStatus: 'confirmed',
+          showDateTime: false
+        },
+        {
+          day: 5,
+          title: 'Apharwat Peak 14,000ft Gondola Cable Car',
+          activities: 'VIP pre-booked Gondola tickets for Phase 1 & 2. High-altitude snow activities, Apharwat ridge photography, and tea at 14,000 feet alpine cafe.',
+          hotelId: 'h-gulmarg-1',
+          hotelName: 'The Highland Chalet & Alpine Spa',
+          hotelImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=800',
+          transport: 'Toyota Innova Crysta VIP',
+          roomType: 'Alpine Pine Suite',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 18500,
+          transportPrice: 3800,
+          extraBedPrice: 0,
+          hotelNetCost: 14000,
+          transportNetCost: 3000,
+          paxCount: '2',
+          vendorStatus: 'confirmed',
+          showDateTime: false
+        },
+        {
+          day: 6,
+          title: 'Gulmarg to Srinagar Airport Departure',
+          activities: 'Descend to Srinagar. Curated artisan Pashmina weavers and authentic saffron boutique visit before comfortable VIP airport drop-off.',
+          hotelId: '',
+          hotelName: '',
+          hotelImage: '',
+          transport: 'Toyota Innova Crysta VIP',
+          roomType: 'Transfer Only',
+          mealPlan: 'CP (Breakfast Only)',
+          bedCount: '',
+          hotelPrice: 0,
+          transportPrice: 3500,
+          extraBedPrice: 0,
+          hotelNetCost: 0,
+          transportNetCost: 2800,
+          paxCount: '2',
+          vendorStatus: 'confirmed',
+          showDateTime: false
+        }
+      ];
+    } else if (templateType === 'romance-5d') {
+      newDays = [
+        {
+          day: 1,
+          title: 'Romantic Dal Lake Houseboat Arrival',
+          activities: 'Warm welcome with Kashmiri Kehwa, private candlelit Shikara ride at twilight, hand-crafted cedarwood heated suite.',
+          hotelId: 'h-houseboat-1',
+          hotelName: 'Nigeen Royal Cedar Houseboat',
+          hotelImage: 'https://images.unsplash.com/photo-1566837493203-d2d46e01a5d6?auto=format&fit=crop&q=80&w=800',
+          transport: 'Private Executive Sedan',
+          roomType: 'Royal Honeymoon Suite',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 9000,
+          transportPrice: 3200,
+          extraBedPrice: 0,
+          hotelNetCost: 6800,
+          transportNetCost: 2500,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        },
+        {
+          day: 2,
+          title: 'Old City Artisans & Mughal Floral Gardens',
+          activities: 'Nishat & Shalimar bagh royal floral tour, heritage handicraft exploration, evening riverside high tea.',
+          hotelId: 'h-houseboat-1',
+          hotelName: 'Nigeen Royal Cedar Houseboat',
+          hotelImage: 'https://images.unsplash.com/photo-1566837493203-d2d46e01a5d6?auto=format&fit=crop&q=80&w=800',
+          transport: 'Private Executive Sedan',
+          roomType: 'Royal Honeymoon Suite',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 9000,
+          transportPrice: 3200,
+          extraBedPrice: 0,
+          hotelNetCost: 6800,
+          transportNetCost: 2500,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        },
+        {
+          day: 3,
+          title: 'Scenic Transfer to Gulmarg Winter Chalet',
+          activities: 'Ascent to snow-draped Gulmarg pine forest, luxury cottage fireside lounge, couples spa session.',
+          hotelId: 'h-gulmarg-1',
+          hotelName: 'The Highland Chalet & Alpine Spa',
+          hotelImage: 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?auto=format&fit=crop&q=80&w=800',
+          transport: 'Private Executive Sedan',
+          roomType: 'Highland Alpine Suite',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 17500,
+          transportPrice: 3800,
+          extraBedPrice: 0,
+          hotelNetCost: 13500,
+          transportNetCost: 3000,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        },
+        {
+          day: 4,
+          title: 'Gulmarg Gondola Ride & Snow Excursion',
+          activities: 'Phase 1 & Phase 2 cable car up Apharwat peak, snow photography, cozy hot cocoa at highland cafe.',
+          hotelId: 'h-gulmarg-1',
+          hotelName: 'The Highland Chalet & Alpine Spa',
+          hotelImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=800',
+          transport: 'Private Executive Sedan',
+          roomType: 'Highland Alpine Suite',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'King Bed',
+          hotelPrice: 17500,
+          transportPrice: 3200,
+          extraBedPrice: 0,
+          hotelNetCost: 13500,
+          transportNetCost: 2500,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        },
+        {
+          day: 5,
+          title: 'Sweet Memories & Airport Farewell',
+          activities: 'Breakfast at chalet, scenic return drive to Srinagar Airport with complimentary dry fruit souvenir box.',
+          hotelId: '',
+          hotelName: '',
+          hotelImage: '',
+          transport: 'Private Executive Sedan',
+          roomType: 'Transfer Only',
+          mealPlan: 'CP (Breakfast Only)',
+          bedCount: '',
+          hotelPrice: 0,
+          transportPrice: 3000,
+          extraBedPrice: 0,
+          hotelNetCost: 0,
+          transportNetCost: 2400,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        }
+      ];
+    } else {
+      newDays = [
+        {
+          day: 1,
+          title: 'Srinagar to Gulmarg Direct Ski Express',
+          activities: 'Direct 4x4 SUV transfer from airport to Gulmarg ski slopes. Check-in to heated chalet, equipment fitting & ski pass check.',
+          hotelId: 'h-gulmarg-1',
+          hotelName: 'The Highland Chalet & Alpine Spa',
+          hotelImage: 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?auto=format&fit=crop&q=80&w=800',
+          transport: '4x4 Snow Chains Mountain SUV',
+          roomType: 'Heated Chalet Room',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'Twin/Double',
+          hotelPrice: 16000,
+          transportPrice: 4500,
+          extraBedPrice: 0,
+          hotelNetCost: 12000,
+          transportNetCost: 3500,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        },
+        {
+          day: 2,
+          title: 'Full Day Skiing Apharwat Peak Phase 1 & 2',
+          activities: 'Dedicated ski instructor liaison. Morning powder skiing on Phase 2 Apharwat bowl, afternoon slalom courses.',
+          hotelId: 'h-gulmarg-1',
+          hotelName: 'The Highland Chalet & Alpine Spa',
+          hotelImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=800',
+          transport: '4x4 Snow Chains Mountain SUV',
+          roomType: 'Heated Chalet Room',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'Twin/Double',
+          hotelPrice: 16000,
+          transportPrice: 3000,
+          extraBedPrice: 0,
+          hotelNetCost: 12000,
+          transportNetCost: 2200,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        },
+        {
+          day: 3,
+          title: 'Snowmobile Trails & Srinagar Houseboat Evening',
+          activities: 'Morning snowmobiling and Mary Shoulder trail. Afternoon descent to Dal Lake for authentic heritage houseboat night.',
+          hotelId: 'h-houseboat-1',
+          hotelName: 'Nigeen Royal Cedar Houseboat',
+          hotelImage: 'https://images.unsplash.com/photo-1566837493203-d2d46e01a5d6?auto=format&fit=crop&q=80&w=800',
+          transport: '4x4 Snow Chains Mountain SUV',
+          roomType: 'Royal Suite',
+          mealPlan: 'MAP (Breakfast + Dinner)',
+          bedCount: 'Twin/Double',
+          hotelPrice: 7500,
+          transportPrice: 4200,
+          extraBedPrice: 0,
+          hotelNetCost: 5500,
+          transportNetCost: 3200,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        },
+        {
+          day: 4,
+          title: 'Farewell Kashmir Flight Transfer',
+          activities: 'Early morning shikara view across snow-dusted mountains, hot Kahwa, transfer to Srinagar airport.',
+          hotelId: '',
+          hotelName: '',
+          hotelImage: '',
+          transport: 'Private Executive Sedan',
+          roomType: 'Transfer Only',
+          mealPlan: 'CP (Breakfast Only)',
+          bedCount: '',
+          hotelPrice: 0,
+          transportPrice: 3000,
+          extraBedPrice: 0,
+          hotelNetCost: 0,
+          transportNetCost: 2400,
+          paxCount: '2',
+          vendorStatus: 'confirmed'
+        }
+      ];
+    }
+    setDays(newDays);
+    toast.success(`Loaded ${newDays.length}-Day Master Blueprint successfully!`);
+  };
+
   const totalRevenue = days.reduce((sum, day) => sum + (day.hotelPrice || 0) + (day.transportPrice || 0) + (day.extraBedPrice || 0), 0);
   const totalNetCost = days.reduce((sum, day) => sum + (day.hotelNetCost || 0) + (day.transportNetCost || 0), 0);
   const profit = totalRevenue - totalNetCost;
@@ -656,6 +964,46 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
               </div>
             </div>
           </Card>
+
+                    {/* 1-Click Master Itinerary Blueprints */}
+          <div className="p-6 rounded-[2rem] bg-gradient-to-r from-amber-500/10 via-white/[0.02] to-transparent border border-amber-400/20 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span className="text-xs font-black uppercase tracking-wider text-amber-400">1-Click Master Itinerary Blueprints</span>
+              </div>
+              <p className="text-[11px] text-white/50">Instantly populate high-conversion itineraries with hotels, routes, and pricing.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => loadTemplate('flagship-6d')}
+                className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
+              >
+                6D/5N Flagship
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => loadTemplate('romance-5d')}
+                className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
+              >
+                5D/4N Romance
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => loadTemplate('snow-4d')}
+                className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
+              >
+                4D/3N Gulmarg Ski
+              </Button>
+            </div>
+          </div>
 
           <div className="flex items-center justify-between px-4">
             <h3 className="text-xl font-bold text-white flex items-center gap-3">
@@ -1252,7 +1600,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                         variant="ghost"
                         className="w-full bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 text-emerald-400 font-bold h-12 rounded-xl text-[10px] uppercase tracking-widest"
                       >
-                        <Upload className="w-3.5 h-3.5 mr-2" /> Mock Upload
+                        <Upload className="w-3.5 h-3.5 mr-2" /> Attach PDF Document
                       </Button>
                       <input 
                         type="file" 
