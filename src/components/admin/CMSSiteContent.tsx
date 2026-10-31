@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Loader2, Plane, Compass, Coffee, Clock, CheckCircle } from 'lucide-react';
+import { Save, Loader2, Plane, Compass, Coffee, Clock, CheckCircle, MapPin, Phone, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +39,31 @@ const defaultContent: Record<string, Partial<SiteContent>> = {
     subtitle: 'Uncompromising Luxury and Authentic Experiences',
     content: {
       description: 'We are a premier luxury travel atelier specializing in bespoke Kashmir tourism, delivering unparalleled private experiences.',
+    },
+    image_url: '',
+  },
+  socialMedia: {
+    section_key: 'socialMedia',
+    title: 'Brand Social Footprint',
+    subtitle: 'Manage the outbound connection links for the Footer.',
+    content: {
+      facebook: 'https://facebook.com',
+      instagram: 'https://instagram.com',
+      twitter: 'https://twitter.com',
+      youtube: 'https://youtube.com',
+    },
+    image_url: '',
+  },
+  footer: {
+    section_key: 'footer',
+    title: 'Valley Ground Liaison',
+    subtitle: 'Footer configuration and direct contact protocol',
+    content: {
+      description: 'The premier registry for high-fidelity travel experiences across the Kashmir valley. Curating excellence since 2012.',
+      address: 'Watergam, Rafiabad, Sopore, 193303',
+      phone: '+91 91037 98448',
+      email: 'Zahidreyaz44123@gmail.com',
+      copyright: '© 2026 The Kashmir Curators',
     },
     image_url: '',
   },
@@ -326,6 +351,80 @@ export default function CMSSiteContent() {
               <Save className="h-4 w-4 mr-2" />
             )}
             Save Social Links
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Footer & Valley HQ Liaison Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Footer & Valley HQ Liaison</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-1 block">Brand Tagline / Description</label>
+            <Textarea
+              value={(content.footer?.content as Record<string, string>)?.description || ''}
+              onChange={(e) => updateContentField('footer', 'description', e.target.value)}
+              placeholder="The premier registry for high-fidelity travel experiences across the Kashmir valley. Curating excellence since 2012."
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-amber-500" />
+                <span>Physical Office Address</span>
+              </label>
+              <Input
+                value={(content.footer?.content as Record<string, string>)?.address || ''}
+                onChange={(e) => updateContentField('footer', 'address', e.target.value)}
+                placeholder="Watergam, Rafiabad, Sopore, 193303"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block flex items-center gap-1.5">
+                <Phone className="h-4 w-4 text-emerald-500" />
+                <span>24/7 Helpline Phone</span>
+              </label>
+              <Input
+                value={(content.footer?.content as Record<string, string>)?.phone || ''}
+                onChange={(e) => updateContentField('footer', 'phone', e.target.value)}
+                placeholder="+91 91037 98448"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block flex items-center gap-1.5">
+                <Mail className="h-4 w-4 text-blue-500" />
+                <span>Official Desk Email</span>
+              </label>
+              <Input
+                value={(content.footer?.content as Record<string, string>)?.email || ''}
+                onChange={(e) => updateContentField('footer', 'email', e.target.value)}
+                placeholder="Zahidreyaz44123@gmail.com"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Copyright Notice</label>
+              <Input
+                value={(content.footer?.content as Record<string, string>)?.copyright || ''}
+                onChange={(e) => updateContentField('footer', 'copyright', e.target.value)}
+                placeholder="© 2026 The Kashmir Curators"
+              />
+            </div>
+          </div>
+
+          <Button onClick={() => saveSection('footer')} disabled={saving === 'footer'}>
+            {saving === 'footer' ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save Footer & HQ Liaison
           </Button>
         </CardContent>
       </Card>

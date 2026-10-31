@@ -48,6 +48,19 @@ const defaultContent: Record<string, any> = {
     },
     image_url: ''
   },
+  footer: {
+    section_key: 'footer',
+    title: 'Valley Ground Liaison',
+    subtitle: 'Footer configuration and direct contact protocol',
+    content: {
+      description: 'The premier registry for high-fidelity travel experiences across the Kashmir valley. Curating excellence since 2012.',
+      address: 'Watergam, Rafiabad, Sopore, 193303',
+      phone: '+91 91037 98448',
+      email: 'Zahidreyaz44123@gmail.com',
+      copyright: '© 2026 The Kashmir Curators',
+    },
+    image_url: ''
+  },
   fleetHero: {
     section_key: 'fleetHero',
     title: 'Premium Transport',

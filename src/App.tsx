@@ -29,6 +29,9 @@ import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
 import PaymentRequest from "./pages/PaymentRequest";
 import PublicItinerary from "./pages/PublicItinerary";
+import About from "./pages/About";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 import { ThemeProvider } from "./contexts/ThemeContext";
 import EmergencyBanner from "./components/layout/EmergencyBanner";
@@ -79,6 +82,10 @@ const App = () => {
                   <Route path="/vendor/portal" element={<VendorPortal />} />
                   <Route path="/partner" element={<VendorPortal />} />
                   <Route path="/safety-card/:token" element={<TravelStatusPage />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/contact" element={<About />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

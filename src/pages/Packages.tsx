@@ -78,9 +78,16 @@ export default function Packages() {
     };
   }, []);
 
+  useEffect(() => {
+    const dest = searchParams.get('destination');
+    if (dest) {
+      setFilters(prev => ({ ...prev, destination: dest }));
+    }
+  }, [searchParams]);
+
   const filteredPackages = useMemo(() => {
     return packages.filter((pkg) => {
-      if (filters.destination && filters.destination !== 'all' && pkg.destination.toLowerCase() !== filters.destination.toLowerCase()) return false;
+      if (filters.destination && filters.destination !== 'all' && !pkg.destination.toLowerCase().includes(filters.destination.toLowerCase()) && !pkg.name.toLowerCase().includes(filters.destination.toLowerCase())) return false;
       if (filters.search && !pkg.name.toLowerCase().includes(filters.search.toLowerCase()) && !pkg.destination.toLowerCase().includes(filters.search.toLowerCase())) return false;
       
       if (filters.budget[1] < 500000) {

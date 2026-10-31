@@ -155,7 +155,7 @@ export default function Hotels() {
     if (!hotels) return [];
 
     return hotels.filter(hotel => {
-      if (filters.location && filters.location !== 'all' && hotel.location.toLowerCase() !== filters.location.toLowerCase()) return false;
+      if (filters.location && filters.location !== 'all' && !hotel.location.toLowerCase().includes(filters.location.toLowerCase()) && !hotel.name.toLowerCase().includes(filters.location.toLowerCase())) return false;
       if (filters.search && !hotel.name.toLowerCase().includes(filters.search.toLowerCase()) && !hotel.location.toLowerCase().includes(filters.search.toLowerCase())) return false;
       
       const price = hotel.pricePerNight || 0;
