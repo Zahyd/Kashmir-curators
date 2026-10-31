@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { toast } from 'sonner';
 import { io, Socket } from 'socket.io-client';
 
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 
 const API_URL = API_BASE_URL;
 
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Initialize socket when user changes
   useEffect(() => {
     if (user && !socket) {
-      const newSocket = io(SOCKET_URL);
+      const newSocket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
       setSocket(newSocket);
 
       newSocket.on('connect', () => {

@@ -19,7 +19,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { Logo } from '@/components/ui/Logo';
 import SeoMeta from '@/components/SeoMeta';
 import { io } from 'socket.io-client';
@@ -87,7 +87,7 @@ export default function PaymentRequest() {
   useEffect(() => {
     if (!paymentId) return;
 
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     
     socket.emit('join-payment', paymentId);
     

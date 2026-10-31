@@ -26,7 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 import { cn } from '@/lib/utils';
 import { io } from 'socket.io-client';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 
 const amenityIcons: Record<string, any> = {
   WiFi: Wifi,
@@ -135,9 +135,7 @@ export default function Hotels() {
     };
     fetchHeroContent();
 
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling']
-    });
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     socket.on('site-content-updated', (payload) => {
       if (payload.sectionKey === 'hotelsHero' && payload.data) {
         if (payload.data.title) setHeroTitle(payload.data.title);

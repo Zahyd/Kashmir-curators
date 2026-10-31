@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 
-import { SOCKET_URL } from '@/lib/api';
+import { SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 
 export type TeamRole = 'admin' | 'operations' | 'sales' | 'marketing';
 
@@ -117,7 +117,7 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
   // Initialize socket when team user changes
   useEffect(() => {
     if (teamUser && !socket) {
-      const newSocket = io(SOCKET_URL);
+      const newSocket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
       setSocket(newSocket);
 
       newSocket.on('connect', () => {

@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { io } from 'socket.io-client';
 
 const SAMPLE_MARKETPLACE_SUPPLY = [
@@ -209,7 +209,7 @@ export default function AgentPortal() {
   }, [user, token]);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     socket.on('disruption-alert', () => {
       fetchCrisisData();
     });

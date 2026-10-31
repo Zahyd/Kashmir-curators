@@ -18,7 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { usePackages, useDestinations } from '@/hooks/useCMSData';
 import { cn } from '@/lib/utils';
 import { io } from 'socket.io-client';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 
 export default function Packages() {
@@ -64,7 +64,7 @@ export default function Packages() {
     };
     fetchHero();
 
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     socket.on('site-content-updated', (data) => {
       if (data.key === 'packages_hero') {
         if (data.content.title) setHeroTitle(data.content.title);

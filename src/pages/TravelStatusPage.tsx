@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { io } from 'socket.io-client';
 import TripSafetyCardModal from '@/components/common/TripSafetyCardModal';
 
@@ -109,7 +109,7 @@ export default function TravelStatusPage() {
   useEffect(() => {
     fetchAdvisories();
 
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     socket.on('advisory-created', () => fetchAdvisories());
     socket.on('advisory-updated', () => fetchAdvisories());
     socket.on('emergency-mode-toggled', () => fetchAdvisories());
