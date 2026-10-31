@@ -206,18 +206,32 @@ function SortableLeadCard({ inquiry, onClick }: { inquiry: Inquiry; onClick?: ()
           )}
 
           {/* Footer controls */}
-          <div className="flex justify-between items-center border-t border-white/5 pt-2 mt-1">
-            <span className="text-[9px] text-white/20 font-bold uppercase">
+          <div className="flex justify-between items-center border-t border-white/5 pt-2.5 mt-1.5">
+            <span className="text-[10px] text-white/40 font-bold uppercase">
               {new Date(inquiry.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
-            {onClick && (
-              <button 
-                onClick={onClick} 
-                className="text-[9px] font-black uppercase tracking-wider text-kashmir-gold hover:text-white transition-colors flex items-center gap-1 bg-white/5 px-2 py-1 rounded"
-              >
-                <Sparkles className="w-2.5 h-2.5" /> Action
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {inquiry.phone && (
+                <a 
+                  href={`https://wa.me/${inquiry.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${inquiry.customerName}, this is your private concierge from Kashmir Curators regarding your itinerary for ${inquiry.destination}.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[9px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-2 py-1 rounded-md transition-all"
+                  title="WhatsApp Client"
+                >
+                  WhatsApp
+                </a>
+              )}
+              {onClick && (
+                <button 
+                  onClick={onClick} 
+                  className="text-[9px] font-black uppercase tracking-wider text-black bg-kashmir-gold hover:bg-amber-400 transition-colors flex items-center gap-1 px-2.5 py-1 rounded-md shadow-sm"
+                >
+                  <Sparkles className="w-2.5 h-2.5" /> Quote
+                </button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

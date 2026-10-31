@@ -252,6 +252,35 @@ export default function CMSBookings() {
     }
   };
 
+  
+  const handleExportCSV = () => {
+    if (filteredBookings.length === 0) {
+      toast.error('No bookings available to export');
+      return;
+    }
+    const headers = ['Booking ID', 'Customer Name', 'Email', 'Phone', 'Service Type', 'Item Name', 'Date', 'Amount', 'Status'];
+    const rows = filteredBookings.map(b => [
+      b.id,
+      `"${(b.user?.name || 'Guest').replace(/"/g, '""')}"`,
+      b.user?.email || '',
+      b.user?.phone || '',
+      b.type,
+      `"${(b.itemName || '').replace(/"/g, '""')}"`,
+      b.bookingDate ? new Date(b.bookingDate).toLocaleDateString() : '',
+      b.totalAmount,
+      b.status
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `kashmir_curators_bookings_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${filteredBookings.length} bookings to CSV successfully!`);
+  };
+
   const filteredBookings = bookings.filter(b => {
     const matchesSearch = 
       b.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -290,8 +319,8 @@ export default function CMSBookings() {
           >
             <Plus className="w-4 h-4 mr-2" /> New Booking
           </Button>
-          <Button variant="outline" className="rounded-xl bg-white/5 border-white/5 text-[10px] font-black uppercase tracking-widest px-6 h-12">
-            <Download className="w-4 h-4 mr-2" /> Export CSV
+          <Button variant="outline" onClick={handleExportCSV} className="rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-white/80 hover:text-white text-xs font-bold uppercase tracking-wider px-6 h-12 cursor-pointer">
+            <Download className="w-4 h-4 mr-2 text-kashmir-gold" /> Export CSV
           </Button>
         </div>
       </div>

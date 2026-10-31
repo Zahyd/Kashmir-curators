@@ -425,11 +425,11 @@ export default function CMSPackages() {
         <Table>
           <TableHeader className="bg-white/[0.02] border-b border-white/5">
             <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] py-8 pl-10">Intelligence Node</TableHead>
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Operational Parameters</TableHead>
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Asset Value</TableHead>
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em]">Status</TableHead>
-              <TableHead className="text-white/20 uppercase text-[9px] font-black tracking-[0.4em] text-right pr-10">Controls</TableHead>
+              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider py-8 pl-10">Signature Package</TableHead>
+              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider">Route & Duration</TableHead>
+              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider">Tariff / Rates</TableHead>
+              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider">Display Status</TableHead>
+              <TableHead className="text-white/20 uppercase text-xs font-bold uppercase tracking-wider text-right pr-10">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-white/5">

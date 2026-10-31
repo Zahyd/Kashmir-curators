@@ -188,6 +188,37 @@ export default function CMSInquiries() {
     return id.includes('-') ? `KC-${id.split('-')[0].toUpperCase()}` : `KC-${id.substring(0, 8).toUpperCase()}`;
   };
 
+  
+  const handleExportCSV = () => {
+    if (filteredInquiries.length === 0) {
+      toast.error('No inquiries available to export');
+      return;
+    }
+    const headers = ['Inquiry ID', 'Customer Name', 'Email', 'Phone', 'Destination', 'Duration', 'Travelers', 'Budget', 'Status', 'Assigned Agent', 'Date'];
+    const rows = filteredInquiries.map(inq => [
+      formatId(inq.id, inq.leadId),
+      `"${(inq.customerName || '').replace(/"/g, '""')}"`,
+      inq.email || '',
+      inq.phone || '',
+      `"${(inq.destination || '').replace(/"/g, '""')}"`,
+      inq.duration || '',
+      inq.travelers || '2',
+      inq.budget || '',
+      inq.status || '',
+      inq.assignedTo || 'Unassigned',
+      inq.date || (inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : '')
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `kashmir_curators_inquiries_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${filteredInquiries.length} inquiries to CSV successfully!`);
+  };
+
   const filteredInquiries = inquiries.filter(inq => {
     const displayId = formatId(inq.id, inq.leadId);
     const matchesSearch = displayId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -365,7 +396,7 @@ export default function CMSInquiries() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
-          <Button variant="outline" className="flex-1 xl:flex-none h-16 bg-white/[0.02] border-white/5 text-white/40 hover:text-white hover:bg-white/10 px-8 rounded-[1.5rem] transition-all duration-500 group">
+          <Button variant="outline" onClick={handleExportCSV} className="flex-1 xl:flex-none h-16 bg-white/[0.02] border-white/10 text-white/70 hover:text-white hover:bg-white/10 px-8 rounded-[1.5rem] transition-all duration-500 group cursor-pointer">
             <Download className="w-5 h-5 mr-3 group-hover:-translate-y-0.5 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Export Data</span>
           </Button>
@@ -389,14 +420,14 @@ export default function CMSInquiries() {
           <table className="w-full text-left border-collapse min-w-[980px]">
             <thead>
               <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] w-36">Inquiry ID</th>
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[220px]">Intelligence Profile</th>
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[260px]">Trip Parameters</th>
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] w-44">Status</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] w-36">Lead Reference</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[220px]">Guest Profile</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[260px]">Itinerary & Route</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] w-44">Pipeline Status</th>
                 {canAssign && (
-                  <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[180px]">Assigned Agent</th>
+                  <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] min-w-[180px]">Lead Liaison</th>
                 )}
-                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] text-right w-28">Controls</th>
+                <th className="px-6 py-6 font-black text-white/30 text-[9px] uppercase tracking-[0.3em] text-right w-36">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">

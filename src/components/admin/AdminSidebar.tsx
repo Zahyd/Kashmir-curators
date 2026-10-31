@@ -118,7 +118,7 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
           </div>
           <div>
             <h2 className="text-lg font-display font-black text-white tracking-tighter leading-none group-hover/logo:text-kashmir-gold transition-colors">Kashmir<span className="text-kashmir-gold ml-0.5 text-xl group-hover/logo:text-white transition-colors">Director</span></h2>
-            <p className="text-[9px] uppercase tracking-[0.4em] text-kashmir-gold font-black opacity-60 mt-1">Global Command</p>
+            <p className="text-[9px] uppercase tracking-widest text-kashmir-gold font-black opacity-60 mt-1">Global Command</p>
           </div>
         </Link>
 
@@ -222,7 +222,7 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
           className="w-full flex items-center gap-4 px-5 py-3 mb-2 rounded-2xl text-white/40 hover:text-white hover:bg-white/5 transition-all duration-300 group"
         >
           <Sparkles className="w-5 h-5 text-kashmir-gold group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Visit Website</span>
+          <span className="text-[10px] font-black uppercase tracking-wider">Visit Website</span>
         </Link>
         
         <Button 
@@ -231,7 +231,7 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
           className="w-full justify-start gap-4 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-500 rounded-2xl h-12 px-5 group/logout"
         >
           <LogOut className="w-5 h-5 group-hover/logout:-translate-x-1 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Terminate Session</span>
+          <span className="text-[10px] font-black uppercase tracking-wider">Terminate Session</span>
         </Button>
       </div>
     </aside>

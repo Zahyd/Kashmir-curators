@@ -183,24 +183,29 @@ export default function Admin() {
         return (
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
             {/* Header Intelligence */}
-            <div className="relative overflow-hidden p-10 rounded-[3rem] bg-gradient-to-br from-kashmir-gold/10 via-transparent to-transparent border border-white/5 shadow-2xl">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/5 blur-[80px] -mr-32 -mt-32" />
-              <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
-                <div className="space-y-2">
-                  <Badge className="bg-kashmir-gold text-black hover:bg-kashmir-gold border-none font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] mb-4">
-                    Enterprise Intelligence
-                  </Badge>
-                  <h1 className="text-5xl font-display font-black text-white leading-tight">Welcome back, <span className="text-kashmir-gold">{ROLE_LABELS[teamRole]}</span></h1>
-                  <p className="text-white/40 text-sm max-w-xl font-medium leading-relaxed">Your Kashmir Curators ecosystem is performing at <span className="text-green-400 font-bold">124% capacity</span>. All operational nodes are synchronized and secured.</p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="text-center p-6 rounded-[2rem] bg-white/5 border border-white/5 backdrop-blur-xl min-w-[140px]">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-2">System Load</p>
-                    <p className="text-2xl font-display font-bold text-white">0.42<span className="text-kashmir-gold text-sm ml-1">ms</span></p>
+            <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-amber-500/10 via-white/[0.02] to-transparent border border-amber-400/20 shadow-2xl backdrop-blur-2xl">
+              <div className="absolute top-0 right-0 w-72 h-72 bg-amber-400/10 blur-[90px] -mr-32 -mt-32 pointer-events-none" />
+              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-400 text-[10px] font-bold uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Valley Operations Telemetry 2026</span>
                   </div>
-                  <div className="text-center p-6 rounded-[2rem] bg-kashmir-gold/5 border border-kashmir-gold/10 backdrop-blur-xl min-w-[140px]">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-kashmir-gold/50 mb-2">Live Nodes</p>
-                    <p className="text-2xl font-display font-bold text-kashmir-gold">18</p>
+                  <h1 className="text-3xl sm:text-5xl font-display font-black text-white leading-tight uppercase tracking-tight">
+                    Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">{ROLE_LABELS[teamRole]}</span>
+                  </h1>
+                  <p className="text-white/60 text-xs sm:text-sm max-w-xl font-medium leading-relaxed">
+                    Kashmir Curators ground telemetry active. All luxury houseboats, alpine ski chalets, and 4x4 mountain transit corridors are operating under certified protocols.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3 self-stretch sm:self-auto">
+                  <div className="flex-1 sm:flex-initial text-center p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl min-w-[130px]">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-1">Active Pipeline</p>
+                    <p className="text-2xl font-display font-black text-white">{dynamicStats?.activeInquiries ?? 0}<span className="text-amber-400 text-xs ml-1">leads</span></p>
+                  </div>
+                  <div className="flex-1 sm:flex-initial text-center p-5 rounded-2xl bg-amber-400/10 border border-amber-400/25 backdrop-blur-xl min-w-[130px]">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300 mb-1">Fleet Status</p>
+                    <p className="text-2xl font-display font-black text-amber-400">{dynamicStats?.cabAvailability ?? 'Active'}</p>
                   </div>
                 </div>
               </div>
