@@ -193,7 +193,7 @@ export default function HeroSection() {
     return (
       <>
         {rest} <br className="hidden md:block" />
-        <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/20">
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 dark:from-amber-400 dark:via-yellow-300 dark:to-amber-500">
           {lastWord}
         </span>
       </>
@@ -220,7 +220,7 @@ export default function HeroSection() {
         />
       </div>
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-16 pb-12">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-8 sm:pt-16 sm:pb-12">
         <div className="flex flex-col items-center text-center">
           {/* Elite Badge */}
           <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/90 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 shadow-sm mb-8 animate-fade-up group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-500 cursor-default">
@@ -232,7 +232,7 @@ export default function HeroSection() {
 
           {/* Headline - Editorial Style in Solid Dark Blue #111439 */}
           <div className="max-w-5xl mb-8 space-y-4">
-            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-[#111439] dark:text-white leading-[1.0] tracking-tight animate-fade-up transition-all duration-700 uppercase" style={{ animationDelay: '100ms' }}>
+            <h1 className="font-display text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-[#111439] dark:text-white leading-[1.05] sm:leading-[1.0] tracking-tight animate-fade-up transition-all duration-700 uppercase" style={{ animationDelay: '100ms' }}>
               {renderStyledTitle(heroData.title)}
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-[#4A5568] dark:text-white/60 font-medium max-w-2xl mx-auto tracking-normal animate-fade-up transition-all duration-700" style={{ animationDelay: '200ms' }}>
@@ -241,10 +241,10 @@ export default function HeroSection() {
           </div>
 
           {/* Direct Lead Capture Action Strip */}
-          <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mb-10 animate-fade-up" style={{ animationDelay: '250ms' }}>
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2.5 sm:gap-4 mb-8 sm:mb-10 w-full max-w-xl sm:max-w-none px-2 animate-fade-up" style={{ animationDelay: '250ms' }}>
             <Button
               onClick={() => openLeadModal({ sourceCta: 'BUILD_ITINERARY', intent: 'Bespoke Itinerary' })}
-              className="h-12 sm:h-13 px-7 sm:px-8 rounded-full bg-[#111439] hover:bg-[#1a205a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-black font-black text-[11px] sm:text-xs uppercase tracking-widest shadow-xl shadow-[#111439]/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5"
+              className="w-full sm:w-auto h-12 sm:h-13 px-6 sm:px-8 rounded-full bg-[#111439] hover:bg-[#1a205a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-black font-black text-xs uppercase tracking-widest shadow-xl shadow-[#111439]/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2.5"
             >
               <Sparkles className="w-4 h-4 text-amber-400 dark:text-black" />
               <span>Build My Itinerary</span>
@@ -253,34 +253,36 @@ export default function HeroSection() {
             <Button
               onClick={() => openLeadModal({ sourceCta: 'CUSTOM_PACKAGE', intent: 'Custom Package' })}
               variant="outline"
-              className="h-12 sm:h-13 px-6 sm:px-7 rounded-full border-slate-300 dark:border-white/20 bg-white/80 dark:bg-white/5 hover:bg-white text-[#111439] dark:text-white font-black text-[11px] sm:text-xs uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+              className="w-full sm:w-auto h-12 sm:h-13 px-6 sm:px-7 rounded-full border-slate-300 dark:border-white/20 bg-white/80 dark:bg-white/5 hover:bg-white text-[#111439] dark:text-white font-black text-xs uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
             >
               <span>Get Custom Package</span>
             </Button>
 
-            <Button
-              onClick={() => openCallbackModal({ sourceCta: 'HERO_EXPERT' })}
-              variant="ghost"
-              className="h-12 sm:h-13 px-5 sm:px-6 rounded-full text-[#111439] dark:text-white hover:bg-white/80 dark:hover:bg-white/10 font-bold text-[11px] sm:text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
-            >
-              <Headphones className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span>Talk to a Local Expert</span>
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
+              <Button
+                onClick={() => openCallbackModal({ sourceCta: 'HERO_EXPERT' })}
+                variant="ghost"
+                className="flex-1 sm:flex-initial h-11 sm:h-13 px-4 sm:px-6 rounded-full text-[#111439] dark:text-white hover:bg-white/80 dark:hover:bg-white/10 font-bold text-[11px] sm:text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all"
+              >
+                <Headphones className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Talk to Expert</span>
+              </Button>
 
-            <button
-              type="button"
-              onClick={() => openWhatsAppLead({ intent: 'General Curation' })}
-              className="h-12 sm:h-13 px-5 rounded-full bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] sm:text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
-            >
-              <MessageCircle className="w-4 h-4 text-[#25D366]" />
-              <span>WhatsApp Us</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => openWhatsAppLead({ intent: 'General Curation' })}
+                className="flex-1 sm:flex-initial h-11 sm:h-13 px-4 rounded-full bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] sm:text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all"
+              >
+                <MessageCircle className="w-4 h-4 text-[#25D366]" />
+                <span>WhatsApp</span>
+              </button>
+            </div>
           </div>
 
           {/* Daylight Command Module (Search) */}
           <div className="w-full max-w-5xl animate-fade-up" style={{ animationDelay: '300ms' }}>
             {/* Flat Search Tabs */}
-            <div className="flex items-center gap-6 md:gap-10 mb-6 justify-center md:justify-start pl-4 md:pl-8 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex items-center gap-3 sm:gap-6 md:gap-10 mb-6 justify-start px-2 sm:px-4 overflow-x-auto no-scrollbar pb-2 w-full">
               <button 
                 type="button"
                 onClick={() => setSearchTab('packages')}
@@ -944,13 +946,13 @@ export default function HeroSection() {
           </div>
 
           {/* Floating High-Fidelity Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mt-16 w-full max-w-4xl animate-fade-up" style={{ animationDelay: '400ms' }}>
+          <div className="grid grid-cols-3 gap-2 sm:gap-6 md:gap-12 mt-10 md:mt-16 w-full max-w-4xl px-2 animate-fade-up" style={{ animationDelay: '400ms' }}>
             {heroData.stats.map((stat) => (
               <div key={stat.label} className="text-center group cursor-default">
-                <div className="font-display text-4xl font-black text-[#111439] dark:text-white mb-2 tracking-tight group-hover:text-amber-500 transition-colors duration-500">
+                <div className="font-display text-2xl sm:text-3xl md:text-4xl font-black text-[#111439] dark:text-white mb-1 md:mb-2 tracking-tight group-hover:text-amber-500 transition-colors duration-500">
                   {stat.value}
                 </div>
-                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-[#4A5568] dark:text-white/60 group-hover:text-[#111439] dark:group-hover:text-white transition-colors duration-500">
+                <div className="text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.3em] text-[#4A5568] dark:text-white/60 group-hover:text-[#111439] dark:group-hover:text-white transition-colors duration-500 leading-tight">
                   {stat.label}
                 </div>
               </div>

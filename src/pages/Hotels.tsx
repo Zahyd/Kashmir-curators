@@ -66,6 +66,7 @@ export default function Hotels() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [previewHotel, setPreviewHotel] = useState<CMSHotel | null>(null);
   const [bookingHotel, setBookingHotel] = useState<CMSHotel | null>(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const [filters, setFilters] = useState({
     location: searchParams.get('destination') || searchParams.get('location') || '',
@@ -270,7 +271,7 @@ export default function Hotels() {
             </span>
           </div>
 
-          <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-black tracking-tight mb-6 leading-[1.05]">
+          <h1 className="font-display text-3xl sm:text-5xl md:text-7xl font-black tracking-tight mb-6 leading-[1.08] sm:leading-[1.05]">
             {heroTitle.split(' ').map((word, i) => (
               <span 
                 key={i} 
@@ -288,7 +289,7 @@ export default function Hotels() {
             {heroSubtitle}
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-700 dark:text-white/70">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-4 text-xs font-semibold text-slate-700 dark:text-white/70">
             <span className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-amber-500" /> Inspected Heritage Houseboats
             </span>
@@ -305,11 +306,30 @@ export default function Hotels() {
       </div>
 
       {/* Main Workspace Layout */}
-      <div className="container mx-auto px-6 py-12 flex-1">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-1">
+        {/* Mobile Filter Toggle Header */}
+        <div className="lg:hidden flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-[#0a0f12] border border-slate-200 dark:border-white/10 mb-6 shadow-sm">
+          <button 
+            type="button"
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span>{showMobileFilters ? "Hide Filters" : "Filter & Search Stays"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-[11px] font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-10">
           
           {/* Left Column: Filter Sidebar */}
-          <div className="lg:col-span-1">
+          <div className={cn("lg:col-span-1", !showMobileFilters && "hidden lg:block")}>
             <div className="sticky top-28 p-6 md:p-8 rounded-[2.5rem] bg-white dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 shadow-xl shadow-slate-200/40 dark:shadow-none backdrop-blur-xl space-y-7">
               <div className="flex items-center justify-between pb-5 border-b border-slate-200 dark:border-white/5">
                 <span className="text-xs font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400 flex items-center gap-2">

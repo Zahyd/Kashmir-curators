@@ -25,12 +25,12 @@ export default function FeaturedPackages() {
   const [quickPeekPackage, setQuickPeekPackage] = useState<any>(null);
 
   return (
-    <section className="py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
+    <section className="py-16 md:py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
       {/* Background Orbs */}
       <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-amber-400/10 blur-[140px] -ml-64 -translate-y-1/2 pointer-events-none" />
       <div className="absolute top-1/2 right-0 w-[500px] h-[500px] bg-purple-400/10 blur-[140px] -mr-64 -translate-y-1/2 pointer-events-none" />
       
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
         {/* Header - Elite Style */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-12 mb-20 animate-fade-up">
           <div className="max-w-2xl">
@@ -38,7 +38,7 @@ export default function FeaturedPackages() {
               <TrendingUp className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
               <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">Seasonal Selections</span>
             </div>
-            <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] dark:text-white leading-tight tracking-tight">
+            <h2 className="font-display text-3xl sm:text-5xl md:text-7xl font-black text-[#111439] dark:text-white leading-tight tracking-tight">
               PRIVATE <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">COLLECTIONS</span>
             </h2>
@@ -72,7 +72,7 @@ export default function FeaturedPackages() {
                   {/* Clickable Image Hub with Quick Peek Overlay */}
                   <div 
                     onClick={() => setQuickPeekPackage(pkg)}
-                    className="relative h-72 overflow-hidden m-4 rounded-[2rem] cursor-pointer"
+                    className="relative h-56 sm:h-72 overflow-hidden m-3 sm:m-4 rounded-2xl sm:rounded-[2rem] cursor-pointer"
                   >
                     <img
                       src={pkg.image}

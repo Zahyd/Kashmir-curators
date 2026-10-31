@@ -105,11 +105,11 @@ export default function FloatingActions() {
 
   return (
     <>
-      {/* Live Social Proof Widget - Bottom Left */}
+      {/* Live Social Proof Widget - Bottom Left (Desktop and Tablets only to prevent mobile clutter/overlap) */}
       {bookings.length > 0 && bookings[socialIdx] && (
         <div 
           className={cn(
-            "fixed bottom-6 left-6 z-50 max-w-xs md:max-w-sm transition-all duration-700 transform flex items-center gap-3.5 p-4 rounded-2xl bg-[#080d10]/90 border border-white/5 backdrop-blur-md shadow-2xl pointer-events-none select-none",
+            "hidden sm:flex fixed bottom-6 left-6 z-40 max-w-xs md:max-w-sm transition-all duration-700 transform items-center gap-3.5 p-4 rounded-2xl bg-[#080d10]/95 border border-white/10 backdrop-blur-md shadow-2xl pointer-events-none select-none",
             showSocial ? "translate-y-0 opacity-100 scale-100" : "translate-y-8 opacity-0 scale-95"
           )}
         >
@@ -129,7 +129,7 @@ export default function FloatingActions() {
       )}
 
       {/* Floating Buttons - Bottom Right */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-3">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col-reverse items-end gap-2.5 sm:gap-3">
         {/* Action Buttons */}
         {isOpen && (
           <div className="flex flex-col gap-2.5 animate-fade-up items-end">

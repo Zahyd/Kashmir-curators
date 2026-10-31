@@ -1052,14 +1052,14 @@ export default function Cabs() {
             </div>
           </div>
 
-          <div className="container mx-auto px-6 py-12">
+          <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
               
               {/* Form Input Side */}
               <div className="lg:col-span-8 space-y-10">
                 
                 {/* Search Configuration Card */}
-                <div className="bg-white dark:bg-[#0a0f12]/60 border border-slate-200/80 dark:border-white/5 rounded-[2.5rem] p-6 md:p-10 backdrop-blur-xl shadow-xl shadow-slate-200/40 dark:shadow-2xl relative overflow-hidden">
+                <div className="bg-white dark:bg-[#0a0f12]/60 border border-slate-200/80 dark:border-white/5 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 backdrop-blur-xl shadow-xl shadow-slate-200/40 dark:shadow-2xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/[0.03] blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                   
                   <Tabs value={tripType} onValueChange={(val) => { setTripType(val); setPickupInput(''); setDropInput(''); }}>
@@ -1320,7 +1320,7 @@ export default function Cabs() {
                       </div>
 
                       {/* Interactive Map */}
-                      <div className="relative w-full h-80 rounded-[2rem] overflow-hidden border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-[#0a0f12]/30 shadow-inner group mt-4">
+                      <div className="relative w-full h-64 sm:h-80 rounded-2xl sm:rounded-[2rem] overflow-hidden border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-[#0a0f12]/30 shadow-inner group mt-4">
                         {/* Leaflet Map Div */}
                         <div ref={mapRef} className="w-full h-full z-10" />
                         

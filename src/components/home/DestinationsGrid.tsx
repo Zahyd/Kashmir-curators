@@ -44,19 +44,19 @@ const destinations = [
 export default function DestinationsGrid() {
   const { openLeadModal, openCallbackModal } = useLeadCapture();
   return (
-    <section className="py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
+    <section className="py-16 md:py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
       {/* Background Orbs */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-400/10 blur-[140px] -mr-64 -mt-64" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-400/10 blur-[140px] -ml-64 -mb-64" />
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-20 animate-fade-up">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm mb-6">
               <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
               <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">Curated Geography</span>
             </div>
-            <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] dark:text-white leading-tight tracking-tight">
+            <h2 className="font-display text-3xl sm:text-5xl md:text-7xl font-black text-[#111439] dark:text-white leading-tight tracking-tight">
               SIGNATURE <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">LOCATIONS</span>
             </h2>
@@ -71,7 +71,7 @@ export default function DestinationsGrid() {
             <Link
               key={dest.name}
               to={`/packages?destination=${dest.name}`}
-              className={`group relative overflow-hidden rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-900/5 bg-[#0a0f12] ${dest.colSpan} ${dest.rowSpan} animate-fade-up transition-all duration-700 hover:border-amber-400/50 hover:shadow-2xl`}
+              className={`group relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-900/5 bg-[#0a0f12] min-h-[300px] md:min-h-0 ${dest.colSpan} ${dest.rowSpan} animate-fade-up transition-all duration-700 hover:border-amber-400/50 hover:shadow-2xl`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Image with Parallax Effect */}
@@ -92,7 +92,7 @@ export default function DestinationsGrid() {
                   <h4 className="font-display text-3xl md:text-4xl font-black text-white mb-4">
                     {dest.name}
                   </h4>
-                  <p className="text-white/40 text-sm font-medium mb-8 max-w-xs opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+                  <p className="text-white/60 text-xs sm:text-sm font-medium mb-4 sm:mb-8 max-w-xs opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-500 delay-100">
                     {dest.desc}
                   </p>
                   

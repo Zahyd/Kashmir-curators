@@ -50,8 +50,8 @@ export default function Footer() {
       {/* Background Subtle Gradient */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-kashmir-gold/5 blur-[120px] opacity-30 pointer-events-none" />
 
-      <div className="container mx-auto px-6 py-24 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 md:gap-12">
+      <div className="container mx-auto px-4 sm:px-6 py-14 md:py-24 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-12">
           {/* Heritage Brand */}
           <div className="space-y-8">
             <Link to="/" className="flex items-center group">

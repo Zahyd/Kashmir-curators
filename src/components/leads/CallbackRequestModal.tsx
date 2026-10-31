@@ -67,7 +67,7 @@ export default function CallbackRequestModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-[#070b0e]/80 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
@@ -75,7 +75,7 @@ export default function CallbackRequestModal() {
       />
 
       {/* Modal Box */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#0c1216] border border-slate-200 dark:border-white/10 rounded-[2.5rem] shadow-2xl z-10 overflow-hidden text-[#111439] dark:text-white my-auto animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-lg bg-white dark:bg-[#0c1216] border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden text-[#111439] dark:text-white my-auto max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-300">
         
         {/* Ambient Glow */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -89,7 +89,7 @@ export default function CallbackRequestModal() {
         </button>
 
         {!submittedLead ? (
-          <form onSubmit={handleSubmit} className="p-8 space-y-6 relative z-10">
+          <form onSubmit={handleSubmit} className="p-5 sm:p-8 space-y-4 sm:space-y-6 relative z-10 overflow-y-auto max-h-[calc(92vh-120px)]">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[9px] font-black uppercase tracking-widest mb-3">
                 <Headphones className="w-3 h-3 text-amber-600" /> Instant Local Expert Liaison

@@ -45,20 +45,21 @@ export default function Navbar() {
 
   return (
     <nav className={cn(
-      "fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-4 md:px-8 pointer-events-none",
-      scrolled ? "py-3" : "py-5 md:py-6"
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-2.5 sm:px-4 md:px-8 pointer-events-none",
+      scrolled ? "py-2 sm:py-3" : "py-3 sm:py-5 md:py-6"
     )}>
       <div className={cn(
-        "container mx-auto px-5 md:px-7 rounded-full transition-all duration-500 border pointer-events-auto",
+        "container mx-auto px-3.5 sm:px-5 md:px-7 transition-all duration-500 border pointer-events-auto",
+        isOpen ? "rounded-3xl shadow-2xl" : "rounded-full shadow-sm",
         scrolled 
-          ? "bg-white/95 dark:bg-[#070b0e]/95 backdrop-blur-2xl border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-900/10 py-2.5" 
-          : "bg-white/85 dark:bg-[#070b0e]/80 backdrop-blur-xl py-3.5 border-slate-200/60 dark:border-white/10 shadow-sm"
+          ? "bg-white/95 dark:bg-[#070b0e]/95 backdrop-blur-2xl border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-900/10 py-2 sm:py-2.5" 
+          : "bg-white/85 dark:bg-[#070b0e]/80 backdrop-blur-xl py-2.5 sm:py-3.5 border-slate-200/60 dark:border-white/10"
       )}>
         <div className="flex items-center justify-between">
           
           {/* Logo */}
           <Link to="/" className="flex items-center group shrink-0">
-            <Logo className="h-10 md:h-11 w-auto transition-transform duration-300 group-hover:scale-105" />
+            <Logo className="h-8 sm:h-9 md:h-11 w-auto transition-transform duration-300 group-hover:scale-105" />
           </Link>
 
           {/* Desktop Navigation Links (Clear, Uncrowded) */}
@@ -104,7 +105,7 @@ export default function Navbar() {
           </div>
 
           {/* Right Action Hub */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-3 shrink-0">
             
             {/* Daylight / Night View Theme Toggle Button */}
             <button
@@ -112,12 +113,12 @@ export default function Navbar() {
               onClick={toggleTheme}
               title={isDark ? "Switch to Daylight Mode" : "Switch to Night Mode"}
               aria-label="Toggle theme"
-              className="w-10 h-10 rounded-full flex items-center justify-center border border-slate-300 dark:border-white/15 bg-slate-100 dark:bg-white/5 text-[#111439] dark:text-amber-400 hover:bg-slate-200 dark:hover:bg-white/15 transition-all hover:scale-105 active:scale-95 shadow-sm"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border border-slate-300 dark:border-white/15 bg-slate-100 dark:bg-white/5 text-[#111439] dark:text-amber-400 hover:bg-slate-200 dark:hover:bg-white/15 transition-all hover:scale-105 active:scale-95 shadow-sm shrink-0"
             >
               {isDark ? (
-                <Sun className="w-4 h-4 text-amber-400 animate-spin-slow" />
+                <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 animate-spin-slow" />
               ) : (
-                <Moon className="w-4 h-4 text-[#111439]" />
+                <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#111439]" />
               )}
             </button>
 
@@ -136,12 +137,12 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    className="h-10 px-4 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[#111439] dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 gap-2.5 group"
+                    className="h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[#111439] dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 gap-1.5 sm:gap-2.5 group"
                   >
-                    <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
                       <User className="h-3 w-3 text-amber-700 dark:text-amber-400" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest max-w-[90px] truncate">{user?.name || teamUser?.name}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest max-w-[70px] sm:max-w-[90px] truncate">{user?.name || teamUser?.name}</span>
                     <ChevronDown className="h-3.5 w-3.5 text-[#111439]/40 dark:text-white/40 group-hover:text-[#111439] dark:group-hover:text-white transition-colors" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -205,29 +206,29 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Single Unified Primary CTA (High Contrast in Both Themes) */}
+            {/* Single Unified Primary CTA (Desktop & Tablet) */}
             <Button 
               onClick={() => openLeadModal({ sourceCta: 'PLAN_MY_TRIP_NAVBAR' })}
-              className="h-10 sm:h-11 px-4 sm:px-6 rounded-full bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/25 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-1.5 shrink-0"
+              className="hidden sm:inline-flex h-10 sm:h-11 px-4 sm:px-6 rounded-full bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/25 transition-all duration-300 hover:scale-105 active:scale-95 items-center gap-1.5 shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Curate Trip</span>
             </Button>
 
-            {/* Mobile Menu Toggle Button */}
+            {/* Mobile Menu Toggle Button - Always visible on < lg */}
             <button
-              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[#111439] dark:text-white"
+              className="lg:hidden w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[#111439] dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-colors shrink-0"
               onClick={() => setIsOpen(!isOpen)}
               aria-label="Toggle menu"
             >
-              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Navigation Drawer */}
         {isOpen && (
-          <div className="lg:hidden mt-4 pb-4 animate-fade-in border-t border-slate-200 dark:border-white/10 pt-4">
+          <div className="lg:hidden mt-3 pb-3 animate-fade-in border-t border-slate-200 dark:border-white/10 pt-3 max-h-[75vh] overflow-y-auto">
             <div className="flex flex-col gap-2 p-1">
               
               {/* Primary Mobile Action */}
@@ -236,7 +237,7 @@ export default function Navbar() {
                   setIsOpen(false);
                   openLeadModal({ sourceCta: 'PLAN_MY_TRIP_NAVBAR_MOBILE' });
                 }}
-                className="w-full h-12 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black text-[11px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2"
+                className="w-full h-12 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-[11px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Curate My Kashmir Trip</span>

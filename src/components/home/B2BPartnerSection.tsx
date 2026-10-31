@@ -12,19 +12,19 @@ export default function B2BPartnerSection() {
   const [previewMode, setPreviewMode] = useState<'agent' | 'client'>('agent');
 
   return (
-    <section className="py-28 bg-[#030608] text-white relative overflow-hidden border-y border-white/5">
+    <section className="py-16 md:py-28 bg-[#030608] text-white relative overflow-hidden border-y border-white/5">
       {/* Background Ambience */}
       <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-amber-500/10 blur-[160px] pointer-events-none rounded-full" />
       <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-emerald-500/10 blur-[180px] pointer-events-none rounded-full" />
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
         {/* Section Header */}
         <div className="max-w-3xl mx-auto text-center mb-16">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-400 text-xs font-bold tracking-widest uppercase mb-5">
             <Building2 className="w-3.5 h-3.5" />
             <span>Kashmir Connect B2B Travel Operating System</span>
           </div>
-          <h2 className="font-display text-4xl md:text-6xl font-black tracking-tight leading-tight mb-6">
+          <h2 className="font-display text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight mb-6">
             Powering 400+ Travel Agents <br className="hidden md:block" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-amber-200 to-emerald-400">
               With Direct Kashmir Ground Supply
@@ -99,7 +99,7 @@ export default function B2BPartnerSection() {
             </div>
 
             {/* Toggle Switch */}
-            <div className="flex items-center gap-1 bg-black/60 p-1.5 rounded-2xl border border-white/10">
+            <div className="flex flex-col sm:flex-row items-center gap-1 bg-black/60 p-1.5 rounded-2xl border border-white/10 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setPreviewMode('agent')}

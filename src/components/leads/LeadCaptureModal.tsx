@@ -198,7 +198,7 @@ export default function LeadCaptureModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
       {/* Frosted Glass Dark Overlay */}
       <div 
         className="fixed inset-0 bg-[#070b0e]/80 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
@@ -206,7 +206,7 @@ export default function LeadCaptureModal() {
       />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-2xl bg-white dark:bg-[#0c1216] border border-slate-200 dark:border-white/10 rounded-[2.5rem] shadow-2xl z-10 overflow-hidden text-[#111439] dark:text-white my-auto animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-[#0c1216] border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden text-[#111439] dark:text-white my-auto max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-300">
         
         {/* Subtle Ambient Glow */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -221,7 +221,7 @@ export default function LeadCaptureModal() {
         </button>
 
         {/* Progress Tracker Header */}
-        <div className="px-8 pt-8 pb-4 border-b border-slate-100 dark:border-white/5 relative z-10">
+        <div className="px-5 sm:px-8 pt-6 sm:pt-8 pb-3 sm:pb-4 border-b border-slate-100 dark:border-white/5 relative z-10 shrink-0">
           <div className="flex items-center justify-between gap-4 mb-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[9px] font-black uppercase tracking-widest">
               <Sparkles className="w-3 h-3" />
@@ -257,7 +257,7 @@ export default function LeadCaptureModal() {
         {/* STAGE 1: Frictionless 10-Second Quick Lead Capture */}
         {/* ========================================================================= */}
         {step === 1 && (
-          <form onSubmit={handleQuickSubmit} className="p-8 space-y-6 relative z-10 animate-fade-in">
+          <form onSubmit={handleQuickSubmit} className="p-5 sm:p-8 space-y-4 sm:space-y-6 relative z-10 animate-fade-in overflow-y-auto max-h-[calc(92vh-120px)]">
             <div className="space-y-4">
               {/* Intent Selector Quick Pills */}
               <div className="space-y-2">
