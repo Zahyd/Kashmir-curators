@@ -4,7 +4,8 @@ import {
   Calendar, Wrench, ShieldAlert, Printer, Send, Clock, Phone, User, 
   MapPin, Sliders, X, DollarSign, Settings, CheckCircle2, AlertTriangle, 
   Play, Navigation, Map, Search, Filter, Sparkles, TrendingUp, BarChart3, 
-  Shield, FileText, Check, MessageSquare, AlertOctagon, ArrowRight
+  Shield, FileText, Check, MessageSquare, AlertOctagon, ArrowRight,
+  Eye, Download, LayoutGrid, List, PhoneCall, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -258,6 +259,61 @@ export default function CMSCabs() {
     emergencyContact: '+919876543219'
   });
   const [savingDriver, setSavingDriver] = useState(false);
+
+  // Fleet Registry Search, Filter, View Mode & Dossier
+  const [registryViewMode, setRegistryViewMode] = useState<'grid' | 'table'>('grid');
+  const [registrySearch, setRegistrySearch] = useState('');
+  const [registryTypeFilter, setRegistryTypeFilter] = useState('all');
+  const [dossierCab, setDossierCab] = useState<Cab | null>(null);
+
+  // Filtered cabs list
+  const filteredCabs = useMemo(() => {
+    return cabs.filter(c => {
+      const meta = operationsData.cabsMetadata[c.id] || defaultMetadata;
+      const matchSearch =
+        c.name.toLowerCase().includes(registrySearch.toLowerCase()) ||
+        c.type.toLowerCase().includes(registrySearch.toLowerCase()) ||
+        (meta.registrationNo && meta.registrationNo.toLowerCase().includes(registrySearch.toLowerCase())) ||
+        (meta.driverName && meta.driverName.toLowerCase().includes(registrySearch.toLowerCase()));
+
+      if (!matchSearch) return false;
+
+      if (registryTypeFilter !== 'all' && !c.type.toLowerCase().includes(registryTypeFilter.toLowerCase())) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [cabs, operationsData, registrySearch, registryTypeFilter]);
+
+  const exportFleetCSV = () => {
+    const headers = ['Vehicle Name', 'Type', 'Capacity', 'Price / KM (INR)', 'Base Price', 'Registration No', 'Ownership', 'Default Driver', 'Driver Phone', 'Status'];
+    const rows = filteredCabs.map(c => {
+      const meta = operationsData.cabsMetadata[c.id] || defaultMetadata;
+      return [
+        `"${c.name}"`,
+        `"${c.type}"`,
+        c.capacity,
+        c.pricePerKm,
+        c.basePrice,
+        `"${meta.registrationNo || ''}"`,
+        `"${meta.ownership || 'company'}"`,
+        `"${meta.driverName || ''}"`,
+        `"${meta.driverPhone || ''}"`,
+        c.isActive ? 'Active' : 'Offline'
+      ];
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `kashmir_curators_fleet_registry_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Fleet registry exported to CSV');
+  };
 
   const openCreateDriverDialog = () => {
     setEditingDriver(null);
@@ -1200,51 +1256,64 @@ export default function CMSCabs() {
   return (
     <div className="space-y-8 text-left">
       
-      {/* Top Header Controls Panel */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-white/5 pb-6">
+      {/* Top Header Command Bar */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-gradient-to-r from-amber-500/[0.04] via-transparent to-transparent p-6 rounded-3xl border border-white/5 backdrop-blur-xl">
         <div>
-          <Badge className="bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/20 font-black px-4 py-1 rounded-full text-[9px] uppercase tracking-[0.2em] mb-3">
-            Real-Time Transportation Command
-          </Badge>
-          <h2 className="text-3xl font-display font-black text-white uppercase tracking-tight">
-            Fleet Command <span className="text-kashmir-gold italic">Center</span>
-          </h2>
-          <p className="text-white/40 text-xs mt-1.5 uppercase tracking-widest font-black flex items-center gap-2">
-            <span>● Status: Active</span>
+          <div className="flex items-center gap-2 text-amber-400 text-[10px] font-black uppercase tracking-[0.25em] mb-1">
+            <Car className="w-3.5 h-3.5" />
+            <span>Transportation & Mountain Logistics Fleet</span>
+          </div>
+          <h1 className="text-3xl lg:text-4xl font-display font-bold text-white tracking-tight">
+            Fleet & Chauffeur Operations
+          </h1>
+          <p className="text-xs text-white/50 mt-1 flex items-center gap-2">
+            <span>● Corridor Telemetry: Live</span>
             <span>• {cabs.length} Vehicles</span>
             <span>• {bookings.filter(b => b.details?.cabAllocation).length} Active Assignments</span>
           </p>
         </div>
 
-        {/* Role Simulator Bar */}
-        <div className="flex flex-wrap items-center gap-2.5 bg-white/5 border border-white/10 rounded-2xl p-1.5">
-          <span className="text-[9px] font-black uppercase tracking-widest text-white/40 pl-2 pr-1">Simulator Role</span>
-          {(['Director', 'Dispatcher', 'Fleet Manager', 'Finance'] as const).map((r) => (
-            <button
-              key={r}
-              onClick={() => {
-                setActiveRole(r);
-                toast.info(`Permission matrix set to role: ${r}`);
-              }}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
-                activeRole === r 
-                  ? "bg-kashmir-gold text-black shadow-lg" 
-                  : "text-white/40 hover:text-white"
-              )}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="flex items-center flex-wrap gap-2.5">
+          <Button
+            onClick={() => {
+              fetchCabs();
+              fetchOperationsData();
+              toast.success('Fleet operations synchronized');
+            }}
+            variant="outline"
+            className="h-10 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 border-white/10 text-white/80 text-xs font-bold gap-2"
+            title="Synchronize Fleet Telemetry"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Sync Fleet</span>
+          </Button>
+
+          <Button
+            onClick={exportFleetCSV}
+            variant="outline"
+            className="h-10 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 border-white/10 text-white/80 text-xs font-bold gap-2"
+            title="Export CSV Fleet Registry"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+
+          <Button 
+            onClick={openCreateDialog}
+            className="h-10 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-wider text-[11px] px-5 shadow-lg shadow-amber-500/15 gap-2"
+          >
+            <Plus className="w-3.5 h-3.5" /> 
+            <span>Deploy Vehicle</span>
+          </Button>
         </div>
       </div>
 
       {/* Main Tabs Navigation */}
-      <div className="flex overflow-x-auto gap-3 pb-3 border-b border-white/5 scrollbar-thin">
+      <div className="flex bg-[#090e13]/90 border border-white/5 p-1 rounded-2xl overflow-x-auto custom-scrollbar shadow-lg">
         {[
           { id: 'operations', label: 'Operations Desk', icon: Sliders },
-          { id: 'registry', label: 'Fleet Registry', icon: Car },
-          { id: 'drivers', label: 'Chauffeur Hub', icon: Users },
+          { id: 'registry', label: `Fleet Registry (${cabs.length})`, icon: Car },
+          { id: 'drivers', label: `Chauffeur Hub (${driversList.length})`, icon: Users },
           { id: 'ai-dispatch', label: 'AI Dispatch & Rates', icon: Sparkles },
           { id: 'maintenance', label: 'Workshop Center', icon: Wrench },
           { id: 'finance', label: 'P&L Analytics', icon: DollarSign },
@@ -1254,14 +1323,14 @@ export default function CMSCabs() {
             key={tab.id}
             onClick={() => setCurrentTab(tab.id as any)}
             className={cn(
-              "flex items-center gap-2 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 shrink-0",
+              "flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 shrink-0",
               currentTab === tab.id 
-                ? "bg-kashmir-gold text-black shadow-lg font-bold" 
-                : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-black" 
+                : "text-white/50 hover:text-white"
             )}
           >
             <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
@@ -1473,221 +1542,392 @@ export default function CMSCabs() {
 
       {/* TAB 2: FLEET REGISTRY */}
       {currentTab === 'registry' && (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500">
           
-          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
-            <div>
-              <h3 className="text-xl font-display font-black text-white">PHYSICAL ASSETS REGISTRY</h3>
-              <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Manage registration compliance documents, odometer limits and models</p>
+          {/* Controls Bar */}
+          <div className="bg-[#090e13]/90 border border-white/5 rounded-3xl p-5 shadow-xl space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+              {/* Search */}
+              <div className="md:col-span-5 relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <Input
+                  placeholder="Search by vehicle name, model, reg no, driver..."
+                  value={registrySearch}
+                  onChange={(e) => setRegistrySearch(e.target.value)}
+                  className="pl-10 pr-9 bg-white/5 border-white/10 rounded-xl h-11 text-xs text-white placeholder:text-white/30 focus:border-amber-400"
+                />
+                {registrySearch && (
+                  <button onClick={() => setRegistrySearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Type Filter */}
+              <div className="md:col-span-4">
+                <select
+                  value={registryTypeFilter}
+                  onChange={(e) => setRegistryTypeFilter(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl h-11 px-3 text-xs text-white/80 focus:border-amber-400 focus:outline-none"
+                >
+                  <option value="all" className="bg-[#090e13]">All Vehicle Types</option>
+                  <option value="suv" className="bg-[#090e13]">4x4 Mountain SUV (Innova, Fortuner)</option>
+                  <option value="sedan" className="bg-[#090e13]">Luxury Sedan (Etios, Dzire)</option>
+                  <option value="tempo" className="bg-[#090e13]">Tempo Traveler (12-17 Seats)</option>
+                  <option value="coach" className="bg-[#090e13]">Luxury Bus / Coach</option>
+                </select>
+              </div>
+
+              {/* View Switcher */}
+              <div className="md:col-span-3 flex justify-end items-center gap-2">
+                <div className="flex items-center bg-black/40 border border-white/10 p-1 rounded-xl">
+                  <button
+                    onClick={() => setRegistryViewMode('grid')}
+                    className={cn(
+                      "p-2 rounded-lg text-xs transition-colors",
+                      registryViewMode === 'grid' ? "bg-amber-500/20 text-amber-400" : "text-white/40 hover:text-white"
+                    )}
+                    title="Grid Cards"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setRegistryViewMode('table')}
+                    className={cn(
+                      "p-2 rounded-lg text-xs transition-colors",
+                      registryViewMode === 'table' ? "bg-amber-500/20 text-amber-400" : "text-white/40 hover:text-white"
+                    )}
+                    title="Dense Table"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
-            {activeRole === 'Director' && (
-              <Button 
-                onClick={openCreateDialog}
-                className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" /> Deploy New Vehicle
-              </Button>
-            )}
           </div>
 
-          {/* Registry Table */}
-          <Card className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-[2.5rem]">
-            <Table>
-              <TableHeader className="bg-white/[0.02] border-b border-white/10">
-                <TableRow className="border-none">
-                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase pl-6 py-5">Vehicle</TableHead>
-                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Ownership</TableHead>
-                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Logistics Capacity</TableHead>
-                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Base Rate / KM</TableHead>
-                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Default Driver</TableHead>
-                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase">Document Status</TableHead>
-                  <TableHead className="text-amber-200/90 font-black text-[10px] tracking-[0.25em] uppercase text-right pr-6">Controls</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-y divide-white/5">
-                {cabs.map(cab => {
-                  const meta = operationsData.cabsMetadata[cab.id] || defaultMetadata;
-                  return (
-                    <TableRow key={cab.id} className="hover:bg-white/[0.02] transition-colors border-none">
-                      <TableCell className="py-6 pl-6 font-bold text-white flex items-center gap-4">
-                        {cab.image && (
-                          <img src={cab.image} alt={cab.name} className="w-14 h-10 object-contain rounded-lg bg-black/40 border border-white/5" />
+          {filteredCabs.length === 0 ? (
+            <div className="py-20 text-center border border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
+              <Car className="w-10 h-10 text-white/20 mx-auto mb-3" />
+              <p className="text-white/40 text-xs font-bold uppercase tracking-wider">
+                No fleet vehicles found matching your criteria.
+              </p>
+            </div>
+          ) : registryViewMode === 'grid' ? (
+            /* Modern Grid Cards View */
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredCabs.map(cab => {
+                const meta = operationsData.cabsMetadata[cab.id] || defaultMetadata;
+                return (
+                  <div
+                    key={cab.id}
+                    className="rounded-2xl bg-[#090e13]/90 border border-white/5 hover:border-amber-500/30 transition-all duration-300 group flex flex-col justify-between overflow-hidden shadow-xl"
+                  >
+                    <div>
+                      {/* Image Preview & Overlay */}
+                      <div className="relative aspect-[16/10] overflow-hidden bg-white/5">
+                        {cab.image ? (
+                          <img src={cab.image} alt={cab.name} className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-500/10 to-transparent">
+                            <Car className="w-12 h-12 text-amber-400/40" />
+                          </div>
                         )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent pointer-events-none" />
+
+                        {/* Top Badges */}
+                        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                          <Badge className="bg-black/60 backdrop-blur-md border-white/20 text-white text-[9px] font-bold px-2 py-0.5">
+                            {cab.capacity} Seats
+                          </Badge>
+                          <Badge className="bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[8px] font-bold uppercase">
+                            {meta.ownership === 'vendor' ? 'Vendor Contract' : 'Company Asset'}
+                          </Badge>
+                        </div>
+
+                        {/* Registration Chip */}
+                        <div className="absolute bottom-3 left-3">
+                          <span className="font-mono font-bold text-xs bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md text-amber-300 border border-amber-500/30">
+                            {meta.registrationNo || 'JK-01-PENDING'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Content Details */}
+                      <div className="p-5 space-y-3">
                         <div>
-                          <span className="text-xs uppercase block text-white font-black">{cab.name}</span>
-                          <span className="text-[9px] text-white/30 uppercase font-bold tracking-widest">{meta.registrationNo || 'JK-01-PENDING'}</span>
+                          <h3 className="font-bold text-white text-base group-hover:text-amber-400 transition-colors line-clamp-1">
+                            {cab.name}
+                          </h3>
+                          <p className="text-xs text-white/50 uppercase tracking-wider font-semibold mt-0.5">
+                            {cab.type}
+                          </p>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-white/60">
-                        <Badge className="bg-[#0A141A] text-kashmir-gold border border-kashmir-gold/20 uppercase text-[8px] font-bold">
-                          {meta.ownership === 'vendor' ? 'Vendor Contract' : 'Company Asset'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-white/60 font-semibold">{cab.capacity} Seats</TableCell>
-                      <TableCell className="text-xs">
-                        <span className="font-bold text-white block">₹{cab.pricePerKm}/km</span>
-                        <span className="text-[9px] text-white/30 block">Base: ₹{cab.basePrice}</span>
-                      </TableCell>
-                      <TableCell className="text-xs text-white/60 font-semibold">{meta.driverName || 'No Driver Allocated'}</TableCell>
-                      <TableCell className="text-xs">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          <span className="text-[9px] text-white/40 uppercase font-black">All active</span>
+
+                        {/* Default Chauffeur Strip */}
+                        <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-white/70 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 truncate">
+                              <User className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <strong className="text-white truncate">{meta.driverName || 'No Driver Assigned'}</strong>
+                            </span>
+                            {meta.driverPhone && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <a
+                                  href={`https://wa.me/${meta.driverPhone.replace(/[^0-9]/g, '')}?text=Fleet%20dispatch%20alert%20from%20Kashmir%20Curators.`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1 rounded bg-emerald-500/15 text-emerald-400 hover:text-emerald-300"
+                                  title="WhatsApp Driver"
+                                >
+                                  <MessageSquare className="w-3 h-3" />
+                                </a>
+                                <a
+                                  href={`tel:${meta.driverPhone}`}
+                                  className="p-1 rounded bg-white/5 text-white/60 hover:text-white"
+                                  title="Call Driver"
+                                >
+                                  <PhoneCall className="w-3 h-3" />
+                                </a>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right pr-6 py-6">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/5 text-white/40 hover:text-white" onClick={() => openEditDialog(cab)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-8 w-8 hover:bg-red-500/15 text-red-500"
-                            onClick={() => {
-                              setItemToDelete(cab.id);
-                              setDeleteConfirmOpen(true);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+
+                        {/* Rates & Logistics */}
+                        <div className="flex items-baseline justify-between pt-2 border-t border-white/5">
+                          <div>
+                            <span className="text-[8px] font-black uppercase tracking-wider text-white/40 block">Transit Rate</span>
+                            <span className="text-lg font-mono font-bold text-amber-400">₹{cab.pricePerKm}</span>
+                            <span className="text-[10px] text-white/40 ml-1">/ km</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-white/40 block">Base Charge</span>
+                            <span className="text-sm font-mono font-bold text-white/80">₹{cab.basePrice}</span>
+                          </div>
                         </div>
-                      </TableCell>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="p-5 pt-0 flex items-center gap-2">
+                      <Button
+                        onClick={() => setDossierCab(cab)}
+                        variant="outline"
+                        className="flex-1 h-9 rounded-xl bg-white/5 hover:bg-white/10 border-white/10 text-white/90 text-[10px] font-black uppercase tracking-wider gap-1.5"
+                      >
+                        <Eye className="w-3 h-3 text-amber-400" />
+                        <span>Vehicle Dossier</span>
+                      </Button>
+                      <Button
+                        onClick={() => openEditDialog(cab)}
+                        variant="outline"
+                        className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border-white/10 text-white/80"
+                        title="Edit Vehicle"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <button
+                        onClick={() => {
+                          setItemToDelete(cab.id);
+                          setDeleteConfirmOpen(true);
+                        }}
+                        className="w-9 h-9 rounded-xl bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/20 flex items-center justify-center text-rose-400 transition-all shrink-0"
+                        title="Decommission Vehicle"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Dense Table View */
+            <div className="bg-[#090e13]/90 border border-white/5 rounded-3xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto custom-scrollbar">
+                <Table>
+                  <TableHeader className="bg-white/[0.02] border-b border-white/5">
+                    <TableRow className="border-none text-[9px] font-black uppercase tracking-widest text-white/40">
+                      <TableHead className="py-4 px-6 text-white/40">Vehicle Asset</TableHead>
+                      <TableHead className="py-4 px-4 text-white/40">Ownership</TableHead>
+                      <TableHead className="py-4 px-4 text-white/40">Capacity</TableHead>
+                      <TableHead className="py-4 px-4 text-white/40 text-right">Rate / KM</TableHead>
+                      <TableHead className="py-4 px-4 text-white/40">Default Chauffeur</TableHead>
+                      <TableHead className="py-4 px-4 text-white/40 text-center">Compliance</TableHead>
+                      <TableHead className="py-4 px-6 text-white/40 text-right">Actions</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </Card>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-white/5">
+                    {filteredCabs.map(cab => {
+                      const meta = operationsData.cabsMetadata[cab.id] || defaultMetadata;
+                      return (
+                        <TableRow key={cab.id} className="hover:bg-white/[0.02] transition-colors cursor-pointer border-none" onClick={() => setDossierCab(cab)}>
+                          <TableCell className="py-4 px-6">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-10 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center p-1 shrink-0">
+                                {cab.image ? (
+                                  <img src={cab.image} alt={cab.name} className="w-full h-full object-contain" />
+                                ) : (
+                                  <Car className="w-5 h-5 text-amber-400" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-bold text-white text-sm">{cab.name}</p>
+                                <p className="text-[10px] font-mono text-amber-300">{meta.registrationNo || 'JK-01-PENDING'}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="py-4 px-4">
+                            <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/20 uppercase text-[8px] font-bold">
+                              {meta.ownership === 'vendor' ? 'Vendor Contract' : 'Company Asset'}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="py-4 px-4 text-xs text-white/70 font-semibold">
+                            {cab.capacity} Seats
+                          </TableCell>
+
+                          <TableCell className="py-4 px-4 text-right">
+                            <span className="font-mono font-bold text-amber-400 text-sm">₹{cab.pricePerKm}/km</span>
+                            <span className="block text-[9px] text-white/40">Base ₹{cab.basePrice}</span>
+                          </TableCell>
+
+                          <TableCell className="py-4 px-4 text-xs text-white/70">
+                            <p className="font-bold text-white">{meta.driverName || 'No Driver Allocated'}</p>
+                            <p className="text-[10px] text-white/40">{meta.driverPhone || 'No Phone'}</p>
+                          </TableCell>
+
+                          <TableCell className="py-4 px-4 text-center">
+                            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span className="text-[9px] uppercase">Compliant</span>
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button onClick={() => setDossierCab(cab)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white" title="View Dossier">
+                                <Eye className="w-3.5 h-3.5 text-amber-400" />
+                              </button>
+                              <button onClick={() => openEditDialog(cab)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white" title="Edit">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => { setItemToDelete(cab.id); setDeleteConfirmOpen(true); }} className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400" title="Delete">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
       {/* TAB 3: CHAUFFEUR HUB */}
       {currentTab === 'drivers' && (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          
-          <div className="flex justify-between items-center bg-[#0a0f14]/85 border border-white/10 shadow-xl rounded-3xl p-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#090e13]/90 border border-white/5 rounded-3xl p-6 shadow-xl">
             <div>
-              <h3 className="text-xl font-display font-black text-white">CHAUFFEUR HUB</h3>
-              <p className="text-xs text-white/30 uppercase tracking-widest font-black mt-1">Track driver duty rosters, license verifications, ratings, and incentive structures</p>
+              <h3 className="text-xl font-display font-bold text-white tracking-tight">Chauffeur Command Hub</h3>
+              <p className="text-xs text-white/40 mt-0.5">Track certified mountain chauffeurs, license verification, ratings & trip rosters</p>
             </div>
-            <div className="flex items-center gap-3">
-              {activeRole === 'Director' && (
-                <Button 
-                  className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
-                  onClick={openCreateDriverDialog}
-                >
-                  <Plus className="w-4 h-4" /> Register Chauffeur
-                </Button>
-              )}
+            <div className="flex items-center gap-2">
               <Button 
-                variant="outline"
-                className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl font-black text-[9px] uppercase tracking-widest px-5 h-12 flex items-center gap-2"
-                onClick={() => {
-                  toast.success('Licensing API validation portal opened.');
-                }}
+                className="bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider h-10 px-5 rounded-xl shadow-lg"
+                onClick={openCreateDriverDialog}
               >
-                <Shield className="w-4 h-4 text-kashmir-gold" /> Verify Licenses
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Register Chauffeur
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {driversList.map(drv => {
               const isLicExpiring = new Date(drv.licenseExpiry) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
               return (
-                <Card key={drv.id} className="bg-[#0a0f14]/85 border border-white/10 shadow-xl p-6 rounded-3xl relative overflow-hidden group">
-                  {/* Action Overlays */}
-                  {activeRole === 'Director' && (
-                    <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/5 z-10">
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-7 w-7 hover:bg-white/10 text-white" 
-                        onClick={() => openEditDriverDialog(drv)}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-7 w-7 hover:bg-red-500/20 text-red-400" 
-                        onClick={() => handleDeleteDriver(drv.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                <div key={drv.id} className="p-5 rounded-2xl bg-[#090e13]/90 border border-white/5 hover:border-amber-500/30 transition-all shadow-xl space-y-3.5 relative group">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white truncate max-w-[130px]">{drv.name}</h4>
+                        <span className="text-[10px] text-white/40 block font-mono">{drv.phone}</span>
+                      </div>
                     </div>
-                  )}
-
-                  <div className="absolute top-4 right-4">
                     <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
-                      drv.status === 'ONLINE' || drv.status === 'Online' ? 'bg-emerald-500/10 text-emerald-400' : 
-                      drv.status === 'ON TRIP' || drv.status === 'On Trip' ? 'bg-red-500/10 text-red-400' : 'bg-neutral-500/10 text-neutral-400'
+                      drv.status === 'ONLINE' || drv.status === 'Online' ? 'bg-emerald-500/15 text-emerald-400' : 
+                      drv.status === 'ON TRIP' || drv.status === 'On Trip' ? 'bg-rose-500/15 text-rose-400' : 'bg-neutral-500/15 text-neutral-400'
                     )}>
                       {drv.status}
                     </Badge>
                   </div>
 
-                  <div className="space-y-4 pt-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-                        <User className="w-5 h-5 text-kashmir-gold" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-black uppercase text-white leading-tight">{drv.name}</h4>
-                        <span className="text-[9px] text-white/30 font-bold uppercase">{drv.phone}</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 border-t border-b border-white/5 py-3 text-[10px]">
-                      <div>
-                        <span className="block text-[8px] text-white/20 uppercase tracking-wider">Trips Completed</span>
-                        <span className="font-bold text-white text-xs">{drv.trips}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[8px] text-white/20 uppercase tracking-wider">Rating Score</span>
-                        <span className="font-bold text-kashmir-gold text-xs">{drv.rating} ★</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1 text-[9px] text-white/40 uppercase font-semibold">
-                      <div className="flex justify-between">
-                        <span>Aadhaar No:</span>
-                        <span className="text-white font-mono">{drv.aadhaar}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Experience:</span>
-                        <span className="text-white">{drv.experience} Years</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Languages:</span>
-                        <span className="text-white truncate max-w-[120px]">{drv.languages}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center text-[10px] border-t border-white/5 pt-3">
-                      <div>
-                        <span className="block text-[8px] text-white/20 uppercase">Driver Earnings</span>
-                        <span className="font-bold text-emerald-400">₹{drv.earnings.toLocaleString()}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="block text-[8px] text-white/20 uppercase">Verification</span>
-                        <Badge className={cn("border-none text-[8px] px-2 py-0.5",
-                          drv.policeVerification === 'Verified' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                        )}>
-                          {drv.policeVerification}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {isLicExpiring && (
-                      <div className="p-2 bg-red-500/15 border border-red-500/20 rounded-xl flex items-center gap-2 mt-2">
-                        <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                        <span className="text-[8px] text-red-300 font-bold uppercase tracking-wider">DL Expiry: {drv.licenseExpiry}</span>
-                      </div>
-                    )}
+                  {/* Quick Action Contact Channels */}
+                  <div className="flex gap-2">
+                    <a
+                      href={`https://wa.me/${drv.phone.replace(/[^0-9]/g, '')}?text=Chauffeur%20dispatch%20notice%20from%20Kashmir%20Curators.`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-bold flex items-center justify-center gap-1 border border-emerald-500/20"
+                    >
+                      <MessageSquare className="w-3 h-3" /> WhatsApp
+                    </a>
+                    <a
+                      href={`tel:${drv.phone}`}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-[10px] font-bold flex items-center justify-center gap-1 border border-white/10"
+                    >
+                      <PhoneCall className="w-3 h-3" /> Call
+                    </a>
                   </div>
-                </Card>
+
+                  <div className="grid grid-cols-2 gap-2 border-t border-b border-white/5 py-2.5 text-xs">
+                    <div>
+                      <span className="block text-[8px] text-white/30 uppercase">Trips Completed</span>
+                      <span className="font-bold text-white text-sm">{drv.trips}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[8px] text-white/30 uppercase">Chauffeur Rating</span>
+                      <span className="font-bold text-amber-400 text-sm">{drv.rating} ★</span>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-white/40 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Experience:</span>
+                      <span className="text-white font-semibold">{drv.experience} Years</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Languages:</span>
+                      <span className="text-white font-semibold truncate max-w-[130px]">{drv.languages}</span>
+                    </div>
+                  </div>
+
+                  {isLicExpiring && (
+                    <div className="p-2 bg-rose-500/15 border border-rose-500/20 rounded-xl flex items-center gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                      <span className="text-[8px] text-rose-300 font-bold uppercase tracking-wider">DL Expiry: {drv.licenseExpiry}</span>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-1 border-t border-white/5">
+                    <Button size="sm" variant="outline" className="flex-1 h-8 bg-white/5 border-white/10 text-white text-[10px]" onClick={() => openEditDriverDialog(drv)}>
+                      Edit Chauffeur
+                    </Button>
+                    <button onClick={() => handleDeleteDriver(drv.id)} className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -3002,6 +3242,108 @@ export default function CMSCabs() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* VEHICLE DOSSIER MODAL */}
+      {dossierCab && (() => {
+        const meta = operationsData.cabsMetadata[dossierCab.id] || defaultMetadata;
+        return (
+          <Dialog open={!!dossierCab} onOpenChange={() => setDossierCab(null)}>
+            <DialogContent className="max-w-xl bg-[#090e13]/98 border border-white/10 text-white rounded-3xl p-8 backdrop-blur-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-display font-bold">Vehicle Logistics Dossier</DialogTitle>
+                <p className="text-white/40 text-xs font-mono">ASSET ID: {dossierCab.id}</p>
+              </DialogHeader>
+
+              <div className="py-4 space-y-5 text-left text-xs">
+                {/* Vehicle Image & Name */}
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <div className="w-20 h-14 rounded-xl bg-black/40 border border-white/10 p-2 flex items-center justify-center shrink-0">
+                    {dossierCab.image ? (
+                      <img src={dossierCab.image} alt={dossierCab.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <Car className="w-6 h-6 text-amber-400" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">{dossierCab.name}</h3>
+                    <span className="text-amber-300 font-mono font-bold">{meta.registrationNo || 'JK-01-PENDING'}</span>
+                    <span className="text-white/40 ml-2">• {dossierCab.capacity} Seats</span>
+                  </div>
+                </div>
+
+                {/* Logistics Metrics */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
+                    <span className="text-[9px] font-black uppercase text-white/40 block mb-1">Transit Rate</span>
+                    <span className="text-lg font-mono font-bold text-amber-400">₹{dossierCab.pricePerKm} / km</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
+                    <span className="text-[9px] font-black uppercase text-white/40 block mb-1">Base Charge</span>
+                    <span className="text-lg font-mono font-bold text-white">₹{dossierCab.basePrice}</span>
+                  </div>
+                </div>
+
+                {/* Assigned Chauffeur & Contact */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 block">Default Chauffeur</span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-white">{meta.driverName || 'No Chauffeur Assigned'}</p>
+                      <p className="text-[10px] text-white/40 font-mono">{meta.driverPhone || 'No Phone'}</p>
+                    </div>
+                    {meta.driverPhone && (
+                      <div className="flex gap-2">
+                        <a
+                          href={`https://wa.me/${meta.driverPhone.replace(/[^0-9]/g, '')}?text=Fleet%20dispatch%20notice%20from%20Kashmir%20Curators.`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 text-xs font-bold flex items-center gap-1 border border-emerald-500/20"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+                        </a>
+                        <a
+                          href={`tel:${meta.driverPhone}`}
+                          className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs font-bold flex items-center gap-1 border border-white/10"
+                        >
+                          <PhoneCall className="w-3.5 h-3.5" /> Call
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Compliance Documents */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-white/40 block">Compliance Status</span>
+                  <div className="grid grid-cols-3 gap-2 text-[10px]">
+                    <div>
+                      <span className="text-white/30 block">Insurance</span>
+                      <span className="font-bold text-emerald-400">{meta.insuranceExpiry || 'Active'}</span>
+                    </div>
+                    <div>
+                      <span className="text-white/30 block">Tourist Permit</span>
+                      <span className="font-bold text-emerald-400">{meta.permitExpiry || 'Active'}</span>
+                    </div>
+                    <div>
+                      <span className="text-white/30 block">Pollution (PUC)</span>
+                      <span className="font-bold text-emerald-400">{meta.pollutionExpiry || 'Active'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-4 border-t border-white/5 flex gap-2">
+                <Button variant="outline" onClick={() => setDossierCab(null)} className="flex-1 bg-white/5 border-white/10 text-white text-xs h-11 rounded-xl">
+                  Close Dossier
+                </Button>
+                <Button onClick={() => { const c = dossierCab; setDossierCab(null); openEditDialog(c); }} className="flex-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold h-11 rounded-xl">
+                  Edit Vehicle
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }
