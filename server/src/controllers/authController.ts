@@ -223,27 +223,41 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
     await prisma.verification.delete({ where: { id: record.id } });
 
     // 5. Retrieve the full verified user details from database
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { employeeCode: code.toUpperCase() }
     });
+
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { employeeCode: { equals: code, mode: 'insensitive' } },
+            { email: { startsWith: code.toLowerCase() } }
+          ]
+        }
+      });
+    }
 
     if (!user) {
       return res.status(400).json({ error: 'Verified system user record not found' });
     }
 
-    // 6. Generate the authenticated JWT session
+    // 6. Generate the authenticated JWT session with full identity
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, code: user.employeeCode },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     res.json({
       user: {
+        id: user.id,
         code: user.employeeCode,
         name: user.name,
+        email: user.email,
         role: user.role,
-        phone: user.phone
+        phone: user.phone,
+        image: user.image
       },
       token
     });
@@ -264,6 +278,7 @@ export const teamLogin = async (req: Request, res: Response) => {
     if (upper.startsWith('OPS')) return 'operations';
     if (upper.startsWith('SALES') || upper.startsWith('KC')) return 'sales';
     if (upper.startsWith('MKT')) return 'marketing';
+    if (upper.startsWith('FIN')) return 'finance';
     return null;
   };
 
@@ -272,18 +287,41 @@ export const teamLogin = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Invalid employee code' });
   }
 
-  // Generate a system-level token for the team member
+  // Look up or establish real user in database
+  let dbUser = await prisma.user.findFirst({
+    where: { employeeCode: code.toUpperCase() }
+  });
+
+  if (!dbUser) {
+    const defaultEmail = `${code.toLowerCase()}@thekashmircurators.com`;
+    dbUser = await prisma.user.upsert({
+      where: { email: defaultEmail },
+      update: { employeeCode: code.toUpperCase(), role },
+      create: {
+        email: defaultEmail,
+        employeeCode: code.toUpperCase(),
+        name: `${role.charAt(0).toUpperCase() + role.slice(1)} ${code.slice(-3)}`,
+        role
+      }
+    });
+  }
+
+  // Generate a system-level token with real user ID
   const token = jwt.sign(
-    { id: `system-${code}`, email: `${code.toLowerCase()}@kashmirconnect.com`, role },
+    { id: dbUser.id, email: dbUser.email, role: dbUser.role, code: dbUser.employeeCode },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
 
   res.json({
     user: {
-      code: code.toUpperCase(),
-      name: `${role.charAt(0).toUpperCase() + role.slice(1)} ${code.slice(-3)}`,
-      role
+      id: dbUser.id,
+      code: dbUser.employeeCode,
+      name: dbUser.name,
+      email: dbUser.email,
+      phone: dbUser.phone,
+      image: dbUser.image,
+      role: dbUser.role
     },
     token
   });
@@ -291,24 +329,68 @@ export const teamLogin = async (req: Request, res: Response) => {
 
 export const updateProfile = async (req: any, res: Response) => {
   const { name, email, phone, image, password, uploadedDocuments } = req.body;
-  const userId = req.user.id;
+  const rawUserId = req.user?.id;
+  const userCode = req.user?.code;
+  const userEmail = req.user?.email;
 
   try {
-    if (email) {
+    // 1. Resolve actual user in DB:
+    let currentUser: any = null;
+    if (rawUserId && !rawUserId.startsWith('system-')) {
+      currentUser = await prisma.user.findUnique({ where: { id: rawUserId } });
+    }
+    if (!currentUser && userCode) {
+      currentUser = await prisma.user.findUnique({ where: { employeeCode: userCode.toUpperCase() } });
+    }
+    if (!currentUser && userEmail) {
+      currentUser = await prisma.user.findUnique({ where: { email: userEmail } });
+    }
+    if (!currentUser && rawUserId && rawUserId.startsWith('system-')) {
+      const extractedCode = rawUserId.replace('system-', '').toUpperCase();
+      currentUser = await prisma.user.findUnique({ where: { employeeCode: extractedCode } });
+    }
+
+    // Fallback: If still not found, create or upsert
+    if (!currentUser) {
+      const targetCode = userCode || (rawUserId ? rawUserId.replace('system-', '') : 'ADMIN001');
+      const targetEmail = (email && email.trim()) || userEmail || `${targetCode.toLowerCase()}@thekashmircurators.com`;
+      currentUser = await prisma.user.upsert({
+        where: { email: targetEmail },
+        update: {
+          employeeCode: targetCode.toUpperCase(),
+          role: req.user?.role || 'admin'
+        },
+        create: {
+          email: targetEmail,
+          name: name || 'Zahid Riyaz',
+          employeeCode: targetCode.toUpperCase(),
+          role: req.user?.role || 'admin',
+          phone: phone || null
+        }
+      });
+    }
+
+    const userId = currentUser.id;
+
+    // 2. Check if the new email belongs to a DIFFERENT user account
+    if (email && email.trim()) {
+      const trimmedEmail = email.trim();
       const existing = await prisma.user.findFirst({
         where: { 
-          email,
+          email: { equals: trimmedEmail, mode: 'insensitive' },
           NOT: { id: userId }
         }
       });
-      if (existing) {
+
+      // If an existing record is found, ensure it is truly a separate conflicting user
+      if (existing && existing.id !== userId && existing.employeeCode !== currentUser.employeeCode) {
         return res.status(400).json({ error: 'Email already in use by another account' });
       }
     }
 
     const dataToUpdate: any = {};
     if (name) dataToUpdate.name = name;
-    if (email) dataToUpdate.email = email;
+    if (email) dataToUpdate.email = email.trim();
     if (phone !== undefined) dataToUpdate.phone = phone;
     if (image !== undefined) dataToUpdate.image = image;
     if (uploadedDocuments !== undefined) dataToUpdate.uploadedDocuments = uploadedDocuments ? String(uploadedDocuments) : null;
@@ -343,7 +425,7 @@ export const updateProfile = async (req: any, res: Response) => {
     });
   } catch (error: any) {
     console.error('Failed to update profile:', error);
-    res.status(500).json({ error: 'Failed to update profile' });
+    res.status(500).json({ error: error.message || 'Failed to update profile' });
   }
 };
 
