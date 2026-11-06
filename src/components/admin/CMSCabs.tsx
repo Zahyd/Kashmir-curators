@@ -2618,11 +2618,48 @@ export default function CMSCabs() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Primary Asset Image</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Primary Asset Image</label>
+                {formData.image && (
+                  <span className="text-[9px] font-bold text-amber-400 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Transparent Cutout Engine Active
+                  </span>
+                )}
+              </div>
               <MediaPicker
                 value={formData.image || ''}
                 onChange={(url) => setFormData({ ...formData, image: url })}
               />
+              {formData.image && !formData.image.includes('e_make_transparent') && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div>
+                      <p className="text-[11px] font-bold text-white">Dark Background Removal</p>
+                      <p className="text-[9px] text-white/40">Convert opaque image to clean showroom transparent PNG</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      if (!formData.image) return;
+                      let transformed = formData.image;
+                      if (transformed.includes('cloudinary.com') && transformed.includes('/upload/')) {
+                        transformed = transformed.replace('/upload/', '/upload/e_make_transparent:20,f_png/');
+                        transformed = transformed.replace(/\.(jpg|jpeg)$/, '.png');
+                        setFormData({ ...formData, image: transformed });
+                        toast.success('Clean transparent PNG applied to vehicle!');
+                      } else {
+                        toast.info('Hover over image preview above and click "Make Transparent PNG"');
+                      }
+                    }}
+                    className="h-8 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-black uppercase tracking-wider"
+                  >
+                    Clean Background
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload, Image as ImageIcon, X, Loader2 } from 'lucide-react';
+import { Upload, Image as ImageIcon, X, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
+import { removeDarkBackground, isImageDarkBackground } from '@/lib/imageTransparency';
 
 interface MediaItem {
   id: string;
@@ -24,6 +25,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [converting, setConverting] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [urlError, setUrlError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,10 +61,25 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
     setUploading(true);
     try {
       const token = localStorage.getItem('teamToken');
-      const formData = new FormData();
-      formData.append('file', file);
+      let fileToUpload = file;
 
-      console.log(`[MediaPicker] Uploading ${file.name} to backend...`);
+      // Automatically inspect if image has dark/black background
+      try {
+        const isDark = await isImageDarkBackground(file);
+        if (isDark) {
+          toast.loading('Black background detected. Auto-converting to transparent PNG cutout...', { id: 'bg-remove' });
+          const processed = await removeDarkBackground(file);
+          fileToUpload = processed.file;
+          toast.success('Converted to transparent PNG cutout!', { id: 'bg-remove' });
+        }
+      } catch (err) {
+        console.warn('[MediaPicker] Auto-transparency skipped:', err);
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+
+      console.log(`[MediaPicker] Uploading ${fileToUpload.name} to backend...`);
       const response = await fetch(`${API_BASE_URL}/media/upload`, {
         method: 'POST',
         headers: {
@@ -81,7 +98,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
       
       onChange(uploadedMedia.url);
       setDialogOpen(false);
-      toast.success('Image uploaded');
+      toast.success('Asset uploaded successfully');
     } catch (error: any) {
       console.error('[MediaPicker] Upload error:', error);
       toast.error(`Upload failed: ${error.message}`);
@@ -90,6 +107,60 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleMakeTransparent = async () => {
+    if (!value) return;
+    setConverting(true);
+    toast.loading('Analyzing & converting to transparent PNG...', { id: 'trans-convert' });
+    try {
+      const token = localStorage.getItem('teamToken');
+
+      // If it's a Cloudinary URL, we can directly apply transparent PNG transformation
+      if (value.includes('cloudinary.com') && value.includes('/upload/')) {
+        let transformed = value;
+        if (!transformed.includes('e_make_transparent')) {
+          transformed = transformed.replace('/upload/', '/upload/e_make_transparent:20,f_png/');
+        }
+        if (transformed.endsWith('.jpg') || transformed.endsWith('.jpeg')) {
+          transformed = transformed.replace(/\.(jpg|jpeg)$/, '.png');
+        }
+        onChange(transformed);
+        toast.success('Applied clean transparent PNG transformation!', { id: 'trans-convert' });
+        return;
+      }
+
+      // Otherwise, run client canvas flood-fill
+      const processed = await removeDarkBackground(value);
+      const formData = new FormData();
+      formData.append('file', processed.file);
+
+      const response = await fetch(`${API_BASE_URL}/media/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (response.ok) {
+        const uploaded = await response.json();
+        onChange(uploaded.url);
+        toast.success('Converted to transparent PNG!', { id: 'trans-convert' });
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (err: any) {
+      console.error('Transparency conversion error:', err);
+      if (value.includes('cloudinary.com') && value.includes('/upload/')) {
+        let transformed = value.replace('/upload/', '/upload/e_make_transparent:20,f_png/');
+        transformed = transformed.replace(/\.(jpg|jpeg)$/, '.png');
+        onChange(transformed);
+        toast.success('Applied clean transparent PNG transformation!', { id: 'trans-convert' });
+      } else {
+        toast.error(`Conversion failed: ${err.message}`, { id: 'trans-convert' });
+      }
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -122,7 +193,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
             />
             
             {/* Control Overlay */}
-            <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2.5 px-4 flex-wrap">
               <Button 
                 variant="secondary" 
                 size="sm" 
@@ -133,7 +204,18 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
                 }}
               >
                 <ImageIcon className="h-4 w-4 mr-1.5" />
-                Change Image
+                Change
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                disabled={converting}
+                className="rounded-xl font-bold bg-amber-500 text-black hover:bg-amber-400 transition-all gap-1.5 shadow-md shadow-amber-500/20"
+                onClick={handleMakeTransparent}
+                title="Remove black/dark background and convert to transparent PNG"
+              >
+                {converting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                <span>Make Transparent PNG</span>
               </Button>
               <Button 
                 variant="destructive" 
