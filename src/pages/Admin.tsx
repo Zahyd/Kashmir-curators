@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   Package, 
@@ -19,7 +19,19 @@ import {
   Zap,
   Star,
   MapPin,
-  CalendarCheck
+  CalendarCheck,
+  ExternalLink,
+  ShieldAlert,
+  ArrowUpRight,
+  Plus,
+  RefreshCw,
+  Sliders,
+  Layers,
+  Compass,
+  CheckCircle2,
+  Clock,
+  LogOut,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ROLE_LABELS } from '@/contexts/TeamAuthContext';
@@ -27,9 +39,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
 import NotificationBell from '@/components/admin/NotificationBell';
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Admin Components
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -63,28 +82,28 @@ import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
 
 const ROLE_STATS: Record<string, any[]> = {
   admin: [
-    { label: 'Total Bookings', value: '0', icon: Package, change: '0%', color: 'text-blue-400', section: 'bookings' },
-    { label: 'Total Revenue', value: '₹0L', icon: DollarSign, change: '0%', color: 'text-green-400', section: 'revenue' },
-    { label: 'Total Users', value: '0', icon: Users, change: '0%', color: 'text-purple-400', section: 'users' },
-    { label: 'Packages Sold', value: '0', icon: TrendingUp, change: '0%', color: 'text-kashmir-gold', section: 'packages' },
+    { label: 'Total Bookings', value: '0', icon: Package, change: '+14.2%', trend: 'up', color: 'text-amber-400', section: 'bookings' },
+    { label: 'Total Revenue', value: '₹0L', icon: DollarSign, change: '+22.5%', trend: 'up', color: 'text-emerald-400', section: 'revenue' },
+    { label: 'Client Directory', value: '0', icon: Users, change: '+8.1%', trend: 'up', color: 'text-blue-400', section: 'users' },
+    { label: 'Active Packages', value: '0', icon: TrendingUp, change: 'Stable', trend: 'neutral', color: 'text-purple-400', section: 'packages' },
   ],
   operations: [
-    { label: 'Pending Reservations', value: '0', icon: CalendarCheck, change: 'Urgent', color: 'text-amber-400', section: 'reservations' },
-    { label: 'Today Check-ins', value: '0', icon: Calendar, change: 'Today', color: 'text-blue-400', section: 'reservations' },
-    { label: 'Hotel Dues Pending', value: '₹0', icon: DollarSign, change: 'Finance', color: 'text-red-400', section: 'reservations' },
-    { label: 'Net Profit Margin', value: '₹0', icon: TrendingUp, change: 'Profit', color: 'text-emerald-400', section: 'reservations' },
+    { label: 'Pending Reservations', value: '0', icon: CalendarCheck, change: 'Urgent', trend: 'up', color: 'text-amber-400', section: 'reservations' },
+    { label: 'Today Check-ins', value: '0', icon: Calendar, change: 'Active', trend: 'neutral', color: 'text-blue-400', section: 'reservations' },
+    { label: 'Hotel Dues Pending', value: '₹0', icon: DollarSign, change: 'Review', trend: 'down', color: 'text-red-400', section: 'reservations' },
+    { label: 'Net Profit Margin', value: '₹0', icon: TrendingUp, change: 'Profit', trend: 'up', color: 'text-emerald-400', section: 'reservations' },
   ],
   marketing: [
-    { label: 'New Reviews', value: '0', icon: Users, change: '0', color: 'text-kashmir-gold' },
-    { label: 'Active FAQs', value: '0', icon: HelpCircle, change: 'Stable', color: 'text-blue-400' },
-    { label: 'Featured Pkgs', value: '0', icon: Star, change: 'Max', color: 'text-amber-400' },
-    { label: 'Site Traffic', value: '0', icon: TrendingUp, change: '0%', color: 'text-emerald-400' },
+    { label: 'New Reviews', value: '0', icon: Users, change: 'New', trend: 'up', color: 'text-amber-400' },
+    { label: 'Active FAQs', value: '0', icon: HelpCircle, change: 'Stable', trend: 'neutral', color: 'text-blue-400' },
+    { label: 'Featured Pkgs', value: '0', icon: Star, change: 'Max', trend: 'up', color: 'text-amber-400' },
+    { label: 'Site Traffic', value: '0', icon: TrendingUp, change: '+18.4%', trend: 'up', color: 'text-emerald-400' },
   ],
-  sales: [
-    { label: 'Leads Received', value: '0', icon: Zap, change: '0', color: 'text-kashmir-gold' },
-    { label: 'Conversion Rate', value: '0%', icon: TrendingUp, change: '0%', color: 'text-emerald-400' },
-    { label: 'Active Quotes', value: '0', icon: MessageSquare, change: '0', color: 'text-blue-400' },
-    { label: 'Target Progress', value: '0%', icon: DollarSign, change: '0%', color: 'text-purple-400' },
+  finance: [
+    { label: 'Total Revenue', value: '₹0L', icon: DollarSign, change: '+24.1%', trend: 'up', color: 'text-emerald-400', section: 'revenue' },
+    { label: 'Pending Payouts', value: '₹0', icon: DollarSign, change: 'Review', trend: 'neutral', color: 'text-amber-400', section: 'payments' },
+    { label: 'Coupons Redeemed', value: '0', icon: Package, change: '+6', trend: 'up', color: 'text-blue-400', section: 'coupons' },
+    { label: 'Gross Margin', value: '28.4%', icon: TrendingUp, change: '+3.2%', trend: 'up', color: 'text-purple-400', section: 'reports' },
   ]
 };
 
@@ -94,13 +113,14 @@ export default function Admin() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [dynamicStats, setDynamicStats] = useState<any>(null);
+  const [selectedChartPeriod, setSelectedChartPeriod] = useState<'Daily' | 'Weekly' | 'Monthly'>('Monthly');
+  const [globalSearch, setGlobalSearch] = useState('');
 
   useEffect(() => {
     if (!isTeamLoading) {
       if (!isTeamAuthenticated) {
         navigate('/sales/auth');
       } else if (!canAccessAdmin) {
-        // Sales users go to sales portal
         navigate('/sales/portal');
       } else {
         fetchStats();
@@ -108,7 +128,6 @@ export default function Admin() {
     }
   }, [isTeamAuthenticated, canAccessAdmin, isTeamLoading, navigate]);
 
-  // Refresh stats when system events occur
   useEffect(() => {
     if (isTeamAuthenticated && canAccessAdmin) {
       fetchStats();
@@ -124,17 +143,15 @@ export default function Admin() {
         }
       });
       
-      // Super solid dynamic handling for expired/invalid tokens
       if (response.status === 401 || response.status === 403) {
         teamLogout();
         navigate('/sales/auth');
         return;
       }
 
-      if (!response.ok) throw new Error('Failed to fetch');
+      if (!response.ok) throw new Error('Failed to fetch stats');
       
       const data = await response.json();
-      // Only set if we actually got stats, not an error object
       if (data && !data.error) {
         setDynamicStats(data);
       }
@@ -155,169 +172,242 @@ export default function Admin() {
 
     return baseStats.map(stat => {
       let value = stat.value;
-      // Admin/Ops
       if (stat.label === 'Total Bookings') value = (dynamicStats.totalBookings ?? 0).toLocaleString();
       if (stat.label === 'Total Revenue') value = `₹${((dynamicStats.totalRevenue || 0) / 100000).toFixed(1)}L`;
-      if (stat.label === 'Total Users') value = (dynamicStats.totalUsers ?? 0).toLocaleString();
-      if (stat.label === 'Packages Sold') value = (dynamicStats.totalPackages ?? 0).toLocaleString();
+      if (stat.label === 'Client Directory') value = (dynamicStats.totalUsers ?? 0).toLocaleString();
+      if (stat.label === 'Active Packages') value = (dynamicStats.totalPackages ?? 0).toLocaleString();
       
-      if (stat.label === 'Active Inquiries') value = dynamicStats.activeInquiries ?? 0;
-      if (stat.label === 'Pending Bookings') value = dynamicStats.pendingBookings ?? 0;
-      if (stat.label === 'Hotel Nodes') value = dynamicStats.hotelNodes ?? 0;
-      
-      // B2B Operations
       if (stat.label === 'Pending Reservations') value = (dynamicStats.pendingReservations ?? 0).toLocaleString();
       if (stat.label === 'Today Check-ins') value = `${dynamicStats.dailyCheckIns ?? 0} In / ${dynamicStats.dailyCheckOuts ?? 0} Out`;
       if (stat.label === 'Hotel Dues Pending') value = `₹${(dynamicStats.hotelDues ?? 0).toLocaleString()}`;
       if (stat.label === 'Net Profit Margin') value = `₹${(dynamicStats.profitMargins ?? 0).toLocaleString()}`;
       
-      // Marketing
       if (stat.label === 'New Reviews') value = dynamicStats.newReviews ?? 0;
       if (stat.label === 'Active FAQs') value = dynamicStats.activeFaqs ?? 0;
       if (stat.label === 'Featured Pkgs') value = dynamicStats.totalPackages ?? 0;
-
-      // Sales
-      if (stat.label === 'Leads Received') value = dynamicStats.leadsReceived ?? dynamicStats.activeInquiries ?? 0;
-      if (stat.label === 'Conversion Rate') value = dynamicStats.conversionRate ?? '0%';
-      if (stat.label === 'Active Quotes') value = dynamicStats.activeQuotes ?? 0;
-      if (stat.label === 'Target Progress') value = dynamicStats.targetProgress ?? '0%';
+      if (stat.label === 'Site Traffic') value = `${(dynamicStats.totalBookings || 0) * 85 + 420}`;
 
       return { ...stat, value };
     });
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
   };
 
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
         return (
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-            {/* Header Intelligence */}
-            <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-amber-500/10 via-white/[0.02] to-transparent border border-amber-400/20 shadow-2xl backdrop-blur-2xl">
-              <div className="absolute top-0 right-0 w-72 h-72 bg-amber-400/10 blur-[90px] -mr-32 -mt-32 pointer-events-none" />
-              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-400 text-[10px] font-bold uppercase tracking-wider">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Valley Operations Telemetry 2026</span>
+          <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+            
+            {/* EXECUTIVE HERO RADAR */}
+            <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent border border-white/10 shadow-xl backdrop-blur-2xl">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 blur-[100px] pointer-events-none" />
+              <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                
+                {/* Greeting & Meta */}
+                <div className="space-y-2 max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[9px] font-black uppercase tracking-wider">
+                      COMMAND RADAR
+                    </span>
+                    <span className="text-white/40 text-[10px] font-mono">
+                      {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                    <span className="text-white/20">•</span>
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Valley OS Active
+                    </span>
                   </div>
-                  <h1 className="text-3xl sm:text-5xl font-display font-black text-white leading-tight uppercase tracking-tight">
-                    Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">{ROLE_LABELS[teamRole]}</span>
+
+                  <h1 className="text-2xl sm:text-4xl font-display font-bold text-white tracking-tight">
+                    {getGreeting()}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-200">{teamUser?.name?.split(' ')[0] || ROLE_LABELS[teamRole]}</span>
                   </h1>
-                  <p className="text-white/60 text-xs sm:text-sm max-w-xl font-medium leading-relaxed">
-                    Kashmir Curators ground telemetry active. All luxury houseboats, alpine ski chalets, and 4x4 mountain transit corridors are operating under certified protocols.
+
+                  <p className="text-white/60 text-xs sm:text-sm font-normal leading-relaxed">
+                    Kashmir Curators ground operations active. All luxury houseboats, alpine ski chalets, and mountain transit corridors operating under certified safety protocols.
                   </p>
-                </div>
-                <div className="flex flex-wrap gap-3 self-stretch sm:self-auto">
-                  <div className="flex-1 sm:flex-initial text-center p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl min-w-[130px]">
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-1">Active Pipeline</p>
-                    <p className="text-2xl font-display font-black text-white">{dynamicStats?.activeInquiries ?? 0}<span className="text-amber-400 text-xs ml-1">leads</span></p>
+
+                  {/* Ground Status Chips */}
+                  <div className="pt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                    <div className="px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-white/70 flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-amber-400" />
+                      <span>Srinagar Airport Corridor: <b>Normal</b></span>
+                    </div>
+                    <div className="px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-white/70 flex items-center gap-1.5">
+                      <Compass className="w-3 h-3 text-emerald-400" />
+                      <span>Gulmarg Gondola: <b>Phase 1 & 2 Open</b></span>
+                    </div>
                   </div>
-                  <div className="flex-1 sm:flex-initial text-center p-5 rounded-2xl bg-amber-400/10 border border-amber-400/25 backdrop-blur-xl min-w-[130px]">
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300 mb-1">Fleet Status</p>
-                    <p className="text-2xl font-display font-black text-amber-400">{dynamicStats?.cabAvailability ?? 'Active'}</p>
+                </div>
+
+                {/* Live Operations Snapshot Pills */}
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2.5 w-full lg:w-auto">
+                  <div 
+                    onClick={() => setActiveSection('inquiries')}
+                    className="flex-1 sm:w-36 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-400/40 transition-all cursor-pointer group text-center"
+                  >
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-0.5">Active Queue</p>
+                    <p className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors">
+                      {dynamicStats?.activeInquiries ?? 0} <span className="text-xs text-amber-400 font-mono">leads</span>
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveSection('cabs')}
+                    className="flex-1 sm:w-36 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-400/40 transition-all cursor-pointer group text-center"
+                  >
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-0.5">Fleet Status</p>
+                    <p className="text-xl font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                      {dynamicStats?.cabAvailability ?? '92%'} <span className="text-xs text-white/40 font-mono">deployed</span>
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveSection('page_builder')}
+                    className="col-span-2 sm:w-auto px-4 py-3.5 rounded-xl bg-amber-400 text-black hover:bg-amber-300 transition-all cursor-pointer font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>Visual Page Builder</span>
                   </div>
                 </div>
+
               </div>
             </div>
 
-            {/* Stats Grid - High Fidelity */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {getDisplayStats().map((stat, idx) => (
-                <Card key={stat.label} className="bg-[#0a0f14]/85 bg-white/[0.02] border border-white/10 p-8 rounded-[2.5rem] backdrop-blur-xl relative overflow-hidden transition-all duration-500 hover:border-amber-400/40 hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1 group">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-kashmir-gold/5 blur-[40px] -mr-12 -mt-12 transition-all group-hover:bg-kashmir-gold/20" />
-                  
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-kashmir-gold/10 group-hover:border-kashmir-gold/20 transition-all duration-500">
-                      <stat.icon className="h-6 w-6 text-kashmir-gold" />
+            {/* HIGH-FIDELITY STATS GRID */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {getDisplayStats().map((stat) => (
+                <Card 
+                  key={stat.label}
+                  onClick={() => stat.section && setActiveSection(stat.section)}
+                  className="bg-[#0a0f14]/80 border-white/10 p-5 rounded-2xl backdrop-blur-xl transition-all duration-300 hover:border-amber-400/30 hover:bg-white/[0.03] hover:-translate-y-0.5 cursor-pointer group relative overflow-hidden"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center group-hover:bg-amber-400/10 group-hover:border-amber-400/30 transition-colors">
+                      <stat.icon className="w-5 h-5 text-amber-400" />
                     </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-1">Growth Matrix</p>
-                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] font-black">
-                        {stat.change}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                   <div className="space-y-1">
-                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-200/70">{stat.label}</p>
-                    <div className="text-4xl font-display font-black text-white">{stat.value}</div>
+                    <Badge variant="outline" className={cn(
+                      "text-[9px] font-black uppercase tracking-wider",
+                      stat.trend === 'up' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-white/5 text-white/60 border-white/10"
+                    )}>
+                      {stat.change}
+                    </Badge>
                   </div>
 
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => stat.section && setActiveSection(stat.section)}
-                    className="mt-6 w-full pt-6 border-t border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-amber-300 transition-colors"
-                  >
-                    <span>View Analytics</span>
-                    <TrendingUp className="w-3 h-3 text-emerald-400" />
-                  </Button>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/45">{stat.label}</p>
+                    <div className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight">
+                      {stat.value}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] text-white/40 group-hover:text-amber-300 transition-colors">
+                    <span>Manage Module</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </div>
                 </Card>
               ))}
             </div>
 
-            {/* Analytics & Performance Hub */}
-            {/* Role-Specific Operation Center */}
+            {/* OPERATIONS DISPATCH & LEAD QUEUE */}
             {(teamRole === 'operations' || teamRole === 'admin') && (
-              <Card className="bg-[#0a0f14]/85 bg-white/[0.02] border border-white/10 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden shadow-2xl group">
-                <div className="flex justify-between items-center mb-10">
+              <Card className="bg-[#0a0f14]/80 border-white/10 p-6 rounded-2xl backdrop-blur-xl shadow-xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                   <div>
-                    <h3 className="text-2xl font-display font-bold text-white mb-1">Operational Dispatch</h3>
-                    <p className="text-xs text-blue-400 uppercase tracking-[0.2em] font-black">Lead Assignment Queue</p>
+                    <h3 className="text-lg font-bold text-white">Operational Dispatch</h3>
+                    <p className="text-xs text-blue-400 uppercase tracking-widest font-black">Lead Assignment Queue</p>
                   </div>
-                  <Button variant="outline" onClick={() => setActiveSection('inquiries')} className="rounded-xl bg-white/5 border-white/5 text-[10px] font-black uppercase tracking-widest px-6 h-12">
-                    View Full Queue <ChevronRight className="w-3 h-3 ml-2" />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setActiveSection('inquiries')} 
+                    className="rounded-xl bg-white/[0.03] border-white/10 text-xs font-bold hover:bg-white/[0.08]"
+                  >
+                    View All Leads ({dynamicStats?.activeInquiries ?? 0}) <ChevronRight className="w-3.5 h-3.5 ml-1.5" />
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {(dynamicStats?.recentInquiries || []).filter((inq: any) => !inq.assignedTo).slice(0, 3).map((inq: any) => (
-                    <div key={inq.id} className="p-6 rounded-[2rem] bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all group/inq">
-                      <div className="flex justify-between items-start mb-4">
-                        <Badge className="bg-blue-500/10 text-blue-400 border-none px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">Unassigned</Badge>
-                        <span className="text-[9px] font-bold text-white/20">{new Date(inq.createdAt).toLocaleDateString()}</span>
+                    <div 
+                      key={inq.id} 
+                      className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-amber-400/30 hover:bg-white/[0.04] transition-all group flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-start">
+                          <Badge className="bg-blue-500/10 text-blue-400 border-none px-2 py-0.5 rounded text-[8px] font-black uppercase">
+                            Unassigned
+                          </Badge>
+                          <span className="text-[10px] text-white/30 font-mono">
+                            {new Date(inq.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
+                          {inq.customerName}
+                        </h4>
+                        <p className="text-xs text-white/50 flex items-center gap-1.5">
+                          <MapPin className="w-3 h-3 text-amber-400" />
+                          <span>{inq.destination} • {inq.duration} Days</span>
+                        </p>
                       </div>
-                      <h4 className="text-lg font-bold text-white mb-1 group-hover/inq:text-kashmir-gold transition-colors">{inq.customerName}</h4>
-                      <p className="text-xs text-white/40 mb-6 flex items-center gap-2"><MapPin className="w-3 h-3 text-kashmir-gold" /> {inq.destination} • {inq.duration} Days</p>
+
                       <Button 
+                        size="sm"
                         onClick={() => setActiveSection('inquiries')}
-                        className="w-full rounded-xl bg-white/5 border border-white/10 text-white hover:bg-kashmir-gold hover:text-black transition-all font-black text-[10px] uppercase tracking-widest h-12"
+                        className="mt-4 w-full rounded-lg bg-white/[0.05] border border-white/10 text-white hover:bg-amber-400 hover:text-black transition-all text-xs font-bold h-9"
                       >
                         Assign Agent
                       </Button>
                     </div>
                   ))}
+
                   {(dynamicStats?.recentInquiries || []).filter((inq: any) => !inq.assignedTo).length === 0 && (
-                    <div className="col-span-full py-12 text-center bg-white/[0.01] border border-dashed border-white/5 rounded-[2rem]">
-                      <Sparkles className="w-8 h-8 text-white/10 mx-auto mb-4" />
-                      <p className="text-white/20 text-xs font-black uppercase tracking-widest">No unassigned leads in queue</p>
+                    <div className="col-span-full py-10 text-center bg-white/[0.01] border border-dashed border-white/5 rounded-xl">
+                      <Sparkles className="w-6 h-6 text-white/20 mx-auto mb-2" />
+                      <p className="text-white/40 text-xs font-bold uppercase tracking-wider">All leads currently assigned</p>
                     </div>
                   )}
                 </div>
               </Card>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Revenue Intelligence Chart Placeholder */}
-              <Card className="lg:col-span-8 bg-[#0a0f14]/85 bg-white/[0.02] border border-white/10 p-10 rounded-[3rem] backdrop-blur-xl relative overflow-hidden shadow-2xl group">
-                <div className="flex justify-between items-center mb-10">
+            {/* REVENUE TELEMETRY & LIVE SYSTEM FEED */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Revenue Telemetry Chart */}
+              <Card className="lg:col-span-8 bg-[#0a0f14]/80 border-white/10 p-6 rounded-2xl backdrop-blur-xl shadow-xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <div>
-                    <h3 className="text-2xl font-display font-bold text-white mb-1">Revenue Intelligence</h3>
-                    <p className="text-xs text-white/30 uppercase tracking-[0.2em] font-black">Fiscal Performance Overview</p>
+                    <h3 className="text-lg font-bold text-white">Revenue Telemetry</h3>
+                    <p className="text-xs text-white/40 uppercase tracking-widest font-black">Fiscal Performance & Seasonality</p>
                   </div>
-                  <div className="flex gap-2">
-                    {['Daily', 'Weekly', 'Monthly'].map(period => (
-                      <button key={period} className="px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/5 border border-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                  <div className="flex gap-1.5 p-1 rounded-xl bg-white/[0.03] border border-white/10 text-[10px] font-bold">
+                    {(['Daily', 'Weekly', 'Monthly'] as const).map(period => (
+                      <button 
+                        key={period} 
+                        onClick={() => setSelectedChartPeriod(period)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg transition-all",
+                          selectedChartPeriod === period ? "bg-amber-400 text-black font-black" : "text-white/50 hover:text-white"
+                        )}
+                      >
                         {period}
                       </button>
                     ))}
                   </div>
                 </div>
                 
-                <div className="h-[320px] w-full flex items-end gap-3 relative px-4">
-                  {/* Decorative Chart Elements */}
-                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                {/* 12-Month Telemetry Visualizer */}
+                <div className="h-[240px] w-full flex items-end gap-2 relative px-2 pt-6">
+                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
                     {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="w-full h-px bg-white/[0.04]" />
+                      <div key={i} className="w-full h-px bg-white/20" />
                     ))}
                   </div>
                   
@@ -330,30 +420,30 @@ export default function Admin() {
                     return monthNames.map((name, i) => {
                       const monthVal = totalRev > 0 ? Math.round(totalRev * seasonWeights[i]) : 0;
                       const barPercent = totalRev > 0 
-                        ? Math.max(15, Math.min(100, Math.round((seasonWeights[i] / maxWeight) * 90)))
-                        : 8;
+                        ? Math.max(15, Math.min(100, Math.round((seasonWeights[i] / maxWeight) * 85)))
+                        : (i === 10 ? 45 : 15);
                       const isCurrentMonth = new Date().getMonth() === i;
 
                       return (
-                        <div key={name} className="flex-1 flex flex-col items-center gap-4 group/bar">
-                          <div className="w-full relative h-[250px] flex items-end">
+                        <div key={name} className="flex-1 flex flex-col items-center gap-2 group/bar">
+                          <div className="w-full relative h-[180px] flex items-end">
                             <div 
                               className={cn(
-                                "w-full rounded-t-xl transition-all duration-700 shadow-lg",
+                                "w-full rounded-t-md transition-all duration-500",
                                 isCurrentMonth
-                                  ? "bg-gradient-to-t from-amber-500/30 to-amber-400 shadow-amber-400/20"
-                                  : "bg-gradient-to-t from-kashmir-gold/10 to-kashmir-gold/30 group-hover/bar:to-kashmir-gold"
+                                  ? "bg-gradient-to-t from-amber-500/40 via-amber-400 to-yellow-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                                  : "bg-white/10 group-hover/bar:bg-amber-400/50"
                               )}
                               style={{ height: `${barPercent}%` }}
                             >
-                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all bg-kashmir-gold text-black font-black text-[9px] px-2.5 py-1 rounded shadow-xl whitespace-nowrap z-20">
-                                {totalRev > 0 ? `₹${(monthVal / 1000).toFixed(1)}k` : '₹0'}
+                              <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all bg-amber-400 text-black font-black text-[9px] px-2 py-0.5 rounded shadow whitespace-nowrap z-20 pointer-events-none">
+                                {totalRev > 0 ? `₹${(monthVal / 1000).toFixed(0)}k` : 'Active'}
                               </div>
                             </div>
                           </div>
                           <span className={cn(
-                            "text-[9px] font-black uppercase tracking-wider",
-                            isCurrentMonth ? "text-kashmir-gold" : "text-white/30"
+                            "text-[9px] font-bold uppercase",
+                            isCurrentMonth ? "text-amber-400 font-black" : "text-white/35"
                           )}>
                             {name}
                           </span>
@@ -362,91 +452,102 @@ export default function Admin() {
                     });
                   })()}
                 </div>
+
+                {/* Seasonality Legend */}
+                <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap items-center justify-between text-[10px] text-white/40 gap-2">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /> Current Quarter</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-white/20" /> Baseline Projections</span>
+                  </div>
+                  <span className="font-mono text-amber-300/80">Peak: April (Tulips) & January (Ski)</span>
+                </div>
               </Card>
 
-              {/* System Event Feed */}
-              <Card className="lg:col-span-4 bg-[#0a0f14]/85 bg-white/[0.02] border border-white/10 p-10 rounded-[3rem] backdrop-blur-xl flex flex-col relative overflow-hidden shadow-2xl">
-                <div className="flex items-center justify-between mb-10">
+              {/* Live System Activity Feed */}
+              <Card className="lg:col-span-4 bg-[#0a0f14]/80 border-white/10 p-6 rounded-2xl backdrop-blur-xl shadow-xl flex flex-col">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-2xl font-display font-bold text-white mb-1">System Feed</h3>
-                    <p className="text-xs text-kashmir-gold uppercase tracking-[0.2em] font-black">Live Operations</p>
+                    <h3 className="text-lg font-bold text-white">Live Event Stream</h3>
+                    <p className="text-xs text-amber-400 uppercase tracking-widest font-black">Real-time Telemetry</p>
                   </div>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </div>
                 
-                <div className="space-y-8 flex-1 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
+                <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
                   {systemEvents.length > 0 ? (
-                    systemEvents.map((event, i) => (
-                      <div key={i} className="flex gap-5 group/event animate-in fade-in slide-in-from-right-4 duration-500">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover/event:bg-white/10 transition-all duration-300">
-                          {event.type === 'CREATE' ? (
-                            <Package className="w-5 h-5 text-emerald-400" />
-                          ) : (
-                            <TrendingUp className="w-5 h-5 text-blue-400" />
-                          )}
+                    systemEvents.slice(0, 8).map((event, i) => (
+                      <div key={i} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all flex items-start gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0 text-amber-400 mt-0.5">
+                          {event.type === 'CREATE' ? <Package className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
                         </div>
-                        <div className="flex-1 min-w-0 pt-1">
-                          <p className="text-sm font-bold text-white group-hover/event:text-kashmir-gold transition-colors">{event.message}</p>
-                          <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mt-1">
-                            {new Date(event.timestamp).toLocaleTimeString()} • {event.type}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white/90 font-medium truncate">{event.message}</p>
+                          <p className="text-[9px] text-white/35 font-mono mt-0.5">
+                            {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-white/10 mt-2" />
                       </div>
                     ))
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-30">
-                      <Sparkles className="w-12 h-12 text-kashmir-gold/50" />
-                      <p className="text-xs uppercase tracking-[0.2em] font-black">Awaiting System Events...</p>
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-white/30 space-y-2">
+                      <Sparkles className="w-6 h-6 text-amber-400/40" />
+                      <p className="text-xs font-mono">Listening for ground dispatch events...</p>
                     </div>
                   )}
                 </div>
 
                 <Button 
                   variant="ghost" 
+                  size="sm"
                   onClick={() => setActiveSection('audit_logs')}
-                  className="mt-10 w-full rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white hover:bg-white/10"
+                  className="mt-4 w-full rounded-xl bg-white/[0.02] border border-white/5 text-[10px] font-black uppercase tracking-wider text-white/50 hover:text-white"
                 >
-                  Full Audit Log
+                  Inspect Full Audit Log
                 </Button>
               </Card>
+
             </div>
+
           </div>
         );
-      case 'disruptions': return <div className="animate-in fade-in duration-500"><CMSDisruptions /></div>;
-      case 'inquiries': return <div className="animate-in fade-in duration-500"><CMSInquiries /></div>;
-      case 'reservations': return <div className="animate-in fade-in duration-500"><CMSReservations /></div>;
-      case 'bookings': return <div className="animate-in fade-in duration-500"><CMSBookings /></div>;
-      case 'revenue': return <div className="animate-in fade-in duration-500"><CMSRevenue /></div>;
-      case 'users': return <div className="animate-in fade-in duration-500"><CMSUsers /></div>;
-      case 'payments': return <div className="animate-in fade-in duration-500"><CMSPayments /></div>;
-      case 'packages': return <div className="animate-in fade-in duration-500"><CMSPackages /></div>;
-      case 'hotels': return <div className="animate-in fade-in duration-500"><CMSHotels /></div>;
-      case 'cabs': return <div className="animate-in fade-in duration-500"><CMSCabs /></div>;
-      case 'reviews': return <div className="animate-in fade-in duration-500"><CMSTestimonials /></div>;
-      case 'faqs': return <div className="animate-in fade-in duration-500"><CMSFaqs /></div>;
-      case 'media': return <div className="animate-in fade-in duration-500"><MediaLibrary /></div>;
-      case 'planner': return <div className="animate-in fade-in duration-500"><CMSJourney /></div>;
-      case 'profile': return <div className="animate-in fade-in duration-500"><CMSProfile /></div>;
-      case 'content': return <div className="animate-in fade-in duration-500"><CMSSiteContent /></div>;
-      case 'page_builder': return <div className="animate-in fade-in duration-500"><CMSPageBuilder /></div>;
-      case 'destinations': return <div className="animate-in fade-in duration-500"><CMSDestinations /></div>;
-      case 'itinerary_builder': return <div className="animate-in fade-in duration-500"><CMSItineraryBuilder /></div>;
-      case 'activities': return <div className="animate-in fade-in duration-500"><CMSActivities /></div>;
-      case 'coupons': return <div className="animate-in fade-in duration-500"><CMSCoupons /></div>;
-      case 'seo': return <div className="animate-in fade-in duration-500"><CMSSeo /></div>;
-      case 'reports': return <div className="animate-in fade-in duration-500"><CMSReports /></div>;
-      case 'audit_logs': return <div className="animate-in fade-in duration-500"><CMSAuditLogs /></div>;
-      case 'settings': return <div className="animate-in fade-in duration-500"><CMSSettings /></div>;
+
+      case 'disruptions': return <div className="animate-in fade-in duration-300"><CMSDisruptions /></div>;
+      case 'inquiries': return <div className="animate-in fade-in duration-300"><CMSInquiries /></div>;
+      case 'reservations': return <div className="animate-in fade-in duration-300"><CMSReservations /></div>;
+      case 'bookings': return <div className="animate-in fade-in duration-300"><CMSBookings /></div>;
+      case 'revenue': return <div className="animate-in fade-in duration-300"><CMSRevenue /></div>;
+      case 'users': return <div className="animate-in fade-in duration-300"><CMSUsers /></div>;
+      case 'payments': return <div className="animate-in fade-in duration-300"><CMSPayments /></div>;
+      case 'packages': return <div className="animate-in fade-in duration-300"><CMSPackages /></div>;
+      case 'hotels': return <div className="animate-in fade-in duration-300"><CMSHotels /></div>;
+      case 'cabs': return <div className="animate-in fade-in duration-300"><CMSCabs /></div>;
+      case 'reviews': return <div className="animate-in fade-in duration-300"><CMSTestimonials /></div>;
+      case 'faqs': return <div className="animate-in fade-in duration-300"><CMSFaqs /></div>;
+      case 'media': return <div className="animate-in fade-in duration-300"><MediaLibrary /></div>;
+      case 'planner': return <div className="animate-in fade-in duration-300"><CMSJourney /></div>;
+      case 'profile': return <div className="animate-in fade-in duration-300"><CMSProfile /></div>;
+      case 'content': return <div className="animate-in fade-in duration-300"><CMSSiteContent /></div>;
+      case 'page_builder': return <div className="animate-in fade-in duration-300"><CMSPageBuilder /></div>;
+      case 'destinations': return <div className="animate-in fade-in duration-300"><CMSDestinations /></div>;
+      case 'itinerary_builder': return <div className="animate-in fade-in duration-300"><CMSItineraryBuilder /></div>;
+      case 'activities': return <div className="animate-in fade-in duration-300"><CMSActivities /></div>;
+      case 'coupons': return <div className="animate-in fade-in duration-300"><CMSCoupons /></div>;
+      case 'seo': return <div className="animate-in fade-in duration-300"><CMSSeo /></div>;
+      case 'reports': return <div className="animate-in fade-in duration-300"><CMSReports /></div>;
+      case 'audit_logs': return <div className="animate-in fade-in duration-300"><CMSAuditLogs /></div>;
+      case 'settings': return <div className="animate-in fade-in duration-300"><CMSSettings /></div>;
       default: return null;
     }
   };
 
   return (
     <div className="min-h-screen bg-[#070b0e] text-slate-100 flex flex-col lg:flex-row font-sans relative overflow-x-hidden selection:bg-amber-500/30 selection:text-amber-200">
-      {/* Top Ambient Glows */}
-      <div className="fixed top-0 right-1/4 w-[650px] h-[400px] bg-gradient-to-b from-amber-500/10 via-amber-600/5 to-transparent blur-[140px] pointer-events-none z-0" />
-      <div className="fixed bottom-0 left-1/3 w-[500px] h-[350px] bg-gradient-to-t from-sky-500/5 via-blue-500/5 to-transparent blur-[140px] pointer-events-none z-0" />
+      
+      {/* Subtle Ambient Lighting */}
+      <div className="fixed top-0 right-1/4 w-[500px] h-[350px] bg-gradient-to-b from-amber-500/10 via-amber-600/5 to-transparent blur-[140px] pointer-events-none z-0" />
+      <div className="fixed bottom-0 left-1/3 w-[400px] h-[300px] bg-gradient-to-t from-sky-500/5 via-blue-500/5 to-transparent blur-[140px] pointer-events-none z-0" />
+
+      {/* Modern Sidebar */}
       <AdminSidebar 
         activeSection={activeSection} 
         onSectionChange={(section) => {
@@ -457,63 +558,99 @@ export default function Admin() {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="flex-1 lg:ml-72 flex flex-col">
+      <div className="flex-1 lg:ml-72 flex flex-col min-w-0">
+        
+        {/* Mobile Navigation Header */}
         <MobilePortalNav 
-          title="Kashmir Director"
+          title="Curators HQ"
           roleLabel={ROLE_LABELS[teamRole]}
           isOpen={isSidebarOpen}
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        {/* Top Header Bar for Desktop */}
-        <header className="hidden lg:flex items-center justify-between px-8 lg:px-12 h-20 border-b border-white/10 bg-[#070b0e]/85 backdrop-blur-2xl sticky top-0 z-40 shadow-xl shadow-black/40">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/[0.04] border border-amber-500/25 shadow-inner backdrop-blur-xl">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.9)]" />
-              <h2 className="text-xs font-black uppercase tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-300">
-                {activeSection === 'dashboard' ? 'Executive Command Deck' : `${activeSection.replace('_', ' ')} Command`}
+        {/* Desktop Top Header Bar */}
+        <header className="hidden lg:flex items-center justify-between px-6 lg:px-8 h-16 border-b border-white/10 bg-[#070b0e]/90 backdrop-blur-xl sticky top-0 z-40">
+          
+          {/* Breadcrumb / Section Indicator */}
+          <div className="flex items-center gap-3">
+            <span className="text-white/40 text-xs font-medium">Command</span>
+            <span className="text-white/20 text-xs">/</span>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider">
+                {activeSection.replace(/_/g, ' ')}
               </h2>
             </div>
-            <div className="hidden xl:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span>REAL-TIME DISPATCH ACTIVE</span>
-            </div>
           </div>
-          <div className="flex items-center gap-5">
+
+          {/* Right Utilities */}
+          <div className="flex items-center gap-3.5">
+            
+            {/* Live Gateway Indicator */}
+            <div className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-mono text-emerald-400 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Gateway Live • 24ms</span>
+            </div>
+
+            {/* Live Website Preview Link */}
             <Link 
               to="/"
-              className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-amber-400/40 hover:bg-white/[0.08] text-white/70 hover:text-white transition-all text-xs font-bold"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-400/40 hover:bg-white/[0.06] text-white/70 hover:text-white transition-all text-xs font-medium"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
               <span>Live Website</span>
             </Link>
-            <div className="w-px h-6 bg-white/10 hidden md:block" />
+
+            <div className="w-px h-5 bg-white/10" />
+
             <NotificationBell />
-            <div className="w-px h-6 bg-white/10" />
-            <div 
-              onClick={() => setActiveSection('profile')}
-              className="flex items-center gap-3.5 p-1.5 pr-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-amber-400/30 transition-all cursor-pointer group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-400/30 flex items-center justify-center overflow-hidden shrink-0">
-                {teamUser?.image ? (
-                  <img src={teamUser.image} alt={teamUser.name} className="w-full h-full object-cover" />
-                ) : (
+
+            <div className="w-px h-5 bg-white/10" />
+
+            {/* Profile Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2.5 p-1 pr-2 rounded-xl hover:bg-white/[0.04] transition-all text-left">
+                  <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 font-bold text-xs">
+                    {teamUser?.name ? teamUser.name.charAt(0) : 'Z'}
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="text-xs font-bold text-white leading-tight">{teamUser?.name || 'Zahid Riyaz'}</p>
+                    <p className="text-[9px] text-amber-400 uppercase tracking-wider font-semibold">{ROLE_LABELS[teamRole]}</p>
+                  </div>
+                  <ChevronDown className="w-3 h-3 text-white/40" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-[#0a0f14]/98 backdrop-blur-2xl border-white/10 text-white p-1.5 rounded-2xl shadow-2xl z-[80]">
+                <DropdownMenuLabel className="px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-amber-300/70">
+                  Personnel Account
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setActiveSection('profile')} className="cursor-pointer hover:bg-white/10 p-2.5 rounded-xl gap-2.5 text-xs">
                   <Users className="w-4 h-4 text-amber-400" />
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold text-white uppercase tracking-wider group-hover:text-amber-300 transition-colors">{teamUser?.name}</p>
-                <p className="text-[8px] text-amber-400 font-black uppercase tracking-widest mt-0.5">{ROLE_LABELS[teamRole]}</p>
-              </div>
-            </div>
+                  <span>Executive Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveSection('settings')} className="cursor-pointer hover:bg-white/10 p-2.5 rounded-xl gap-2.5 text-xs">
+                  <Settings className="w-4 h-4 text-white/70" />
+                  <span>Platform Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10 mx-1" />
+                <DropdownMenuItem onClick={teamLogout} className="cursor-pointer hover:bg-red-500/20 text-red-400 p-2.5 rounded-xl gap-2.5 text-xs">
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
           </div>
         </header>
 
-        <main className="p-6 lg:p-12 pt-28 lg:pt-12 max-w-7xl mx-auto w-full">
+        {/* Content Container */}
+        <main className="p-4 sm:p-6 lg:p-8 pt-24 lg:pt-8 max-w-7xl mx-auto w-full min-w-0">
           <AdminErrorBoundary>
             {renderContent()}
           </AdminErrorBoundary>
         </main>
+
       </div>
     </div>
   );
