@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
+import { useLandingPageContent } from '@/hooks/useLandingPageContent';
 
 export default function UnifiedClosingCta() {
+  const { closingCta } = useLandingPageContent();
   const [contactForm, setContactForm] = useState({
     name: '',
     phoneOrEmail: '',
@@ -17,6 +19,15 @@ export default function UnifiedClosingCta() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const title = closingCta?.title || 'Ready to Experience Paradise?';
+  const subtitle = closingCta?.subtitle || 'Speak with a Senior Kashmir Destination Specialist or request a bespoke itinerary within 30 minutes.';
+  const buttonText = closingCta?.buttonText || 'Request Private Consultation';
+  const points = closingCta?.points || [
+    'Contracted direct ground net rates',
+    'Complimentary airport concierge meet & greet',
+    '100% weather & disruption flexible cancellation'
+  ];
 
   const handleQuickLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,13 +83,21 @@ export default function UnifiedClosingCta() {
                 <span>For Discerning Travelers</span>
               </div>
               <h3 className="font-display text-3xl md:text-4xl font-black text-white leading-tight mb-4">
-                Let Us Curate Your <br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-amber-200">
-                  Private Kashmir Journey
-                </span>
+                {title.includes('?') ? (
+                  <>
+                    {title.replace('?', '')} <br />
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-amber-200">
+                      Private Kashmir Journey?
+                    </span>
+                  </>
+                ) : (
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-amber-200">
+                    {title}
+                  </span>
+                )}
               </h3>
               <p className="text-white/60 text-sm md:text-base leading-relaxed mb-8">
-                Speak directly with local Kashmir curators. We arrange heritage houseboats on Nigeen, private snow chauffeurs, and offbeat shepherd trails with 24/7 on-ground assistance.
+                {subtitle}
               </p>
 
               {isSubmitted ? (
@@ -107,7 +126,7 @@ export default function UnifiedClosingCta() {
                     className="w-full h-12 bg-amber-400 hover:bg-amber-300 text-black font-black uppercase text-xs rounded-xl transition-all shadow-lg shadow-amber-400/20"
                   >
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                    <span>Request Private Consultation</span>
+                    <span>{buttonText}</span>
                   </Button>
                 </form>
               )}
@@ -139,18 +158,12 @@ export default function UnifiedClosingCta() {
               </p>
 
               <div className="space-y-3.5 mb-8">
-                <div className="flex items-start gap-3 text-xs text-white/80">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Wholesale B2B net tariffs — Zero retail markups.</span>
-                </div>
-                <div className="flex items-start gap-3 text-xs text-white/80">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>White-label quote generator branded with your agency logo.</span>
-                </div>
-                <div className="flex items-start gap-3 text-xs text-white/80">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Real-time weather radar & instant alternative corridor rerouting.</span>
-                </div>
+                {points.map((pt: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-3 text-xs text-white/80">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{pt}</span>
+                  </div>
+                ))}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Sparkles, Compass, ShieldCheck } from 'lucide-react';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { io } from 'socket.io-client';
+import { useLandingPageContent } from '@/hooks/useLandingPageContent';
 
 interface CuratedItem {
   message: string;
@@ -19,13 +20,30 @@ const fallbackTickerItems: CuratedItem[] = [
 ];
 
 export default function DynamicCurationTicker() {
-  const [items, setItems] = useState<CuratedItem[]>(fallbackTickerItems);
+  const { ticker } = useLandingPageContent();
+  const [items, setItems] = useState<CuratedItem[]>(() => {
+    if (ticker?.announcements && ticker.announcements.length > 0) {
+      return ticker.announcements.map((msg: string, i: number) => ({
+        message: msg,
+        time: `${(i + 1) * 10}m ago`,
+        type: i % 2 === 0 ? 'curation' : 'booking'
+      }));
+    }
+    return fallbackTickerItems;
+  });
 
   useEffect(() => {
-    // Connect to WebSocket to receive real-time system events (if any) and prepend to ticker
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling']
-    });
+    if (ticker?.announcements && ticker.announcements.length > 0) {
+      setItems(ticker.announcements.map((msg: string, i: number) => ({
+        message: msg,
+        time: `${(i + 1) * 10}m ago`,
+        type: i % 2 === 0 ? 'curation' : 'booking'
+      })));
+    }
+  }, [ticker?.announcements]);
+
+  useEffect(() => {
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
 
     socket.on('new-system-event', (event: { message: string; timestamp: string; type: string }) => {
       if (event && event.message) {
@@ -43,6 +61,12 @@ export default function DynamicCurationTicker() {
     };
   }, []);
 
+  if (ticker?.isEnabled === false) {
+    return null;
+  }
+
+  const speed = ticker?.speed || 35;
+
   return (
     <div className="w-full bg-white dark:bg-[#070b0e] border-y border-slate-200 dark:border-white/10 py-3.5 overflow-hidden relative z-20 shadow-sm transition-colors">
       {/* Decorative side fades */}
@@ -56,7 +80,7 @@ export default function DynamicCurationTicker() {
           100% { transform: translateX(-50%); }
         }
         .animate-marquee {
-          animation: marquee 35s linear infinite;
+          animation: marquee ${speed}s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;

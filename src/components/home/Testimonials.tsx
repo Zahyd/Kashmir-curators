@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import { Star, ChevronLeft, ChevronRight, Quote, MessageSquareQuote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTestimonials } from '@/hooks/useCMSData';
+import { useLandingPageContent } from '@/hooks/useLandingPageContent';
 import { cn } from '@/lib/utils';
 
 export default function Testimonials() {
   const { data: testimonials = [], isLoading } = useTestimonials();
+  const { content } = useLandingPageContent();
+  const meta = content.testimonialsSection || {};
+  const badgeText = meta.badge || 'Legacy Accounts';
+  const headingText = meta.heading || 'GUEST CHRONICLES';
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
@@ -39,10 +44,21 @@ export default function Testimonials() {
         <div className="flex flex-col items-center text-center mb-24 animate-fade-up">
           <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm mb-6">
             <MessageSquareQuote className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">Legacy Accounts</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">{badgeText}</span>
           </div>
           <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] dark:text-white tracking-tight mb-8">
-            GUEST <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">CHRONICLES</span>
+            {headingText.includes(' ') ? (
+              <>
+                {headingText.split(' ').slice(0, -1).join(' ')}{' '}
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">
+                  {headingText.split(' ').slice(-1).join(' ')}
+                </span>
+              </>
+            ) : (
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">
+                {headingText}
+              </span>
+            )}
           </h2>
           <div className="w-24 h-1 bg-amber-500/40 rounded-full" />
         </div>

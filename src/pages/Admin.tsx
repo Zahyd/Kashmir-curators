@@ -50,6 +50,15 @@ import CMSJourney from '@/components/admin/CMSJourney';
 import CMSProfile from '@/components/admin/CMSProfile';
 import CMSReservations from '@/components/admin/CMSReservations';
 import CMSDisruptions from '@/components/admin/CMSDisruptions';
+import CMSPageBuilder from '@/components/admin/CMSPageBuilder';
+import CMSDestinations from '@/components/admin/CMSDestinations';
+import CMSItineraryBuilder from '@/components/admin/CMSItineraryBuilder';
+import CMSActivities from '@/components/admin/CMSActivities';
+import CMSCoupons from '@/components/admin/CMSCoupons';
+import CMSSeo from '@/components/admin/CMSSeo';
+import CMSReports from '@/components/admin/CMSReports';
+import CMSAuditLogs from '@/components/admin/CMSAuditLogs';
+import CMSSettings from '@/components/admin/CMSSettings';
 import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
 
 const ROLE_STATS: Record<string, any[]> = {
@@ -393,7 +402,11 @@ export default function Admin() {
                   )}
                 </div>
 
-                <Button variant="ghost" className="mt-10 w-full rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white hover:bg-white/10">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setActiveSection('audit_logs')}
+                  className="mt-10 w-full rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white hover:bg-white/10"
+                >
                   Full Audit Log
                 </Button>
               </Card>
@@ -416,6 +429,15 @@ export default function Admin() {
       case 'planner': return <div className="animate-in fade-in duration-500"><CMSJourney /></div>;
       case 'profile': return <div className="animate-in fade-in duration-500"><CMSProfile /></div>;
       case 'content': return <div className="animate-in fade-in duration-500"><CMSSiteContent /></div>;
+      case 'page_builder': return <div className="animate-in fade-in duration-500"><CMSPageBuilder /></div>;
+      case 'destinations': return <div className="animate-in fade-in duration-500"><CMSDestinations /></div>;
+      case 'itinerary_builder': return <div className="animate-in fade-in duration-500"><CMSItineraryBuilder /></div>;
+      case 'activities': return <div className="animate-in fade-in duration-500"><CMSActivities /></div>;
+      case 'coupons': return <div className="animate-in fade-in duration-500"><CMSCoupons /></div>;
+      case 'seo': return <div className="animate-in fade-in duration-500"><CMSSeo /></div>;
+      case 'reports': return <div className="animate-in fade-in duration-500"><CMSReports /></div>;
+      case 'audit_logs': return <div className="animate-in fade-in duration-500"><CMSAuditLogs /></div>;
+      case 'settings': return <div className="animate-in fade-in duration-500"><CMSSettings /></div>;
       default: return null;
     }
   };

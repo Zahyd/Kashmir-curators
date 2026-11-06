@@ -7,9 +7,28 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useLandingPageContent } from '@/hooks/useLandingPageContent';
+
+const ICON_MAP: Record<string, any> = {
+  Landmark,
+  Sparkles,
+  ShieldAlert,
+  ShieldCheck,
+  FileText,
+  Users2,
+  Building2,
+  Compass,
+  Car
+};
 
 export default function B2BPartnerSection() {
   const [previewMode, setPreviewMode] = useState<'agent' | 'client'>('agent');
+  const { b2bSection } = useLandingPageContent();
+
+  const badgeText = b2bSection?.badgeText || 'Kashmir Connect B2B Travel Operating System';
+  const title = b2bSection?.title || 'Powering 400+ Travel Agents';
+  const subtitle = b2bSection?.subtitle || 'Stop losing bookings to opaque cab unions and sudden road disruptions. Access contracted wholesale net rates, build white-label client proposals in 90 seconds, and deliver 24/7 on-ground execution.';
+  const pillars = b2bSection?.pillars || [];
 
   return (
     <section className="py-16 md:py-28 bg-[#030608] text-white relative overflow-hidden border-y border-white/5">
@@ -22,72 +41,46 @@ export default function B2BPartnerSection() {
         <div className="max-w-3xl mx-auto text-center mb-16">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-400 text-xs font-bold tracking-widest uppercase mb-5">
             <Building2 className="w-3.5 h-3.5" />
-            <span>Kashmir Connect B2B Travel Operating System</span>
+            <span>{badgeText}</span>
           </div>
           <h2 className="font-display text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight mb-6">
-            Powering 400+ Travel Agents <br className="hidden md:block" />
+            {title} <br className="hidden md:block" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-amber-200 to-emerald-400">
               With Direct Kashmir Ground Supply
             </span>
           </h2>
           <p className="text-white/60 text-lg md:text-xl font-medium leading-relaxed">
-            Stop losing bookings to opaque cab unions and sudden road disruptions. Access contracted wholesale net rates, build white-label client proposals in 90 seconds, and deliver 24/7 on-ground execution.
+            {subtitle}
           </p>
         </div>
 
         {/* 4 Pillars Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 hover:border-amber-400/40 transition-all duration-300">
-            <div className="w-12 h-12 rounded-2xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-400 mb-5">
-              <Landmark className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Contracted B2B Net Rates</h3>
-            <p className="text-sm text-white/50 leading-relaxed mb-4">
-              Wholesale tariffs for Dal Lake houseboats, Gulmarg ski chalets, and private 4x4 snow fleets. Zero broker markups.
-            </p>
-            <span className="text-[11px] font-semibold text-amber-400/90 flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5" /> Locked seasonal pricing
-            </span>
-          </div>
+          {pillars.map((pillar: any, index: number) => {
+            const IconComponent = ICON_MAP[pillar.icon] || Landmark;
+            const colors = [
+              { border: 'hover:border-amber-400/40', bg: 'bg-amber-400/15', text: 'text-amber-400', badgeText: 'text-amber-400/90' },
+              { border: 'hover:border-emerald-400/40', bg: 'bg-emerald-400/15', text: 'text-emerald-400', badgeText: 'text-emerald-400/90' },
+              { border: 'hover:border-cyan-400/40', bg: 'bg-cyan-400/15', text: 'text-cyan-400', badgeText: 'text-cyan-400/90' },
+              { border: 'hover:border-purple-400/40', bg: 'bg-purple-400/15', text: 'text-purple-400', badgeText: 'text-purple-400/90' }
+            ];
+            const color = colors[index % colors.length];
 
-          <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 hover:border-emerald-400/40 transition-all duration-300">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400 mb-5">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">White-Label Quote Studio</h3>
-            <p className="text-sm text-white/50 leading-relaxed mb-4">
-              Create day-wise custom itineraries with your agency logo, phone, and custom markup in under 90 seconds.
-            </p>
-            <span className="text-[11px] font-semibold text-emerald-400/90 flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5" /> PDF & Web share link
-            </span>
-          </div>
-
-          <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 hover:border-cyan-400/40 transition-all duration-300">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-400/15 border border-cyan-400/30 flex items-center justify-center text-cyan-400 mb-5">
-              <ShieldAlert className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Ground Disruption Shield</h3>
-            <p className="text-sm text-white/50 leading-relaxed mb-4">
-              Real-time Sonamarg/Zojila snowfall radar. 1-click alternative rerouting (Doodhpathri, Yusmarg) so clients never get stranded.
-            </p>
-            <span className="text-[11px] font-semibold text-cyan-400/90 flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5" /> 100% Flex trip protection
-            </span>
-          </div>
-
-          <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 hover:border-purple-400/40 transition-all duration-300">
-            <div className="w-12 h-12 rounded-2xl bg-purple-400/15 border border-purple-400/30 flex items-center justify-center text-purple-400 mb-5">
-              <FileText className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Instant Vouchers & Credit</h3>
-            <p className="text-sm text-white/50 leading-relaxed mb-4">
-              Automated hotel vouchers and cab duty slips with driver contact and vehicle numbers dispatched immediately upon booking.
-            </p>
-            <span className="text-[11px] font-semibold text-purple-400/90 flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5" /> GST invoice generator
-            </span>
-          </div>
+            return (
+              <div key={pillar.title} className={`p-7 rounded-3xl bg-white/[0.03] border border-white/10 ${color.border} transition-all duration-300`}>
+                <div className={`w-12 h-12 rounded-2xl ${color.bg} border border-white/20 flex items-center justify-center ${color.text} mb-5`}>
+                  <IconComponent className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">{pillar.title}</h3>
+                <p className="text-sm text-white/50 leading-relaxed mb-4">
+                  {pillar.desc}
+                </p>
+                <span className={`text-[11px] font-semibold ${color.badgeText} flex items-center gap-1.5`}>
+                  <Check className="w-3.5 h-3.5" /> {pillar.highlight}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Interactive Workspace Live Preview Card */}

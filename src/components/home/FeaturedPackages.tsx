@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFeaturedPackages } from '@/hooks/useCMSData';
+import { useLandingPageContent } from '@/hooks/useLandingPageContent';
 import { Badge } from '@/components/ui/badge';
 import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 import {
@@ -21,8 +22,14 @@ import {
 export default function FeaturedPackages() {
   const navigate = useNavigate();
   const { data: featuredPackages = [], isLoading } = useFeaturedPackages();
+  const { content } = useLandingPageContent();
   const { openLeadModal, openWhatsAppLead } = useLeadCapture();
   const [quickPeekPackage, setQuickPeekPackage] = useState<any>(null);
+
+  const meta = content.featuredPackagesSection || {};
+  const badgeText = meta.badge || 'Seasonal Selections';
+  const headingText = meta.heading || 'PRIVATE COLLECTIONS';
+  const descriptionText = meta.description || 'Exclusive itineraries engineered for those who demand transparent pricing and perfection in every mile.';
 
   return (
     <section className="py-16 md:py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
@@ -36,15 +43,25 @@ export default function FeaturedPackages() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm mb-6">
               <TrendingUp className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">Seasonal Selections</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">{badgeText}</span>
             </div>
             <h2 className="font-display text-3xl sm:text-5xl md:text-7xl font-black text-[#111439] dark:text-white leading-tight tracking-tight">
-              PRIVATE <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">COLLECTIONS</span>
+              {headingText.includes(' ') ? (
+                <>
+                  {headingText.split(' ').slice(0, -1).join(' ')} <br />
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">
+                    {headingText.split(' ').slice(-1).join(' ')}
+                  </span>
+                </>
+              ) : (
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">
+                  {headingText}
+                </span>
+              )}
             </h2>
           </div>
           <p className="text-[#4A5568] dark:text-white/60 text-lg max-w-sm font-medium leading-relaxed">
-            Exclusive itineraries engineered for those who demand transparent pricing and perfection in every mile.
+            {descriptionText}
           </p>
         </div>
 

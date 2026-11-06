@@ -15,10 +15,12 @@ import UnifiedClosingCta from '@/components/home/UnifiedClosingCta';
 import SeoMeta from '@/components/SeoMeta';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLeadCapture } from '@/contexts/LeadCaptureContext';
+import { useLandingPageContent } from '@/hooks/useLandingPageContent';
 
 const Index = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const { openLeadModal } = useLeadCapture();
+  const { seo, pageSectionsOrder } = useLandingPageContent();
 
   useEffect(() => {
     // Proactively invite visitor to curate trip if not authenticated and hasn't seen it
@@ -37,28 +39,74 @@ const Index = () => {
     }
   }, [isAuthenticated, isLoading, openLeadModal]);
 
+  const renderSection = (id: string) => {
+    switch (id) {
+      case 'hero':
+        return <HeroSection key="hero" />;
+      case 'radar':
+        return (
+          <div key="radar" className="relative z-20 -mt-6">
+            <DynamicCurationTicker />
+            <TravelStatusWidget />
+          </div>
+        );
+      case 'destinations':
+        return <DestinationsGrid key="destinations" />;
+      case 'featuredPackages':
+        return <FeaturedPackages key="featuredPackages" />;
+      case 'b2bPartner':
+        return <B2BPartnerSection key="b2bPartner" />;
+      case 'authenticity':
+        return <AuthenticityFeatures key="authenticity" />;
+      case 'testimonials':
+        return <Testimonials key="testimonials" />;
+      case 'faqs':
+        return <FAQSection key="faqs" />;
+      case 'closingCta':
+        return <UnifiedClosingCta key="closingCta" />;
+      default:
+        return null;
+    }
+  };
+
+  const activeSections = (pageSectionsOrder && pageSectionsOrder.length > 0)
+    ? [...pageSectionsOrder].filter(s => s.isVisible !== false).sort((a, b) => (a.order || 0) - (b.order || 0))
+    : [
+        { id: 'hero' },
+        { id: 'radar' },
+        { id: 'destinations' },
+        { id: 'featuredPackages' },
+        { id: 'b2bPartner' },
+        { id: 'authenticity' },
+        { id: 'testimonials' },
+        { id: 'faqs' },
+        { id: 'closingCta' }
+      ];
+
   return (
     <div className="min-h-screen bg-[#F8F8F9] dark:bg-[#05080a] text-slate-900 dark:text-white transition-colors">
       <SeoMeta 
-        title="Luxury Kashmir Tour Packages, B2B Travel Partner DMC & Custom Itineraries"
-        description="Book bespoke luxury travel experiences in Kashmir or partner as a verified travel agent. Direct B2B net rates, premium Dal Lake houseboats, private ski chalets, and 24/7 ground execution."
-        keywords="kashmir tour packages, kashmir b2b dmc, travel agent net rates kashmir, gulmarg luxury resort, srinagar houseboats, pahalgam vacation planner, kashmir curators"
+        title={seo.defaultTitle}
+        description={seo.defaultDescription}
+        keywords={seo.defaultKeywords}
+        canonical={seo.canonicalBase}
+        image={seo.ogImage}
         schema={{
           "@context": "https://schema.org",
           "@graph": [
             {
               "@type": "WebSite",
-              "@id": "https://kashmircurators.com/#website",
-              "url": "https://kashmircurators.com",
-              "name": "Kashmir Curators & B2B Partner DMC",
-              "description": "Bespoke Luxury Travel Curators & Direct Ground DMC for Kashmir Tours"
+              "@id": `${seo.canonicalBase}/#website`,
+              "url": seo.canonicalBase,
+              "name": seo.siteName,
+              "description": seo.defaultDescription
             },
             {
               "@type": "Organization",
-              "@id": "https://kashmircurators.com/#organization",
-              "name": "Kashmir Curators",
-              "url": "https://kashmircurators.com",
-              "logo": "https://kashmircurators.com/logo.png",
+              "@id": `${seo.canonicalBase}/#organization`,
+              "name": seo.siteName,
+              "url": seo.canonicalBase,
+              "logo": `${seo.canonicalBase}/logo.png`,
               "sameAs": [
                 "https://facebook.com/kashmircurators",
                 "https://instagram.com/kashmircurators"
@@ -71,35 +119,7 @@ const Index = () => {
       <Navbar />
       
       <main>
-        {/* 1. Hero with Integrated Search Tabs */}
-        <HeroSection />
-        
-        {/* 2. Live Valley Radar & Corridor Trust Strip */}
-        <div className="relative z-20 -mt-6">
-          <DynamicCurationTicker />
-          <TravelStatusWidget />
-        </div>
-
-        {/* 3. Iconic Valley Destinations */}
-        <DestinationsGrid />
-
-        {/* 4. Curated Luxury Packages */}
-        <FeaturedPackages />
-
-        {/* 5. Dedicated B2B Travel Agent & DMC Operating System */}
-        <B2BPartnerSection />
-
-        {/* 6. The Curators Craft & Ground Authenticity */}
-        <AuthenticityFeatures />
-
-        {/* 7. Social Proof & Reviews */}
-        <Testimonials />
-
-        {/* 8. Minimalist Collapsible FAQ */}
-        <FAQSection />
-
-        {/* 9. Unified Closing Consultation & Agent Onboarding Card */}
-        <UnifiedClosingCta />
+        {activeSections.map(s => renderSection(s.id))}
       </main>
 
       <Footer />

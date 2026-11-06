@@ -18,7 +18,16 @@ import {
   CreditCard,
   CalendarCheck,
   ShieldAlert,
-  X
+  X,
+  Layers,
+  MapPin,
+  Route,
+  Compass,
+  Tag,
+  Globe,
+  BarChart3,
+  History,
+  Sliders
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ADMIN_SIDEBAR_ITEMS, ROLE_LABELS } from '@/contexts/TeamAuthContext';
@@ -58,18 +67,29 @@ const allMenuItems: MenuItem[] = [
 
   // Commerce & Intelligence
   { id: 'revenue', label: 'Revenue Intel', icon: TrendingUp, category: 'COMMERCE & CLIENTS' },
+  { id: 'reports', label: 'Reports & Telemetry', icon: BarChart3, category: 'COMMERCE & CLIENTS' },
   { id: 'users', label: 'Client Directory', icon: Users, category: 'COMMERCE & CLIENTS' },
   { id: 'payments', label: 'Payment Protocols', icon: CreditCard, category: 'COMMERCE & CLIENTS' },
+  { id: 'coupons', label: 'Coupons & Offers', icon: Tag, category: 'COMMERCE & CLIENTS' },
 
   // Atelier CMS & Inventory
+  { id: 'page_builder', label: 'Visual Page Builder', icon: Layers, badge: 'CMS', category: 'ATELIER INVENTORY' },
+  { id: 'destinations', label: 'Destinations CMS', icon: MapPin, category: 'ATELIER INVENTORY' },
   { id: 'packages', label: 'Packages CMS', icon: Package, category: 'ATELIER INVENTORY' },
+  { id: 'itinerary_builder', label: 'Itinerary Builder', icon: Route, category: 'ATELIER INVENTORY' },
   { id: 'hotels', label: 'Hotels CMS', icon: Building, category: 'ATELIER INVENTORY' },
   { id: 'cabs', label: 'Fleet & Cabs CMS', icon: Car, category: 'ATELIER INVENTORY' },
+  { id: 'activities', label: 'Experiences CMS', icon: Compass, category: 'ATELIER INVENTORY' },
   { id: 'reviews', label: 'Guest Reviews', icon: Users, category: 'ATELIER INVENTORY' },
   { id: 'faqs', label: 'FAQs Knowledge', icon: HelpCircle, category: 'ATELIER INVENTORY' },
   { id: 'media', label: 'Media Library', icon: ImageIcon, category: 'ATELIER INVENTORY' },
   { id: 'planner', label: 'Planner CMS', icon: Sparkles, category: 'ATELIER INVENTORY' },
-  { id: 'content', label: 'Site Content Engine', icon: Settings, category: 'ATELIER INVENTORY' },
+  { id: 'content', label: 'Site Content Engine', icon: Sliders, category: 'ATELIER INVENTORY' },
+
+  // System & Governance
+  { id: 'seo', label: 'SEO & Search Engine', icon: Globe, category: 'SYSTEM & SETTINGS' },
+  { id: 'audit_logs', label: 'Security & Audit Logs', icon: History, category: 'SYSTEM & SETTINGS' },
+  { id: 'settings', label: 'Platform Settings', icon: Settings, category: 'SYSTEM & SETTINGS' },
 ];
 
 export default function AdminSidebar({ activeSection, onSectionChange, isOpen, onClose }: AdminSidebarProps) {

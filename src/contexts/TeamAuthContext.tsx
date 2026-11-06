@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 import { SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 
-export type TeamRole = 'admin' | 'operations' | 'sales' | 'marketing';
+export type TeamRole = 'admin' | 'operations' | 'sales' | 'marketing' | 'finance';
 
 export interface TeamUser {
   code: string;
@@ -23,30 +23,40 @@ export interface SystemEvent {
 // Permission map: what each role can access
 const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
   admin: [
-    'dashboard', 'disruptions', 'inquiries', 'bookings', 'revenue', 'users', 'payments', 
-    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 'planner', 
-    'assign_leads', 'view_financials', 'sales_portal', 'reservations'
+    'dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
+    'hotels', 'cabs', 'activities', 'reviews', 'faqs', 'media', 'inquiries', 
+    'customers', 'bookings', 'reservations', 'disruptions', 'payments', 'coupons', 
+    'seo', 'reports', 'users', 'audit_logs', 'settings', 'revenue', 'content', 'planner',
+    'assign_leads', 'view_financials', 'sales_portal'
   ],
   operations: [
-    'dashboard', 'disruptions', 'inquiries', 'bookings', 'hotels', 'cabs', 'assign_leads', 'reservations'
+    'dashboard', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 
+    'assign_leads', 'audit_logs'
   ],
   sales: [
     'sales_portal', 'builder', 'payments', 'vault', 'work_log', 'performance'
   ],
   marketing: [
-    'dashboard', 'packages', 'reviews', 'media', 'content', 'planner'
+    'dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
+    'activities', 'reviews', 'faqs', 'media', 'seo', 'coupons', 'content'
   ],
+  finance: [
+    'dashboard', 'revenue', 'payments', 'coupons', 'reports', 'audit_logs'
+  ]
 };
 
 // Which sidebar items each role can see in the admin portal
 export const ADMIN_SIDEBAR_ITEMS: Record<TeamRole, string[]> = {
   admin: [
-    'dashboard', 'disruptions', 'inquiries', 'bookings', 'revenue', 'users', 'payments', 
-    'packages', 'hotels', 'cabs', 'reviews', 'faqs', 'media', 'content', 'planner', 'reservations'
+    'dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
+    'hotels', 'cabs', 'activities', 'reviews', 'faqs', 'media', 'inquiries', 
+    'bookings', 'reservations', 'disruptions', 'payments', 'coupons', 
+    'seo', 'reports', 'users', 'audit_logs', 'settings', 'revenue', 'content', 'planner'
   ],
-  operations: ['dashboard', 'disruptions', 'inquiries', 'bookings', 'hotels', 'cabs', 'reservations'],
+  operations: ['dashboard', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 'audit_logs'],
   sales: [],
-  marketing: ['dashboard', 'packages', 'reviews', 'media', 'content', 'planner'],
+  marketing: ['dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 'activities', 'reviews', 'faqs', 'media', 'seo', 'coupons'],
+  finance: ['dashboard', 'revenue', 'payments', 'coupons', 'reports', 'audit_logs'],
 };
 
 // Available sales agents for assignment
@@ -62,6 +72,7 @@ export const ROLE_LABELS: Record<TeamRole, string> = {
   operations: 'Ops Manager',
   sales: 'Sales Executive',
   marketing: 'Marketing Lead',
+  finance: 'Finance Director',
 };
 
 // Role colors for badges
@@ -70,6 +81,7 @@ export const ROLE_COLORS: Record<TeamRole, string> = {
   operations: 'bg-blue-500/20 text-blue-400',
   sales: 'bg-emerald-500/20 text-emerald-400',
   marketing: 'bg-purple-500/20 text-purple-400',
+  finance: 'bg-cyan-500/20 text-cyan-400',
 };
 
 interface TeamAuthContextType {
@@ -95,6 +107,7 @@ function detectRole(code: string): TeamRole | null {
   if (upper.startsWith('OPS')) return 'operations';
   if (upper.startsWith('SALES') || upper.startsWith('KC')) return 'sales';
   if (upper.startsWith('MKT')) return 'marketing';
+  if (upper.startsWith('FIN')) return 'finance';
   return null;
 }
 
@@ -105,6 +118,8 @@ function generateName(code: string, role: TeamRole): string {
     case 'operations': return `Ops Manager ${suffix}`;
     case 'sales': return `Executive ${suffix}`;
     case 'marketing': return `Marketing Lead ${suffix}`;
+    case 'finance': return `Finance Director ${suffix}`;
+    default: return `Officer ${suffix}`;
   }
 }
 

@@ -1,10 +1,16 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFAQs } from '@/hooks/useCMSData';
+import { useLandingPageContent } from '@/hooks/useLandingPageContent';
 import { HelpCircle, ShieldCheck } from 'lucide-react';
 
 export default function FAQSection() {
   const { data: cmsFaqs = [], isLoading } = useFAQs();
+  const { content } = useLandingPageContent();
+  const meta = content.faqsSection || {};
+  const badgeText = meta.badge || 'Registry Queries';
+  const headingText = meta.heading || 'KNOWLEDGE BASE';
+  const descriptionText = meta.description || 'Essential intelligence for navigating the sublime valleys of Kashmir.';
 
   const staticFAQs = [
     {
@@ -34,13 +40,24 @@ export default function FAQSection() {
           <div className="flex flex-col items-center text-center mb-20 animate-fade-up">
             <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm mb-6">
               <HelpCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">Registry Queries</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">{badgeText}</span>
             </div>
             <h2 className="font-display text-5xl md:text-7xl font-black text-[#111439] dark:text-white tracking-tight mb-8 uppercase">
-              KNOWLEDGE <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">BASE</span>
+              {headingText.includes(' ') ? (
+                <>
+                  {headingText.split(' ').slice(0, -1).join(' ')}{' '}
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">
+                    {headingText.split(' ').slice(-1).join(' ')}
+                  </span>
+                </>
+              ) : (
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">
+                  {headingText}
+                </span>
+              )}
             </h2>
             <p className="text-[#4A5568] dark:text-white/60 text-lg max-w-xl mx-auto font-medium leading-relaxed">
-              Essential intelligence for navigating the sublime valleys of Kashmir.
+              {descriptionText}
             </p>
           </div>
 

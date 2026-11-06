@@ -2,47 +2,66 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles, MapPin, Compass, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLeadCapture } from '@/contexts/LeadCaptureContext';
+import { useLandingPageContent } from '@/hooks/useLandingPageContent';
 import srinagarImg from '@/assets/kashmir-hero-new.jpg';
 import gulmargImg from '@/assets/gulmarg.jpg';
 import pahalgamImg from '@/assets/pahalgam.jpg';
 
-const destinations = [
+const defaultDestinations = [
   {
+    id: 'dest-1',
     name: 'Srinagar',
     image: srinagarImg,
     tagline: 'The City of Eternal Lakes',
     desc: 'Venice of the East, where luxury floats on silent waters.',
     colSpan: 'col-span-1 md:col-span-2',
-    rowSpan: 'row-span-1 md:row-span-2'
+    rowSpan: 'row-span-1 md:row-span-2',
+    isActive: true
   },
   {
+    id: 'dest-2',
     name: 'Gulmarg',
     image: gulmargImg,
     tagline: 'The Alpine Sanctuary',
     desc: 'World-class peaks and pristine winter elegance.',
     colSpan: 'col-span-1 md:col-span-2',
-    rowSpan: 'row-span-1'
+    rowSpan: 'row-span-1',
+    isActive: true
   },
   {
+    id: 'dest-3',
     name: 'Pahalgam',
     image: pahalgamImg,
     tagline: 'The Valley of Quietude',
     desc: 'Serene riverbanks and ancient pine-scented air.',
     colSpan: 'col-span-1 md:col-span-1',
-    rowSpan: 'row-span-1'
+    rowSpan: 'row-span-1',
+    isActive: true
   },
   {
+    id: 'dest-4',
     name: 'Sonmarg',
     image: 'https://images.unsplash.com/photo-1595932594611-6beec02f61aa?w=800',
     tagline: 'The Meadow of Gold',
     desc: 'Where glaciers meet the sky in a golden embrace.',
     colSpan: 'col-span-1 md:col-span-1',
-    rowSpan: 'row-span-1'
+    rowSpan: 'row-span-1',
+    isActive: true
   }
 ];
 
 export default function DestinationsGrid() {
   const { openLeadModal, openCallbackModal } = useLeadCapture();
+  const { destinations: cmsDestinations } = useLandingPageContent();
+
+  const items = (cmsDestinations?.items && cmsDestinations.items.length > 0)
+    ? cmsDestinations.items.filter((d: any) => d.isActive !== false)
+    : defaultDestinations;
+
+  const badgeText = cmsDestinations?.badgeText || 'Curated Geography';
+  const title = cmsDestinations?.title || 'SIGNATURE LOCATIONS';
+  const subtitle = cmsDestinations?.subtitle || 'Beyond the maps, discover the hidden soul of the valley through our handpicked premier destinations.';
+
   return (
     <section className="py-16 md:py-32 bg-[#F8F8F9] dark:bg-[#05080a] relative overflow-hidden transition-colors">
       {/* Background Orbs */}
@@ -54,24 +73,34 @@ export default function DestinationsGrid() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm mb-6">
               <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">Curated Geography</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#111439] dark:text-white">{badgeText}</span>
             </div>
             <h2 className="font-display text-3xl sm:text-5xl md:text-7xl font-black text-[#111439] dark:text-white leading-tight tracking-tight">
-              SIGNATURE <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">LOCATIONS</span>
+              {title.includes(' ') ? (
+                <>
+                  {title.split(' ').slice(0, -1).join(' ')} <br />
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">
+                    {title.split(' ').slice(-1)[0]}
+                  </span>
+                </>
+              ) : (
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-purple-600 to-cyan-600">
+                  {title}
+                </span>
+              )}
             </h2>
           </div>
           <p className="text-[#4A5568] dark:text-white/60 text-lg max-w-sm font-medium leading-relaxed">
-            Beyond the maps, discover the hidden soul of the valley through our handpicked premier destinations.
+            {subtitle}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-6 h-auto md:h-[800px]">
-          {destinations.map((dest, index) => (
+          {items.map((dest: any, index: number) => (
             <Link
-              key={dest.name}
+              key={dest.name || dest.id}
               to={`/packages?destination=${dest.name}`}
-              className={`group relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-900/5 bg-[#0a0f12] min-h-[300px] md:min-h-0 ${dest.colSpan} ${dest.rowSpan} animate-fade-up transition-all duration-700 hover:border-amber-400/50 hover:shadow-2xl`}
+              className={`group relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-900/5 bg-[#0a0f12] min-h-[300px] md:min-h-0 ${dest.colSpan || 'col-span-1'} ${dest.rowSpan || 'row-span-1'} animate-fade-up transition-all duration-700 hover:border-amber-400/50 hover:shadow-2xl`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Image with Parallax Effect */}
