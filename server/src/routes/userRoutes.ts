@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, getUserStats, createTeamMember, deleteUser } from '../controllers/userController';
+import { getAllUsers, getUserStats, createTeamMember, deleteUser, updateUser } from '../controllers/userController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -42,6 +42,17 @@ router.get('/stats', authenticateToken, getUserStats);
  *       - bearerAuth: []
  */
 router.post('/team', authenticateToken, createTeamMember);
+
+/**
+ * @swagger
+ * /api/users/:id:
+ *   patch:
+ *     summary: Update a user profile (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch('/:id', authenticateToken, updateUser);
 
 /**
  * @swagger

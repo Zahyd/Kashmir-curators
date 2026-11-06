@@ -10,11 +10,43 @@ export const getAllUsers = async (req: Request, res: Response) => {
         email: true,
         phone: true,
         role: true,
+        employeeCode: true,
+        isOnline: true,
+        leadCapacity: true,
         createdAt: true,
+        bookings: {
+          select: {
+            id: true,
+            type: true,
+            itemName: true,
+            bookingDate: true,
+            status: true,
+            stage: true,
+            totalAmount: true,
+            details: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' }
+        },
+        inquiries: {
+          select: {
+            id: true,
+            destination: true,
+            duration: true,
+            travelers: true,
+            budget: true,
+            status: true,
+            leadStage: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' }
+        },
+        agentProfile: true,
+        driverProfile: true,
         _count: {
           select: {
             bookings: true,
-            inquiries: true, // TS cache refresh
+            inquiries: true,
           }
         }
       },
@@ -108,5 +140,31 @@ export const deleteUser = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Failed to delete user:', error);
     res.status(500).json({ error: error.message || 'Failed to remove profile' });
+  }
+};
+
+export const updateUser = async (req: Request, res: Response) => {
+  const adminUser = (req as any).user;
+  if (!adminUser || adminUser.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden. Only administrators can update profiles.' });
+  }
+
+  const { id } = req.params;
+  const { name, phone, role, leadCapacity } = req.body;
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: id as string },
+      data: {
+        ...(name && { name }),
+        ...(phone !== undefined && { phone }),
+        ...(role && { role: role.toLowerCase() }),
+        ...(leadCapacity !== undefined && { leadCapacity: parseInt(leadCapacity) })
+      }
+    });
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Failed to update user profile:', error);
+    res.status(500).json({ error: error.message || 'Failed to update user profile' });
   }
 };
