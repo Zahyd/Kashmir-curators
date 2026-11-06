@@ -28,6 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import MediaPicker from './MediaPicker';
 import { API_BASE_URL } from '@/lib/api';
 
@@ -160,6 +161,7 @@ const defaultMetadata: CabMetadata = {
 
 export default function CMSCabs() {
   const { systemEvents } = useTeamAuth();
+  const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<'operations' | 'registry' | 'drivers' | 'ai-dispatch' | 'maintenance' | 'finance' | 'emergency'>('operations');
   const [activeRole, setActiveRole] = useState<'Director' | 'Operations Manager' | 'Dispatcher' | 'Fleet Manager' | 'Driver' | 'Finance' | 'Support'>('Director');
   
@@ -578,35 +580,40 @@ export default function CMSCabs() {
       const data = await response.json();
       
       const sanitized = data.map((cab: any) => {
-        const features = typeof cab.features === 'string' ? JSON.parse(cab.features) : (Array.isArray(cab.features) ? cab.features : []);
-        
-        // Match mapping logic
-        const isFortuner = cab.name.toLowerCase().includes("fortuner") || cab.id === "cab-fortuner";
-        const displayName = isFortuner ? "Force Urbania Luxury" : cab.name;
-        const displayType = isFortuner ? "Luxury Cruiser" : cab.type;
-        const displayCapacity = isFortuner ? 10 : cab.capacity;
-        
-        let imagePath = "";
-        if (isFortuner) {
-          imagePath = "/images/tourist_urbania.png";
-        } else if (cab.name.toLowerCase().includes("sedan") || cab.name.toLowerCase().includes("etios") || cab.name.toLowerCase().includes("dzire")) {
-          imagePath = "/images/tourist_sedan.png";
-        } else if (cab.name.toLowerCase().includes("ertiga")) {
-          imagePath = "/images/tourist_ertiga.png";
-        } else if (cab.name.toLowerCase().includes("crysta") || (cab.name.toLowerCase().includes("innova") && cab.name.toLowerCase().includes("luxury"))) {
-          imagePath = "/images/tourist_innova.png";
-        } else if (cab.name.toLowerCase().includes("traveller") || cab.name.toLowerCase().includes("tempo")) {
-          imagePath = "/images/tourist_tempo.png";
-        } else {
-          imagePath = cab.image || "/images/tourist_innova.png";
+        let features: string[] = [];
+        if (typeof cab.features === 'string') {
+          try {
+            const parsed = JSON.parse(cab.features);
+            if (Array.isArray(parsed)) features = parsed;
+          } catch {
+            features = [];
+          }
+        } else if (Array.isArray(cab.features)) {
+          features = cab.features;
         }
+
+        // Determine fallback image only when cab.image is not provided
+        let fallbackImagePath = "/images/tourist_innova.png";
+        if (cab.name?.toLowerCase().includes("sedan") || cab.name?.toLowerCase().includes("etios") || cab.name?.toLowerCase().includes("dzire")) {
+          fallbackImagePath = "/images/tourist_sedan.png";
+        } else if (cab.name?.toLowerCase().includes("ertiga")) {
+          fallbackImagePath = "/images/tourist_ertiga.png";
+        } else if (cab.name?.toLowerCase().includes("crysta") || (cab.name?.toLowerCase().includes("innova") && cab.name?.toLowerCase().includes("luxury"))) {
+          fallbackImagePath = "/images/tourist_innova.png";
+        } else if (cab.name?.toLowerCase().includes("traveller") || cab.name?.toLowerCase().includes("tempo") || cab.name?.toLowerCase().includes("urbania")) {
+          fallbackImagePath = "/images/tourist_tempo.png";
+        }
+
+        const chosenImage = (cab.image && typeof cab.image === 'string' && cab.image.trim() !== '') 
+          ? cab.image.trim() 
+          : fallbackImagePath;
 
         return {
           ...cab,
-          name: displayName,
-          type: displayType,
-          capacity: displayCapacity,
-          image: imagePath,
+          name: cab.name,
+          type: cab.type,
+          capacity: Number(cab.capacity) || 4,
+          image: chosenImage,
           features
         };
       });
@@ -833,6 +840,7 @@ export default function CMSCabs() {
         setDialogOpen(false);
         fetchCabs();
         fetchOperationsData();
+        queryClient.invalidateQueries({ queryKey: ['cms-cabs'] });
       } else {
         const errData = await response.json();
         toast.error(errData.error || 'Operations setup failed');
@@ -857,6 +865,7 @@ export default function CMSCabs() {
         setDeleteConfirmOpen(false);
         fetchCabs();
         fetchOperationsData();
+        queryClient.invalidateQueries({ queryKey: ['cms-cabs'] });
       } else {
         toast.error('Decommissioning failed');
       }
@@ -880,6 +889,7 @@ export default function CMSCabs() {
       if (response.ok) {
         fetchCabs();
         fetchOperationsData();
+        queryClient.invalidateQueries({ queryKey: ['cms-cabs'] });
       } else {
         toast.error('Failed to change availability status');
       }

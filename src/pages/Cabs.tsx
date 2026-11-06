@@ -20,9 +20,11 @@ import { Calendar as UICalendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useCabs } from '@/hooks/useCMSData';
+import { useQueryClient } from '@tanstack/react-query';
+import { io } from 'socket.io-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 
 interface Cab {
   id: string;
@@ -166,6 +168,7 @@ const standardVehicles = [
 export default function Cabs() {
   const navigate = useNavigate();
   const { isAuthenticated, addBooking } = useAuth();
+  const queryClient = useQueryClient();
   const { data: dbCabs = [], isLoading: isLoadingCabs } = useCabs();
   
   const [selectedCab, setSelectedCab] = useState<any>(null);
@@ -219,6 +222,37 @@ export default function Cabs() {
       setBookingDate(date);
     }
   }, []);
+
+  // Real-time synchronization with Fleet & Cabs CMS
+  useEffect(() => {
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
+
+    const refreshCabs = () => {
+      queryClient.invalidateQueries({ queryKey: ['cms-cabs'] });
+    };
+
+    socket.on('cabs-updated', refreshCabs);
+    socket.on('fleet-updated', refreshCabs);
+    socket.on('site-content-updated', (data: any) => {
+      if (!data || !data.sectionKey || data.sectionKey === 'cabs') {
+        refreshCabs();
+      }
+    });
+    socket.on('new-system-event', (data: any) => {
+      if (
+        data?.booking?.entityType === 'cab' ||
+        data?.message?.toLowerCase().includes('cab') ||
+        data?.message?.toLowerCase().includes('fleet') ||
+        data?.message?.toLowerCase().includes('vehicle')
+      ) {
+        refreshCabs();
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [queryClient]);
 
   const parseDateString = (dateStr: string) => {
     if (!dateStr) return undefined;
@@ -646,50 +680,58 @@ export default function Cabs() {
 
   // Merge database items with standard UI categories
   const resolvedVehicles = dbCabs.length > 0 ? dbCabs.map(db => {
-    // If it is cab-fortuner or includes "fortuner", map it to Urbania!
-    const isFortuner = db.name.toLowerCase().includes("fortuner") || db.id === "cab-fortuner";
-    
-    const displayName = isFortuner ? "Force Urbania Luxury" : db.name;
-    const displayType = isFortuner ? "Luxury Cruiser" : db.type;
-    const displayCapacity = isFortuner ? 10 : db.capacity;
-    
+    // Determine intelligent fallback image ONLY if db.image is missing or empty
+    let fallbackImagePath = "/images/tourist_innova.png";
+    if (db.name?.toLowerCase().includes("sedan") || db.name?.toLowerCase().includes("etios") || db.name?.toLowerCase().includes("dzire")) {
+      fallbackImagePath = "/images/tourist_sedan.png";
+    } else if (db.name?.toLowerCase().includes("ertiga")) {
+      fallbackImagePath = "/images/tourist_ertiga.png";
+    } else if (db.name?.toLowerCase().includes("crysta") || (db.name?.toLowerCase().includes("innova") && db.name?.toLowerCase().includes("luxury"))) {
+      fallbackImagePath = "/images/tourist_innova.png";
+    } else if (db.name?.toLowerCase().includes("traveller") || db.name?.toLowerCase().includes("tempo") || db.name?.toLowerCase().includes("urbania")) {
+      fallbackImagePath = "/images/tourist_tempo.png";
+    }
+
     const standard = standardVehicles.find(s => 
-      (isFortuner && s.id === "standard-urbania") ||
-      db.name.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()) || 
-      db.type.toLowerCase() === s.type.toLowerCase()
+      db.name?.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()) || 
+      db.type?.toLowerCase() === s.type.toLowerCase()
     ) || {
       features: [],
-      capacity: displayCapacity,
+      capacity: db.capacity || 4,
       luggage: 4,
       availability: "Available"
     };
 
-    let imagePath = "";
-    if (isFortuner) {
-      imagePath = "/images/tourist_urbania.png";
-    } else if (db.name.toLowerCase().includes("sedan") || db.name.toLowerCase().includes("etios") || db.name.toLowerCase().includes("dzire")) {
-      imagePath = "/images/tourist_sedan.png";
-    } else if (db.name.toLowerCase().includes("ertiga")) {
-      imagePath = "/images/tourist_ertiga.png";
-    } else if (db.name.toLowerCase().includes("crysta") || (db.name.toLowerCase().includes("innova") && db.name.toLowerCase().includes("luxury"))) {
-      imagePath = "/images/tourist_innova.png";
-    } else if (db.name.toLowerCase().includes("traveller") || db.name.toLowerCase().includes("tempo")) {
-      imagePath = "/images/tourist_tempo.png";
+    // Prioritize actual image URL uploaded/set in CMS
+    const finalImage = (db.image && typeof db.image === 'string' && db.image.trim() !== '') 
+      ? db.image.trim() 
+      : fallbackImagePath;
+
+    let parsedFeatures: string[] = [];
+    if (Array.isArray(db.features)) {
+      parsedFeatures = db.features;
+    } else if (typeof db.features === 'string') {
+      try {
+        const parsed = JSON.parse(db.features);
+        if (Array.isArray(parsed)) parsedFeatures = parsed;
+      } catch {
+        parsedFeatures = standard.features || [];
+      }
     } else {
-      imagePath = "/images/tourist_innova.png"; // default fallback
+      parsedFeatures = standard.features || [];
     }
 
     return {
       id: db.id,
-      name: displayName,
-      type: displayType,
-      capacity: displayCapacity,
-      pricePerKm: db.pricePerKm,
-      basePrice: db.basePrice,
-      image: imagePath,
-      features: isFortuner ? ["Luxury Captain Seats", "Climate Control AC", "Ample Luggage Space", "Premium Audio System"] : (Array.isArray(db.features) ? db.features : (standard.features || [])),
-      luggage: isFortuner ? 6 : (standard.luggage || 4),
-      availability: standard.availability || "Available"
+      name: db.name || standard.name,
+      type: db.type || standard.type,
+      capacity: db.capacity || standard.capacity,
+      pricePerKm: db.pricePerKm !== undefined ? db.pricePerKm : standard.pricePerKm,
+      basePrice: db.basePrice !== undefined ? db.basePrice : standard.basePrice,
+      image: finalImage,
+      features: parsedFeatures.length > 0 ? parsedFeatures : ["Climate Control AC", "Local Certified Chauffeur", "24/7 Valley Support"],
+      luggage: db.capacity >= 7 ? 5 : (db.capacity >= 6 ? 4 : (db.capacity <= 2 ? 2 : 3)),
+      availability: db.isActive !== false ? (standard.availability || "Available") : "Maintenance"
     };
   }) : standardVehicles.map(s => {
     // If fallback to standardVehicles is used
@@ -702,6 +744,16 @@ export default function Cabs() {
     else if (s.id === "standard-tempo") imagePath = "/images/tourist_tempo.png";
     return { ...s, image: imagePath };
   });
+
+  // Keep selectedCab synced in real-time when resolvedVehicles refreshes
+  useEffect(() => {
+    if (selectedCab && resolvedVehicles.length > 0) {
+      const live = resolvedVehicles.find(v => v.id === selectedCab.id);
+      if (live && (live.image !== selectedCab.image || live.name !== selectedCab.name || live.pricePerKm !== selectedCab.pricePerKm || live.basePrice !== selectedCab.basePrice)) {
+        setSelectedCab(live);
+      }
+    }
+  }, [resolvedVehicles, selectedCab]);
 
   // Start Uber-style Broadcast and matching simulation
   const handleStartBroadcast = () => {

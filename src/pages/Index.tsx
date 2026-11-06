@@ -9,6 +9,7 @@ import FeaturedPackages from '@/components/home/FeaturedPackages';
 import B2BPartnerSection from '@/components/home/B2BPartnerSection';
 import Testimonials from '@/components/home/Testimonials';
 import FAQSection from '@/components/home/FAQSection';
+import FleetSection from '@/components/home/FleetSection';
 import DynamicCurationTicker from '@/components/home/DynamicCurationTicker';
 import TravelStatusWidget from '@/components/home/TravelStatusWidget';
 import UnifiedClosingCta from '@/components/home/UnifiedClosingCta';
@@ -54,6 +55,9 @@ const Index = () => {
         return <DestinationsGrid key="destinations" />;
       case 'featuredPackages':
         return <FeaturedPackages key="featuredPackages" />;
+      case 'fleet':
+      case 'cabs':
+        return <FleetSection key="fleet" />;
       case 'b2bPartner':
         return <B2BPartnerSection key="b2bPartner" />;
       case 'authenticity':
@@ -76,6 +80,7 @@ const Index = () => {
         { id: 'radar' },
         { id: 'destinations' },
         { id: 'featuredPackages' },
+        { id: 'fleet' },
         { id: 'b2bPartner' },
         { id: 'authenticity' },
         { id: 'testimonials' },

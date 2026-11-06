@@ -54,6 +54,9 @@ export const createCab = async (req: any, res: Response) => {
         message: `New vehicle node deployed: ${cab.name}`,
         booking: { ...cab, entityType: 'cab' }
       });
+      req.io.emit('cabs-updated', { type: 'CREATE', cab });
+      req.io.emit('fleet-updated', { type: 'CREATE', cab });
+      req.io.emit('site-content-updated', { sectionKey: 'cabs', data: cab });
     }
     
     res.status(201).json(cab);
@@ -90,6 +93,9 @@ export const updateCab = async (req: any, res: Response) => {
         message: `Logistics node ${cab.name} reconfigured`,
         booking: { ...cab, entityType: 'cab' }
       });
+      req.io.emit('cabs-updated', { type: 'UPDATE', cab });
+      req.io.emit('fleet-updated', { type: 'UPDATE', cab });
+      req.io.emit('site-content-updated', { sectionKey: 'cabs', data: cab });
     }
     
     res.json(cab);
@@ -111,6 +117,9 @@ export const deleteCab = async (req: any, res: Response) => {
         type: 'DELETE',
         message: `Cab ${id} deleted`
       });
+      req.io.emit('cabs-updated', { type: 'DELETE', id });
+      req.io.emit('fleet-updated', { type: 'DELETE', id });
+      req.io.emit('site-content-updated', { sectionKey: 'cabs', data: { id, deleted: true } });
     }
     
     res.status(204).send();

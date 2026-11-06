@@ -113,11 +113,12 @@ export const DEFAULT_PAGE_SECTIONS: PageSectionConfig[] = [
   { id: 'radar', name: 'Valley Radar & Live Ticker', isVisible: true, order: 2 },
   { id: 'destinations', name: 'Signature Locations Grid', isVisible: true, order: 3 },
   { id: 'featuredPackages', name: 'Curated Luxury Packages', isVisible: true, order: 4 },
-  { id: 'b2bPartner', name: 'B2B Partner & Travel Agent OS', isVisible: true, order: 5 },
-  { id: 'authenticity', name: 'Craftsmanship & Authenticity', isVisible: true, order: 6 },
-  { id: 'testimonials', name: 'Guest Reviews & Testimonials', isVisible: true, order: 7 },
-  { id: 'faqs', name: 'Collapsible FAQ Knowledgebase', isVisible: true, order: 8 },
-  { id: 'closingCta', name: 'Closing Consultation CTA', isVisible: true, order: 9 }
+  { id: 'fleet', name: 'VIP Chauffeur Fleet & 4x4 Transit', isVisible: true, order: 5 },
+  { id: 'b2bPartner', name: 'B2B Partner & Travel Agent OS', isVisible: true, order: 6 },
+  { id: 'authenticity', name: 'Craftsmanship & Authenticity', isVisible: true, order: 7 },
+  { id: 'testimonials', name: 'Guest Reviews & Testimonials', isVisible: true, order: 8 },
+  { id: 'faqs', name: 'Collapsible FAQ Knowledgebase', isVisible: true, order: 9 },
+  { id: 'closingCta', name: 'Closing Consultation CTA', isVisible: true, order: 10 }
 ];
 
 export function useLandingPageContent() {
