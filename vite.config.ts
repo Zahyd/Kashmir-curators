@@ -17,7 +17,28 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [react()],
   build: {
-    sourcemap: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('@radix-ui')) {
+              return 'vendor-ui';
+            }
+            if (id.includes('framer-motion') || id.includes('recharts')) {
+              return 'vendor-charts';
+            }
+          }
+        }
+      }
+    }
   },
   resolve: {
     alias: {

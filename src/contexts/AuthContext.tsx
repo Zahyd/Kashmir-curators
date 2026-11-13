@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { io, Socket } from 'socket.io-client';
 
 import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
+import { neonAuth } from '@/lib/neonAuth';
 
 const API_URL = API_BASE_URL;
 
@@ -245,6 +246,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = async (name: string, email: string, password: string) => {
     try {
+      // 1. Direct registration with Neon Hosted Better Auth
+      neonAuth.signUp({ email, password, name }).catch(neonErr => {
+        console.warn('Neon Better Auth direct registration notice:', neonErr);
+      });
+
+      // 2. Primary CRM profile & session generation
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -288,6 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    neonAuth.signOut().catch(() => {});
     setUser(null);
     setToken(null);
     setBookings([]);

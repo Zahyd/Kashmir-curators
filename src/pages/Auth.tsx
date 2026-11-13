@@ -228,11 +228,16 @@ export default function Auth() {
         <h1 className="font-display text-3xl font-bold mb-2 text-center text-primary">
           {mode === 'login' ? 'Welcome Back' : 'Create Account'}
         </h1>
-        <p className="text-muted-foreground mb-6 text-center">
+        <p className="text-muted-foreground mb-3 text-center">
           {mode === 'login' 
             ? 'Sign in to continue your Kashmir journey' 
             : 'Join us and start exploring Paradise on Earth'}
         </p>
+
+        <div className="flex items-center justify-center gap-1.5 mb-6 text-xs text-muted-foreground/80 bg-muted/30 py-1 px-3 rounded-full mx-auto w-fit border border-border/40">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Secured by <strong className="text-primary font-medium">Neon Better Auth</strong></span>
+        </div>
 
         {/* Auth Method Toggle */}
         <div className="flex bg-muted/50 p-1 rounded-xl mb-8">

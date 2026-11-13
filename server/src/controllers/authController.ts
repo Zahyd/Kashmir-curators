@@ -29,6 +29,19 @@ export const register = async (req: Request, res: Response) => {
 
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     
+    // Asynchronously synchronize user account into Neon Hosted Better Auth
+    const neonAuthUrl = process.env.NEON_AUTH_BASE_URL || 'https://ep-purple-shadow-ao7lc51d.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth';
+    if (neonAuthUrl) {
+      fetch(`${neonAuthUrl}/sign-up/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'https://kashmir-curators.vercel.app'
+        },
+        body: JSON.stringify({ email, password, name })
+      }).catch(neonErr => console.warn('Neon Better Auth background sync notice:', neonErr));
+    }
+    
     res.status(201).json({ 
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
       token 
