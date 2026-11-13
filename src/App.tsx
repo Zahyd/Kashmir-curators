@@ -21,7 +21,6 @@ import NotFound from "./pages/NotFound";
 import BlogList from "./pages/BlogList";
 import BlogPost from "./pages/BlogPost";
 import HotelConfirm from "./pages/HotelConfirm";
-import AgentPortal from "./pages/AgentPortal";
 import TravelStatusPage from "./pages/TravelStatusPage";
 import VendorPortal from "./pages/VendorPortal";
 import AgentDashboard from "./modules/agents/pages/AgentDashboard";
