@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 export interface AiItineraryRequest {
   duration: string; // e.g. "5 Days / 4 Nights"
   travelers: string; // e.g. "2 Adults (Honeymoon)"

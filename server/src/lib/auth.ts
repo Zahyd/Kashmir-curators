@@ -3,8 +3,14 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import prisma from './prisma';
 
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:5000',
-  secret: process.env.JWT_SECRET || process.env.BETTER_AUTH_SECRET || 'kashmir_curators_secret_2026',
+  baseURL: process.env.BETTER_AUTH_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5000',
+  trustedOrigins: [
+    'https://kashmir-curators.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5000',
+    ...(process.env.RENDER_EXTERNAL_URL ? [process.env.RENDER_EXTERNAL_URL] : ['https://kashmir-curators-api.onrender.com'])
+  ],
+  secret: process.env.BETTER_AUTH_SECRET || process.env.JWT_SECRET || 'kashmir_curators_secret_2026',
   database: prismaAdapter(prisma, {
     provider: 'postgresql'
   }),

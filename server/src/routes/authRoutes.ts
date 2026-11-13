@@ -114,6 +114,6 @@ router.post('/team-send-otp', teamSendOtp);
 router.post('/team-verify-otp', teamVerifyOtp);
 
 // Neon / Better Auth standard handler for session management, social OAuth, and credential sign-ins
-router.all('/*', toNodeHandler(auth));
+router.use(toNodeHandler(auth));
 
 export default router;
