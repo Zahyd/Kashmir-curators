@@ -10,7 +10,8 @@ import {
   Award,
   PhoneCall,
   Clock,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,9 +31,10 @@ import WhiteLabelBrandingCard from '../components/WhiteLabelBrandingCard';
 import UsageQuotaMeter from '../components/UsageQuotaMeter';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import AgentLandingPage from './AgentLandingPage';
 
 export const AgentDashboard: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AgentTab>('overview');
   
   // Real-time Agent & Lead State
@@ -46,30 +48,32 @@ export const AgentDashboard: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // SaaS Subscription & White-Label State
+  // SaaS Subscription & White-Label State (Clean Default: STARTER)
   const [currentPlan, setCurrentPlan] = useState<SaaSPlanId>(
-    (localStorage.getItem('agent_saas_plan') as SaaSPlanId) || 'PRO_DMC'
+    (localStorage.getItem('agent_saas_plan') as SaaSPlanId) || 'STARTER'
   );
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
+  
+  // Real Agency Branding (Zero hardcoded fake agency names)
   const [agencyBranding, setAgencyBranding] = useState<any>(() => {
     try {
       const saved = localStorage.getItem('agent_branding');
       return saved ? JSON.parse(saved) : {
-        agencyName: user?.name ? `${user.name} Luxury Travels` : 'Chinar Luxury Holidays',
-        agencyTagline: 'Official Handcrafted Kashmir DMC & Tour Curator',
+        agencyName: user?.name ? `${user.name} Travels` : '',
+        agencyTagline: 'Verified Kashmir Tour Operator & B2B Partner',
         logoUrl: '',
         primaryColor: '#d97706',
-        phone: user?.phone || '+91 99060 12345',
-        website: 'www.chinarholidays.com'
+        phone: user?.phone || '',
+        website: ''
       };
     } catch {
       return {
-        agencyName: 'Chinar Luxury Holidays',
-        agencyTagline: 'Official Handcrafted Kashmir DMC',
+        agencyName: user?.name ? `${user.name} Travels` : '',
+        agencyTagline: 'Verified Kashmir Tour Operator & B2B Partner',
         logoUrl: '',
         primaryColor: '#d97706',
-        phone: '+91 99060 12345',
-        website: 'www.chinarholidays.com'
+        phone: user?.phone || '',
+        website: ''
       };
     }
   });
@@ -80,6 +84,8 @@ export const AgentDashboard: React.FC = () => {
 
   // Fetch leads and agent data
   const fetchData = async () => {
+    if (!token && !localStorage.getItem('auth_token')) return;
+
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
@@ -116,36 +122,55 @@ export const AgentDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
-
-    // Setup real-time websocket updates
-    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
-    socket.on('connect', () => {
-      if (user?.id) socket.emit('join-user', user.id);
-    });
-
-    socket.on('lead-updated', (data: any) => {
-      toast.info('Lead Stage Updated in Real-Time', {
-        description: `${data.customerName} is now in ${data.newStage}`,
-        icon: '⚡'
-      });
+    if (isAuthenticated) {
       fetchData();
-    });
 
-    socket.on('new-system-event', (data: any) => {
-      if (data.type === 'INQUIRY_CREATED') {
-        toast.success('Fresh Kashmir Inquiry Received!', {
-          description: data.message,
-          icon: '✨'
+      // Setup real-time websocket updates
+      const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
+      socket.on('connect', () => {
+        if (user?.id) socket.emit('join-user', user.id);
+      });
+
+      socket.on('lead-updated', (data: any) => {
+        toast.info('Lead Stage Updated in Real-Time', {
+          description: `${data.customerName} is now in ${data.newStage}`,
+          icon: '⚡'
         });
         fetchData();
-      }
-    });
+      });
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [user?.id, token]);
+      socket.on('new-system-event', (data: any) => {
+        if (data.type === 'INQUIRY_CREATED') {
+          toast.success('Fresh Kashmir Inquiry Received!', {
+            description: data.message,
+            icon: '✨'
+          });
+          fetchData();
+        }
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [user?.id, token, isAuthenticated]);
+
+  // Auth Guard: If still checking session, render luxury loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+          <p className="text-sm font-semibold text-muted-foreground">Connecting to Kashmir B2B DMC Network...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Auth Guard: If not authenticated, render the dedicated B2B Landing Page
+  if (!isAuthenticated) {
+    return <AgentLandingPage />;
+  }
 
   const handleUpdateLeadStage = async (leadId: string, newStage: string) => {
     try {
@@ -159,34 +184,34 @@ export const AgentDashboard: React.FC = () => {
         body: JSON.stringify({ stage: newStage })
       });
 
-      if (res.ok) {
-        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, leadStage: newStage } : l));
-        toast.success(`Inquiry moved to ${newStage.replace(/_/g, ' ')}`);
-      }
+      if (!res.ok) throw new Error('Failed to update stage');
+      toast.success(`Lead moved to ${newStage}`);
+      fetchData();
     } catch (err) {
-      toast.error('Failed to update stage');
+      toast.error('Could not update lead stage');
     }
   };
 
-  const handleOpenQuoteModal = (lead?: any) => {
+  const handleOpenQuoteModal = (lead?: LeadItem) => {
     setSelectedLeadForQuote(lead || null);
     setQuoteModalOpen(true);
   };
 
-  const handleSubmitVerification = async (data: any) => {
+  const handleSubmitVerification = async (data: { licenseNumber: string; file: File | null }) => {
+    const formData = new FormData();
+    formData.append('licenseNumber', data.licenseNumber);
+    if (data.file) formData.append('licenseFile', data.file);
+
     const authToken = token || localStorage.getItem('auth_token') || '';
-    const res = await fetch(`${API_BASE_URL}/agents/register`, {
+    const res = await fetch(`${API_BASE_URL}/agents/verify-license`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`
-      },
-      body: JSON.stringify(data)
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData
     });
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.error || 'Failed to submit');
+      throw new Error(err.error || 'Failed to submit accreditation');
     }
 
     const result = await res.json();
@@ -205,20 +230,24 @@ export const AgentDashboard: React.FC = () => {
   };
 
   const verificationStatus = agentProfile?.status || (user?.role === 'agent' ? 'APPROVED' : 'NOT_APPLIED');
+  
+  // Real dynamic agent code and company name (Zero mock values)
+  const displayAgentCode = agentProfile?.agentCode || (user?.id ? `AGT-${user.id.slice(0, 6).toUpperCase()}` : 'AGT-PENDING');
+  const displayCompanyName = agencyBranding?.agencyName || agentProfile?.companyName || user?.name || 'Registered Travel Partner';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col selection:bg-amber-500 selection:text-black">
       <Navbar />
 
       <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Dedicated Agent Sidebar */}
+        {/* Dedicated Agent Sidebar with real agent metadata */}
         <AgentSidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
           verificationStatus={verificationStatus}
           plan={currentPlan}
-          agentCode={agentProfile?.agentCode || 'AGT-KASHMIR-01'}
-          companyName={agencyBranding?.agencyName || agentProfile?.companyName || user?.name}
+          agentCode={displayAgentCode}
+          companyName={displayCompanyName}
         />
 
         {/* Main Content Workspace */}
@@ -230,6 +259,9 @@ export const AgentDashboard: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   B2B DMC Workspace
+                </span>
+                <span className="text-[10px] bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 rounded-full">
+                  {currentPlan.replace('_', ' ')}
                 </span>
               </div>
               <h1 className="text-2xl font-black text-foreground tracking-tight mt-1">
@@ -259,33 +291,25 @@ export const AgentDashboard: React.FC = () => {
               <Button
                 size="sm"
                 onClick={() => handleOpenQuoteModal()}
-                className="rounded-xl text-xs font-bold gap-1.5 shadow-sm shadow-primary/20"
+                className="rounded-xl text-xs font-bold gap-1.5 bg-primary text-primary-foreground shadow-sm"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Custom Quote</span>
+                <span>New Quotation</span>
               </Button>
             </div>
           </div>
 
-          {/* Usage Quota & SaaS Plan Bar */}
-          <UsageQuotaMeter
-            plan={currentPlan}
-            leadsUsed={leads.length}
-            leadsLimit={15}
-            onOpenUpgradeModal={() => setSubscriptionModalOpen(true)}
-          />
-
-          {/* TAB 1: OVERVIEW CONTROL DESK */}
+          {/* TAB 1: OVERVIEW DASHBOARD */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* 4 Metric Cards */}
+              {/* 4 Metric Cards with REAL Data (Zero fake numbers) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="rounded-3xl border border-border/70 p-5 bg-card">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted-foreground">Active Travel Inquiries</span>
                     <Users className="w-4 h-4 text-primary" />
                   </div>
-                  <p className="text-3xl font-black text-foreground mt-2">{stats.activeLeadsCount || leads.length}</p>
+                  <p className="text-3xl font-black text-foreground mt-2">{stats.activeLeadsCount || leads.length || 0}</p>
                   <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1 font-medium">
                     <TrendingUp className="w-3 h-3" /> Real-time pipeline
                   </p>
@@ -296,8 +320,10 @@ export const AgentDashboard: React.FC = () => {
                     <span className="text-xs font-semibold text-muted-foreground">Proposals Dispatched</span>
                     <FileSpreadsheet className="w-4 h-4 text-purple-500" />
                   </div>
-                  <p className="text-3xl font-black text-foreground mt-2">{stats.quotesSentCount || 4}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Average conversion: 42%</p>
+                  <p className="text-3xl font-black text-foreground mt-2">{stats.quotesSentCount || 0}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {stats.quotesSentCount > 0 ? 'Active Proposals' : 'No proposals yet'}
+                  </p>
                 </Card>
 
                 <Card className="rounded-3xl border border-border/70 p-5 bg-card">
@@ -306,10 +332,10 @@ export const AgentDashboard: React.FC = () => {
                     <Award className="w-4 h-4 text-emerald-500" />
                   </div>
                   <p className="text-3xl font-black text-foreground mt-2">
-                    {agentProfile?.commissionPct || 10}%
+                    {agentProfile?.commissionPct || (verificationStatus === 'APPROVED' ? 10 : 5)}%
                   </p>
                   <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
-                    Net wholesale discount unlocked
+                    {verificationStatus === 'APPROVED' ? 'Verified wholesale discount' : 'Standard starter discount'}
                   </p>
                 </Card>
 
@@ -336,7 +362,7 @@ export const AgentDashboard: React.FC = () => {
                 </Card>
               </div>
 
-              {/* Quick Pipeline Teaser */}
+              {/* Priority Inquiries Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg text-foreground">Priority Inquiries</h3>
@@ -348,11 +374,31 @@ export const AgentDashboard: React.FC = () => {
                     Open Full Kanban Board &rarr;
                   </Button>
                 </div>
-                <LeadKanbanBoard
-                  leads={leads.slice(0, 10)}
-                  onUpdateStage={handleUpdateLeadStage}
-                  onCreateQuote={handleOpenQuoteModal}
-                />
+
+                {leads.length === 0 ? (
+                  <div className="p-8 sm:p-12 rounded-3xl border border-dashed border-border/80 bg-card/50 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-bold text-base text-foreground">No Inquiries in Pipeline Yet</h4>
+                    <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                      Your travel leads will appear here automatically when guests submit requests, or you can build a customized proposal right away.
+                    </p>
+                    <Button
+                      onClick={() => handleOpenQuoteModal()}
+                      className="rounded-xl text-xs font-bold gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 mt-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create First Client Quotation</span>
+                    </Button>
+                  </div>
+                ) : (
+                  <LeadKanbanBoard
+                    leads={leads.slice(0, 10)}
+                    onUpdateStage={handleUpdateLeadStage}
+                    onCreateQuote={handleOpenQuoteModal}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -409,8 +455,8 @@ export const AgentDashboard: React.FC = () => {
           {activeTab === 'licensing' && (
             <LicenseVerificationCard
               status={verificationStatus}
-              agentCode={agentProfile?.agentCode}
-              companyName={agentProfile?.companyName || user?.name}
+              agentCode={displayAgentCode}
+              companyName={displayCompanyName}
               licenseNumber={agentProfile?.licenseNumber}
               commissionPct={agentProfile?.commissionPct}
               onSubmitVerification={handleSubmitVerification}
