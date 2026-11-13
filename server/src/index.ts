@@ -47,6 +47,8 @@ import disruptionRoutes from './routes/disruptionRoutes';
 import vendorRoutes from './routes/vendorRoutes';
 import walletRoutes from './routes/walletRoutes';
 import safetyCardRoutes from './routes/safetyCardRoutes';
+import aiRoutes from './routes/aiRoutes';
+import vaultRoutes from './routes/vaultRoutes';
 import { handleStripeWebhook } from './controllers/paymentController';
 import prisma from './lib/prisma';
 
@@ -192,6 +194,8 @@ app.use('/api/disruptions', disruptionRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/wallets', walletRoutes);
 app.use('/api/safety-card', safetyCardRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/vault', vaultRoutes);
 app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers

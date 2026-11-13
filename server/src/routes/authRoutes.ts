@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { register, login, getMe, teamLogin, teamSendOtp, teamVerifyOtp, updateProfile, googleLogin, googleRealtimeLogin } from '../controllers/authController';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { toNodeHandler } from 'better-auth/node';
+import { auth } from '../lib/auth';
 
 const router = Router();
 
@@ -110,5 +112,8 @@ router.put('/profile', authenticateToken, updateProfile);
 router.post('/team-login', teamLogin);
 router.post('/team-send-otp', teamSendOtp);
 router.post('/team-verify-otp', teamVerifyOtp);
+
+// Neon / Better Auth standard handler for session management, social OAuth, and credential sign-ins
+router.all('/*', toNodeHandler(auth));
 
 export default router;

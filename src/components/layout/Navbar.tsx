@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import AiTripCuratorModal from '@/components/planner/AiTripCuratorModal';
 
 const navLinks = [
   { href: '/packages', label: 'Itineraries' },
@@ -34,6 +35,7 @@ export default function Navbar() {
   const { teamUser } = useTeamAuth();
   const { openLeadModal, openCallbackModal } = useLeadCapture();
   const { isDark, toggleTheme } = useTheme();
+  const [aiCuratorOpen, setAiCuratorOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -120,6 +122,15 @@ export default function Navbar() {
               ) : (
                 <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#111439]" />
               )}
+            </button>
+
+            {/* AI Kashmir Curator */}
+            <button
+              onClick={() => setAiCuratorOpen(true)}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/10 to-primary/10 border border-amber-500/30 text-[10px] font-black uppercase tracking-widest text-[#111439] dark:text-white hover:border-amber-500 transition-all shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+              <span>AI Curator</span>
             </button>
 
             {/* Talk to Expert / Concierge Callback */}
@@ -346,6 +357,12 @@ export default function Navbar() {
           </div>
         )}
       </div>
+
+      {/* AI Kashmir Trip Curator Modal */}
+      <AiTripCuratorModal
+        isOpen={aiCuratorOpen}
+        onClose={() => setAiCuratorOpen(false)}
+      />
     </nav>
   );
 }
