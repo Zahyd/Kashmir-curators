@@ -24,3 +24,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.neon
+.env
+.env.local
+*.bak
+

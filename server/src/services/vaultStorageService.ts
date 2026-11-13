@@ -34,7 +34,7 @@ export const vaultStorageService = {
             'Content-Type': mimeType,
             'Authorization': `Bearer ${accessKey}`
           },
-          body: buffer
+          body: new Uint8Array(buffer)
         });
 
         if (uploadRes.ok) {
