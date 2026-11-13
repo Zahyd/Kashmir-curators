@@ -148,12 +148,26 @@ export default function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 bg-white/95 dark:bg-[#0c1216]/95 backdrop-blur-3xl border-slate-200 dark:border-white/10 text-[#111439] dark:text-white rounded-2xl p-2 mt-4 shadow-2xl">
                   {isAuthenticated && (
-                    <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
-                      <Link to="/agent" className="flex items-center gap-3">
-                        <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-xs font-bold text-[#111439] dark:text-white">Agent Workspace</span>
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/agent" className="flex items-center gap-3">
+                          <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">Agent CRM & Licensing</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/hospitality" className="flex items-center gap-3">
+                          <Building className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">Hotels & Houseboats</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/driver" className="flex items-center gap-3">
+                          <Car className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">Driver Cockpit</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   {isAuthenticated && (
                     <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
@@ -266,15 +280,35 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {/* B2B Partner Desk Link in Mobile */}
-              <Link
-                to="/agent"
-                onClick={() => setIsOpen(false)}
-                className="px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 flex items-center gap-2"
-              >
-                <Building2 className="w-4 h-4" />
-                <span>B2B Agent Workspace</span>
-              </Link>
+              {/* B2B Partner Hub Links in Mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-1">
+                <Link
+                  to="/agent"
+                  onClick={() => setIsOpen(false)}
+                  className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-2"
+                >
+                  <Building2 className="w-4 h-4" />
+                  <span>Agent CRM</span>
+                </Link>
+
+                <Link
+                  to="/hospitality"
+                  onClick={() => setIsOpen(false)}
+                  className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 flex items-center gap-2"
+                >
+                  <Building className="w-4 h-4" />
+                  <span>Hotels & Houseboats</span>
+                </Link>
+
+                <Link
+                  to="/driver"
+                  onClick={() => setIsOpen(false)}
+                  className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 flex items-center gap-2"
+                >
+                  <Car className="w-4 h-4" />
+                  <span>Driver Cockpit</span>
+                </Link>
+              </div>
 
               {/* Theme & Concierge Quick Actions */}
               <div className="grid grid-cols-2 gap-2 pt-2">

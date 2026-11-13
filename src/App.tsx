@@ -24,6 +24,9 @@ import HotelConfirm from "./pages/HotelConfirm";
 import AgentPortal from "./pages/AgentPortal";
 import TravelStatusPage from "./pages/TravelStatusPage";
 import VendorPortal from "./pages/VendorPortal";
+import AgentDashboard from "./modules/agents/pages/AgentDashboard";
+import HospitalityDashboard from "./modules/hospitality/pages/HospitalityDashboard";
+import DriverDashboard from "./modules/drivers/pages/DriverDashboard";
 
 import SalesAuth from "./pages/SalesAuth";
 import SalesPortal from "./pages/SalesPortal";
@@ -74,7 +77,13 @@ const App = () => {
                   <Route path="/sales/" element={<SalesAuth />} />
                   <Route path="/payment-request/:paymentId" element={<PaymentRequest />} />
                   <Route path="/hotel/confirm/:reservationId" element={<HotelConfirm />} />
-                  <Route path="/agent" element={<AgentPortal />} />
+                  <Route path="/agent" element={<AgentDashboard />} />
+                  <Route path="/agent/*" element={<AgentDashboard />} />
+                  <Route path="/hospitality" element={<HospitalityDashboard />} />
+                  <Route path="/hospitality/*" element={<HospitalityDashboard />} />
+                  <Route path="/driver" element={<DriverDashboard />} />
+                  <Route path="/driver/*" element={<DriverDashboard />} />
+                  <Route path="/drivers" element={<DriverDashboard />} />
                   <Route path="/travel-status" element={<TravelStatusPage />} />
                   <Route path="/vendor" element={<VendorPortal />} />
                   <Route path="/vendor/auth" element={<VendorPortal />} />

@@ -52,6 +52,14 @@ export default function PublicItinerary() {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number | null>(1); // Default expand day 1
   const [isPaying, setIsPaying] = useState(false);
+  const [agencyBranding, setAgencyBranding] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('agent_branding');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -160,6 +168,37 @@ export default function PublicItinerary() {
 
   return (
     <div className="min-h-screen bg-[#05080a] text-white font-sans selection:bg-kashmir-gold/30">
+      {/* White-Label Partner Header (Shown for Pro/Enterprise DMC Proposals) */}
+      {agencyBranding && (
+        <header className="bg-[#0b1317]/95 backdrop-blur-xl border-b border-white/10 px-6 py-3 sticky top-0 z-50">
+          <div className="container max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-white text-xs shadow-sm"
+                style={{ backgroundColor: agencyBranding.primaryColor || '#d97706' }}
+              >
+                {agencyBranding.agencyName?.charAt(0) || 'C'}
+              </div>
+              <div>
+                <span className="font-bold text-xs text-white block">{agencyBranding.agencyName}</span>
+                <span className="text-[10px] text-white/50">{agencyBranding.agencyTagline}</span>
+              </div>
+            </div>
+
+            {agencyBranding.phone && (
+              <a 
+                href={`https://wa.me/${agencyBranding.phone.replace(/[^0-9]/g, '')}?text=Hi,%20I%20am%20viewing%20my%20Kashmir%20Itinerary%20(${itinerary.customerName})`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20"
+              >
+                <span>WhatsApp Specialist</span>
+              </a>
+            )}
+          </div>
+        </header>
+      )}
+
       {/* Hero Header Banner */}
       <div className="relative h-[40vh] w-full overflow-hidden flex items-end">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1566228015668-4c45dbc4e2f5?q=80&w=1600')] bg-cover bg-center opacity-40 scale-105" />
