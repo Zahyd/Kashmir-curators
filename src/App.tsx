@@ -24,6 +24,11 @@ import HotelConfirm from "./pages/HotelConfirm";
 import TravelStatusPage from "./pages/TravelStatusPage";
 import VendorPortal from "./pages/VendorPortal";
 import AgentDashboard from "./modules/agents/pages/AgentDashboard";
+import AgentLandingPage from "./modules/agents/pages/AgentLandingPage";
+import AgencyOnboardingPage from "./modules/agents/pages/AgencyOnboardingPage";
+import AgencyStatusPage from "./modules/agents/pages/AgencyStatusPage";
+import AgencySuccessPage from "./modules/agents/pages/AgencySuccessPage";
+import AgentPricingPage from "./modules/agents/pages/AgentPricingPage";
 import HospitalityDashboard from "./modules/hospitality/pages/HospitalityDashboard";
 import DriverDashboard from "./modules/drivers/pages/DriverDashboard";
 
@@ -76,6 +81,11 @@ const App = () => {
                   <Route path="/sales/" element={<SalesAuth />} />
                   <Route path="/payment-request/:paymentId" element={<PaymentRequest />} />
                   <Route path="/hotel/confirm/:reservationId" element={<HotelConfirm />} />
+                  <Route path="/agent/apply" element={<AgencyOnboardingPage />} />
+                  <Route path="/agent/status" element={<AgencyStatusPage />} />
+                  <Route path="/agent/pricing" element={<AgentPricingPage />} />
+                  <Route path="/agent/success" element={<AgencySuccessPage />} />
+                  <Route path="/agent/landing" element={<AgentLandingPage />} />
                   <Route path="/agent" element={<AgentDashboard />} />
                   <Route path="/agent/*" element={<AgentDashboard />} />
                   <Route path="/hospitality" element={<HospitalityDashboard />} />

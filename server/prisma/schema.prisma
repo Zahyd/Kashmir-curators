@@ -489,8 +489,42 @@ model AgentProfile {
   agentCode      String   @unique
   commissionPct  Float    @default(0.0)
   status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  plan           String   @default("STARTER") // STARTER, PROFESSIONAL, ENTERPRISE
+  billingCycle   String   @default("MONTHLY") // MONTHLY, ANNUAL
+  city           String?
+  state          String?
+  website        String?
+  applicationRef String?
   userId         String   @unique
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AgencyApplication {
+  id                 String    @id @default(uuid())
+  applicationRef     String    @unique // e.g. "KCB2B-2026-8942"
+  agencyName         String
+  authorizedPerson   String
+  email              String
+  phone              String
+  location           String    // City, State, Country
+  websiteOrSocial    String?
+  businessCategory   String    @default("TOUR_OPERATOR") // TOUR_OPERATOR, TRAVEL_AGENT, CORPORATE_DESK, FREELANCE_CURATOR
+  tourismLicenseNo   String?
+  gstin              String?
+  documentUrl        String?
+  status             String    @default("SUBMITTED") // SUBMITTED, UNDER_REVIEW, DOCUMENTS_VERIFIED, APPROVED, REJECTED, NEEDS_INFO
+  adminRemarks       String?
+  selectedPlan       String    @default("STARTER") // STARTER, PROFESSIONAL, ENTERPRISE
+  billingCycle       String    @default("MONTHLY") // MONTHLY, ANNUAL
+  userId             String?   // Linked user if account already created
+  reviewedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([email])
+  @@index([phone])
+  @@index([applicationRef])
+  @@index([status])
 }
 
 model DriverProfile {
