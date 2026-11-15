@@ -326,68 +326,69 @@ export default function Auth() {
   const ContextIcon = portalContext.icon;
 
   return (
-    <div className="min-h-screen bg-[#070B12] text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-black">
+    <div className="min-h-screen min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#070B12] text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-black">
       {/* Background Ambient Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -left-40 w-72 sm:w-96 h-72 sm:h-96 bg-amber-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -right-40 w-72 sm:w-[30rem] h-72 sm:h-[30rem] bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 left-1/3 w-72 sm:w-96 h-72 sm:h-96 bg-blue-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Top Header Bar */}
-      <header className="relative z-20 w-full px-6 py-5 border-b border-white/5 bg-slate-950/40 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
-            <Logo className="h-10 w-auto transition-transform group-hover:scale-105" isDarkBg={true} />
+      {/* Top Header Bar - Optimized for Mobile Viewports */}
+      <header className="relative z-20 w-full px-3.5 sm:px-6 py-3 sm:py-4 border-b border-white/5 bg-slate-950/60 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          <Link to="/" className="flex items-center shrink-0 group">
+            <Logo className="h-8 sm:h-10 w-auto transition-transform group-hover:scale-105" isDarkBg={true} />
           </Link>
           
           <Link 
             to="/" 
-            className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10"
+            className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-slate-300 hover:text-amber-400 transition-colors bg-white/5 hover:bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 shrink-0"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Return to Explore</span>
+            <span className="hidden sm:inline">Return to </span>
+            <span>Explore</span>
           </Link>
         </div>
       </header>
 
       {/* Main Dual-Column Content */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex items-center">
-        <div className="w-full grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:p-8 flex items-center">
+        <div className="w-full grid lg:grid-cols-12 gap-6 lg:gap-12 items-center">
           
-          {/* LEFT COLUMN: Modern Authentication Form (Cols 1-7) */}
-          <div className="lg:col-span-7 xl:col-span-6 flex flex-col justify-center">
-            <div className="w-full max-w-xl mx-auto bg-slate-900/80 backdrop-blur-2xl border border-white/10 p-6 sm:p-8 md:p-10 rounded-3xl shadow-2xl shadow-black/80">
+          {/* LEFT COLUMN: Modern Authentication Form (Cols 1-7 on desktop, full-width on mobile) */}
+          <div className="lg:col-span-7 xl:col-span-6 flex flex-col justify-center w-full max-w-full">
+            <div className="w-full max-w-xl mx-auto bg-slate-900/85 backdrop-blur-2xl border border-white/10 p-4 sm:p-7 md:p-10 rounded-2xl sm:rounded-3xl shadow-2xl shadow-black/80">
               
               {/* Dynamic Context Banner when arriving via deep link */}
               <div className={cn(
-                "rounded-2xl p-4 mb-6 border flex items-center gap-3.5 transition-all bg-gradient-to-r",
+                "rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-5 border flex items-center gap-3 transition-all bg-gradient-to-r",
                 portalContext.accentColor
               )}>
-                <div className="w-11 h-11 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
-                  <ContextIcon className="w-5 h-5 text-amber-400" />
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
+                  <ContextIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-400">
                       {portalContext.badge}
                     </span>
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                    <span className="text-[8px] sm:text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 sm:px-2 py-0.5 rounded-full font-bold">
                       Neon Better Auth
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 truncate mt-0.5">
+                  <p className="text-[11px] sm:text-xs text-slate-300 leading-snug mt-0.5 line-clamp-2 sm:line-clamp-none">
                     {portalContext.description}
                   </p>
                 </div>
               </div>
 
               {/* Header Title & Subtext */}
-              <div className="mb-6">
-                <h1 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight">
+              <div className="mb-5 sm:mb-6">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-white tracking-tight">
                   {mode === 'login' ? 'Welcome Back' : 'Join Kashmir Curators'}
                 </h1>
-                <p className="text-sm text-slate-400 mt-1">
+                <p className="text-xs sm:text-sm text-slate-400 mt-1">
                   {mode === 'login' 
                     ? 'Enter your credentials or use one-tap Google login to proceed.' 
                     : 'Create your account to unlock verified B2B rates and luxury services.'}
@@ -395,7 +396,7 @@ export default function Auth() {
               </div>
 
               {/* Mode Switcher: Sign In vs Create Account */}
-              <div className="grid grid-cols-2 p-1 bg-slate-950/70 border border-white/10 rounded-2xl mb-6">
+              <div className="grid grid-cols-2 p-1 bg-slate-950/70 border border-white/10 rounded-xl sm:rounded-2xl mb-5 sm:mb-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -403,7 +404,7 @@ export default function Auth() {
                     setErrors({});
                   }}
                   className={cn(
-                    "py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200",
+                    "py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all duration-200",
                     mode === 'login'
                       ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20"
                       : "text-slate-400 hover:text-white"
@@ -418,7 +419,7 @@ export default function Auth() {
                     setErrors({});
                   }}
                   className={cn(
-                    "py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200",
+                    "py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all duration-200",
                     mode === 'signup'
                       ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20"
                       : "text-slate-400 hover:text-white"
@@ -430,8 +431,8 @@ export default function Auth() {
 
               {/* Role Selection Selector (in Sign Up Mode) */}
               {mode === 'signup' && (
-                <div className="mb-6 animate-fade-in">
-                  <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-2">
+                <div className="mb-5 sm:mb-6 animate-fade-in">
+                  <label className="text-[11px] sm:text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-2">
                     Select Account Type
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -449,15 +450,15 @@ export default function Auth() {
                           type="button"
                           onClick={() => setSelectedRole(role.id as UserRoleOption)}
                           className={cn(
-                            "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all",
+                            "flex flex-col items-center justify-center p-2 sm:p-2.5 rounded-xl border text-center transition-all",
                             isSelected
                               ? "bg-amber-500/20 border-amber-500/60 text-amber-300 shadow-sm"
                               : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
                           )}
                         >
-                          <Icon className={cn("w-4 h-4 mb-1", isSelected ? "text-amber-400" : "text-slate-400")} />
-                          <span className="text-xs font-bold leading-tight">{role.label}</span>
-                          <span className="text-[10px] text-slate-500">{role.desc}</span>
+                          <Icon className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 mb-1 shrink-0", isSelected ? "text-amber-400" : "text-slate-400")} />
+                          <span className="text-[11px] sm:text-xs font-bold leading-tight truncate w-full">{role.label}</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-500 truncate w-full">{role.desc}</span>
                         </button>
                       );
                     })}
@@ -466,7 +467,7 @@ export default function Auth() {
               )}
 
               {/* Auth Method Toggle: Email vs Phone */}
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-2 mb-5 sm:mb-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -474,14 +475,15 @@ export default function Auth() {
                     setErrors({});
                   }}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border transition-all",
+                    "flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2.5 sm:px-3 rounded-xl text-xs font-semibold border transition-all",
                     authMethod === 'email'
                       ? "bg-white/10 border-white/20 text-white shadow-sm"
                       : "bg-transparent border-transparent text-slate-400 hover:text-slate-200"
                   )}
                 >
-                  <Mail className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Email & Password</span>
+                  <Mail className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="hidden sm:inline">Email & Password</span>
+                  <span className="sm:hidden">Email</span>
                 </button>
                 <button
                   type="button"
@@ -491,24 +493,25 @@ export default function Auth() {
                     setMode('login');
                   }}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border transition-all",
+                    "flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2.5 sm:px-3 rounded-xl text-xs font-semibold border transition-all",
                     authMethod === 'phone'
                       ? "bg-white/10 border-white/20 text-white shadow-sm"
                       : "bg-transparent border-transparent text-slate-400 hover:text-slate-200"
                   )}
                 >
-                  <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Instant Mobile OTP</span>
+                  <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="hidden sm:inline">Instant Mobile OTP</span>
+                  <span className="sm:hidden">Phone OTP</span>
                 </button>
               </div>
 
               {/* Primary Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
                 {authMethod === 'email' ? (
                   <>
                     {/* Full Name in Sign Up */}
                     {mode === 'signup' && (
-                      <div className="space-y-1.5 animate-fade-in">
+                      <div className="space-y-1 animate-fade-in">
                         <label className="text-xs font-semibold text-slate-300">
                           Full Name or Agency Name
                         </label>
@@ -522,7 +525,7 @@ export default function Auth() {
                               setErrors(prev => ({ ...prev, name: '' }));
                             }}
                             className={cn(
-                              "pl-10 h-12 bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
+                              "pl-10 h-11 sm:h-12 text-base sm:text-sm bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
                               errors.name && "border-rose-500 focus:border-rose-500"
                             )}
                           />
@@ -536,7 +539,7 @@ export default function Auth() {
                     )}
 
                     {/* Email Input */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-300">
                         Email Address
                       </label>
@@ -551,7 +554,7 @@ export default function Auth() {
                             setErrors(prev => ({ ...prev, email: '' }));
                           }}
                           className={cn(
-                            "pl-10 h-12 bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
+                            "pl-10 h-11 sm:h-12 text-base sm:text-sm bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
                             errors.email && "border-rose-500 focus:border-rose-500"
                           )}
                         />
@@ -564,7 +567,7 @@ export default function Auth() {
                     </div>
 
                     {/* Password Input */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-semibold text-slate-300">
                           Password
@@ -590,14 +593,14 @@ export default function Auth() {
                             setErrors(prev => ({ ...prev, password: '' }));
                           }}
                           className={cn(
-                            "pl-10 pr-10 h-12 bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
+                            "pl-10 pr-10 h-11 sm:h-12 text-base sm:text-sm bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
                             errors.password && "border-rose-500 focus:border-rose-500"
                           )}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -610,7 +613,7 @@ export default function Auth() {
 
                       {/* Password Strength Indicator on Signup */}
                       {mode === 'signup' && formData.password && (
-                        <div className="mt-2.5 p-3 rounded-xl bg-slate-950/50 border border-white/5 space-y-2">
+                        <div className="mt-2 p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-white/5 space-y-1.5">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="text-slate-400">Security Strength:</span>
                             <span className={cn(
@@ -637,13 +640,13 @@ export default function Auth() {
                   </>
                 ) : (
                   /* Phone & OTP Authentication Flow */
-                  <div className="space-y-4 animate-fade-in">
-                    <div className="space-y-1.5">
+                  <div className="space-y-3.5 sm:space-y-4 animate-fade-in">
+                    <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-300">
                         Indian Mobile Number
                       </label>
                       <div className="relative flex">
-                        <span className="inline-flex items-center px-3.5 rounded-l-xl border border-r-0 border-white/10 bg-slate-950/80 text-slate-300 text-xs font-bold h-12">
+                        <span className="inline-flex items-center px-3 sm:px-3.5 rounded-l-xl border border-r-0 border-white/10 bg-slate-950/80 text-slate-300 text-xs font-bold h-11 sm:h-12 shrink-0">
                           +91
                         </span>
                         <Input
@@ -656,7 +659,7 @@ export default function Auth() {
                             setErrors(prev => ({ ...prev, phone: '' }));
                           }}
                           className={cn(
-                            "rounded-l-none pl-3.5 h-12 bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-r-xl focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
+                            "rounded-l-none pl-3 h-11 sm:h-12 text-base sm:text-sm bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-r-xl focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
                             errors.phone && "border-rose-500 focus:border-rose-500"
                           )}
                         />
@@ -694,7 +697,7 @@ export default function Auth() {
                               setErrors(prev => ({ ...prev, otp: '' }));
                             }}
                             className={cn(
-                              "pl-10 h-12 tracking-widest text-lg font-bold bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:border-emerald-400",
+                              "pl-10 h-11 sm:h-12 tracking-widest text-lg font-bold bg-slate-950/60 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:border-emerald-400",
                               errors.otp && "border-rose-500 focus:border-rose-500"
                             )}
                           />
@@ -711,7 +714,7 @@ export default function Auth() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 mt-2 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 active:scale-[0.99] transition-all text-sm flex items-center justify-center gap-2"
+                  className="w-full h-11 sm:h-12 mt-2 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 active:scale-[0.99] transition-all text-xs sm:text-sm flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -721,17 +724,23 @@ export default function Auth() {
                   ) : authMethod === 'phone' ? (
                     otpSent ? 'Verify OTP & Enter' : 'Send Instant OTP'
                   ) : mode === 'login' ? (
-                    `Sign In to ${portalContext.badge.split(' ')[0]}`
+                    <>
+                      <span className="hidden sm:inline">Sign In to {portalContext.badge.split(' ')[0]}</span>
+                      <span className="sm:hidden">Sign In</span>
+                    </>
                   ) : (
-                    `Complete Registration with Neon Auth`
+                    <>
+                      <span className="hidden sm:inline">Complete Registration with Neon Auth</span>
+                      <span className="sm:hidden">Create Account with Neon Auth</span>
+                    </>
                   )}
                 </Button>
               </form>
 
               {/* Divider */}
-              <div className="relative flex py-5 items-center">
+              <div className="relative flex py-4 sm:py-5 items-center">
                 <div className="flex-grow border-t border-white/10" />
-                <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                <span className="flex-shrink mx-3 sm:mx-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                   Or Continue With
                 </span>
                 <div className="flex-grow border-t border-white/10" />
@@ -741,9 +750,9 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                className="w-full h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold transition-all duration-200 flex items-center justify-center gap-3 group text-xs sm:text-sm"
+                className="w-full h-11 sm:h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 sm:gap-3 group text-xs sm:text-sm active:scale-[0.99]"
               >
-                <svg className="w-4 h-4 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 group-hover:scale-110 transition-transform shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
@@ -753,9 +762,9 @@ export default function Auth() {
               </button>
 
               {/* Bottom Security Footer */}
-              <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center justify-center gap-2">
-                <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-white/5 flex flex-col items-center justify-center gap-1.5 sm:gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-slate-400 text-center">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                   <span>Encrypted by <strong className="text-white">Neon Better Auth</strong> • 256-Bit SSL</span>
                 </div>
                 <p className="text-[10px] text-slate-500 text-center">
@@ -764,6 +773,27 @@ export default function Auth() {
               </div>
 
             </div>
+
+            {/* Mobile Trust Micro-Highlights (Visible on Mobile Below Form) */}
+            <div className="lg:hidden mt-5 grid grid-cols-2 gap-2 text-center text-slate-400 text-[11px]">
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/5 flex items-center justify-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="truncate">J&K Tourism Registered</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/5 flex items-center justify-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="truncate">Instant B2B Rates</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/5 flex items-center justify-center gap-1.5">
+                <Car className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span className="truncate">1,200+ Fleet Cabs</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/5 flex items-center justify-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span className="truncate">Encrypted JWKS Auth</span>
+              </div>
+            </div>
+
           </div>
 
           {/* RIGHT COLUMN: Luxury Valley Showcase (Desktop Only, Cols 8-12) */}
@@ -857,14 +887,14 @@ export default function Auth() {
 
       {/* Forgot Password Modal */}
       {forgotPasswordOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in" 
             onClick={() => setForgotPasswordOpen(false)} 
           />
-          <div className="relative z-10 w-full max-w-md bg-slate-900 border border-white/10 p-6 sm:p-8 rounded-3xl shadow-2xl text-white animate-scale-in">
-            <h3 className="text-xl font-display font-bold">Reset Your Password</h3>
-            <p className="text-xs text-slate-400 mt-1 mb-5">
+          <div className="relative z-10 w-full max-w-md max-h-[90dvh] overflow-y-auto bg-slate-900 border border-white/10 p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl text-white animate-scale-in">
+            <h3 className="text-lg sm:text-xl font-display font-bold">Reset Your Password</h3>
+            <p className="text-xs text-slate-400 mt-1 mb-4 sm:mb-5">
               Enter your registered email address and we'll send you an encrypted reset link.
             </p>
 
@@ -884,14 +914,14 @@ export default function Auth() {
                     setForgotPasswordOpen(false);
                     setResetSent(false);
                   }}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold"
+                  className="w-full bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold h-11"
                 >
                   Close Window
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div className="space-y-1.5">
+              <form onSubmit={handleForgotPassword} className="space-y-3.5 sm:space-y-4">
+                <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-300">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -900,23 +930,23 @@ export default function Auth() {
                       placeholder="you@example.com"
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
-                      className="pl-10 h-12 bg-slate-950 border-white/10 text-white placeholder:text-slate-600 rounded-xl"
+                      className="pl-10 h-11 sm:h-12 text-base sm:text-sm bg-slate-950 border-white/10 text-white placeholder:text-slate-600 rounded-xl"
                     />
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-1">
                   <Button
                     type="button"
                     onClick={() => setForgotPasswordOpen(false)}
                     variant="outline"
-                    className="flex-1 border-white/10 text-slate-300 hover:bg-white/5 rounded-xl text-xs"
+                    className="flex-1 border-white/10 text-slate-300 hover:bg-white/5 rounded-xl text-xs h-11"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md shadow-amber-500/20"
+                    className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 h-11"
                   >
                     Send Reset Link
                   </Button>
@@ -929,14 +959,14 @@ export default function Auth() {
 
       {/* Google Account Selector Luxury Modal (Fallback/Simulated) */}
       {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <div 
             className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in" 
             onClick={() => !googleLoading && setShowGoogleModal(false)} 
           />
           
-          <div className="relative z-10 w-full max-w-sm bg-slate-900 border border-white/10 p-6 rounded-3xl shadow-2xl animate-scale-in text-white">
-            <div className="text-center mb-6">
+          <div className="relative z-10 w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-slate-900 border border-white/10 p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl animate-scale-in text-white">
+            <div className="text-center mb-5 sm:mb-6">
               <svg className="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -953,7 +983,7 @@ export default function Auth() {
                 <p className="text-xs text-slate-300 font-medium">Authenticating {selectedGoogleEmail}...</p>
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {[
                   { name: 'Zahid Riyaz', email: 'zahid@gmail.com', avatar: 'ZR' },
                   { name: 'Traveler Curators', email: 'traveler@kashmirconnect.com', avatar: 'TC' },
@@ -961,21 +991,21 @@ export default function Auth() {
                   <button
                     key={account.email}
                     onClick={() => handleSelectGoogleAccount(account)}
-                    className="w-full p-3 rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-left flex items-center gap-3 transition-all"
+                    className="w-full p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-left flex items-center gap-3 transition-all"
                   >
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-extrabold text-xs">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-extrabold text-xs shrink-0">
                       {account.avatar}
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{account.name}</p>
-                      <p className="text-[10px] text-slate-400">{account.email}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-white truncate">{account.name}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{account.email}</p>
                     </div>
                   </button>
                 ))}
                 
                 <button
                   onClick={() => setShowGoogleModal(false)}
-                  className="w-full py-2.5 text-center text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors"
+                  className="w-full py-2.5 text-center text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors mt-2"
                 >
                   Cancel
                 </button>
