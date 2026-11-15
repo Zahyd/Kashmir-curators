@@ -42,6 +42,7 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
+import { getHospitalityHeaders } from '../utils/hospitalityAuth';
 
 export interface ReceptionReservation {
   id: string;
@@ -153,30 +154,8 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
   const fetchReservations = async () => {
     try {
       setIsLoading(true);
-      let portalKey = '';
-      try {
-        const sess = JSON.parse(localStorage.getItem('hospitality_session') || '{}');
-        portalKey = sess.accessKey || '';
-      } catch {}
-
-      const authToken = 
-        token || 
-        localStorage.getItem('hospitality_token') || 
-        localStorage.getItem('teamToken') || 
-        localStorage.getItem('token') || 
-        localStorage.getItem('auth_token') || 
-        portalKey || 
-        '';
-
-      const headers: Record<string, string> = {};
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      if (portalKey) {
-        headers['x-portal-key'] = portalKey;
-      }
-
-      const url = `${API_BASE_URL}/hospitality${selectedHotelId ? `?hotelId=${selectedHotelId}` : ''}`;
+      const headers = getHospitalityHeaders(token);
+      const url = `${API_BASE_URL}/hospitality${selectedHotelId && selectedHotelId !== 'ALL' ? `?hotelId=${selectedHotelId}` : ''}`;
       const res = await fetch(url, { headers });
       if (res.ok) {
         const data = await res.json();
@@ -421,16 +400,24 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
     }
   };
 
+  // Filter by selected hotel first (strict isolation)
+  const propertyReservations = reservations.filter(r => {
+    if (selectedHotelId && selectedHotelId !== 'ALL' && r.hotelId !== selectedHotelId) {
+      return false;
+    }
+    return true;
+  });
+
   // KPI Calculations
-  const totalCount = reservations.length;
-  const pendingCount = reservations.filter(r => r.confirmationStage === 'PENDING_RESPONSE' || r.status === 'Pending').length;
-  const availabilityCount = reservations.filter(r => r.confirmationStage === 'AVAILABILITY_CONFIRMED').length;
-  const alternativeCount = reservations.filter(r => r.confirmationStage === 'ALTERNATIVE_OFFERED').length;
-  const confirmedCount = reservations.filter(r => r.confirmationStage === 'HOTEL_CONFIRMED' || r.status === 'Confirmed').length;
-  const unavailableCount = reservations.filter(r => r.confirmationStage === 'REJECTED_UNAVAILABLE' || r.status === 'Rejected').length;
+  const totalCount = propertyReservations.length;
+  const pendingCount = propertyReservations.filter(r => r.confirmationStage === 'PENDING_RESPONSE' || r.status === 'Pending').length;
+  const availabilityCount = propertyReservations.filter(r => r.confirmationStage === 'AVAILABILITY_CONFIRMED').length;
+  const alternativeCount = propertyReservations.filter(r => r.confirmationStage === 'ALTERNATIVE_OFFERED').length;
+  const confirmedCount = propertyReservations.filter(r => r.confirmationStage === 'HOTEL_CONFIRMED' || r.status === 'Confirmed').length;
+  const unavailableCount = propertyReservations.filter(r => r.confirmationStage === 'REJECTED_UNAVAILABLE' || r.status === 'Rejected').length;
 
   // Filter Logic
-  const filteredReservations = reservations.filter(r => {
+  const filteredReservations = propertyReservations.filter(r => {
     const matchesSearch = 
       r.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (r.bookingReference || '').toLowerCase().includes(searchQuery.toLowerCase()) ||

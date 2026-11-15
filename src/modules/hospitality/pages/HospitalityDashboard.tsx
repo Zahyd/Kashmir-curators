@@ -78,7 +78,7 @@ export const HospitalityDashboard: React.FC = () => {
 
   // Property list & Selected Property
   const [hotelsList, setHotelsList] = useState<HotelItem[]>([]);
-  const [selectedHotelId, setSelectedHotelId] = useState<string>('');
+  const [selectedHotelId, setSelectedHotelId] = useState<string>('ALL');
 
   // Fetch properties list from backend
   const fetchHotels = async () => {
@@ -88,9 +88,6 @@ export const HospitalityDashboard: React.FC = () => {
         const data = await res.json();
         const list = Array.isArray(data) ? data : [];
         setHotelsList(list);
-        if (list.length > 0 && !selectedHotelId) {
-          setSelectedHotelId(list[0].id);
-        }
       }
     } catch (err) {
       console.error('Failed to load hotels list:', err);
@@ -144,8 +141,8 @@ export const HospitalityDashboard: React.FC = () => {
           <HospitalitySidebar
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            propertyName={currentHotel?.name || 'Kashmir Hotel Directory'}
-            propertyType={currentHotel?.location || 'Jammu & Kashmir'}
+            propertyName={selectedHotelId === 'ALL' ? 'All Kashmir Portfolio' : (currentHotel?.name || 'Kashmir Hotel Directory')}
+            propertyType={selectedHotelId === 'ALL' ? 'Kashmir DMC Network' : (currentHotel?.location || 'Jammu & Kashmir')}
             isVerified={true}
           />
 
@@ -176,10 +173,13 @@ export const HospitalityDashboard: React.FC = () => {
                   <div className="flex items-center gap-1.5 bg-card border border-border/80 rounded-2xl px-2 py-1 shadow-sm">
                     <Building2 className="w-4 h-4 text-amber-500 shrink-0" />
                     <Select value={selectedHotelId} onValueChange={(val) => setSelectedHotelId(val)}>
-                      <SelectTrigger className="h-8 border-0 bg-transparent text-xs font-bold w-48 sm:w-60 focus:ring-0">
+                      <SelectTrigger className="h-8 border-0 bg-transparent text-xs font-bold w-48 sm:w-64 focus:ring-0">
                         <SelectValue placeholder="Select Property..." />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="ALL" className="text-xs font-bold text-amber-500">
+                          🌟 All Kashmir Properties (Full Portfolio)
+                        </SelectItem>
                         {hotelsList.map((h) => (
                           <SelectItem key={h.id} value={h.id} className="text-xs font-semibold">
                             {h.name} ({h.location.split(',')[0]})

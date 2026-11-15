@@ -5,7 +5,9 @@
  */
 
 export const getHospitalityToken = (fallbackToken?: string | null): string => {
-  if (fallbackToken && fallbackToken.trim()) return fallbackToken.trim();
+  if (fallbackToken && fallbackToken.trim() && fallbackToken !== 'null' && fallbackToken !== 'undefined') {
+    return fallbackToken.trim();
+  }
 
   let portalKey = '';
   try {
@@ -13,34 +15,41 @@ export const getHospitalityToken = (fallbackToken?: string | null): string => {
     portalKey = session.accessKey || '';
   } catch {}
 
-  return (
-    localStorage.getItem('hospitality_token') ||
-    localStorage.getItem('teamToken') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('auth_token') ||
-    portalKey ||
-    ''
-  );
+  const candidates = [
+    localStorage.getItem('hospitality_token'),
+    localStorage.getItem('teamToken'),
+    localStorage.getItem('token'),
+    localStorage.getItem('auth_token'),
+    portalKey
+  ];
+
+  for (const cand of candidates) {
+    if (cand && cand.trim() && cand !== 'null' && cand !== 'undefined') {
+      return cand.trim();
+    }
+  }
+
+  return '';
 };
 
 export const getHospitalityHeaders = (fallbackToken?: string | null): Record<string, string> => {
-  const token = getHospitalityToken(fallbackToken);
   let portalKey = '';
   try {
     const session = JSON.parse(localStorage.getItem('hospitality_session') || '{}');
     portalKey = session.accessKey || '';
   } catch {}
 
+  const token = getHospitalityToken(fallbackToken);
   const headers: Record<string, string> = {};
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  if (portalKey) {
+  if (portalKey && portalKey !== 'null' && portalKey !== 'undefined') {
     headers['x-portal-key'] = portalKey;
-    if (!headers['Authorization']) {
-      headers['Authorization'] = `Bearer ${portalKey}`;
-    }
+  }
+
+  if (token && token !== 'null' && token !== 'undefined') {
+    headers['Authorization'] = `Bearer ${token}`;
+  } else if (portalKey && portalKey !== 'null' && portalKey !== 'undefined') {
+    headers['Authorization'] = `Bearer ${portalKey}`;
   }
 
   return headers;

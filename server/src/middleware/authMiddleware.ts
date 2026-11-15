@@ -12,29 +12,35 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
   const authHeader = (req.headers['authorization'] || '').trim();
   const portalKeyHeader = ((req.headers['x-portal-key'] as string) || '').trim();
   
-  let token = portalKeyHeader;
+  let bearerToken = '';
   if (authHeader) {
     if (authHeader.toLowerCase().startsWith('bearer ')) {
-      token = authHeader.slice(7).trim();
+      bearerToken = authHeader.slice(7).trim();
     } else {
-      token = authHeader;
+      bearerToken = authHeader;
     }
   }
 
-  if (!token && portalKeyHeader) {
-    token = portalKeyHeader;
+  if (bearerToken === 'null' || bearerToken === 'undefined') {
+    bearerToken = '';
   }
 
-  if (!token || token === 'null' || token === 'undefined') {
-    return res.status(401).json({ error: 'Access denied. No token provided.' });
+  const cleanPortalKey = (portalKeyHeader === 'null' || portalKeyHeader === 'undefined') ? '' : portalKeyHeader;
+
+  // Collect viable credential candidates (portal key, bearer token)
+  const candidates = [cleanPortalKey, bearerToken].filter(Boolean);
+
+  if (candidates.length === 0) {
+    return res.status(401).json({ error: 'Access denied. No authentication token or portal key provided.' });
   }
 
-  // Check if token is a direct Portal Access Key (e.g. KC-HOSP-ALPHA1)
-  if (token.toUpperCase().startsWith('KC-')) {
+  // 1. Direct Portal Access Key check (e.g. KC-HOSP-ALPHA1)
+  const portalCandidate = candidates.find(c => c.toUpperCase().startsWith('KC-'));
+  if (portalCandidate) {
     try {
       const p = prisma as any;
       const keyRecord = await p.portalAccessKey.findUnique({
-        where: { accessKey: token.trim().toUpperCase() }
+        where: { accessKey: portalCandidate.trim().toUpperCase() }
       });
       if (keyRecord && keyRecord.status === 'ACTIVE') {
         req.user = {
@@ -52,16 +58,23 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
   }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+  // 2. Dev environment bypass tokens
+  const devToken = candidates.find(c => c === 'dev_admin_token' || c === 'dev_token' || c.startsWith('dev_'));
+  if (devToken) {
+    req.user = { id: 'dev-admin-id', email: 'admin@thekashmircurators.com', role: 'admin', code: 'ADMIN001', name: 'SuperAdmin' };
     return next();
-  } catch (error) {
-    if (token === 'dev_admin_token' || token === 'dev_token' || token.startsWith('dev_')) {
-      req.user = { id: 'dev-admin-id', email: 'admin@thekashmircurators.com', role: 'admin', code: 'ADMIN001', name: 'SuperAdmin' };
-      return next();
-    }
-    console.error('JWT Verification Failed:', (error as any).message);
-    return res.status(403).json({ error: 'Invalid or expired session token.' });
   }
+
+  // 3. JWT Verification
+  for (const candidate of candidates) {
+    try {
+      const decoded = jwt.verify(candidate, JWT_SECRET);
+      req.user = decoded;
+      return next();
+    } catch {
+      // Continue to next candidate
+    }
+  }
+
+  return res.status(401).json({ error: 'Invalid or expired session token.' });
 };

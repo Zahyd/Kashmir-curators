@@ -105,17 +105,6 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  const getAuthToken = () => {
-    return (
-      token ||
-      localStorage.getItem('hospitality_token') ||
-      localStorage.getItem('teamToken') ||
-      localStorage.getItem('token') ||
-      localStorage.getItem('auth_token') ||
-      ''
-    );
-  };
-
   // "Send Booking to Hotel" Modal State
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
   const [selectedHotelId, setSelectedHotelId] = useState(initialHotelId || '');
@@ -163,6 +152,12 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
     loadMetadata();
   }, [initialHotelId]);
 
+  useEffect(() => {
+    if (initialHotelId && initialHotelId !== 'ALL') {
+      setSelectedHotelId(initialHotelId);
+    }
+  }, [initialHotelId]);
+
   // Update roomType & hotel reception contacts when hotel changes
   useEffect(() => {
     if (selectedHotelId) {
@@ -183,10 +178,9 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   const fetchVouchers = async () => {
     try {
       setIsLoading(true);
-      const authToken = getAuthToken();
-      const res = await fetch(`${API_BASE_URL}/hospitality`, {
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
+      const headers = getHospitalityHeaders(token);
+      const url = `${API_BASE_URL}/hospitality${initialHotelId && initialHotelId !== 'ALL' ? `?hotelId=${initialHotelId}` : ''}`;
+      const res = await fetch(url, { headers });
       if (res.ok) {
         const data = await res.json();
         setVouchers(Array.isArray(data) ? data : []);
@@ -201,7 +195,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
 
   useEffect(() => {
     fetchVouchers();
-  }, [token]);
+  }, [token, initialHotelId]);
 
   // Handle Dispatch Booking Submission
   const handleDispatchBooking = async (e: React.FormEvent) => {
@@ -274,12 +268,11 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   // 1-Click Status Transitions
   const handleConfirmVoucher = async (voucherId: string, guest: string) => {
     try {
-      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...getHospitalityHeaders(token)
         }
       });
 
@@ -298,12 +291,11 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
     if (!window.confirm(`Cancel booking voucher for ${guest}? The room allocation will be released.`)) return;
 
     try {
-      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...getHospitalityHeaders(token)
         },
         body: JSON.stringify({ status: 'Cancelled' })
       });
@@ -320,12 +312,11 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   // Accept alternative proposed by hotel
   const handleAcceptAlternative = async (voucherId: string, guest: string) => {
     try {
-      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/accept-alternative`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...getHospitalityHeaders(token)
         }
       });
 
@@ -343,12 +334,11 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   // Regenerate expiring link and extend deadline
   const handleRegenerateLink = async (voucherId: string) => {
     try {
-      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/regenerate-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...getHospitalityHeaders(token)
         },
         body: JSON.stringify({ extendHours: 48 })
       });
@@ -401,6 +391,10 @@ _Please click the portal link above to confirm room availability and assign your
 
   // Filtered Vouchers
   const filteredVouchers = vouchers.filter(v => {
+    if (initialHotelId && initialHotelId !== 'ALL' && v.hotelId !== initialHotelId) {
+      return false;
+    }
+
     const matchesSearch = v.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (v.bookingReference || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (v.hotel?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||

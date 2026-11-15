@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getHospitalityHeaders } from '../utils/hospitalityAuth';
 
 export interface HotelReservationItem {
   id: string;
@@ -88,17 +89,6 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
   const [idType, setIdType] = useState('Aadhaar Card');
   const [idNumber, setIdNumber] = useState('');
 
-  const getAuthToken = () => {
-    return (
-      token ||
-      localStorage.getItem('hospitality_token') ||
-      localStorage.getItem('teamToken') ||
-      localStorage.getItem('token') ||
-      localStorage.getItem('auth_token') ||
-      ''
-    );
-  };
-
   // Direct Booking Modal
   const [createBookingModalOpen, setCreateBookingModalOpen] = useState(false);
   const [newGuestName, setNewGuestName] = useState('');
@@ -117,19 +107,13 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const authToken = getAuthToken();
-      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
+      const headers = getHospitalityHeaders(token);
+      const hotelParam = (selectedHotelId && selectedHotelId !== 'ALL') ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [resRes, roomsRes, catRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hospitality${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }),
-        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }),
-        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        })
+        fetch(`${API_BASE_URL}/hospitality${hotelParam}`, { headers }),
+        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, { headers }),
+        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, { headers })
       ]);
 
       if (resRes.ok) {
@@ -174,7 +158,6 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
 
     try {
       setIsSubmittingBooking(true);
-      const authToken = getAuthToken();
       const nights = Math.max(1, Math.ceil((new Date(newCheckOut).getTime() - new Date(newCheckIn).getTime()) / (1000 * 60 * 60 * 24)));
       const count = Number(newRoomsCount) || 1;
       const rate = Number(newContractRate) || 0;
@@ -184,7 +167,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...getHospitalityHeaders(token)
         },
         body: JSON.stringify({
           hotelId: selectedHotelId,
@@ -230,7 +213,6 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
   // Handle Status Transitions (Confirm / Hold / Reject)
   const handleAction = async (id: string, action: 'Confirmed' | 'Hold' | 'Rejected') => {
     try {
-      const authToken = getAuthToken();
       const endpoint = action === 'Confirmed' 
         ? `${API_BASE_URL}/hospitality/${id}/confirm`
         : `${API_BASE_URL}/hospitality/${id}`;
@@ -239,7 +221,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
         method: action === 'Confirmed' ? 'POST' : 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...getHospitalityHeaders(token)
         },
         body: JSON.stringify({
           status: action,
@@ -277,12 +259,11 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
     if (!checkInRes) return;
 
     try {
-      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${checkInRes.id}/check-in`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...getHospitalityHeaders(token)
         },
         body: JSON.stringify({
           assignedRoomNumber: assignedRoom,
@@ -313,12 +294,11 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
     }
 
     try {
-      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${resItem.id}/check-out`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...getHospitalityHeaders(token)
         }
       });
 
