@@ -305,17 +305,7 @@ export const getHotelsDashboard = async (req: any, res: Response) => {
         dirty: dirtyRooms,
         inspected: inspectedRooms
       },
-      winterOps: latestWinterLog || {
-        bukhariStatus: 'OPERATIONAL',
-        firewoodStockDays: 14,
-        generatorStatus: 'STANDBY',
-        generatorFuelPct: 90,
-        generatorRuntimeHrs: 22.5,
-        gridPowerStatus: 'LIVE',
-        boilerHotWater: 'ACTIVE',
-        snowRoadClearance: 'CLEAR',
-        shikaraGhatStatus: 'OPEN'
-      },
+      winterOps: latestWinterLog || null,
       maintenanceRequests,
       alertsCount
     });
@@ -407,6 +397,56 @@ export const deleteRoomCategory = async (req: any, res: Response) => {
       });
     }
     res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- Seasonal Tariffs & Dynamic Rates ---
+export const getSeasonalRates = async (req: Request, res: Response) => {
+  const { hotelId, categoryId } = req.query;
+  try {
+    const where: any = {};
+    if (categoryId) {
+      where.categoryId = String(categoryId);
+    } else if (hotelId) {
+      where.category = { hotelId: String(hotelId) };
+    }
+    const rates = await prisma.seasonalRate.findMany({
+      where,
+      include: { category: true },
+      orderBy: { startDate: 'asc' }
+    });
+    res.json(rates);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateSeasonalRate = async (req: any, res: Response) => {
+  const { id } = req.params;
+  const { multiplier, flatRate, seasonName, startDate, endDate } = req.body;
+  try {
+    const rate = await prisma.seasonalRate.update({
+      where: { id },
+      data: {
+        multiplier: multiplier !== undefined ? Number(multiplier) : undefined,
+        flatRate: flatRate !== undefined ? Number(flatRate) : undefined,
+        seasonName: seasonName || undefined,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined
+      },
+      include: { category: true }
+    });
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'UPDATE',
+        message: `Seasonal tariff updated: ${rate.seasonName} (${rate.multiplier}x)`
+      });
+    }
+
+    res.json(rate);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -840,18 +880,7 @@ export const getWinterOpsStatus = async (req: Request, res: Response) => {
     });
 
     if (!log) {
-      return res.json({
-        bukhariStatus: 'OPERATIONAL',
-        firewoodStockDays: 14,
-        generatorStatus: 'STANDBY',
-        generatorFuelPct: 90,
-        generatorRuntimeHrs: 22.5,
-        gridPowerStatus: 'LIVE',
-        boilerHotWater: 'ACTIVE',
-        snowRoadClearance: 'CLEAR',
-        shikaraGhatStatus: 'OPEN',
-        notes: 'Kiln-dried pine firewood fully stocked in woodstore.'
-      });
+      return res.json(null);
     }
     res.json(log);
   } catch (error: any) {

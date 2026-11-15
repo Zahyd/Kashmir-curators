@@ -41,7 +41,11 @@ interface Room {
   status: string;
 }
 
-export const MaintenanceDesk: React.FC = () => {
+interface MaintenanceDeskProps {
+  selectedHotelId?: string;
+}
+
+export const MaintenanceDesk: React.FC<MaintenanceDeskProps> = ({ selectedHotelId }) => {
   const { token, user } = useAuth();
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -58,25 +62,27 @@ export const MaintenanceDesk: React.FC = () => {
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
+      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [ticketsRes, roomsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotels/operations/maintenance`, {
+        fetch(`${API_BASE_URL}/hotels/operations/maintenance${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
+        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         })
       ]);
 
       if (ticketsRes.ok) {
         const data = await ticketsRes.json();
-        setTickets(data);
+        setTickets(Array.isArray(data) ? data : []);
       }
       if (roomsRes.ok) {
         const roomsData = await roomsRes.json();
-        setRooms(roomsData);
-        if (roomsData.length > 0 && !roomNumber) {
-          setRoomNumber(roomsData[0].roomNumber);
+        const rList = Array.isArray(roomsData) ? roomsData : [];
+        setRooms(rList);
+        if (rList.length > 0 && !roomNumber) {
+          setRoomNumber(rList[0].roomNumber);
         }
       }
     } catch (err) {
@@ -88,7 +94,7 @@ export const MaintenanceDesk: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [token]);
+  }, [token, selectedHotelId]);
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +106,7 @@ export const MaintenanceDesk: React.FC = () => {
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
       const selectedRoom = rooms.find(r => r.roomNumber === roomNumber);
-      const hotelId = (selectedRoom as any)?.hotelId || undefined;
+      const hotelId = selectedHotelId || (selectedRoom as any)?.hotelId || undefined;
 
       const res = await fetch(`${API_BASE_URL}/hotels/operations/maintenance`, {
         method: 'POST',

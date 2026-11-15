@@ -53,10 +53,12 @@ interface LedgerData {
 }
 
 interface SettlementLedgerViewProps {
+  selectedHotelId?: string;
   onOpenPayoutModal?: () => void;
 }
 
 export const SettlementLedgerView: React.FC<SettlementLedgerViewProps> = ({
+  selectedHotelId,
   onOpenPayoutModal
 }) => {
   const { token } = useAuth();
@@ -67,7 +69,8 @@ export const SettlementLedgerView: React.FC<SettlementLedgerViewProps> = ({
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
-      const res = await fetch(`${API_BASE_URL}/hotels/operations/settlements/ledger`, {
+      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
+      const res = await fetch(`${API_BASE_URL}/hotels/operations/settlements/ledger${hotelParam}`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       if (res.ok) {
@@ -83,7 +86,7 @@ export const SettlementLedgerView: React.FC<SettlementLedgerViewProps> = ({
 
   useEffect(() => {
     fetchLedger();
-  }, [token]);
+  }, [token, selectedHotelId]);
 
   const handleDownloadCSV = () => {
     if (!data || data.reservations.length === 0) {

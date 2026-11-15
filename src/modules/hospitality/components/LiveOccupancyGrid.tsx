@@ -47,22 +47,15 @@ interface Room {
   guestName?: string;
 }
 
-const DEFAULT_ROOMS: Room[] = [
-  { id: 'r1', roomNumber: '101', floor: '1st Floor', status: 'OCCUPIED', operationalStatus: 'OCCUPIED', housekeeping: 'CLEAN', bukhariActive: true, category: { name: 'Royal Cedar Suite', basePrice: 16500 }, guestName: 'Dr. Rahul Sharma' },
-  { id: 'r2', roomNumber: '102', floor: '1st Floor', status: 'AVAILABLE', operationalStatus: 'AVAILABLE_CLEAN', housekeeping: 'CLEAN', bukhariActive: true, category: { name: 'Royal Cedar Suite', basePrice: 16500 } },
-  { id: 'r3', roomNumber: '103', floor: '1st Floor', status: 'RESERVED', operationalStatus: 'RESERVED', housekeeping: 'CLEAN', bukhariActive: false, category: { name: 'Deluxe Lake View', basePrice: 12500 }, guestName: 'Ananya Roy (Arriving Today)' },
-  { id: 'r4', roomNumber: '104', floor: '1st Floor', status: 'AVAILABLE', operationalStatus: 'AVAILABLE_DIRTY', housekeeping: 'DIRTY', bukhariActive: false, category: { name: 'Deluxe Lake View', basePrice: 12500 } },
-  { id: 'r5', roomNumber: '201', floor: '2nd Floor', status: 'OCCUPIED', operationalStatus: 'OCCUPIED', housekeeping: 'CLEAN', bukhariActive: true, category: { name: 'Alpine Heated Chalet', basePrice: 22000 }, guestName: 'Zubair Al-Mansoor' },
-  { id: 'r6', roomNumber: '202', floor: '2nd Floor', status: 'AVAILABLE', operationalStatus: 'AVAILABLE_CLEAN', housekeeping: 'CLEAN', bukhariActive: true, category: { name: 'Alpine Heated Chalet', basePrice: 22000 } },
-  { id: 'r7', roomNumber: '203', floor: '2nd Floor', status: 'MAINTENANCE', operationalStatus: 'UNDER_MAINTENANCE', housekeeping: 'DIRTY', bukhariActive: false, category: { name: 'Alpine Heated Chalet', basePrice: 22000 } },
-  { id: 'r8', roomNumber: '204', floor: '2nd Floor', status: 'AVAILABLE', operationalStatus: 'AVAILABLE_CLEAN', housekeeping: 'CLEAN', bukhariActive: false, category: { name: 'Deluxe Lake View', basePrice: 12500 } },
-];
+interface LiveOccupancyGridProps {
+  selectedHotelId?: string;
+}
 
-export const LiveOccupancyGrid: React.FC = () => {
+export const LiveOccupancyGrid: React.FC<LiveOccupancyGridProps> = ({ selectedHotelId }) => {
   const { token } = useAuth();
-  const [rooms, setRooms] = useState<Room[]>(DEFAULT_ROOMS);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [categories, setCategories] = useState<RoomCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -76,32 +69,34 @@ export const LiveOccupancyGrid: React.FC = () => {
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
+      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [roomsRes, catRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
+        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/hotels/operations/categories`, {
+        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         })
       ]);
 
       if (roomsRes.ok) {
         const roomsData = await roomsRes.json();
-        if (Array.isArray(roomsData) && roomsData.length > 0) {
-          setRooms(roomsData);
-        }
+        setRooms(Array.isArray(roomsData) ? roomsData : []);
+      } else {
+        setRooms([]);
       }
 
       if (catRes.ok) {
         const catData = await catRes.json();
-        setCategories(catData);
+        setCategories(Array.isArray(catData) ? catData : []);
         if (catData.length > 0 && !newRoomCategory) {
           setNewRoomCategory(catData[0].id);
         }
       }
     } catch (err) {
       console.error('Failed to fetch rooms:', err);
+      setRooms([]);
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +104,7 @@ export const LiveOccupancyGrid: React.FC = () => {
 
   useEffect(() => {
     fetchRoomsAndCategories();
-  }, [token]);
+  }, [token, selectedHotelId]);
 
   const toggleBukhari = async (room: Room) => {
     const nextVal = !room.bukhariActive;
@@ -166,7 +161,7 @@ export const LiveOccupancyGrid: React.FC = () => {
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
       const selectedCat = categories.find(c => c.id === newRoomCategory);
-      const hotelId = (selectedCat as any)?.hotelId || undefined;
+      const hotelId = selectedHotelId || (selectedCat as any)?.hotelId || undefined;
 
       const res = await fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
         method: 'POST',
@@ -308,8 +303,38 @@ export const LiveOccupancyGrid: React.FC = () => {
       </div>
 
       {/* Room Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {filteredRooms.map((room) => {
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <Card key={i} className="rounded-3xl border border-border/60 p-5 animate-pulse bg-card">
+              <div className="h-6 w-20 bg-muted rounded-lg mb-3" />
+              <div className="h-4 w-32 bg-muted rounded mb-2" />
+              <div className="h-3 w-24 bg-muted rounded mb-4" />
+              <div className="h-8 bg-muted rounded-xl" />
+            </Card>
+          ))}
+        </div>
+      ) : filteredRooms.length === 0 ? (
+        <Card className="rounded-3xl border border-dashed border-border/80 p-10 text-center bg-card/50">
+          <BedDouble className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <h4 className="font-bold text-base text-foreground">No Physical Rooms Found</h4>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
+            {rooms.length === 0 
+              ? 'No rooms or suites have been registered for this property yet. Register your physical room numbers to enable live occupancy tracking.'
+              : 'No rooms match the selected filter criteria. Try choosing another status.'}
+          </p>
+          <Button
+            size="sm"
+            onClick={() => setCreateModalOpen(true)}
+            className="rounded-xl text-xs font-bold gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Register First Suite</span>
+          </Button>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {filteredRooms.map((room) => {
           const isAvail = room.status === 'AVAILABLE';
           const isOcc = room.status === 'OCCUPIED';
           const isRes = room.status === 'RESERVED';
@@ -398,7 +423,8 @@ export const LiveOccupancyGrid: React.FC = () => {
             </Card>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Add Suite Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>

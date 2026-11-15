@@ -27,7 +27,9 @@ import {
   deleteHousekeepingTask,
   getWinterOpsStatus,
   updateWinterOpsStatus,
-  getSettlementLedger
+  getSettlementLedger,
+  getSeasonalRates,
+  updateSeasonalRate
 } from '../controllers/hotelController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -41,6 +43,10 @@ router.get('/operations/categories', authenticateToken, getRoomCategories);
 router.post('/operations/categories', authenticateToken, createRoomCategory);
 router.patch('/operations/categories/:id', authenticateToken, updateRoomCategory);
 router.delete('/operations/categories/:id', authenticateToken, deleteRoomCategory);
+
+// Seasonal Tariffs & Dynamic Rates
+router.get('/operations/tariffs', authenticateToken, getSeasonalRates);
+router.patch('/operations/tariffs/:id', authenticateToken, updateSeasonalRate);
 
 // Physical Hotel Rooms & Housekeeping
 router.get('/operations/rooms', authenticateToken, getHotelRooms);

@@ -43,11 +43,13 @@ interface Reservation {
 }
 
 interface ReservationCalendarProps {
+  selectedHotelId?: string;
   onSelectReservation?: (reservationId: string) => void;
   onRefreshNeeded?: () => void;
 }
 
 export const ReservationCalendar: React.FC<ReservationCalendarProps> = ({
+  selectedHotelId,
   onSelectReservation,
   onRefreshNeeded
 }) => {
@@ -66,24 +68,25 @@ export const ReservationCalendar: React.FC<ReservationCalendarProps> = ({
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
+      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
       
       const [roomsRes, resRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
+        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/hotel-reservations`, {
+        fetch(`${API_BASE_URL}/hotel-reservations${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         })
       ]);
 
       if (roomsRes.ok) {
         const roomsData = await roomsRes.json();
-        setRooms(roomsData);
+        setRooms(Array.isArray(roomsData) ? roomsData : []);
       }
 
       if (resRes.ok) {
         const resData = await resRes.json();
-        setReservations(resData);
+        setReservations(Array.isArray(resData) ? resData : []);
       }
     } catch (err) {
       console.error('Failed to load calendar data:', err);
@@ -95,7 +98,7 @@ export const ReservationCalendar: React.FC<ReservationCalendarProps> = ({
 
   useEffect(() => {
     fetchData();
-  }, [token]);
+  }, [token, selectedHotelId]);
 
   // Generate date array
   const dateRange = Array.from({ length: daysCount }, (_, i) => {

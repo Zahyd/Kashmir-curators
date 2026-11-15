@@ -42,40 +42,50 @@ interface WinterLog {
   updatedAt?: string;
 }
 
-export const WinterOpsCockpit: React.FC = () => {
+interface WinterOpsCockpitProps {
+  selectedHotelId?: string;
+}
+
+export const WinterOpsCockpit: React.FC<WinterOpsCockpitProps> = ({ selectedHotelId }) => {
   const { token, user } = useAuth();
-  const [winterData, setWinterData] = useState<WinterLog>({
+  const [winterData, setWinterData] = useState<WinterLog | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Form state for update
+  const [formData, setFormData] = useState<WinterLog>({
     bukhariStatus: 'OPERATIONAL',
     firewoodStockDays: 14,
     generatorStatus: 'STANDBY',
     generatorFuelPct: 90,
-    generatorRuntimeHrs: 22.5,
+    generatorRuntimeHrs: 0,
     gridPowerStatus: 'LIVE',
     boilerHotWater: 'ACTIVE',
     snowRoadClearance: 'CLEAR',
     shikaraGhatStatus: 'OPEN',
-    notes: 'Kiln-dried pine firewood fully stocked in estate woodstore.'
+    notes: 'Operational telemetry logged for current winter shift.'
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-
-  // Form state for update
-  const [formData, setFormData] = useState<WinterLog>(winterData);
 
   const fetchWinterStatus = async () => {
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
-      const res = await fetch(`${API_BASE_URL}/hotels/operations/winter-ops`, {
+      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
+      const res = await fetch(`${API_BASE_URL}/hotels/operations/winter-ops${hotelParam}`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       if (res.ok) {
         const data = await res.json();
         setWinterData(data);
-        setFormData(data);
+        if (data) {
+          setFormData(data);
+        }
+      } else {
+        setWinterData(null);
       }
     } catch (err) {
       console.error('Failed to load winter ops status:', err);
+      setWinterData(null);
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +93,7 @@ export const WinterOpsCockpit: React.FC = () => {
 
   useEffect(() => {
     fetchWinterStatus();
-  }, [token]);
+  }, [token, selectedHotelId]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,8 +105,20 @@ export const WinterOpsCockpit: React.FC = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          hotelId: selectedHotelId
+        })
       });
+
+      if (!res.ok) throw new Error('Failed to update winter operations');
+
+      toast.success('Winter Operations Telemetry updated and published!', {
+        description: 'Sub-zero readiness status broadcast to DMC network.',
+        icon: '❄️'
+      });
+      setModalOpen(false);
+      fetchWinterStatus();
 
       if (!res.ok) throw new Error('Failed to update winter operations');
 
@@ -142,7 +164,7 @@ export const WinterOpsCockpit: React.FC = () => {
           <Button
             size="sm"
             onClick={() => {
-              setFormData(winterData);
+              if (winterData) setFormData(winterData);
               setModalOpen(true);
             }}
             className="rounded-xl text-xs font-bold gap-1.5 h-10 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20"
@@ -154,91 +176,115 @@ export const WinterOpsCockpit: React.FC = () => {
       </div>
 
       {/* 4 Core Winter Telemetry Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Bukhari & Wood Stock */}
-        <Card className="rounded-3xl border border-amber-500/30 bg-card p-5 space-y-3 shadow-md">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <Flame className="w-5 h-5" />
-            </div>
-            <Badge className="bg-amber-500 text-slate-950 text-[10px] font-black uppercase">
-              {winterData.bukhariStatus}
-            </Badge>
-          </div>
-          <div>
-            <h4 className="font-bold text-sm text-foreground">Central Wood Bukhari</h4>
-            <p className="text-2xl font-black font-mono text-foreground mt-1">
-              {winterData.firewoodStockDays} Days
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Kiln-dried pine firewood in dry store
-            </p>
-          </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="rounded-3xl border border-border/60 bg-card p-5 h-40 animate-pulse" />
+          ))}
+        </div>
+      ) : !winterData ? (
+        <Card className="rounded-3xl border border-dashed border-border/80 p-8 text-center bg-card/60">
+          <Snowflake className="w-10 h-10 text-amber-500/50 mx-auto mb-2" />
+          <h4 className="font-bold text-sm text-foreground">No Winter Telemetry Logged Yet</h4>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
+            Initialize sub-zero readiness logs (Bukhari heating, firewood days, and generator fuel) for this property.
+          </p>
+          <Button
+            size="sm"
+            onClick={() => setModalOpen(true)}
+            className="rounded-xl text-xs font-bold gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950"
+          >
+            <Edit className="w-3.5 h-3.5" />
+            <span>Log Winter Readiness</span>
+          </Button>
         </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Bukhari & Wood Stock */}
+          <Card className="rounded-3xl border border-amber-500/30 bg-card p-5 space-y-3 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <Flame className="w-5 h-5" />
+              </div>
+              <Badge className="bg-amber-500 text-slate-950 text-[10px] font-black uppercase">
+                {winterData.bukhariStatus}
+              </Badge>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-foreground">Central Wood Bukhari</h4>
+              <p className="text-2xl font-black font-mono text-foreground mt-1">
+                {winterData.firewoodStockDays} Days
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Kiln-dried pine firewood in dry store
+              </p>
+            </div>
+          </Card>
 
-        {/* Card 2: Generator & Fuel */}
-        <Card className="rounded-3xl border border-border bg-card p-5 space-y-3 shadow-md">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <Fuel className="w-5 h-5" />
+          {/* Card 2: Generator & Fuel */}
+          <Card className="rounded-3xl border border-border bg-card p-5 space-y-3 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <Fuel className="w-5 h-5" />
+              </div>
+              <Badge className="bg-blue-600 text-white text-[10px] font-black uppercase">
+                {winterData.generatorStatus}
+              </Badge>
             </div>
-            <Badge className="bg-blue-600 text-white text-[10px] font-black uppercase">
-              {winterData.generatorStatus}
-            </Badge>
-          </div>
-          <div>
-            <h4 className="font-bold text-sm text-foreground">Silent Generator Backup</h4>
-            <p className="text-2xl font-black font-mono text-foreground mt-1">
-              {winterData.generatorFuelPct}% Fuel
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              {winterData.generatorRuntimeHrs} hrs runtime recorded
-            </p>
-          </div>
-        </Card>
+            <div>
+              <h4 className="font-bold text-sm text-foreground">Silent Generator Backup</h4>
+              <p className="text-2xl font-black font-mono text-foreground mt-1">
+                {winterData.generatorFuelPct}% Fuel
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {winterData.generatorRuntimeHrs} hrs runtime recorded
+              </p>
+            </div>
+          </Card>
 
-        {/* Card 3: 24/7 Hot Water Boiler */}
-        <Card className="rounded-3xl border border-border bg-card p-5 space-y-3 shadow-md">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Droplets className="w-5 h-5" />
+          {/* Card 3: 24/7 Hot Water Boiler */}
+          <Card className="rounded-3xl border border-border bg-card p-5 space-y-3 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Droplets className="w-5 h-5" />
+              </div>
+              <Badge className="bg-emerald-600 text-white text-[10px] font-black uppercase">
+                {winterData.boilerHotWater}
+              </Badge>
             </div>
-            <Badge className="bg-emerald-600 text-white text-[10px] font-black uppercase">
-              {winterData.boilerHotWater}
-            </Badge>
-          </div>
-          <div>
-            <h4 className="font-bold text-sm text-foreground">Hot Water Boilers</h4>
-            <p className="text-2xl font-black font-mono text-foreground mt-1">
-              24/7 Active
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Central wood boiler + geyser hybrid
-            </p>
-          </div>
-        </Card>
+            <div>
+              <h4 className="font-bold text-sm text-foreground">Hot Water Boilers</h4>
+              <p className="text-2xl font-black font-mono text-foreground mt-1">
+                24/7 Active
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Central wood boiler + geyser hybrid
+              </p>
+            </div>
+          </Card>
 
-        {/* Card 4: Access Corridor */}
-        <Card className="rounded-3xl border border-border bg-card p-5 space-y-3 shadow-md">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <Car className="w-5 h-5" />
+          {/* Card 4: Access Corridor */}
+          <Card className="rounded-3xl border border-border bg-card p-5 space-y-3 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                <Car className="w-5 h-5" />
+              </div>
+              <Badge className="bg-purple-600 text-white text-[10px] font-black uppercase">
+                {winterData.snowRoadClearance}
+              </Badge>
             </div>
-            <Badge className="bg-purple-600 text-white text-[10px] font-black uppercase">
-              {winterData.snowRoadClearance}
-            </Badge>
-          </div>
-          <div>
-            <h4 className="font-bold text-sm text-foreground">Corridor & Ghat Clearance</h4>
-            <p className="text-2xl font-black font-mono text-foreground mt-1 truncate">
-              {winterData.shikaraGhatStatus || 'OPEN'}
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Snow chains ready on property shuttles
-            </p>
-          </div>
-        </Card>
-      </div>
+            <div>
+              <h4 className="font-bold text-sm text-foreground">Corridor & Ghat Clearance</h4>
+              <p className="text-2xl font-black font-mono text-foreground mt-1 truncate">
+                {winterData.shikaraGhatStatus || 'OPEN'}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Snow chains ready on property shuttles
+              </p>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Winter Readiness Checklist & Compliance */}
       <div className="grid md:grid-cols-2 gap-6">

@@ -64,69 +64,16 @@ interface Room {
   housekeeping: string;
 }
 
-const SAMPLE_RESERVATIONS: HotelReservationItem[] = [
-  {
-    id: 'res-101',
-    bookingReference: 'KCH-8921',
-    guestName: 'Vikram & Pooja Malhotra',
-    guestPhone: '+91 98200 11223',
-    roomType: 'Royal Cedar Houseboat Suite (Heated)',
-    roomsCount: 1,
-    checkIn: '2026-11-20T00:00:00.000Z',
-    checkOut: '2026-11-23T00:00:00.000Z',
-    mealPlan: 'MAP',
-    status: 'Pending',
-    contractRate: 6500,
-    totalAmount: 24500,
-    hotelDues: 19500,
-    paymentStatus: 'Paid',
-    specialRequests: 'Honeymoon candle-light dinner on houseboat deck & Shikara pickup from Ghat 7',
-    agentName: 'Chinar Luxury DMC'
-  },
-  {
-    id: 'res-102',
-    bookingReference: 'KCH-9402',
-    guestName: 'Faisal Al-Otaibi & Family',
-    guestPhone: '+966 50 123 4567',
-    roomType: 'Alpine Presidential Chalet',
-    roomsCount: 2,
-    checkIn: '2026-12-05T00:00:00.000Z',
-    checkOut: '2026-12-10T00:00:00.000Z',
-    mealPlan: 'CP',
-    status: 'Confirmed',
-    contractRate: 9250,
-    totalAmount: 115000,
-    hotelDues: 92500,
-    paymentStatus: 'Paid',
-    assignedRoomNumber: '201',
-    specialRequests: 'Halal dining, baby crib, central heating 24/7',
-    agentName: 'Direct Luxury Partner'
-  },
-  {
-    id: 'res-103',
-    bookingReference: 'KCH-7104',
-    guestName: 'Rohan Deshmukh',
-    guestPhone: '+91 98765 43210',
-    roomType: 'Deluxe Lake View Suite',
-    roomsCount: 1,
-    checkIn: '2026-11-28T00:00:00.000Z',
-    checkOut: '2026-11-30T00:00:00.000Z',
-    mealPlan: 'EP',
-    status: 'Hold',
-    contractRate: 6500,
-    totalAmount: 16000,
-    hotelDues: 13000,
-    paymentStatus: 'Unpaid',
-    specialRequests: 'Late night arrival from Srinagar airport',
-    agentName: 'Himalayan Escapes'
-  }
-];
+interface ReservationApprovalDeskProps {
+  selectedHotelId?: string;
+}
 
-export const ReservationApprovalDesk: React.FC = () => {
+export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = ({ selectedHotelId }) => {
   const { token, user } = useAuth();
-  const [reservations, setReservations] = useState<HotelReservationItem[]>(SAMPLE_RESERVATIONS);
+  const [reservations, setReservations] = useState<HotelReservationItem[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string; basePrice: number }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -141,33 +88,63 @@ export const ReservationApprovalDesk: React.FC = () => {
   const [idType, setIdType] = useState('Aadhaar Card');
   const [idNumber, setIdNumber] = useState('');
 
+  // Direct Booking Modal
+  const [createBookingModalOpen, setCreateBookingModalOpen] = useState(false);
+  const [newGuestName, setNewGuestName] = useState('');
+  const [newGuestPhone, setNewGuestPhone] = useState('');
+  const [newGuestEmail, setNewGuestEmail] = useState('');
+  const [newRoomType, setNewRoomType] = useState('');
+  const [newRoomsCount, setNewRoomsCount] = useState('1');
+  const [newCheckIn, setNewCheckIn] = useState('');
+  const [newCheckOut, setNewCheckOut] = useState('');
+  const [newMealPlan, setNewMealPlan] = useState<'EP' | 'CP' | 'MAP' | 'AP'>('CP');
+  const [newContractRate, setNewContractRate] = useState('14500');
+  const [newSpecialRequests, setNewSpecialRequests] = useState('');
+  const [newAgentName, setNewAgentName] = useState('Direct Walk-In / Front Desk');
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+
   const fetchData = async () => {
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
+      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
-      const [resRes, roomsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotel-reservations`, {
+      const [resRes, roomsRes, catRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/hotel-reservations${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
+        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }),
+        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         })
       ]);
 
       if (resRes.ok) {
         const data = await resRes.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setReservations(data);
-        }
+        setReservations(Array.isArray(data) ? data : []);
+      } else {
+        setReservations([]);
       }
 
       if (roomsRes.ok) {
         const roomsData = await roomsRes.json();
-        setRooms(roomsData);
+        setRooms(Array.isArray(roomsData) ? roomsData : []);
+      }
+
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        const cats = Array.isArray(catData) ? catData : [];
+        setCategories(cats);
+        if (cats.length > 0 && !newRoomType) {
+          setNewRoomType(cats[0].name);
+          setNewContractRate(String(cats[0].basePrice || 14500));
+        }
       }
     } catch (err) {
       console.error('Failed to load reservations:', err);
+      setReservations([]);
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +152,69 @@ export const ReservationApprovalDesk: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [token]);
+  }, [token, selectedHotelId]);
+
+  const handleCreateDirectBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGuestName.trim() || !newCheckIn || !newCheckOut) {
+      toast.error('Please enter guest name, check-in, and check-out dates');
+      return;
+    }
+
+    try {
+      setIsSubmittingBooking(true);
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      const nights = Math.max(1, Math.ceil((new Date(newCheckOut).getTime() - new Date(newCheckIn).getTime()) / (1000 * 60 * 60 * 24)));
+      const count = Number(newRoomsCount) || 1;
+      const rate = Number(newContractRate) || 0;
+      const total = rate * count * nights;
+
+      const res = await fetch(`${API_BASE_URL}/hotel-reservations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          hotelId: selectedHotelId,
+          guestName: newGuestName.trim(),
+          guestPhone: newGuestPhone.trim(),
+          guestEmail: newGuestEmail.trim(),
+          roomType: newRoomType || 'Deluxe Suite',
+          roomsCount: count,
+          checkIn: new Date(newCheckIn).toISOString(),
+          checkOut: new Date(newCheckOut).toISOString(),
+          mealPlan: newMealPlan,
+          contractRate: rate,
+          totalAmount: total,
+          status: 'Confirmed',
+          paymentStatus: 'Paid',
+          specialRequests: newSpecialRequests,
+          agentName: newAgentName
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to create reservation');
+      }
+
+      toast.success(`Direct reservation for ${newGuestName} confirmed!`, {
+        description: `Total ${nights} nights booking created in Neon DB.`,
+        icon: '🏨'
+      });
+      setCreateBookingModalOpen(false);
+      setNewGuestName('');
+      setNewGuestPhone('');
+      setNewGuestEmail('');
+      setNewSpecialRequests('');
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Error creating reservation');
+    } finally {
+      setIsSubmittingBooking(false);
+    }
+  };
 
   // Handle Status Transitions (Confirm / Hold / Reject)
   const handleAction = async (id: string, action: 'Confirmed' | 'Hold' | 'Rejected') => {
@@ -348,6 +387,15 @@ export const ReservationApprovalDesk: React.FC = () => {
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Sync</span>
           </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setCreateBookingModalOpen(true)}
+            className="rounded-xl text-xs font-bold gap-1.5 h-10 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 shrink-0"
+          >
+            <CalendarCheck2 className="w-4 h-4" />
+            <span>+ Direct Booking</span>
+          </Button>
         </div>
       </div>
 
@@ -377,13 +425,40 @@ export const ReservationApprovalDesk: React.FC = () => {
 
       {/* Reservation Cards List */}
       <div className="space-y-4">
-        {filtered.length === 0 ? (
-          <Card className="rounded-3xl border border-dashed border-border p-12 text-center bg-muted/20">
-            <CalendarCheck2 className="w-10 h-10 mx-auto text-muted-foreground/60 mb-2" />
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="rounded-3xl border border-border/60 p-6 animate-pulse bg-card">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="h-6 w-48 bg-muted rounded-lg" />
+                  <div className="h-6 w-20 bg-muted rounded-full" />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="h-10 bg-muted rounded-xl" />
+                  <div className="h-10 bg-muted rounded-xl" />
+                  <div className="h-10 bg-muted rounded-xl" />
+                  <div className="h-10 bg-muted rounded-xl" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <Card className="rounded-3xl border border-dashed border-border p-12 text-center bg-card/60">
+            <CalendarCheck2 className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
             <h4 className="font-bold text-base text-foreground">No Reservations Found</h4>
-            <p className="text-xs text-muted-foreground mt-1">
-              No bookings matching the current search criteria or status filter.
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
+              {reservations.length === 0 
+                ? 'No guest reservations have been created or received for this property yet. Create a direct front-desk booking or wait for B2B partner agency vouchers.'
+                : 'No bookings match your current search or status filter.'}
             </p>
+            <Button
+              size="sm"
+              onClick={() => setCreateBookingModalOpen(true)}
+              className="rounded-xl text-xs font-bold gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950"
+            >
+              <CalendarCheck2 className="w-4 h-4" />
+              <span>Create Direct Booking</span>
+            </Button>
           </Card>
         ) : (
           filtered.map((r) => {
@@ -758,6 +833,204 @@ export const ReservationApprovalDesk: React.FC = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Direct Reservation / Walk-In Modal */}
+      <Dialog open={createBookingModalOpen} onOpenChange={setCreateBookingModalOpen}>
+        <DialogContent className="rounded-3xl max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <CalendarCheck2 className="w-5 h-5 text-amber-500" />
+              <span>Create Direct Booking / Walk-In</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateDirectBooking} className="space-y-4 py-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Primary Guest Name *
+                </label>
+                <Input
+                  placeholder="e.g. Tariq Ahmad & Family"
+                  value={newGuestName}
+                  onChange={(e) => setNewGuestName(e.target.value)}
+                  className="rounded-xl h-10 text-xs font-medium"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Phone / WhatsApp
+                </label>
+                <Input
+                  placeholder="+91 98765 43210"
+                  value={newGuestPhone}
+                  onChange={(e) => setNewGuestPhone(e.target.value)}
+                  className="rounded-xl h-10 text-xs font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Email Address
+                </label>
+                <Input
+                  type="email"
+                  placeholder="guest@example.com"
+                  value={newGuestEmail}
+                  onChange={(e) => setNewGuestEmail(e.target.value)}
+                  className="rounded-xl h-10 text-xs font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Agent / Channel Source
+                </label>
+                <Input
+                  value={newAgentName}
+                  onChange={(e) => setNewAgentName(e.target.value)}
+                  className="rounded-xl h-10 text-xs font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Check-In Date *
+                </label>
+                <Input
+                  type="date"
+                  value={newCheckIn}
+                  onChange={(e) => setNewCheckIn(e.target.value)}
+                  className="rounded-xl h-10 text-xs font-medium"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Check-Out Date *
+                </label>
+                <Input
+                  type="date"
+                  value={newCheckOut}
+                  onChange={(e) => setNewCheckOut(e.target.value)}
+                  className="rounded-xl h-10 text-xs font-medium"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Room Category
+                </label>
+                {categories.length > 0 ? (
+                  <Select value={newRoomType} onValueChange={(val) => {
+                    setNewRoomType(val);
+                    const cat = categories.find(c => c.name === val);
+                    if (cat) setNewContractRate(String(cat.basePrice));
+                  }}>
+                    <SelectTrigger className="rounded-xl h-10 text-xs">
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(c => (
+                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={newRoomType}
+                    onChange={(e) => setNewRoomType(e.target.value)}
+                    placeholder="e.g. Deluxe Palace Suite"
+                    className="rounded-xl h-10 text-xs"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Rooms Count
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newRoomsCount}
+                  onChange={(e) => setNewRoomsCount(e.target.value)}
+                  className="rounded-xl h-10 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Meal Plan
+                </label>
+                <Select value={newMealPlan} onValueChange={(val: any) => setNewMealPlan(val)}>
+                  <SelectTrigger className="rounded-xl h-10 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EP">EP (Room Only)</SelectItem>
+                    <SelectItem value="CP">CP (Breakfast)</SelectItem>
+                    <SelectItem value="MAP">MAP (Bfast+Dinner)</SelectItem>
+                    <SelectItem value="AP">AP (All Meals)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                Rate Per Night (₹)
+              </label>
+              <Input
+                type="number"
+                value={newContractRate}
+                onChange={(e) => setNewContractRate(e.target.value)}
+                className="rounded-xl h-10 text-xs font-mono font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                Special Requests / Winter Preferences
+              </label>
+              <Input
+                placeholder="e.g. Electric blanket, Bukhari heating pre-lit, late Shikara arrival..."
+                value={newSpecialRequests}
+                onChange={(e) => setNewSpecialRequests(e.target.value)}
+                className="rounded-xl h-10 text-xs"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateBookingModalOpen(false)}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmittingBooking}
+                className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md"
+              >
+                {isSubmittingBooking ? 'Saving...' : 'Confirm & Save Booking'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

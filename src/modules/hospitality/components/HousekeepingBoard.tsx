@@ -45,7 +45,11 @@ interface Room {
   housekeeping: string;
 }
 
-export const HousekeepingBoard: React.FC = () => {
+interface HousekeepingBoardProps {
+  selectedHotelId?: string;
+}
+
+export const HousekeepingBoard: React.FC<HousekeepingBoardProps> = ({ selectedHotelId }) => {
   const { token, user } = useAuth();
   const [tasks, setTasks] = useState<HousekeepingTask[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -63,25 +67,27 @@ export const HousekeepingBoard: React.FC = () => {
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
+      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [tasksRes, roomsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotels/operations/housekeeping`, {
+        fetch(`${API_BASE_URL}/hotels/operations/housekeeping${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
+        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         })
       ]);
 
       if (tasksRes.ok) {
         const data = await tasksRes.json();
-        setTasks(data);
+        setTasks(Array.isArray(data) ? data : []);
       }
       if (roomsRes.ok) {
         const roomsData = await roomsRes.json();
-        setRooms(roomsData);
-        if (roomsData.length > 0 && !newTaskRoom) {
-          setNewTaskRoom(roomsData[0].roomNumber);
+        const rList = Array.isArray(roomsData) ? roomsData : [];
+        setRooms(rList);
+        if (rList.length > 0 && !newTaskRoom) {
+          setNewTaskRoom(rList[0].roomNumber);
         }
       }
     } catch (err) {
@@ -93,7 +99,7 @@ export const HousekeepingBoard: React.FC = () => {
 
   useEffect(() => {
     fetchTasksAndRooms();
-  }, [token]);
+  }, [token, selectedHotelId]);
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +111,7 @@ export const HousekeepingBoard: React.FC = () => {
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
       const selectedRoom = rooms.find(r => r.roomNumber === newTaskRoom);
-      const hotelId = (selectedRoom as any)?.hotelId || undefined;
+      const hotelId = selectedHotelId || (selectedRoom as any)?.hotelId || undefined;
 
       const res = await fetch(`${API_BASE_URL}/hotels/operations/housekeeping`, {
         method: 'POST',
