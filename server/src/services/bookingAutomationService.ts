@@ -126,6 +126,54 @@ export const bookingAutomationService = {
         include: { hotel: true }
       });
 
+      // Auto-Allocate Cab if not already allocated
+      const existingCabReservation = await p.cabReservation.findFirst({
+        where: { inquiryId: inquiry.id }
+      });
+
+      if (!existingCabReservation) {
+        const defaultCab = await p.cab.findFirst({
+          where: { isActive: true },
+          orderBy: { capacity: 'desc' }
+        });
+
+        if (defaultCab) {
+          const startDate = inquiry.travelStartDate ? new Date(inquiry.travelStartDate) : new Date();
+          const endDate = inquiry.travelEndDate ? new Date(inquiry.travelEndDate) : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+          const voucherRef = `KC-CAB-${Math.floor(100000 + Math.random() * 900000)}`;
+
+          await p.cabReservation.create({
+            data: {
+              inquiryId: inquiry.id,
+              cabId: defaultCab.id,
+              driverName: 'Assigned by Operations',
+              driverPhone: '+91 94190 00000',
+              vehicleRegNo: 'JK-01-TEMP',
+              pickupLocation: inquiry.arrivalCity || 'Srinagar Airport (SXR)',
+              dropLocation: inquiry.destination || 'Kashmir Circuit',
+              startDate,
+              endDate,
+              status: 'ALLOCATED',
+              contractRate: defaultCab.basePrice,
+              totalCost: defaultCab.basePrice * 1.15,
+              voucherReference: voucherRef
+            }
+          });
+
+          await p.leadActivity.create({
+            data: {
+              inquiryId: inquiry.id,
+              type: 'CAB_ALLOCATED',
+              title: `Cab Allocated: ${defaultCab.name}`,
+              description: `4x4 vehicle allocated for ${inquiry.destination}. Voucher Ref: ${voucherRef}`,
+              performedBy: 'OPERATIONS_ENGINE'
+            }
+          });
+
+          console.log(`[BookingAutomation] Auto-allocated cab ${defaultCab.name} for inquiry ${inquiry.id}`);
+        }
+      }
+
       if (reservations.length === 0) {
         console.log(`[BookingAutomation] No hotel reservations found for Inquiry ${inquiry.id} to dispatch`);
         return;

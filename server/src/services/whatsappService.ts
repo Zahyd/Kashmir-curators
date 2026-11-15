@@ -356,19 +356,66 @@ export const whatsappService = {
         throw new Error('Inbound parser node yielded no sender identifier.');
       }
 
+      // Check for matching inquiry in database
+      const cleanPhone = sender.replace(/[^0-9]/g, '');
+      const last10 = cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone;
+      const matchedInquiry = await prisma.inquiry.findFirst({
+        where: { phone: { contains: last10 } },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Persist Inbound Message to Database
+      try {
+        await prisma.whatsAppMessage.create({
+          data: {
+            customerPhone: sender,
+            direction: 'INBOUND',
+            content: text,
+            inquiryId: matchedInquiry?.id || null,
+            senderId: 'CUSTOMER',
+            senderName: matchedInquiry?.customerName || sender,
+            status: 'DELIVERED'
+          }
+        });
+
+        if (matchedInquiry) {
+          await prisma.leadActivity.create({
+            data: {
+              inquiryId: matchedInquiry.id,
+              type: 'WHATSAPP_RECEIVED',
+              title: `WhatsApp received from ${matchedInquiry.customerName}`,
+              description: text.slice(0, 150),
+              performedBy: 'CUSTOMER'
+            }
+          });
+        }
+
+        if (io) {
+          io.emit('whatsapp-message-received', {
+            phone: sender,
+            text,
+            inquiryId: matchedInquiry?.id,
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (dbErr: any) {
+        console.warn('Failed to persist inbound WhatsApp message to DB:', dbErr.message);
+      }
+
       // 2. Route Conversational Chatbot State Machine
       const { replyText, isComplete, sessionData } = WhatsAppWorkflowEngine.executeChatbotSessionNode(sender, text);
 
       // 3. If questionnaire is fully completed, sync CRM, Email, and Google Sheets
+      let createdInquiry = matchedInquiry;
       if (isComplete) {
         console.log('\n🏁 [n8n Branch: Form Fully Completed] Initiating downstream integrations...');
         
         // CRM Creation Node
-        const inquiry = await WhatsAppWorkflowEngine.executeCRMNode(io, sessionData);
+        createdInquiry = await WhatsAppWorkflowEngine.executeCRMNode(io, sessionData);
 
         // Async Non-blocking Downstream triggers
-        WhatsAppWorkflowEngine.executeNotificationEmailNode(inquiry);
-        WhatsAppWorkflowEngine.executeGoogleSheetsSyncNode(inquiry);
+        WhatsAppWorkflowEngine.executeNotificationEmailNode(createdInquiry);
+        WhatsAppWorkflowEngine.executeGoogleSheetsSyncNode(createdInquiry);
 
         // Reset the state machine session for this user so they can start fresh next time
         sessions.delete(sender);
@@ -377,6 +424,23 @@ export const whatsappService = {
 
       // 4. Send the conversational chatbot text back to WhatsApp
       await WhatsAppWorkflowEngine.executeWhatsAppSenderNode(sender, replyText);
+
+      // Persist Outbound Bot Reply to Database
+      try {
+        await prisma.whatsAppMessage.create({
+          data: {
+            customerPhone: sender,
+            direction: 'OUTBOUND',
+            content: replyText,
+            inquiryId: (createdInquiry || matchedInquiry)?.id || null,
+            senderId: 'SYSTEM',
+            senderName: 'Kashmir Curators AI Concierge',
+            status: 'SENT'
+          }
+        });
+      } catch (err: any) {
+        console.warn('Failed to record bot reply in DB:', err.message);
+      }
 
       console.log('🌟 [n8n Automation Pipeline: DONE] Execution finished successfully.');
       return true;

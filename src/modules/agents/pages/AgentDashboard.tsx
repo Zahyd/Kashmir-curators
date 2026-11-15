@@ -32,6 +32,8 @@ import UsageQuotaMeter from '../components/UsageQuotaMeter';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AgentLandingPage from './AgentLandingPage';
+import LeadDetailDrawer from '../components/LeadDetailDrawer';
+import CRMBIDashboard from '../components/CRMBIDashboard';
 
 export const AgentDashboard: React.FC = () => {
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -43,6 +45,14 @@ export const AgentDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>({
     activeLeadsCount: 0,
     quotesSentCount: 0,
+    confirmedRevenue: 0,
+    commissionEarned: 0
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Lead Detail Drawer State
+  const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<string | null>(null);
+  const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
     confirmedRevenue: 0,
     commissionEarned: 0
   });
@@ -175,21 +185,26 @@ export const AgentDashboard: React.FC = () => {
   const handleUpdateLeadStage = async (leadId: string, newStage: string) => {
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
-      const res = await fetch(`${API_BASE_URL}/crm/leads/${leadId}`, {
+      const res = await fetch(`${API_BASE_URL}/crm/leads/${leadId}/stage`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`
         },
-        body: JSON.stringify({ stage: newStage })
+        body: JSON.stringify({ leadStage: newStage })
       });
 
       if (!res.ok) throw new Error('Failed to update stage');
-      toast.success(`Lead moved to ${newStage}`);
+      toast.success(`Lead moved to ${newStage.replace(/_/g, ' ')}`);
       fetchData();
     } catch (err) {
       toast.error('Could not update lead stage');
     }
+  };
+
+  const handleSelectLeadForDetail = (lead: LeadItem) => {
+    setSelectedLeadForDetail(lead.id);
+    setLeadDrawerOpen(true);
   };
 
   const handleOpenQuoteModal = (lead?: LeadItem) => {
@@ -239,7 +254,8 @@ export const AgentDashboard: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col selection:bg-amber-500 selection:text-black">
       <Navbar />
 
-      <div className="flex-1 flex flex-col lg:flex-row">
+      {/* Top spacing to completely clear the fixed floating navbar */}
+      <div className="flex-1 flex flex-col lg:flex-row pt-24 sm:pt-28">
         {/* Dedicated Agent Sidebar with real agent metadata */}
         <AgentSidebar
           activeTab={activeTab}
@@ -302,70 +318,16 @@ export const AgentDashboard: React.FC = () => {
           {/* TAB 1: OVERVIEW DASHBOARD */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* 4 Metric Cards with REAL Data (Zero fake numbers) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="rounded-3xl border border-border/70 p-5 bg-card">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground">Active Travel Inquiries</span>
-                    <Users className="w-4 h-4 text-primary" />
-                  </div>
-                  <p className="text-3xl font-black text-foreground mt-2">{stats.activeLeadsCount || leads.length || 0}</p>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1 font-medium">
-                    <TrendingUp className="w-3 h-3" /> Real-time pipeline
-                  </p>
-                </Card>
-
-                <Card className="rounded-3xl border border-border/70 p-5 bg-card">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground">Proposals Dispatched</span>
-                    <FileSpreadsheet className="w-4 h-4 text-purple-500" />
-                  </div>
-                  <p className="text-3xl font-black text-foreground mt-2">{stats.quotesSentCount || 0}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {stats.quotesSentCount > 0 ? 'Active Proposals' : 'No proposals yet'}
-                  </p>
-                </Card>
-
-                <Card className="rounded-3xl border border-border/70 p-5 bg-card">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground">Contract Commission Rate</span>
-                    <Award className="w-4 h-4 text-emerald-500" />
-                  </div>
-                  <p className="text-3xl font-black text-foreground mt-2">
-                    {agentProfile?.commissionPct || (verificationStatus === 'APPROVED' ? 10 : 5)}%
-                  </p>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
-                    {verificationStatus === 'APPROVED' ? 'Verified wholesale discount' : 'Standard starter discount'}
-                  </p>
-                </Card>
-
-                <Card className="rounded-3xl border border-border/70 p-5 bg-card">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground">Tourism Accreditation</span>
-                    <ShieldCheck className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="mt-2">
-                    {verificationStatus === 'APPROVED' ? (
-                      <Badge className="bg-emerald-500 text-white font-bold text-xs">Verified Partner</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-amber-500 border-amber-500/40 text-xs">
-                        Action Required
-                      </Badge>
-                    )}
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab('licensing')}
-                    className="text-[11px] text-primary hover:underline font-medium mt-2 block"
-                  >
-                    View accreditation details &rarr;
-                  </button>
-                </Card>
-              </div>
+              {/* Executive Business Intelligence & Sales Pipeline Analytics */}
+              <CRMBIDashboard />
 
               {/* Priority Inquiries Section */}
-              <div className="space-y-4">
+              <div className="space-y-4 pt-4 border-t border-border/50">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-lg text-foreground">Priority Inquiries</h3>
+                  <div>
+                    <h3 className="font-bold text-lg text-foreground">Active Lead Pipeline (Drag & Drop)</h3>
+                    <p className="text-xs text-muted-foreground">Click any card to open the Traveler Profile & AI Copilot</p>
+                  </div>
                   <Button 
                     variant="link" 
                     onClick={() => setActiveTab('crm')} 
@@ -394,9 +356,10 @@ export const AgentDashboard: React.FC = () => {
                   </div>
                 ) : (
                   <LeadKanbanBoard
-                    leads={leads.slice(0, 10)}
+                    leads={leads}
                     onUpdateStage={handleUpdateLeadStage}
                     onCreateQuote={handleOpenQuoteModal}
+                    onSelectLead={handleSelectLeadForDetail}
                   />
                 )}
               </div>
@@ -409,6 +372,7 @@ export const AgentDashboard: React.FC = () => {
               leads={leads}
               onUpdateStage={handleUpdateLeadStage}
               onCreateQuote={handleOpenQuoteModal}
+              onSelectLead={handleSelectLeadForDetail}
               isLoading={isLoading}
             />
           )}
@@ -522,6 +486,15 @@ export const AgentDashboard: React.FC = () => {
         isOpen={quoteModalOpen}
         onClose={() => setQuoteModalOpen(false)}
         leadData={selectedLeadForQuote}
+      />
+
+      {/* Interactive Lead Detail Drawer (Traveler Profile, AI Copilot, Timeline, Notes, Reminders, WhatsApp) */}
+      <LeadDetailDrawer
+        leadId={selectedLeadForDetail}
+        open={leadDrawerOpen}
+        onClose={() => setLeadDrawerOpen(false)}
+        onUpdateLead={fetchData}
+        onOpenQuoteBuilder={handleOpenQuoteModal}
       />
 
       <Footer />

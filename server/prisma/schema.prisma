@@ -86,17 +86,18 @@ model Hotel {
 }
 
 model Cab {
-  id         String   @id @default(uuid())
-  type       String
-  name       String
-  capacity   Int
-  pricePerKm Float
-  basePrice  Float
-  image      String
-  features   String   // JSON string
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String           @id @default(uuid())
+  type         String
+  name         String
+  capacity     Int
+  pricePerKm   Float
+  basePrice    Float
+  image        String
+  features     String           // JSON string
+  isActive     Boolean          @default(true)
+  reservations CabReservation[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 }
 
 model Testimonial {
@@ -185,8 +186,118 @@ model Inquiry {
   profileCompleteness    Int                @default(25) // 25% to 100%
   notes                  String?
 
+  // Intelligent CRM & Operations Relations
+  activities             LeadActivity[]
+  internalNotes          LeadNote[]
+  reminders              FollowUpReminder[]
+  whatsappMessages       WhatsAppMessage[]
+  cabReservations        CabReservation[]
+  duplicateOfId          String?            // Inquiries flagged as potential duplicates
+  lastContactedAt        DateTime?
+  nextFollowUpDate       DateTime?
+
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+
+  @@index([phone])
+  @@index([email])
+  @@index([leadStage])
+  @@index([assignedTo])
+  @@index([createdAt])
+}
+
+model LeadActivity {
+  id          String   @id @default(uuid())
+  inquiryId   String
+  inquiry     Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  type        String   // STAGE_CHANGE, NOTE_ADDED, WHATSAPP_SENT, WHATSAPP_RECEIVED, QUOTE_DISPATCHED, PAYMENT_CAPTURED, CALL_LOGGED, AI_RECOMMENDATION
+  title       String
+  description String
+  metadata    String?  // JSON string of contextual payload
+  performedBy String?  // User code, name, or 'SYSTEM'
+  createdAt   DateTime @default(now())
+
+  @@index([inquiryId])
+  @@index([createdAt])
+}
+
+model LeadNote {
+  id          String   @id @default(uuid())
+  inquiryId   String
+  inquiry     Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  authorId    String?
+  authorName  String
+  content     String
+  isInternal  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([inquiryId])
+}
+
+model FollowUpReminder {
+  id          String    @id @default(uuid())
+  inquiryId   String
+  inquiry     Inquiry   @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  assignedTo  String?   // Employee code or email
+  title       String
+  dueDate     DateTime
+  priority    String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status      String    @default("PENDING") // PENDING, COMPLETED, OVERDUE, CANCELLED
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([inquiryId])
+  @@index([assignedTo, status])
+  @@index([dueDate])
+}
+
+model WhatsAppMessage {
+  id            String   @id @default(uuid())
+  inquiryId     String?
+  inquiry       Inquiry? @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  customerPhone String
+  direction     String   // INBOUND, OUTBOUND
+  messageType   String   @default("text") // text, template, image, document
+  templateName  String?
+  content       String
+  status        String   @default("SENT") // PENDING, SENT, DELIVERED, READ, FAILED
+  metaMessageId String?  @unique
+  senderId      String?  // Agent user ID or 'SYSTEM' or 'CUSTOMER'
+  senderName    String?
+  createdAt     DateTime @default(now())
+
+  @@index([customerPhone])
+  @@index([inquiryId])
+  @@index([createdAt])
+}
+
+model CabReservation {
+  id                 String   @id @default(uuid())
+  inquiryId          String?
+  inquiry            Inquiry? @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  bookingId          String?
+  cabId              String
+  cab                Cab      @relation(fields: [cabId], references: [id])
+  driverName         String?
+  driverPhone        String?
+  vehicleRegNo       String?
+  pickupLocation     String
+  dropLocation       String
+  startDate          DateTime
+  endDate            DateTime
+  status             String   @default("ALLOCATED") // ALLOCATED, DISPATCHED, ON_TRIP, COMPLETED, CANCELLED
+  totalCost          Float    @default(0.0)
+  contractRate       Float    @default(0.0)
+  profitMargin       Float    @default(0.0)
+  voucherReference   String?  @unique
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([inquiryId])
+  @@index([cabId])
 }
 
 model Media {
