@@ -3,27 +3,15 @@ import {
   Building2, 
   CalendarCheck2, 
   BedDouble, 
-  Flame, 
-  TrendingUp, 
-  DollarSign, 
+  SlidersHorizontal, 
+  Receipt, 
   RefreshCw,
-  Users,
-  Award,
-  Sparkles,
-  Zap,
-  PhoneCall,
-  Calendar,
-  Wrench,
-  Receipt,
-  ArrowRight,
+  Send,
+  Plus,
   ShieldCheck,
   CheckCircle2,
-  Clock,
-  Droplet,
-  Fuel,
-  Car
+  DollarSign
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,14 +21,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 
 import HospitalitySidebar, { HospitalityTab } from '../components/HospitalitySidebar';
-import LiveOccupancyGrid from '../components/LiveOccupancyGrid';
-import ReservationApprovalDesk from '../components/ReservationApprovalDesk';
-import ReservationCalendar from '../components/ReservationCalendar';
-import HousekeepingBoard from '../components/HousekeepingBoard';
-import MaintenanceDesk from '../components/MaintenanceDesk';
-import WinterOpsCockpit from '../components/WinterOpsCockpit';
-import SettlementLedgerView from '../components/SettlementLedgerView';
+import BookingDispatchDesk from '../components/BookingDispatchDesk';
+import HotelDirectoryManager from '../components/HotelDirectoryManager';
+import AccommodationManager from '../components/AccommodationManager';
 import SeasonalTariffManager from '../components/SeasonalTariffManager';
+import SettlementLedgerView from '../components/SettlementLedgerView';
 import HospitalityPayoutModal from '../components/HospitalityPayoutModal';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -54,16 +39,12 @@ interface HotelItem {
 
 export const HospitalityDashboard: React.FC = () => {
   const { user, token } = useAuth();
-  const [activeTab, setActiveTab] = useState<HospitalityTab>('overview');
-  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<HospitalityTab>('dispatch');
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
 
   // Property list & Selected Property
   const [hotelsList, setHotelsList] = useState<HotelItem[]>([]);
   const [selectedHotelId, setSelectedHotelId] = useState<string>('');
-
-  // Authoritative database-driven KPI state (initialized to null while loading)
-  const [metrics, setMetrics] = useState<any>(null);
 
   // Fetch properties list from backend
   const fetchHotels = async () => {
@@ -82,33 +63,11 @@ export const HospitalityDashboard: React.FC = () => {
     }
   };
 
-  const fetchDashboardKPIs = async () => {
-    try {
-      setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
-      const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
-      const res = await fetch(`${API_BASE_URL}/hotels/operations/dashboard${hotelParam}`, {
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setMetrics(data);
-      }
-    } catch (err) {
-      console.error('Failed to load dashboard KPIs:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchHotels();
   }, []);
 
   useEffect(() => {
-    fetchDashboardKPIs();
-
     // Setup real-time websocket synchronization
     const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     socket.on('connect', () => {
@@ -117,26 +76,25 @@ export const HospitalityDashboard: React.FC = () => {
     });
 
     socket.on('new-system-event', (data: any) => {
-      if (data.type === 'GUEST_CHECKED_IN' || data.type === 'GUEST_CHECKED_OUT' || data.type === 'HOUSEKEEPING_TASK_UPDATED') {
-        toast.info(data.message || 'Front desk event received', { icon: '🏨' });
-        fetchDashboardKPIs();
+      if (data.type === 'CREATE' || data.type === 'UPDATE' || data.type === 'DELETE') {
+        toast.info(data.message || 'Hotel event received', { icon: '🏨' });
+        fetchHotels();
       }
     });
 
     socket.on('booking-updated', (data: any) => {
       toast.info('Guest Booking Event', {
-        description: `${data.booking?.itemName || 'Suite'} status: ${data.booking?.status}`,
+        description: `${data.booking?.itemName || 'Hotel'} status: ${data.booking?.status}`,
         icon: '🏨'
       });
-      fetchDashboardKPIs();
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [user?.id, token, selectedHotelId]);
+  }, [user?.id, token]);
 
-  const currentHotel = hotelsList.find(h => h.id === selectedHotelId) || metrics?.hotel;
+  const currentHotel = hotelsList.find(h => h.id === selectedHotelId);
 
   return (
     <div className="min-h-screen bg-background flex flex-col selection:bg-amber-500 selection:text-black">
@@ -147,37 +105,32 @@ export const HospitalityDashboard: React.FC = () => {
         <HospitalitySidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          propertyName={currentHotel?.name || metrics?.hotel?.name || 'Kashmir Property Portfolio'}
-          propertyType={currentHotel?.location || metrics?.hotel?.location || 'Jammu & Kashmir'}
+          propertyName={currentHotel?.name || 'Kashmir Hotel Directory'}
+          propertyType={currentHotel?.location || 'Jammu & Kashmir'}
           isVerified={true}
         />
 
         {/* Main Workspace */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
-          {/* Top Bar with Property Selector and Refresh */}
+          {/* Top Bar with Property Selector and Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/50 pb-5">
             <div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Kashmir Curators PMS & Operations Desk
+                  Kashmir Curators Hotel Network & Dispatch Desk
                 </span>
               </div>
               <h1 className="text-2xl font-black text-foreground tracking-tight mt-1">
-                {activeTab === 'overview' && 'Front Desk Command & Live Occupancy'}
-                {activeTab === 'calendar' && 'Room Rack & Reservation Calendar'}
-                {activeTab === 'reservations' && 'Guest Reservations & Voucher Approvals'}
-                {activeTab === 'inventory' && 'Physical Suites & Room Categories'}
-                {activeTab === 'housekeeping' && 'Housekeeping & Turnover Readiness'}
-                {activeTab === 'maintenance' && 'Maintenance Tickets & Room Blocking'}
-                {activeTab === 'tariffs' && 'Seasonal Tariffs & Meal Plan Add-ons'}
-                {activeTab === 'amenities' && 'Heating, Power & Winter Road Ops'}
-                {activeTab === 'payouts' && 'Settlement Ledger & Bank Payouts'}
+                {activeTab === 'dispatch' && 'Live Hotel Booking & Voucher Dispatch Desk'}
+                {activeTab === 'hotels' && 'Partner Hotels & Houseboats (Directory & CRUD)'}
+                {activeTab === 'accommodations' && 'Accommodations & Live Inventory Matrix'}
+                {activeTab === 'tariffs' && 'Seasonal Tariffs & Contract Multipliers'}
+                {activeTab === 'settlement' && 'Settlement Ledger & Supplier Bank Dues'}
               </h1>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-              {/* Multi-Property Switcher */}
               {hotelsList.length > 0 && (
                 <div className="flex items-center gap-1.5 bg-card border border-border/80 rounded-2xl px-2 py-1 shadow-sm">
                   <Building2 className="w-4 h-4 text-amber-500 shrink-0" />
@@ -195,253 +148,55 @@ export const HospitalityDashboard: React.FC = () => {
                   </Select>
                 </div>
               )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchDashboardKPIs}
-                disabled={isLoading}
-                className="rounded-xl text-xs gap-1.5 h-9"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                <span>Sync KPIs</span>
-              </Button>
             </div>
           </div>
 
-          {/* TAB 1: FRONT DESK OVERVIEW */}
-          {activeTab === 'overview' && (
+          {/* TAB 1: SEND BOOKING & VOUCHERS (DEFAULT PRIMARY) */}
+          {activeTab === 'dispatch' && (
             <div className="space-y-6 animate-fade-in">
-              {/* 4 Primary Operational KPIs */}
-              {isLoading || !metrics ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Card key={i} className="rounded-3xl border border-border/60 p-5 h-32 animate-pulse bg-card" />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Card className="rounded-3xl border border-border/70 p-5 bg-card shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted-foreground">Live Occupancy</span>
-                      <Badge variant="outline" className="text-[10px] font-bold border-emerald-500/30 text-emerald-600">
-                        {metrics.availableRooms || 0} Available
-                      </Badge>
-                    </div>
-                    <p className="text-3xl font-black text-foreground mt-2 font-mono">
-                      {metrics.occupancyRate || 0}%
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-                      <span>{metrics.occupiedRooms || 0} Occupied</span>
-                      <span>•</span>
-                      <span>{metrics.totalRooms || 0} Registered Suites</span>
-                    </p>
-                  </Card>
-
-                  <Card className="rounded-3xl border border-border/70 p-5 bg-card shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted-foreground">Today's Front Desk</span>
-                      <Badge className="bg-blue-600 text-white text-[10px] font-bold">
-                        Live Flow
-                      </Badge>
-                    </div>
-                    <div className="flex items-baseline gap-3 mt-2">
-                      <p className="text-3xl font-black text-foreground font-mono">
-                        {metrics.todayCheckIns || 0}
-                      </p>
-                      <span className="text-xs font-bold text-muted-foreground">Arrivals</span>
-                      <span className="text-xs text-muted-foreground">/</span>
-                      <p className="text-xl font-black text-muted-foreground font-mono">
-                        {metrics.todayCheckOuts || 0}
-                      </p>
-                      <span className="text-xs text-muted-foreground">Departures</span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">Check-in due & room turnover</p>
-                  </Card>
-
-                  <Card className="rounded-3xl border border-amber-500/40 p-5 bg-amber-500/5 dark:bg-amber-500/10 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-amber-700 dark:text-amber-400">Pending Vouchers</span>
-                      <Clock className="w-4 h-4 text-amber-500" />
-                    </div>
-                    <p className="text-3xl font-black text-amber-600 dark:text-amber-400 mt-2 font-mono">
-                      {metrics.pendingConfirmations || 0}
-                    </p>
-                    <button 
-                      onClick={() => setActiveTab('reservations')}
-                      className="text-[11px] text-primary hover:underline font-bold mt-1 flex items-center gap-1"
-                    >
-                      <span>Review vouchers &rarr;</span>
-                    </button>
-                  </Card>
-
-                  <Card className="rounded-3xl border border-emerald-500/30 p-5 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Outstanding Settlement</span>
-                      <DollarSign className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <p className="text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-2">
-                      ₹{(metrics.outstandingSettlement || 0).toLocaleString('en-IN')}
-                    </p>
-                    <button
-                      onClick={() => setActiveTab('payouts')}
-                      className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline font-bold mt-1 block"
-                    >
-                      Scheduled weekly NEFT payout &rarr;
-                    </button>
-                  </Card>
-                </div>
-              )}
-
-              {/* Operations Highlights: Housekeeping + Winter Telemetry */}
-              {metrics && (
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Housekeeping Readiness */}
-                  <Card className="p-6 rounded-3xl border border-border bg-card space-y-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-emerald-500" />
-                        <span>Housekeeping & Room Readiness</span>
-                      </h4>
-                      <button
-                        onClick={() => setActiveTab('housekeeping')}
-                        className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
-                      >
-                        Open Task Board &rarr;
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                      <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                        <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">Clean</span>
-                        <p className="text-xl font-black font-mono text-emerald-600 mt-0.5">{metrics.housekeeping?.clean || 0}</p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
-                        <span className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-400 block">Needs Clean</span>
-                        <p className="text-xl font-black font-mono text-rose-600 mt-0.5">{metrics.housekeeping?.dirty || 0}</p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20">
-                        <span className="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-400 block">Inspected</span>
-                        <p className="text-xl font-black font-mono text-blue-600 mt-0.5">{metrics.housekeeping?.inspected || 0}</p>
-                      </div>
-                    </div>
-                  </Card>
-
-                  {/* Sub-Zero Heating Readiness */}
-                  <Card className="p-6 rounded-3xl border border-border bg-card space-y-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
-                        <Flame className="w-4 h-4 text-amber-500" />
-                        <span>Winter Heating & Power Standard</span>
-                      </h4>
-                      <button
-                        onClick={() => setActiveTab('amenities')}
-                        className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
-                      >
-                        Telemetry Cockpit &rarr;
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                      <div className="p-3 rounded-2xl bg-muted/40 border border-border/60">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Bukhari</span>
-                        <p className="text-sm font-black text-amber-600 dark:text-amber-400 mt-1">
-                          {metrics.winterOps?.bukhariStatus || 'STANDBY'}
-                        </p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-muted/40 border border-border/60">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Generator Fuel</span>
-                        <p className="text-sm font-black font-mono text-foreground mt-1">
-                          {metrics.winterOps ? `${metrics.winterOps.generatorFuelPct}%` : 'N/A'}
-                        </p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-muted/40 border border-border/60">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Road Access</span>
-                        <p className="text-sm font-black text-foreground mt-1 truncate">
-                          {metrics.winterOps?.snowRoadClearance || 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              )}
-
-              {/* Physical Room Grid Overview */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-lg text-foreground">Room & Suite Availability</h3>
-                  <button
-                    onClick={() => setActiveTab('calendar')}
-                    className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                  >
-                    <span>View Drag-and-Drop Calendar Rack</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <LiveOccupancyGrid selectedHotelId={selectedHotelId} />
-              </div>
-
-              {/* Quick Reservation Desk */}
-              <div className="pt-4 border-t border-border/50">
-                <ReservationApprovalDesk selectedHotelId={selectedHotelId} />
-              </div>
+              <BookingDispatchDesk initialHotelId={selectedHotelId} />
             </div>
           )}
 
-          {/* TAB 2: RESERVATION RACK CALENDAR */}
-          {activeTab === 'calendar' && (
+          {/* TAB 2: HOTELS & HOUSEBOATS CRUD DIRECTORY */}
+          {activeTab === 'hotels' && (
             <div className="space-y-6 animate-fade-in">
-              <ReservationCalendar 
-                selectedHotelId={selectedHotelId}
-                onSelectReservation={() => setActiveTab('reservations')} 
+              <HotelDirectoryManager 
+                onSelectHotelToManage={(id) => {
+                  setSelectedHotelId(id);
+                  setActiveTab('accommodations');
+                }}
+                onSendBookingForHotel={(id) => {
+                  setSelectedHotelId(id);
+                  setActiveTab('dispatch');
+                }}
               />
             </div>
           )}
 
-          {/* TAB 3: RESERVATIONS & VOUCHERS */}
-          {activeTab === 'reservations' && (
+          {/* TAB 3: ACCOMMODATIONS & ROOM INVENTORY */}
+          {activeTab === 'accommodations' && (
             <div className="space-y-6 animate-fade-in">
-              <ReservationApprovalDesk selectedHotelId={selectedHotelId} />
+              <AccommodationManager 
+                selectedHotelId={selectedHotelId}
+                onHotelChange={setSelectedHotelId}
+                onSendBooking={(id) => {
+                  setSelectedHotelId(id);
+                  setActiveTab('dispatch');
+                }}
+              />
             </div>
           )}
 
-          {/* TAB 4: ROOM INVENTORY & CATEGORIES */}
-          {activeTab === 'inventory' && (
-            <div className="space-y-6 animate-fade-in">
-              <LiveOccupancyGrid selectedHotelId={selectedHotelId} />
-            </div>
-          )}
-
-          {/* TAB 5: HOUSEKEEPING CMS */}
-          {activeTab === 'housekeeping' && (
-            <div className="space-y-6 animate-fade-in">
-              <HousekeepingBoard selectedHotelId={selectedHotelId} />
-            </div>
-          )}
-
-          {/* TAB 6: MAINTENANCE DESK */}
-          {activeTab === 'maintenance' && (
-            <div className="space-y-6 animate-fade-in">
-              <MaintenanceDesk selectedHotelId={selectedHotelId} />
-            </div>
-          )}
-
-          {/* TAB 7: TARIFFS & MEALS */}
+          {/* TAB 4: SEASONAL TARIFFS */}
           {activeTab === 'tariffs' && (
             <div className="space-y-6 animate-fade-in">
               <SeasonalTariffManager selectedHotelId={selectedHotelId} />
             </div>
           )}
 
-          {/* TAB 8: WINTER HEATING & POWER OPS */}
-          {activeTab === 'amenities' && (
-            <div className="space-y-6 animate-fade-in">
-              <WinterOpsCockpit selectedHotelId={selectedHotelId} />
-            </div>
-          )}
-
-          {/* TAB 9: SETTLEMENT & BANK DUES */}
-          {activeTab === 'payouts' && (
+          {/* TAB 5: SETTLEMENT & BANK DUES */}
+          {activeTab === 'settlement' && (
             <div className="space-y-6 animate-fade-in">
               <SettlementLedgerView 
                 selectedHotelId={selectedHotelId}

@@ -4,15 +4,10 @@ import {
   CalendarCheck2, 
   BedDouble, 
   SlidersHorizontal, 
-  Flame, 
   Receipt, 
-  PhoneCall,
   Menu,
-  Sparkles,
   ShieldCheck,
-  CheckCircle2,
-  Calendar,
-  Wrench,
+  Send,
   Layers
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -20,15 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export type HospitalityTab = 
-  | 'overview' 
-  | 'calendar'
-  | 'reservations' 
-  | 'inventory' 
-  | 'housekeeping'
-  | 'maintenance'
-  | 'tariffs' 
-  | 'amenities' 
-  | 'payouts';
+  | 'dispatch'
+  | 'hotels'
+  | 'accommodations'
+  | 'tariffs'
+  | 'settlement';
 
 interface HospitalitySidebarProps {
   activeTab: HospitalityTab;
@@ -42,21 +33,17 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
   activeTab,
   onTabChange,
   propertyName,
-  propertyType = 'Luxury Houseboat / Mountain Chalet',
+  propertyType = 'Kashmir DMC Hotel Network',
   isVerified = true
 }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const navItems = [
-    { id: 'overview' as HospitalityTab, label: 'Front Desk Overview', icon: Building2 },
-    { id: 'calendar' as HospitalityTab, label: 'Rack & Calendar', icon: Calendar, badge: 'Grid' },
-    { id: 'reservations' as HospitalityTab, label: 'Guest Reservations', icon: CalendarCheck2, badge: 'Live' },
-    { id: 'inventory' as HospitalityTab, label: 'Room Categories & Grid', icon: BedDouble },
-    { id: 'housekeeping' as HospitalityTab, label: 'Housekeeping CMS', icon: Sparkles },
-    { id: 'maintenance' as HospitalityTab, label: 'Maintenance & Repairs', icon: Wrench },
-    { id: 'tariffs' as HospitalityTab, label: 'Seasonal Tariffs & Meals', icon: SlidersHorizontal },
-    { id: 'amenities' as HospitalityTab, label: 'Heating & Winter Ops', icon: Flame },
-    { id: 'payouts' as HospitalityTab, label: 'Settlement & Bank Dues', icon: Receipt },
+    { id: 'dispatch' as HospitalityTab, label: 'Send Booking & Vouchers', icon: Send, badge: 'Dispatch' },
+    { id: 'hotels' as HospitalityTab, label: 'Hotels & Houseboats (CRUD)', icon: Building2, badge: 'Directory' },
+    { id: 'accommodations' as HospitalityTab, label: 'Accommodations & Rooms', icon: BedDouble, badge: 'Inventory' },
+    { id: 'tariffs' as HospitalityTab, label: 'Seasonal Tariffs & Rates', icon: SlidersHorizontal },
+    { id: 'settlement' as HospitalityTab, label: 'Settlement & Bank Dues', icon: Receipt },
   ];
 
   const NavContent = () => (
@@ -66,11 +53,11 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
         <div className="flex items-center gap-2 mb-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
           <span className="text-[11px] font-semibold tracking-wider uppercase text-emerald-600 dark:text-emerald-400">
-            Kashmir Hospitality Network
+            Kashmir Curators Operations
           </span>
         </div>
         <h2 className="font-bold text-lg text-foreground tracking-tight line-clamp-1">
-          {propertyName || 'Chinar Heritage Estate'}
+          {propertyName || 'Kashmir Hotel Directory'}
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
           {propertyType}
@@ -79,7 +66,7 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
           {isVerified ? (
             <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              Verified Kashmir Host
+              Verified Kashmir DMC Network
             </Badge>
           ) : (
             <Badge variant="outline" className="text-amber-500 border-amber-500/30">
@@ -101,20 +88,24 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
                 onTabChange(item.id);
                 setMobileOpen(false);
               }}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-medium transition-all ${
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left ${
                 isActive
-                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-[1.01]'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/70'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
               }`}
             >
               <div className="flex items-center gap-3">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-950' : 'text-amber-500'}`} />
                 <span>{item.label}</span>
               </div>
               {item.badge && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                  isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
-                }`}>
+                <span
+                  className={`text-[9px] uppercase font-mono px-2 py-0.5 rounded-full ${
+                    isActive 
+                      ? 'bg-slate-950/20 text-slate-950 font-black' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
                   {item.badge}
                 </span>
               )}
@@ -123,37 +114,33 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
         })}
       </nav>
 
-      {/* Bottom Emergency Support Card */}
-      <div className="p-4 border-t border-border/50">
-        <div className="p-3 bg-muted/40 rounded-2xl border border-border/60 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-            <PhoneCall className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Srinagar Ground Support</span>
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            24/7 winter emergency & allocation desk: +91 94190 00000
-          </p>
+      {/* Footer Info */}
+      <div className="p-4 border-t border-border/50 text-[11px] text-muted-foreground space-y-2">
+        <div className="flex items-center justify-between">
+          <span>Hotel API Status:</span>
+          <span className="text-emerald-500 font-bold flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live Synchronized
+          </span>
         </div>
+        <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+          Authorized J&K Tourism DMC Inventory with direct contracted wholesale tariffs.
+        </p>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-72 border-r border-border/60 bg-card/40 shrink-0">
-        <NavContent />
-      </aside>
-
       {/* Mobile Drawer Trigger */}
-      <div className="lg:hidden p-4 border-b border-border/50 bg-card flex items-center justify-between">
+      <div className="lg:hidden p-4 border-b border-border flex items-center justify-between bg-card">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-bold text-sm text-foreground">{propertyName || 'Hospitality Desk'}</span>
+          <Building2 className="w-5 h-5 text-amber-500" />
+          <span className="font-bold text-sm text-foreground">{propertyName || 'Hotel Management'}</span>
         </div>
+
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="rounded-xl gap-2">
+            <Button variant="outline" size="sm" className="rounded-xl h-9 gap-1.5 text-xs">
               <Menu className="w-4 h-4" />
               <span>Menu</span>
             </Button>
@@ -163,6 +150,11 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
           </SheetContent>
         </Sheet>
       </div>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-72 border-r border-border/60 bg-card/60 backdrop-blur-md flex-col shrink-0 min-h-[calc(100vh-5rem)]">
+        <NavContent />
+      </aside>
     </>
   );
 };

@@ -57,7 +57,7 @@ export const createHotel = async (req: any, res: Response) => {
       starRating: Number(starRating),
       pricePerNight: Number(pricePerNight),
       description: description || '',
-      image: imageUrl || '',
+      image: imageUrl || req.body.image || '/images/hotels/hotel_1.png',
       amenities: JSON.stringify(Array.isArray(amenities) ? amenities : []),
       roomTypes: JSON.stringify(Array.isArray(roomTypes) ? roomTypes : []),
       rating: Number(rating || 4.5),
@@ -98,7 +98,7 @@ export const updateHotel = async (req: any, res: Response) => {
     if (req.body.starRating !== undefined) updateData.starRating = Number(req.body.starRating);
     if (req.body.pricePerNight !== undefined) updateData.pricePerNight = Number(req.body.pricePerNight);
     if (req.body.description !== undefined) updateData.description = req.body.description || '';
-    if (req.body.imageUrl !== undefined) updateData.image = req.body.imageUrl || '';
+    if (req.body.imageUrl !== undefined || req.body.image !== undefined) updateData.image = req.body.imageUrl || req.body.image || '';
     if (req.body.amenities !== undefined) {
       updateData.amenities = JSON.stringify(Array.isArray(req.body.amenities) ? req.body.amenities : []);
     }
