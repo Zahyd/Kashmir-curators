@@ -30,7 +30,8 @@ import {
   Sliders,
   Search,
   ExternalLink,
-  KeyRound
+  KeyRound,
+  UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ADMIN_SIDEBAR_ITEMS, ROLE_LABELS } from '@/contexts/TeamAuthContext';
@@ -64,6 +65,7 @@ interface MenuItem {
 const allMenuItems: MenuItem[] = [
   // Operations & Radar
   { id: 'dashboard', label: 'Executive Deck', icon: LayoutDashboard, category: 'OPERATIONS & RADAR' },
+  { id: 'attendance', label: 'Employee Attendance & Presence', icon: UserCheck, badge: 'Live', category: 'OPERATIONS & RADAR' },
   { id: 'disruptions', label: 'Disruptions & Safety', icon: ShieldAlert, badge: 'Live', category: 'OPERATIONS & RADAR' },
   { id: 'inquiries', label: 'Trip Inquiries', icon: MessageSquare, badge: 'New', category: 'OPERATIONS & RADAR' },
   { id: 'reservations', label: 'Hotel Reservations', icon: CalendarCheck, category: 'OPERATIONS & RADAR' },

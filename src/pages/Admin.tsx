@@ -79,6 +79,7 @@ import CMSReports from '@/components/admin/CMSReports';
 import CMSAuditLogs from '@/components/admin/CMSAuditLogs';
 import CMSSettings from '@/components/admin/CMSSettings';
 import CMSPortalKeys from '@/components/admin/CMSPortalKeys';
+import CMSAttendance from '@/components/admin/CMSAttendance';
 import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
 
 const ROLE_STATS: Record<string, any[]> = {
@@ -521,6 +522,7 @@ export default function Admin() {
         );
 
       case 'disruptions': return <div className="animate-in fade-in duration-300"><CMSDisruptions /></div>;
+      case 'attendance': return <div className="animate-in fade-in duration-300"><CMSAttendance /></div>;
       case 'inquiries': return <div className="animate-in fade-in duration-300"><CMSInquiries /></div>;
       case 'reservations': return <div className="animate-in fade-in duration-300"><CMSReservations /></div>;
       case 'bookings': return <div className="animate-in fade-in duration-300"><CMSBookings /></div>;

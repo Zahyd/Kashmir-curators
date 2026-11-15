@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { notificationService } from '../services/notificationService';
 
 // Utility for Asia/Kolkata YYYY-MM-DD date string
 const getKolkataDateString = (d: Date = new Date()): string => {
@@ -69,6 +70,42 @@ export const clockIn = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    const io = (req as any).io;
+    if (io) {
+      io.to('admin-room').emit('employee-attendance-updated', {
+        employeeCode,
+        employeeName,
+        role,
+        status: 'ONLINE',
+        action: 'CLOCK_IN',
+        assignedDesk: session.assignedDesk,
+        timestamp: now.toISOString()
+      });
+      io.emit('employee-presence-refresh', {
+        employeeCode,
+        employeeName,
+        status: 'ONLINE'
+      });
+    }
+
+    try {
+      await notificationService.emitSystemEvent(
+        io,
+        'ATTENDANCE',
+        `🟢 ${employeeName} (${employeeCode}) clocked in at ${session.assignedDesk}.`,
+        {
+          entityType: 'attendance',
+          employeeCode,
+          employeeName,
+          status: 'ONLINE',
+          action: 'CLOCK_IN',
+          assignedDesk: session.assignedDesk
+        }
+      );
+    } catch (notifErr: any) {
+      console.warn('[AttendanceController] Notification dispatch warning:', notifErr.message);
+    }
+
     res.json({
       success: true,
       message: `Clocked in successfully as ${employeeName}`,
@@ -112,6 +149,15 @@ export const recordPulse = async (req: AuthRequest, res: Response) => {
             totalWorkMinutes: { increment: minutesSinceLast }
           }
         });
+
+        const io = (req as any).io;
+        if (io) {
+          io.to('admin-room').emit('employee-pulse', {
+            employeeCode,
+            minutesAdded: minutesSinceLast,
+            lastActivityAt: now.toISOString()
+          });
+        }
       }
     }
 
@@ -143,6 +189,7 @@ export const toggleBreak = async (req: AuthRequest, res: Response) => {
     }
 
     const startingBreak = !activeSession.isOnBreak;
+    const io = (req as any).io;
 
     if (startingBreak) {
       // Start break
@@ -158,6 +205,37 @@ export const toggleBreak = async (req: AuthRequest, res: Response) => {
         where: { employeeCode, date: today },
         data: { status: 'ON_BREAK' }
       });
+
+      if (io) {
+        io.to('admin-room').emit('employee-attendance-updated', {
+          employeeCode,
+          employeeName: activeSession.employeeName,
+          status: 'ON_BREAK',
+          action: 'BREAK_START',
+          timestamp: now.toISOString()
+        });
+        io.emit('employee-presence-refresh', {
+          employeeCode,
+          status: 'ON_BREAK'
+        });
+      }
+
+      try {
+        await notificationService.emitSystemEvent(
+          io,
+          'ATTENDANCE',
+          `☕ ${activeSession.employeeName} (${employeeCode}) paused shift for break.`,
+          {
+            entityType: 'attendance',
+            employeeCode,
+            employeeName: activeSession.employeeName,
+            status: 'ON_BREAK',
+            action: 'BREAK_START'
+          }
+        );
+      } catch (notifErr: any) {
+        console.warn('[AttendanceController] Break start notification warning:', notifErr.message);
+      }
 
       res.json({ success: true, isOnBreak: true, message: 'Break started.' });
     } else {
@@ -183,6 +261,39 @@ export const toggleBreak = async (req: AuthRequest, res: Response) => {
           totalBreakMinutes: { increment: breakDuration }
         }
       });
+
+      if (io) {
+        io.to('admin-room').emit('employee-attendance-updated', {
+          employeeCode,
+          employeeName: activeSession.employeeName,
+          status: 'ONLINE',
+          action: 'BREAK_END',
+          breakDuration,
+          timestamp: now.toISOString()
+        });
+        io.emit('employee-presence-refresh', {
+          employeeCode,
+          status: 'ONLINE'
+        });
+      }
+
+      try {
+        await notificationService.emitSystemEvent(
+          io,
+          'ATTENDANCE',
+          `💼 ${activeSession.employeeName} (${employeeCode}) resumed active shift (${breakDuration}m break).`,
+          {
+            entityType: 'attendance',
+            employeeCode,
+            employeeName: activeSession.employeeName,
+            status: 'ONLINE',
+            action: 'BREAK_END',
+            breakDuration
+          }
+        );
+      } catch (notifErr: any) {
+        console.warn('[AttendanceController] Break end notification warning:', notifErr.message);
+      }
 
       res.json({ success: true, isOnBreak: false, message: `Break ended (${breakDuration} mins logged).` });
     }
@@ -221,6 +332,39 @@ export const clockOut = async (req: AuthRequest, res: Response) => {
         status: 'CLOCKED_OUT'
       }
     });
+
+    const employeeName = user.name || user.assignedName || user.email || 'Operations Officer';
+    const io = (req as any).io;
+    if (io) {
+      io.to('admin-room').emit('employee-attendance-updated', {
+        employeeCode,
+        employeeName,
+        status: 'CLOCKED_OUT',
+        action: 'CLOCK_OUT',
+        timestamp: now.toISOString()
+      });
+      io.emit('employee-presence-refresh', {
+        employeeCode,
+        status: 'CLOCKED_OUT'
+      });
+    }
+
+    try {
+      await notificationService.emitSystemEvent(
+        io,
+        'ATTENDANCE',
+        `🚪 ${employeeName} (${employeeCode}) completed shift and clocked out.`,
+        {
+          entityType: 'attendance',
+          employeeCode,
+          employeeName,
+          status: 'CLOCKED_OUT',
+          action: 'CLOCK_OUT'
+        }
+      );
+    } catch (notifErr: any) {
+      console.warn('[AttendanceController] Clock-out notification warning:', notifErr.message);
+    }
 
     res.json({ success: true, message: 'Shift completed. Clocked out successfully.' });
   } catch (error: any) {

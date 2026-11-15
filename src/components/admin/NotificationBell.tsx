@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Search, ShieldAlert, Sparkles, Volume2, VolumeX, Trash2 } from 'lucide-react';
+import { Bell, Check, Search, ShieldAlert, Sparkles, Volume2, VolumeX, Trash2, UserCheck, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
 import { io } from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 
 interface DBNotification {
   id: string;
@@ -21,6 +22,7 @@ interface DBNotification {
 
 export default function NotificationBell() {
   const { teamUser } = useTeamAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<DBNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
@@ -29,6 +31,30 @@ export default function NotificationBell() {
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const getAuthHeaders = (): Record<string, string> => {
+    let portalKey = '';
+    try {
+      portalKey = JSON.parse(localStorage.getItem('hospitality_session') || '{}').accessKey || '';
+    } catch {}
+
+    const token = 
+      localStorage.getItem('teamToken') || 
+      localStorage.getItem('hospitality_token') || 
+      localStorage.getItem('token') || 
+      localStorage.getItem('auth_token') || 
+      portalKey || 
+      '';
+
+    const headers: Record<string, string> = {};
+    if (token && token !== 'null' && token !== 'undefined') {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (portalKey && portalKey !== 'null' && portalKey !== 'undefined') {
+      headers['x-portal-key'] = portalKey;
+    }
+    return headers;
+  };
 
   // Initialize sound alert
   useEffect(() => {
@@ -43,14 +69,12 @@ export default function NotificationBell() {
 
   // Subscribe to real-time WebSockets for push alerts
   useEffect(() => {
-    if (!teamUser) return;
-
     const socket = io(SOCKET_URL);
     socket.emit('join-admin');
 
-    socket.on('new-system-event', (data) => {
-      if (data.notification) {
-        setNotifications(prev => [data.notification, ...prev]);
+    socket.on('new-system-event', (data: any) => {
+      if (data?.notification) {
+        setNotifications(prev => [data.notification, ...prev.filter(n => n.id !== data.notification.id)]);
         
         // Play soft chime sound if enabled
         if (soundEnabled && audioRef.current) {
@@ -59,10 +83,25 @@ export default function NotificationBell() {
       }
     });
 
+    socket.on('employee-attendance-updated', (data: any) => {
+      // Create instant live in-memory notification if socket emits attendance
+      const liveAlert: DBNotification = {
+        id: `att-${Date.now()}`,
+        title: data.status === 'ONLINE' ? 'Employee Clock-In' : data.status === 'ON_BREAK' ? 'Employee on Break' : 'Employee Shift Ended',
+        message: `${data.employeeName || data.employeeCode} status updated to ${data.status}`,
+        type: 'attendance',
+        read: false,
+        priority: 'medium',
+        link: '/admin?section=attendance',
+        createdAt: data.timestamp || new Date().toISOString()
+      };
+      setNotifications(prev => [liveAlert, ...prev]);
+    });
+
     return () => {
       socket.disconnect();
     };
-  }, [teamUser, soundEnabled]);
+  }, [soundEnabled]);
 
   // Click outside listener to auto-close dropdown
   useEffect(() => {
@@ -77,11 +116,9 @@ export default function NotificationBell() {
 
   const fetchNotifications = async () => {
     try {
-      const token = localStorage.getItem('teamToken');
+      const headers = getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/notifications?limit=50`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers
       });
       if (response.ok) {
         const data = await response.json();
@@ -94,12 +131,10 @@ export default function NotificationBell() {
 
   const markAsRead = async (id: string) => {
     try {
-      const token = localStorage.getItem('teamToken');
+      const headers = getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers
       });
       if (response.ok) {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -111,12 +146,10 @@ export default function NotificationBell() {
 
   const markAllRead = async () => {
     try {
-      const token = localStorage.getItem('teamToken');
+      const headers = getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers
       });
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -237,22 +270,31 @@ export default function NotificationBell() {
               filteredNotifications.map((notif) => (
                 <div 
                   key={notif.id} 
+                  onClick={() => {
+                    markAsRead(notif.id);
+                    if (notif.link) {
+                      setIsOpen(false);
+                      navigate(notif.link);
+                    }
+                  }}
                   className={cn(
-                    "p-5 flex gap-4 transition-all hover:bg-white/[0.02] relative group",
-                    !notif.read && "bg-kashmir-gold/[0.01]"
+                    "p-5 flex gap-4 transition-all hover:bg-white/[0.04] cursor-pointer relative group",
+                    !notif.read && "bg-amber-400/[0.03]"
                   )}
                 >
                   {/* Status Indicator Bar */}
                   {!notif.read && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-kashmir-gold" />
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400" />
                   )}
 
                   {/* Priority indicator */}
                   <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                    {notif.priority === 'high' ? (
+                    {notif.type === 'attendance' ? (
+                      <UserCheck className="w-4 h-4 text-emerald-400" />
+                    ) : notif.priority === 'high' ? (
                       <ShieldAlert className="w-4 h-4 text-red-400" />
                     ) : (
-                      <Sparkles className="w-4 h-4 text-kashmir-gold" />
+                      <Sparkles className="w-4 h-4 text-amber-400" />
                     )}
                   </div>
 
@@ -284,7 +326,10 @@ export default function NotificationBell() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => markAsRead(notif.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsRead(notif.id);
+                        }}
                         className="w-7 h-7 rounded-lg text-emerald-400/60 hover:text-emerald-400 hover:bg-white/5"
                         title="Mark as read"
                       >

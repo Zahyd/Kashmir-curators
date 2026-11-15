@@ -23,14 +23,14 @@ export interface SystemEvent {
 // Permission map: what each role can access
 const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
   admin: [
-    'dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
+    'dashboard', 'attendance', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
     'hotels', 'cabs', 'activities', 'reviews', 'faqs', 'media', 'inquiries', 
     'customers', 'bookings', 'reservations', 'disruptions', 'payments', 'coupons', 
     'seo', 'reports', 'users', 'portal_keys', 'audit_logs', 'settings', 'revenue', 'content', 'planner',
     'assign_leads', 'view_financials', 'sales_portal'
   ],
   operations: [
-    'dashboard', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 
+    'dashboard', 'attendance', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 
     'assign_leads', 'portal_keys', 'audit_logs'
   ],
   sales: [
@@ -48,12 +48,12 @@ const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
 // Which sidebar items each role can see in the admin portal
 export const ADMIN_SIDEBAR_ITEMS: Record<TeamRole, string[]> = {
   admin: [
-    'dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
+    'dashboard', 'attendance', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
     'hotels', 'cabs', 'activities', 'reviews', 'faqs', 'media', 'inquiries', 
     'bookings', 'reservations', 'disruptions', 'payments', 'coupons', 
     'seo', 'reports', 'users', 'portal_keys', 'audit_logs', 'settings', 'revenue', 'content', 'planner'
   ],
-  operations: ['dashboard', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 'portal_keys', 'audit_logs'],
+  operations: ['dashboard', 'attendance', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 'portal_keys', 'audit_logs'],
   sales: [],
   marketing: ['dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 'activities', 'reviews', 'faqs', 'media', 'seo', 'coupons'],
   finance: ['dashboard', 'revenue', 'payments', 'coupons', 'reports', 'audit_logs'],

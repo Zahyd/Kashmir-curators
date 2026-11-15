@@ -107,6 +107,11 @@ export const notificationService = {
       notificationType = 'payment';
       priority = 'high';
       redirectLink = '/admin';
+    } else if (type === 'ATTENDANCE' || (data && data.entityType === 'attendance')) {
+      title = data?.action === 'CLOCK_IN' ? 'Employee Clock-In' : data?.action === 'CLOCK_OUT' ? 'Employee Shift Ended' : 'Employee Break Status';
+      notificationType = 'attendance';
+      priority = 'medium';
+      redirectLink = '/admin?section=attendance';
     }
 
     // 2. Save notification to the database

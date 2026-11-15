@@ -23,7 +23,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { io } from 'socket.io-client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { getHospitalityHeaders, getHospitalityToken } from '../utils/hospitalityAuth';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -71,6 +73,7 @@ export const EmployeeAttendanceDesk: React.FC = () => {
   // Presence State
   const [presenceList, setPresenceList] = useState<PresenceMember[]>([]);
   const [presenceStats, setPresenceStats] = useState({ totalActive: 0, totalOnline: 0, totalOnBreak: 0 });
+  const [clockOutDialogOpen, setClockOutDialogOpen] = useState(false);
 
   // Clock
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -117,6 +120,19 @@ export const EmployeeAttendanceDesk: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Live Socket.IO listener for instant team updates
+    const socket = io(SOCKET_URL);
+    socket.emit('join-admin');
+
+    socket.on('employee-attendance-updated', () => {
+      fetchData();
+    });
+
+    socket.on('employee-presence-refresh', () => {
+      fetchData();
+    });
+
     // Heartbeat every 2 minutes
     const heartbeat = setInterval(() => {
       const authToken = getHospitalityToken(token);
@@ -129,7 +145,10 @@ export const EmployeeAttendanceDesk: React.FC = () => {
       }).catch(() => {});
     }, 120000);
 
-    return () => clearInterval(heartbeat);
+    return () => {
+      clearInterval(heartbeat);
+      socket.disconnect();
+    };
   }, [token]);
 
   // Handle Clock In
@@ -181,11 +200,15 @@ export const EmployeeAttendanceDesk: React.FC = () => {
     }
   };
 
-  // Handle Clock Out
-  const handleClockOut = async () => {
-    if (!confirm('Are you sure you want to end your shift and clock out for today?')) return;
+  // Handle Clock Out Modal Trigger
+  const handleClockOut = () => {
+    setClockOutDialogOpen(true);
+  };
 
+  // Perform Clock Out API execution
+  const confirmClockOut = async () => {
     try {
+      setClockOutDialogOpen(false);
       setActionLoading(true);
       const authToken = getHospitalityToken(token);
       const res = await fetch(`${API_BASE_URL}/attendance/clock-out`, {
@@ -535,6 +558,39 @@ export const EmployeeAttendanceDesk: React.FC = () => {
           </Table>
         </div>
       </Card>
+
+      {/* Luxury In-App Confirmation Modal for Shift Clock-Out */}
+      <Dialog open={clockOutDialogOpen} onOpenChange={setClockOutDialogOpen}>
+        <DialogContent className="max-w-md bg-[#0a0f14] border border-white/10 rounded-3xl p-6 shadow-2xl text-white">
+          <DialogHeader className="text-center">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mx-auto mb-3">
+              <LogOut className="w-7 h-7" />
+            </div>
+            <DialogTitle className="text-center text-xl font-black text-white">
+              End Shift & Clock Out
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs text-white/50 mt-2 leading-relaxed">
+              Are you sure you want to conclude your shift for today? Your total productive working hours, break periods, and logout timestamp will be finalized in the live Kashmir Curators operational registry.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex sm:flex-row gap-2 mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setClockOutDialogOpen(false)}
+              className="flex-1 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold text-xs h-11"
+            >
+              Continue Shift
+            </Button>
+            <Button 
+              onClick={confirmClockOut}
+              className="flex-1 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs h-11 shadow-lg shadow-rose-600/25"
+            >
+              Confirm Clock Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

@@ -33,6 +33,7 @@ import SeasonalTariffManager from '../components/SeasonalTariffManager';
 import SettlementLedgerView from '../components/SettlementLedgerView';
 import HospitalityPayoutModal from '../components/HospitalityPayoutModal';
 import { EmployeeAttendanceDesk } from '../components/EmployeeAttendanceDesk';
+import NotificationBell from '@/components/admin/NotificationBell';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
@@ -210,6 +211,11 @@ export const HospitalityDashboard: React.FC = () => {
                     </Button>
                   </div>
                 )}
+
+                {/* Live In-App Notification Center */}
+                <div className="flex items-center">
+                  <NotificationBell />
+                </div>
 
                 {/* Superadmin Quick Link to Keys Generator */}
                 {canBypass && (
