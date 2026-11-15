@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHospitalityToken } from '../utils/hospitalityAuth';
 import { toast } from 'sonner';
 
 interface HousekeepingTask {
@@ -66,7 +67,7 @@ export const HousekeepingBoard: React.FC<HousekeepingBoardProps> = ({ selectedHo
   const fetchTasksAndRooms = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [tasksRes, roomsRes] = await Promise.all([
@@ -109,7 +110,7 @@ export const HousekeepingBoard: React.FC<HousekeepingBoardProps> = ({ selectedHo
     }
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const selectedRoom = rooms.find(r => r.roomNumber === newTaskRoom);
       const hotelId = selectedHotelId || (selectedRoom as any)?.hotelId || undefined;
 
@@ -142,7 +143,7 @@ export const HousekeepingBoard: React.FC<HousekeepingBoardProps> = ({ selectedHo
 
   const handleUpdateStatus = async (taskId: string, newStatus: string) => {
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const updatePayload: any = { status: newStatus };
       if (newStatus === 'INSPECTED') {
         updatePayload.inspectedBy = user?.name || 'Head Housekeeper';

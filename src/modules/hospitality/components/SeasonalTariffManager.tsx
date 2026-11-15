@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHospitalityToken } from '../utils/hospitalityAuth';
 
 interface SeasonalTariffManagerProps {
   selectedHotelId?: string;
@@ -56,7 +57,7 @@ export const SeasonalTariffManager: React.FC<SeasonalTariffManagerProps> = ({ se
   const fetchTariffsAndCategories = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [tariffsRes, catRes] = await Promise.all([
@@ -120,7 +121,7 @@ export const SeasonalTariffManager: React.FC<SeasonalTariffManagerProps> = ({ se
   const handleSaveTariff = async (rate: DBSeasonalRate) => {
     try {
       setIsSaving(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
 
       const res = await fetch(`${API_BASE_URL}/hotels/operations/tariffs/${rate.id}`, {
         method: 'PATCH',
@@ -151,7 +152,7 @@ export const SeasonalTariffManager: React.FC<SeasonalTariffManagerProps> = ({ se
   const handleSaveCategoryBase = async (cat: RoomCategory) => {
     try {
       setIsSaving(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
 
       const res = await fetch(`${API_BASE_URL}/hotels/operations/categories/${cat.id}`, {
         method: 'PATCH',

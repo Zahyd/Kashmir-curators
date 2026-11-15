@@ -99,6 +99,17 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  const getAuthToken = () => {
+    return (
+      token ||
+      localStorage.getItem('hospitality_token') ||
+      localStorage.getItem('teamToken') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('auth_token') ||
+      ''
+    );
+  };
+
   // "Send Booking to Hotel" Modal State
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
   const [selectedHotelId, setSelectedHotelId] = useState(initialHotelId || '');
@@ -159,7 +170,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   const fetchVouchers = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
@@ -189,7 +200,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
 
     try {
       setIsSubmitting(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const nights = Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)));
       const count = Number(roomsCount) || 1;
       const rate = Number(ratePerNight) || 12000;
@@ -247,7 +258,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   // 1-Click Status Transitions
   const handleConfirmVoucher = async (voucherId: string, guest: string) => {
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/confirm`, {
         method: 'POST',
         headers: {
@@ -271,7 +282,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
     if (!window.confirm(`Cancel booking voucher for ${guest}? The room allocation will be released.`)) return;
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}`, {
         method: 'PATCH',
         headers: {
@@ -293,7 +304,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   // Accept alternative proposed by hotel
   const handleAcceptAlternative = async (voucherId: string, guest: string) => {
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/accept-alternative`, {
         method: 'POST',
         headers: {
@@ -316,7 +327,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   // Regenerate expiring link and extend deadline
   const handleRegenerateLink = async (voucherId: string) => {
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/regenerate-token`, {
         method: 'POST',
         headers: {

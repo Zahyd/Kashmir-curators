@@ -153,11 +153,31 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
   const fetchReservations = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      let portalKey = '';
+      try {
+        const sess = JSON.parse(localStorage.getItem('hospitality_session') || '{}');
+        portalKey = sess.accessKey || '';
+      } catch {}
+
+      const authToken = 
+        token || 
+        localStorage.getItem('hospitality_token') || 
+        localStorage.getItem('teamToken') || 
+        localStorage.getItem('token') || 
+        localStorage.getItem('auth_token') || 
+        portalKey || 
+        '';
+
+      const headers: Record<string, string> = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      if (portalKey) {
+        headers['x-portal-key'] = portalKey;
+      }
+
       const url = `${API_BASE_URL}/hospitality${selectedHotelId ? `?hotelId=${selectedHotelId}` : ''}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
+      const res = await fetch(url, { headers });
       if (res.ok) {
         const data = await res.json();
         const list: ReceptionReservation[] = Array.isArray(data) ? data : [];

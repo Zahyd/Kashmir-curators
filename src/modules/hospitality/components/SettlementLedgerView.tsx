@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getHospitalityToken } from '../utils/hospitalityAuth';
 
 interface LedgerData {
   summary: {
@@ -68,7 +69,7 @@ export const SettlementLedgerView: React.FC<SettlementLedgerViewProps> = ({
   const fetchLedger = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
       const res = await fetch(`${API_BASE_URL}/hotels/operations/settlements/ledger${hotelParam}`, {
         headers: { Authorization: `Bearer ${authToken}` }

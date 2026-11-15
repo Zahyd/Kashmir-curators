@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHospitalityToken } from '../utils/hospitalityAuth';
 
 export interface Hotel {
   id: string;
@@ -186,7 +187,7 @@ export const HotelDirectoryManager: React.FC<HotelDirectoryManagerProps> = ({
 
     try {
       setIsSubmitting(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const url = isEditing 
         ? `${API_BASE_URL}/hotels/${currentHotelId}` 
         : `${API_BASE_URL}/hotels`;
@@ -238,7 +239,7 @@ export const HotelDirectoryManager: React.FC<HotelDirectoryManagerProps> = ({
     }
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const res = await fetch(`${API_BASE_URL}/hotels/${hotel.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authToken}` }

@@ -67,7 +67,13 @@ export const ReservationCalendar: React.FC<ReservationCalendarProps> = ({
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = 
+        token || 
+        localStorage.getItem('hospitality_token') || 
+        localStorage.getItem('teamToken') || 
+        localStorage.getItem('token') || 
+        localStorage.getItem('auth_token') || 
+        '';
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
       
       const [roomsRes, resRes] = await Promise.all([

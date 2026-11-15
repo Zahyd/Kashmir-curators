@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHospitalityToken } from '../utils/hospitalityAuth';
 import { toast } from 'sonner';
 
 interface RoomCategory {
@@ -68,7 +69,7 @@ export const LiveOccupancyGrid: React.FC<LiveOccupancyGridProps> = ({ selectedHo
   const fetchRoomsAndCategories = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [roomsRes, catRes] = await Promise.all([
@@ -112,7 +113,7 @@ export const LiveOccupancyGrid: React.FC<LiveOccupancyGridProps> = ({ selectedHo
     setRooms(prev => prev.map(r => r.id === room.id ? { ...r, bukhariActive: nextVal } : r));
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       await fetch(`${API_BASE_URL}/hotels/operations/rooms/${room.id}`, {
         method: 'PATCH',
         headers: {
@@ -132,7 +133,7 @@ export const LiveOccupancyGrid: React.FC<LiveOccupancyGridProps> = ({ selectedHo
     setRooms(prev => prev.map(r => r.id === roomId ? { ...r, housekeeping: newHk } : r));
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       await fetch(`${API_BASE_URL}/hotels/operations/rooms/${roomId}`, {
         method: 'PATCH',
         headers: {
@@ -159,7 +160,7 @@ export const LiveOccupancyGrid: React.FC<LiveOccupancyGridProps> = ({ selectedHo
     }
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const selectedCat = categories.find(c => c.id === newRoomCategory);
       const hotelId = selectedHotelId || (selectedCat as any)?.hotelId || undefined;
 

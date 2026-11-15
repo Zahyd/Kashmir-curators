@@ -68,8 +68,12 @@ export const HospitalityAuthGate: React.FC<HospitalityAuthGateProps> = ({ onAuth
         icon: '🏨'
       });
 
-      // Persist session locally
+      // Persist session and token locally
       localStorage.setItem('hospitality_session', JSON.stringify(data.session));
+      if (data.token) {
+        localStorage.setItem('hospitality_token', data.token);
+        localStorage.setItem('teamToken', data.token);
+      }
       onAuthenticated(data.session);
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid or revoked Access Key.');

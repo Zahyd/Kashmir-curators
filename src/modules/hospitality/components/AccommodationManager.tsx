@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHospitalityToken } from '../utils/hospitalityAuth';
 
 interface RoomCategory {
   id: string;
@@ -120,7 +121,7 @@ export const AccommodationManager: React.FC<AccommodationManagerProps> = ({
     if (!currentHotelId) return;
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const hotelParam = `?hotelId=${encodeURIComponent(currentHotelId)}`;
 
       const [catRes, roomsRes] = await Promise.all([
@@ -202,7 +203,7 @@ export const AccommodationManager: React.FC<AccommodationManagerProps> = ({
     }
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const url = isEditingCategory 
         ? `${API_BASE_URL}/hotels/operations/categories/${editingCategoryId}` 
         : `${API_BASE_URL}/hotels/operations/categories`;
@@ -240,7 +241,7 @@ export const AccommodationManager: React.FC<AccommodationManagerProps> = ({
     if (!window.confirm(`Delete "${cat.name}" category? Associated rooms will also be deleted.`)) return;
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const res = await fetch(`${API_BASE_URL}/hotels/operations/categories/${cat.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authToken}` }
@@ -264,7 +265,7 @@ export const AccommodationManager: React.FC<AccommodationManagerProps> = ({
     }
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const res = await fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
         method: 'POST',
         headers: {
@@ -298,7 +299,7 @@ export const AccommodationManager: React.FC<AccommodationManagerProps> = ({
     setRooms(prev => prev.map(r => r.id === room.id ? { ...r, bukhariActive: nextVal } : r));
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       await fetch(`${API_BASE_URL}/hotels/operations/rooms/${room.id}`, {
         method: 'PATCH',
         headers: {
@@ -319,7 +320,7 @@ export const AccommodationManager: React.FC<AccommodationManagerProps> = ({
     setRooms(prev => prev.map(r => r.id === room.id ? { ...r, status: nextStatus } : r));
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       await fetch(`${API_BASE_URL}/hotels/operations/rooms/${room.id}`, {
         method: 'PATCH',
         headers: {

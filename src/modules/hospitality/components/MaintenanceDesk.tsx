@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHospitalityToken } from '../utils/hospitalityAuth';
 import { toast } from 'sonner';
 
 interface MaintenanceTicket {
@@ -61,7 +62,7 @@ export const MaintenanceDesk: React.FC<MaintenanceDeskProps> = ({ selectedHotelI
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [ticketsRes, roomsRes] = await Promise.all([
@@ -104,7 +105,7 @@ export const MaintenanceDesk: React.FC<MaintenanceDeskProps> = ({ selectedHotelI
     }
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const selectedRoom = rooms.find(r => r.roomNumber === roomNumber);
       const hotelId = selectedHotelId || (selectedRoom as any)?.hotelId || undefined;
 
@@ -138,7 +139,7 @@ export const MaintenanceDesk: React.FC<MaintenanceDeskProps> = ({ selectedHotelI
 
   const handleResolveTicket = async (ticketId: string) => {
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
 
       const res = await fetch(`${API_BASE_URL}/hotels/operations/maintenance/${ticketId}`, {
         method: 'PATCH',

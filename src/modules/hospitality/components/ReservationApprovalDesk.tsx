@@ -88,6 +88,17 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
   const [idType, setIdType] = useState('Aadhaar Card');
   const [idNumber, setIdNumber] = useState('');
 
+  const getAuthToken = () => {
+    return (
+      token ||
+      localStorage.getItem('hospitality_token') ||
+      localStorage.getItem('teamToken') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('auth_token') ||
+      ''
+    );
+  };
+
   // Direct Booking Modal
   const [createBookingModalOpen, setCreateBookingModalOpen] = useState(false);
   const [newGuestName, setNewGuestName] = useState('');
@@ -106,7 +117,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [resRes, roomsRes, catRes] = await Promise.all([
@@ -163,7 +174,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
 
     try {
       setIsSubmittingBooking(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const nights = Math.max(1, Math.ceil((new Date(newCheckOut).getTime() - new Date(newCheckIn).getTime()) / (1000 * 60 * 60 * 24)));
       const count = Number(newRoomsCount) || 1;
       const rate = Number(newContractRate) || 0;
@@ -219,7 +230,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
   // Handle Status Transitions (Confirm / Hold / Reject)
   const handleAction = async (id: string, action: 'Confirmed' | 'Hold' | 'Rejected') => {
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const endpoint = action === 'Confirmed' 
         ? `${API_BASE_URL}/hospitality/${id}/confirm`
         : `${API_BASE_URL}/hospitality/${id}`;
@@ -266,7 +277,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
     if (!checkInRes) return;
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${checkInRes.id}/check-in`, {
         method: 'POST',
         headers: {
@@ -302,7 +313,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
     }
 
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getAuthToken();
       const res = await fetch(`${API_BASE_URL}/hospitality/${resItem.id}/check-out`, {
         method: 'POST',
         headers: {

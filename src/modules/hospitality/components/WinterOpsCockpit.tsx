@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHospitalityToken } from '../utils/hospitalityAuth';
 import { toast } from 'sonner';
 
 interface WinterLog {
@@ -69,7 +70,7 @@ export const WinterOpsCockpit: React.FC<WinterOpsCockpitProps> = ({ selectedHote
   const fetchWinterStatus = async () => {
     try {
       setIsLoading(true);
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
       const res = await fetch(`${API_BASE_URL}/hotels/operations/winter-ops${hotelParam}`, {
         headers: { Authorization: `Bearer ${authToken}` }
@@ -98,7 +99,7 @@ export const WinterOpsCockpit: React.FC<WinterOpsCockpitProps> = ({ selectedHote
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const authToken = token || localStorage.getItem('auth_token') || '';
+      const authToken = getHospitalityToken(token);
       const res = await fetch(`${API_BASE_URL}/hotels/operations/winter-ops`, {
         method: 'POST',
         headers: {

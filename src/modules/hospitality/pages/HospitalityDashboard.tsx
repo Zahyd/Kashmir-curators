@@ -70,6 +70,7 @@ export const HospitalityDashboard: React.FC = () => {
 
   const handleSignOutDesk = () => {
     localStorage.removeItem('hospitality_session');
+    localStorage.removeItem('hospitality_token');
     setSession(null);
     toast.info('Hospitality Desk session closed. Portal locked.');
   };

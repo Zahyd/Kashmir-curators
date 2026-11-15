@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/authMiddleware';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
 
 // Format unique key by portal prefix
 const generateKeyCode = (portalType: string): string => {
@@ -70,9 +73,24 @@ export const verifyPortalAccess = async (req: Request, res: Response) => {
       }
     });
 
+    // Generate authenticated JWT session for the portal
+    const sessionToken = jwt.sign(
+      {
+        id: updated.id,
+        accessKey: updated.accessKey,
+        name: updated.assignedName,
+        role: 'hospitality',
+        portalType: updated.portalType,
+        propertyScope: updated.propertyScope || 'ALL'
+      },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
     res.json({
       success: true,
       message: `Access granted to ${keyRecord.portalType} portal.`,
+      token: sessionToken,
       session: {
         id: updated.id,
         accessKey: updated.accessKey,
