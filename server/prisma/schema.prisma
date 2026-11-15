@@ -79,6 +79,8 @@ model Hotel {
   roomCategories      RoomCategory[]
   rooms               HotelRoom[]
   maintenance         MaintenanceRequest[]
+  housekeepingTasks   HousekeepingTask[]
+  winterOpsLogs       WinterOpsLog[]
   settlements         VendorSettlement[]
   reviews             HotelReview[]
   createdAt           DateTime           @default(now())
@@ -475,6 +477,17 @@ model HotelReservation {
   profitMargin     Float     @default(0)
   hotelDues        Float     @default(0)
   holdUntil        DateTime? // hold countdown timer
+  assignedRoomId   String?
+  assignedRoomNumber String?
+  adults           Int       @default(2)
+  children         Int       @default(0)
+  guestIdType      String?
+  guestIdNumber    String?
+  guestIdVerified  Boolean   @default(false)
+  checkInTime      DateTime?
+  checkOutTime     DateTime?
+  agentName        String?
+  internalNotes    String?
   createdById      String?
   createdBy        User?     @relation("UserReservations", fields: [createdById], references: [id])
   auditLogs        String?   // JSON string of updates/actions
@@ -597,17 +610,24 @@ model RoomCategory {
 }
 
 model HotelRoom {
-  id             String         @id @default(uuid())
-  hotelId        String
-  hotel          Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  categoryId     String
-  category       RoomCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  roomNumber     String
-  floor          String?
-  status         String         @default("AVAILABLE") // AVAILABLE, OCCUPIED, MAINTENANCE
-  housekeeping   String         @default("CLEAN")     // DIRTY, CLEAN, INSPECTED
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                  String         @id @default(uuid())
+  hotelId             String
+  hotel               Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  categoryId          String
+  category            RoomCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  roomNumber          String
+  floor               String?
+  status              String         @default("AVAILABLE") // AVAILABLE, OCCUPIED, MAINTENANCE
+  operationalStatus   String         @default("AVAILABLE_CLEAN") // AVAILABLE_CLEAN, AVAILABLE_DIRTY, OCCUPIED, RESERVED, CHECK_IN_DUE, CHECK_OUT_DUE, OUT_OF_SERVICE, UNDER_MAINTENANCE
+  housekeeping        String         @default("CLEAN")     // DIRTY, CLEAN, INSPECTED
+  bukhariActive       Boolean        @default(false)
+  electricWarmerActive Boolean       @default(false)
+  currentReservationId String?
+  assignedHousekeeper String?
+  housekeepingPriority String?       @default("NORMAL")
+  maintenanceNotes    String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }
 
 model SeasonalRate {
@@ -638,17 +658,58 @@ model MaintenanceRequest {
 }
 
 model VendorSettlement {
-  id             String         @id @default(uuid())
+  id                String         @id @default(uuid())
+  hotelId           String
+  hotel             Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  amount            Float
+  commissionDues    Float
+  netPaid           Float
+  payoutDate        DateTime       @default(now())
+  status            String         @default("COMPLETED") // COMPLETED, PENDING, REJECTED
+  transactionRef    String?
+  bankAccountName   String?
+  bankAccountNumber String?
+  ifscCode          String?
+  notes             String?
+  bookingIds        String?        // JSON array of settled reservation IDs
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model HousekeepingTask {
+  id             String    @id @default(uuid())
   hotelId        String
-  hotel          Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  amount         Float
-  commissionDues Float
-  netPaid        Float
-  payoutDate     DateTime       @default(now())
-  status         String         @default("COMPLETED") // COMPLETED, PENDING, REJECTED
-  transactionRef String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  hotel          Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomNumber     String
+  taskType       String    @default("TURNOVER") // TURNOVER, DAILY_CLEAN, DEEP_CLEAN, INSPECTION, LINEN_CHANGE
+  priority       String    @default("NORMAL")   // LOW, NORMAL, HIGH, URGENT
+  status         String    @default("DIRTY")    // DIRTY, IN_PROGRESS, CLEAN, INSPECTED
+  assignedTo     String?
+  notes          String?
+  linenChanged   Boolean   @default(true)
+  inspectedBy    String?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model WinterOpsLog {
+  id                  String    @id @default(uuid())
+  hotelId             String
+  hotel               Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  bukhariStatus       String    @default("OPERATIONAL") // OPERATIONAL, FUEL_LOW, OFF
+  firewoodStockDays   Int       @default(7)
+  generatorStatus     String    @default("STANDBY")     // RUNNING, STANDBY, MAINTENANCE
+  generatorFuelPct    Int       @default(85)
+  generatorRuntimeHrs Float     @default(0)
+  gridPowerStatus     String    @default("LIVE")        // LIVE, OUTAGE, FLUCTUATING
+  boilerHotWater      String    @default("ACTIVE")      // ACTIVE, REHEATING, FAULT
+  snowRoadClearance   String    @default("CLEAR")       // CLEAR, 4X4_ONLY, CHAINS_REQUIRED, BLOCKED
+  shikaraGhatStatus   String?   @default("OPEN")
+  notes               String?
+  updatedBy           String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 model HotelReview {

@@ -9,7 +9,10 @@ import {
   deleteReservation,
   getPublicReservation,
   confirmPublicReservation,
-  rejectPublicReservation
+  rejectPublicReservation,
+  checkInGuest,
+  checkOutGuest,
+  assignRoom
 } from '../controllers/hotelReservationController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -26,6 +29,9 @@ router.get('/:id', authenticateToken, getReservationById);
 router.post('/', authenticateToken, createReservation);
 router.patch('/:id', authenticateToken, updateReservation);
 router.post('/:id/confirm', authenticateToken, confirmReservation);
+router.post('/:id/check-in', authenticateToken, checkInGuest);
+router.post('/:id/check-out', authenticateToken, checkOutGuest);
+router.post('/:id/assign-room', authenticateToken, assignRoom);
 router.post('/:id/send', authenticateToken, simulateSendQuote);
 router.delete('/:id', authenticateToken, deleteReservation);
 

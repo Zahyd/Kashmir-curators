@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CalendarCheck2, 
   Check, 
@@ -11,223 +11,755 @@ import {
   CheckCircle2, 
   AlertTriangle,
   Download,
-  Share2
+  Share2,
+  RefreshCw,
+  Search,
+  BedDouble,
+  ShieldCheck,
+  Building2,
+  PhoneCall,
+  Eye,
+  LogOut,
+  LogIn
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { API_BASE_URL } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 export interface HotelReservationItem {
   id: string;
+  bookingReference?: string;
   guestName: string;
   guestPhone?: string;
+  guestEmail?: string;
   roomType: string;
   roomsCount: number;
   checkIn: string;
   checkOut: string;
   mealPlan: 'EP' | 'CP' | 'MAP' | 'AP';
-  status: 'Pending' | 'Confirmed' | 'Hold' | 'Rejected';
+  status: 'Pending' | 'Confirmed' | 'Checked-In' | 'Checked-Out' | 'Hold' | 'Rejected' | 'Cancelled';
+  paymentStatus?: string;
+  totalAmount: number;
+  hotelDues: number;
   contractRate: number;
   specialRequests?: string;
   agentName?: string;
+  assignedRoomNumber?: string;
+  guestIdType?: string;
+  guestIdNumber?: string;
+  auditLogs?: string;
+}
+
+interface Room {
+  id: string;
+  roomNumber: string;
+  category?: { name: string };
+  status: string;
+  housekeeping: string;
 }
 
 const SAMPLE_RESERVATIONS: HotelReservationItem[] = [
   {
     id: 'res-101',
+    bookingReference: 'KCH-8921',
     guestName: 'Vikram & Pooja Malhotra',
     guestPhone: '+91 98200 11223',
     roomType: 'Royal Cedar Houseboat Suite (Heated)',
     roomsCount: 1,
-    checkIn: '2026-11-20',
-    checkOut: '2026-11-23',
+    checkIn: '2026-11-20T00:00:00.000Z',
+    checkOut: '2026-11-23T00:00:00.000Z',
     mealPlan: 'MAP',
     status: 'Pending',
-    contractRate: 19500,
+    contractRate: 6500,
+    totalAmount: 24500,
+    hotelDues: 19500,
+    paymentStatus: 'Paid',
     specialRequests: 'Honeymoon candle-light dinner on houseboat deck & Shikara pickup from Ghat 7',
     agentName: 'Chinar Luxury DMC'
   },
   {
     id: 'res-102',
+    bookingReference: 'KCH-9402',
     guestName: 'Faisal Al-Otaibi & Family',
     guestPhone: '+966 50 123 4567',
     roomType: 'Alpine Presidential Chalet',
     roomsCount: 2,
-    checkIn: '2026-12-05',
-    checkOut: '2026-12-10',
+    checkIn: '2026-12-05T00:00:00.000Z',
+    checkOut: '2026-12-10T00:00:00.000Z',
     mealPlan: 'CP',
     status: 'Confirmed',
-    contractRate: 92500,
+    contractRate: 9250,
+    totalAmount: 115000,
+    hotelDues: 92500,
+    paymentStatus: 'Paid',
+    assignedRoomNumber: '201',
     specialRequests: 'Halal dining, baby crib, central heating 24/7',
     agentName: 'Direct Luxury Partner'
   },
   {
     id: 'res-103',
+    bookingReference: 'KCH-7104',
     guestName: 'Rohan Deshmukh',
     guestPhone: '+91 98765 43210',
     roomType: 'Deluxe Lake View Suite',
     roomsCount: 1,
-    checkIn: '2026-11-28',
-    checkOut: '2026-11-30',
+    checkIn: '2026-11-28T00:00:00.000Z',
+    checkOut: '2026-11-30T00:00:00.000Z',
     mealPlan: 'EP',
     status: 'Hold',
-    contractRate: 13000,
+    contractRate: 6500,
+    totalAmount: 16000,
+    hotelDues: 13000,
+    paymentStatus: 'Unpaid',
     specialRequests: 'Late night arrival from Srinagar airport',
     agentName: 'Himalayan Escapes'
   }
 ];
 
 export const ReservationApprovalDesk: React.FC = () => {
+  const { token, user } = useAuth();
   const [reservations, setReservations] = useState<HotelReservationItem[]>(SAMPLE_RESERVATIONS);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleAction = (id: string, action: 'Confirmed' | 'Hold' | 'Rejected') => {
-    setReservations(prev => prev.map(r => {
-      if (r.id === id) {
-        if (action === 'Confirmed') {
-          toast.success(`Booking Confirmed for ${r.guestName}! Voucher dispatched.`, { icon: '✅' });
-        } else if (action === 'Hold') {
-          toast.info(`Booking placed on 24-hour hold for ${r.guestName}`, { icon: '⏳' });
-        } else {
-          toast.error(`Reservation declined for ${r.guestName}`);
+  // Selected reservation for detail dialog
+  const [selectedRes, setSelectedRes] = useState<HotelReservationItem | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+
+  // Check-In dialog
+  const [checkInModalOpen, setCheckInModalOpen] = useState(false);
+  const [checkInRes, setCheckInRes] = useState<HotelReservationItem | null>(null);
+  const [assignedRoom, setAssignedRoom] = useState('');
+  const [idType, setIdType] = useState('Aadhaar Card');
+  const [idNumber, setIdNumber] = useState('');
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const authToken = token || localStorage.getItem('auth_token') || '';
+
+      const [resRes, roomsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/hotel-reservations`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }),
+        fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        })
+      ]);
+
+      if (resRes.ok) {
+        const data = await resRes.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setReservations(data);
         }
-        return { ...r, status: action };
       }
-      return r;
-    }));
+
+      if (roomsRes.ok) {
+        const roomsData = await roomsRes.json();
+        setRooms(roomsData);
+      }
+    } catch (err) {
+      console.error('Failed to load reservations:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [token]);
+
+  // Handle Status Transitions (Confirm / Hold / Reject)
+  const handleAction = async (id: string, action: 'Confirmed' | 'Hold' | 'Rejected') => {
+    try {
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      const endpoint = action === 'Confirmed' 
+        ? `${API_BASE_URL}/hotel-reservations/${id}/confirm`
+        : `${API_BASE_URL}/hotel-reservations/${id}`;
+
+      const res = await fetch(endpoint, {
+        method: action === 'Confirmed' ? 'POST' : 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          status: action,
+          holdUntil: action === 'Hold' ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null
+        })
+      });
+
+      if (!res.ok) throw new Error(`Failed to update status to ${action}`);
+
+      if (action === 'Confirmed') {
+        toast.success(`Booking Confirmed! Official Voucher dispatched.`, { icon: '✅' });
+      } else if (action === 'Hold') {
+        toast.info(`Booking placed on 24-hour hold.`, { icon: '⏳' });
+      } else {
+        toast.error(`Reservation declined.`);
+      }
+
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Error updating status');
+    }
+  };
+
+  // Check-In Guest Handler
+  const handleOpenCheckIn = (resItem: HotelReservationItem) => {
+    setCheckInRes(resItem);
+    setAssignedRoom(resItem.assignedRoomNumber || (rooms[0]?.roomNumber || ''));
+    setIdType(resItem.guestIdType || 'Aadhaar Card');
+    setIdNumber(resItem.guestIdNumber || '');
+    setCheckInModalOpen(true);
+  };
+
+  const handleConfirmCheckIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checkInRes) return;
+
+    try {
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      const res = await fetch(`${API_BASE_URL}/hotel-reservations/${checkInRes.id}/check-in`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          assignedRoomNumber: assignedRoom,
+          guestIdType: idType,
+          guestIdNumber: idNumber
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Check-in failed');
+      }
+
+      toast.success(`${checkInRes.guestName} successfully checked in to Room ${assignedRoom}!`, {
+        icon: '🏨'
+      });
+      setCheckInModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to complete check-in');
+    }
+  };
+
+  // Check-Out Guest Handler
+  const handleCheckOut = async (resItem: HotelReservationItem) => {
+    if (!window.confirm(`Confirm check-out for ${resItem.guestName}? Room will be scheduled for turnover cleaning.`)) {
+      return;
+    }
+
+    try {
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      const res = await fetch(`${API_BASE_URL}/hotel-reservations/${resItem.id}/check-out`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (!res.ok) throw new Error('Check-out failed');
+
+      toast.success(`${resItem.guestName} checked out. Room marked dirty & turnover task generated!`, {
+        icon: '🧹'
+      });
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Error checking out guest');
+    }
   };
 
   const getMealPlanLabel = (mp: string) => {
-    switch(mp) {
-      case 'EP': return 'Room Only (EP)';
-      case 'CP': return 'Breakfast Included (CP)';
-      case 'MAP': return 'Breakfast + Dinner (MAP)';
-      case 'AP': return 'All Meals (AP)';
+    switch (mp) {
+      case 'EP': return 'European Plan (Room Only)';
+      case 'CP': return 'Continental Plan (Bed & Breakfast)';
+      case 'MAP': return 'Modified American Plan (Breakfast + Dinner)';
+      case 'AP': return 'American Plan (All Meals Included)';
       default: return mp;
     }
   };
 
+  // Filtered reservations
+  const filtered = reservations.filter(r => {
+    const matchesSearch = r.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.guestPhone || '').includes(searchQuery) ||
+      (r.bookingReference || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.roomType || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (statusFilter === 'PENDING') return r.status === 'Pending';
+    if (statusFilter === 'CONFIRMED') return r.status === 'Confirmed';
+    if (statusFilter === 'IN_HOUSE') return r.status === 'Checked-In';
+    if (statusFilter === 'CHECKED_OUT') return r.status === 'Checked-Out';
+    if (statusFilter === 'HOLD') return r.status === 'Hold';
+
+    return true;
+  });
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Top Header & Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-4 sm:p-5 rounded-3xl border border-border/80 shadow-sm">
         <div>
-          <h3 className="font-bold text-lg text-foreground">Guest Bookings & Voucher Confirmations</h3>
-          <p className="text-xs text-muted-foreground">Approve incoming agent vouchers and hold allocations.</p>
+          <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+            <span>Guest Reservations & Voucher Desk</span>
+            <Badge variant="outline" className="text-emerald-600 border-emerald-500/40 text-xs">
+              Live B2B Sync
+            </Badge>
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Review incoming booking vouchers, allocate rooms, verify guest IDs, and manage departures.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search guest or ref..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-10 w-52 text-xs rounded-xl"
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchData}
+            disabled={isLoading}
+            className="rounded-xl text-xs gap-1.5 h-10"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>Sync</span>
+          </Button>
         </div>
       </div>
 
-      <div className="space-y-3">
-        {reservations.map((res) => {
-          const isPending = res.status === 'Pending';
-          const isConfirmed = res.status === 'Confirmed';
-          const isHold = res.status === 'Hold';
-
-          return (
-            <Card key={res.id} className="rounded-3xl border border-border/70 overflow-hidden bg-card hover:shadow-sm transition-all">
-              <CardContent className="p-5 space-y-4">
-                {/* Header row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                      {res.id}
-                    </span>
-                    <h4 className="font-bold text-base text-foreground">{res.guestName}</h4>
-                    {res.agentName && (
-                      <span className="text-[11px] text-muted-foreground">via {res.agentName}</span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      className={`text-xs font-bold ${
-                        isConfirmed ? 'bg-emerald-500 text-white' :
-                        isPending ? 'bg-amber-500 text-white animate-pulse' :
-                        isHold ? 'bg-purple-500 text-white' : 'bg-rose-500 text-white'
-                      }`}
-                    >
-                      {res.status}
-                    </Badge>
-                    <span className="text-xs font-bold text-primary">₹{res.contractRate.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-
-                {/* Details Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted/30 p-3.5 rounded-2xl text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Room Category:</span>
-                    <p className="font-semibold text-foreground mt-0.5">{res.roomType} ({res.roomsCount} Unit)</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Check-In / Out:</span>
-                    <p className="font-semibold text-foreground mt-0.5">{res.checkIn} &rarr; {res.checkOut}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Meal Plan:</span>
-                    <p className="font-semibold text-foreground mt-0.5 flex items-center gap-1">
-                      <Utensils className="w-3 h-3 text-primary" />
-                      {getMealPlanLabel(res.mealPlan)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Special Requests */}
-                {res.specialRequests && (
-                  <p className="text-xs text-muted-foreground italic bg-amber-500/5 p-2.5 rounded-xl border border-amber-500/10">
-                    <span className="font-semibold text-foreground not-italic">Guest Request: </span>
-                    "{res.specialRequests}"
-                  </p>
-                )}
-
-                {/* Action buttons */}
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  {isPending && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAction(res.id, 'Rejected')}
-                        className="rounded-xl text-xs text-rose-600 hover:bg-rose-50"
-                      >
-                        <X className="w-3.5 h-3.5 mr-1" />
-                        Decline
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAction(res.id, 'Hold')}
-                        className="rounded-xl text-xs border-purple-500/30 text-purple-600 hover:bg-purple-50"
-                      >
-                        <Clock className="w-3.5 h-3.5 mr-1" />
-                        24h Hold
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAction(res.id, 'Confirmed')}
-                        className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        Confirm Booking Voucher
-                      </Button>
-                    </>
-                  )}
-
-                  {isConfirmed && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toast.success(`Check-In voucher downloaded for ${res.guestName}`)}
-                      className="rounded-xl text-xs gap-1.5"
-                    >
-                      <Download className="w-3.5 h-3.5 text-primary" />
-                      Download Guest Voucher Slip
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { id: 'ALL', label: 'All Bookings' },
+          { id: 'PENDING', label: 'Pending Confirmations' },
+          { id: 'CONFIRMED', label: 'Confirmed Vouchers' },
+          { id: 'IN_HOUSE', label: 'In-House (Checked-In)' },
+          { id: 'CHECKED_OUT', label: 'Departed' },
+          { id: 'HOLD', label: 'On Hold' }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setStatusFilter(tab.id)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              statusFilter === tab.id
+                ? 'bg-amber-500 text-slate-950 shadow-sm'
+                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* Reservation Cards List */}
+      <div className="space-y-4">
+        {filtered.length === 0 ? (
+          <Card className="rounded-3xl border border-dashed border-border p-12 text-center bg-muted/20">
+            <CalendarCheck2 className="w-10 h-10 mx-auto text-muted-foreground/60 mb-2" />
+            <h4 className="font-bold text-base text-foreground">No Reservations Found</h4>
+            <p className="text-xs text-muted-foreground mt-1">
+              No bookings matching the current search criteria or status filter.
+            </p>
+          </Card>
+        ) : (
+          filtered.map((r) => {
+            const checkInDate = new Date(r.checkIn);
+            const checkOutDate = new Date(r.checkOut);
+            const nights = Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+            return (
+              <Card 
+                key={r.id} 
+                className={`rounded-3xl border transition-all overflow-hidden ${
+                  r.status === 'Pending' ? 'border-amber-500/50 bg-amber-500/5' :
+                  r.status === 'Checked-In' ? 'border-blue-500/40 bg-blue-500/5' :
+                  r.status === 'Confirmed' ? 'border-emerald-500/40 bg-card' : 'border-border bg-card'
+                }`}
+              >
+                <div className="p-5 sm:p-6 space-y-4">
+                  {/* Top Header Row */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-2xl bg-muted/80 flex items-center justify-center font-bold text-sm text-foreground shrink-0 border border-border">
+                        <User className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-base text-foreground">{r.guestName}</h4>
+                          <Badge variant="outline" className="font-mono text-[10px] uppercase font-bold">
+                            {r.bookingReference || `KCH-${r.id.slice(0, 6).toUpperCase()}`}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                          {r.guestPhone && <span>{r.guestPhone}</span>}
+                          {r.agentName && (
+                            <>
+                              <span>•</span>
+                              <span>Agent: <strong className="text-foreground">{r.agentName}</strong></span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <Badge 
+                        className={`text-xs font-black uppercase px-3 py-1 ${
+                          r.status === 'Confirmed' ? 'bg-emerald-600 text-white' :
+                          r.status === 'Checked-In' ? 'bg-blue-600 text-white' :
+                          r.status === 'Pending' ? 'bg-amber-500 text-slate-950' :
+                          r.status === 'Hold' ? 'bg-purple-600 text-white' :
+                          r.status === 'Checked-Out' ? 'bg-slate-600 text-white' : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {r.status}
+                      </Badge>
+
+                      {r.paymentStatus && (
+                        <Badge variant="outline" className="text-xs font-bold">
+                          {r.paymentStatus}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Booking Details Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                    <div className="p-3 bg-muted/40 rounded-2xl space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                        Dates & Duration
+                      </span>
+                      <p className="font-bold text-foreground">
+                        {checkInDate.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                        {' — '}
+                        {checkOutDate.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">{nights} Nights • {r.roomsCount} Suite</p>
+                    </div>
+
+                    <div className="p-3 bg-muted/40 rounded-2xl space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                        Room & Meal Plan
+                      </span>
+                      <p className="font-bold text-foreground truncate">{r.roomType}</p>
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">{r.mealPlan} Plan</p>
+                    </div>
+
+                    <div className="p-3 bg-muted/40 rounded-2xl space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                        Assigned Suite #
+                      </span>
+                      <p className="font-mono font-black text-sm text-foreground">
+                        {r.assignedRoomNumber ? `Suite #${r.assignedRoomNumber}` : 'Not Allocated Yet'}
+                      </p>
+                      {r.guestIdVerified && (
+                        <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                          <ShieldCheck className="w-3 h-3" /> ID Verified
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">
+                        Hotel Net Payable
+                      </span>
+                      <p className="font-mono font-black text-base text-emerald-600 dark:text-emerald-400">
+                        ₹{(r.hotelDues || r.totalAmount || 0).toLocaleString('en-IN')}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Gross: ₹{r.totalAmount?.toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
+
+                  {/* Special Requests Banner */}
+                  {r.specialRequests && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-foreground flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span><strong>Special Guest Request:</strong> {r.specialRequests}</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons Bar */}
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-border/50">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRes(r);
+                        setDetailModalOpen(true);
+                      }}
+                      className="text-xs font-bold text-muted-foreground hover:text-foreground h-9"
+                    >
+                      <Eye className="w-3.5 h-3.5 mr-1.5" />
+                      View Audit Details
+                    </Button>
+
+                    <div className="flex items-center gap-2">
+                      {/* PENDING ACTIONS */}
+                      {r.status === 'Pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAction(r.id, 'Hold')}
+                            className="text-xs font-bold rounded-xl h-9 border-amber-500/40 text-amber-700 dark:text-amber-400"
+                          >
+                            Place 24h Hold
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAction(r.id, 'Rejected')}
+                            className="text-xs font-bold rounded-xl h-9 text-rose-600 border-rose-500/30"
+                          >
+                            Decline
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleAction(r.id, 'Confirmed')}
+                            className="text-xs font-bold rounded-xl h-9 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                          >
+                            <Check className="w-3.5 h-3.5 mr-1" />
+                            Confirm Voucher
+                          </Button>
+                        </>
+                      )}
+
+                      {/* CONFIRMED ACTIONS (Ready to check-in) */}
+                      {r.status === 'Confirmed' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenCheckIn(r)}
+                          className="text-xs font-bold rounded-xl h-9 bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20"
+                        >
+                          <LogIn className="w-3.5 h-3.5 mr-1.5" />
+                          Check-In Guest
+                        </Button>
+                      )}
+
+                      {/* IN-HOUSE ACTIONS (Ready to check-out) */}
+                      {r.status === 'Checked-In' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleCheckOut(r)}
+                          className="text-xs font-bold rounded-xl h-9 bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-950"
+                        >
+                          <LogOut className="w-3.5 h-3.5 mr-1.5" />
+                          Check-Out & Turnover
+                        </Button>
+                      )}
+
+                      {/* Direct WhatsApp contact */}
+                      {r.guestPhone && (
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="text-xs font-bold rounded-xl h-9 text-emerald-600 border-emerald-500/30"
+                        >
+                          <a
+                            href={`https://wa.me/${r.guestPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Greetings from Kashmir Curators! Regarding your booking ${r.bookingReference || ''} for ${r.roomType}: looking forward to welcoming you!`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <PhoneCall className="w-3.5 h-3.5 mr-1" />
+                            WhatsApp
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* Check-In Modal with Room Allocation & ID Verification */}
+      <Dialog open={checkInModalOpen} onOpenChange={setCheckInModalOpen}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <LogIn className="w-5 h-5 text-blue-600" />
+              <span>Guest Check-In & Room Allocation</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {checkInRes && (
+            <form onSubmit={handleConfirmCheckIn} className="space-y-4 py-2 text-xs">
+              <div className="p-3 bg-muted/40 rounded-2xl">
+                <p className="font-bold text-sm text-foreground">{checkInRes.guestName}</p>
+                <p className="text-muted-foreground">{checkInRes.roomType} • {checkInRes.roomsCount} Suite</p>
+              </div>
+
+              <div>
+                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Assign Suite / Room Number
+                </label>
+                <Select value={assignedRoom} onValueChange={setAssignedRoom}>
+                  <SelectTrigger className="rounded-xl h-11 text-xs">
+                    <SelectValue placeholder="Select available clean room" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rooms.map(room => (
+                      <SelectItem 
+                        key={room.id} 
+                        value={room.roomNumber}
+                        disabled={room.status === 'MAINTENANCE' || room.housekeeping === 'DIRTY'}
+                      >
+                        Suite #{room.roomNumber} ({room.category?.name || 'Deluxe'}) — {room.status} [{room.housekeeping}]
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                    Govt ID Proof Type
+                  </label>
+                  <Select value={idType} onValueChange={setIdType}>
+                    <SelectTrigger className="rounded-xl h-11 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Aadhaar Card">Aadhaar Card</SelectItem>
+                      <SelectItem value="Passport">Passport</SelectItem>
+                      <SelectItem value="Voter ID">Voter ID</SelectItem>
+                      <SelectItem value="Driving License">Driving License</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                    ID Document Number
+                  </label>
+                  <Input
+                    placeholder="e.g. 8492-XXXX-XXXX"
+                    value={idNumber}
+                    onChange={(e) => setIdNumber(e.target.value)}
+                    className="rounded-xl h-11 font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span className="text-emerald-950 dark:text-emerald-200 text-[11px]">
+                  Room readiness check passed. Central heating and Bukhari verified active.
+                </span>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCheckInModalOpen(false)}
+                  className="rounded-xl text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20"
+                >
+                  Confirm Check-In
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reservation Details & Audit Dialog */}
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="rounded-3xl max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <FileText className="w-5 h-5 text-amber-500" />
+              <span>Reservation Audit & Details</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedRes && (
+            <div className="space-y-4 py-2 text-xs">
+              <div className="grid grid-cols-2 gap-3 p-4 bg-muted/40 rounded-2xl">
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Guest</span>
+                  <span className="font-bold text-foreground text-sm">{selectedRes.guestName}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Reference</span>
+                  <span className="font-mono font-bold text-foreground">{selectedRes.bookingReference || selectedRes.id}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Check-In</span>
+                  <span className="font-medium text-foreground">{new Date(selectedRes.checkIn).toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Check-Out</span>
+                  <span className="font-medium text-foreground">{new Date(selectedRes.checkOut).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div>
+                <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Action Audit History
+                </h5>
+                <div className="p-3 rounded-2xl border border-border bg-card space-y-2 max-h-48 overflow-y-auto">
+                  {selectedRes.auditLogs ? (
+                    (() => {
+                      try {
+                        const logs = JSON.parse(selectedRes.auditLogs);
+                        return logs.map((log: any, idx: number) => (
+                          <div key={idx} className="p-2 rounded-xl bg-muted/30 text-[11px] space-y-0.5">
+                            <div className="flex items-center justify-between text-muted-foreground text-[10px]">
+                              <strong>{log.action}</strong>
+                              <span>{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <p className="text-foreground">{log.details}</p>
+                            <span className="text-[10px] text-muted-foreground">User: {log.user}</span>
+                          </div>
+                        ));
+                      } catch {
+                        return <p className="text-muted-foreground italic">No formatted logs.</p>;
+                      }
+                    })()
+                  ) : (
+                    <p className="text-muted-foreground italic">Reservation initialized in system.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BedDouble, 
   Flame, 
@@ -9,62 +9,213 @@ import {
   Sliders, 
   Zap, 
   Droplet,
-  Users
+  Users,
+  RefreshCw,
+  Search,
+  Wrench,
+  ShieldCheck,
+  Check
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { API_BASE_URL } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+interface RoomCategory {
+  id: string;
+  name: string;
+  basePrice: number;
+}
 
 interface Room {
   id: string;
   roomNumber: string;
-  category: string;
-  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'MAINTENANCE';
-  housekeeping: 'CLEAN' | 'DIRTY' | 'INSPECTED';
-  bukhariActive: boolean;
+  floor?: string;
+  status: string;
+  operationalStatus?: string;
+  housekeeping: string;
+  bukhariActive?: boolean;
+  electricWarmerActive?: boolean;
+  assignedHousekeeper?: string;
+  categoryId?: string;
+  category?: { name: string; basePrice: number };
   guestName?: string;
 }
 
-const INITIAL_ROOMS: Room[] = [
-  { id: 'r1', roomNumber: '101', category: 'Royal Cedar Suite', status: 'OCCUPIED', housekeeping: 'INSPECTED', bukhariActive: true, guestName: 'Dr. Rahul Sharma' },
-  { id: 'r2', roomNumber: '102', category: 'Royal Cedar Suite', status: 'AVAILABLE', housekeeping: 'CLEAN', bukhariActive: true },
-  { id: 'r3', roomNumber: '103', category: 'Deluxe Lake View', status: 'RESERVED', housekeeping: 'CLEAN', bukhariActive: false, guestName: 'Ananya Roy (Arriving Today)' },
-  { id: 'r4', roomNumber: '104', category: 'Deluxe Lake View', status: 'AVAILABLE', housekeeping: 'CLEAN', bukhariActive: false },
-  { id: 'r5', roomNumber: '201', category: 'Alpine Heated Chalet', status: 'OCCUPIED', housekeeping: 'INSPECTED', bukhariActive: true, guestName: 'Zubair Al-Mansoor' },
-  { id: 'r6', roomNumber: '202', category: 'Alpine Heated Chalet', status: 'AVAILABLE', housekeeping: 'CLEAN', bukhariActive: true },
-  { id: 'r7', roomNumber: '203', category: 'Alpine Heated Chalet', status: 'MAINTENANCE', housekeeping: 'DIRTY', bukhariActive: false },
-  { id: 'r8', roomNumber: '204', category: 'Deluxe Lake View', status: 'AVAILABLE', housekeeping: 'CLEAN', bukhariActive: false },
+const DEFAULT_ROOMS: Room[] = [
+  { id: 'r1', roomNumber: '101', floor: '1st Floor', status: 'OCCUPIED', operationalStatus: 'OCCUPIED', housekeeping: 'CLEAN', bukhariActive: true, category: { name: 'Royal Cedar Suite', basePrice: 16500 }, guestName: 'Dr. Rahul Sharma' },
+  { id: 'r2', roomNumber: '102', floor: '1st Floor', status: 'AVAILABLE', operationalStatus: 'AVAILABLE_CLEAN', housekeeping: 'CLEAN', bukhariActive: true, category: { name: 'Royal Cedar Suite', basePrice: 16500 } },
+  { id: 'r3', roomNumber: '103', floor: '1st Floor', status: 'RESERVED', operationalStatus: 'RESERVED', housekeeping: 'CLEAN', bukhariActive: false, category: { name: 'Deluxe Lake View', basePrice: 12500 }, guestName: 'Ananya Roy (Arriving Today)' },
+  { id: 'r4', roomNumber: '104', floor: '1st Floor', status: 'AVAILABLE', operationalStatus: 'AVAILABLE_DIRTY', housekeeping: 'DIRTY', bukhariActive: false, category: { name: 'Deluxe Lake View', basePrice: 12500 } },
+  { id: 'r5', roomNumber: '201', floor: '2nd Floor', status: 'OCCUPIED', operationalStatus: 'OCCUPIED', housekeeping: 'CLEAN', bukhariActive: true, category: { name: 'Alpine Heated Chalet', basePrice: 22000 }, guestName: 'Zubair Al-Mansoor' },
+  { id: 'r6', roomNumber: '202', floor: '2nd Floor', status: 'AVAILABLE', operationalStatus: 'AVAILABLE_CLEAN', housekeeping: 'CLEAN', bukhariActive: true, category: { name: 'Alpine Heated Chalet', basePrice: 22000 } },
+  { id: 'r7', roomNumber: '203', floor: '2nd Floor', status: 'MAINTENANCE', operationalStatus: 'UNDER_MAINTENANCE', housekeeping: 'DIRTY', bukhariActive: false, category: { name: 'Alpine Heated Chalet', basePrice: 22000 } },
+  { id: 'r8', roomNumber: '204', floor: '2nd Floor', status: 'AVAILABLE', operationalStatus: 'AVAILABLE_CLEAN', housekeeping: 'CLEAN', bukhariActive: false, category: { name: 'Deluxe Lake View', basePrice: 12500 } },
 ];
 
 export const LiveOccupancyGrid: React.FC = () => {
-  const [rooms, setRooms] = useState<Room[]>(INITIAL_ROOMS);
+  const { token } = useAuth();
+  const [rooms, setRooms] = useState<Room[]>(DEFAULT_ROOMS);
+  const [categories, setCategories] = useState<RoomCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const toggleRoomStatus = (roomId: string) => {
-    setRooms(prev => prev.map(r => {
-      if (r.id === roomId) {
-        const nextStatus = r.status === 'AVAILABLE' ? 'OCCUPIED' : 'AVAILABLE';
-        toast.info(`Room ${r.roomNumber} status set to ${nextStatus}`);
-        return { ...r, status: nextStatus };
+  // New room state
+  const [newRoomNumber, setNewRoomNumber] = useState('');
+  const [newRoomFloor, setNewRoomFloor] = useState('1st Floor');
+  const [newRoomCategory, setNewRoomCategory] = useState('');
+
+  const fetchRoomsAndCategories = async () => {
+    try {
+      setIsLoading(true);
+      const authToken = token || localStorage.getItem('auth_token') || '';
+
+      const [roomsRes, catRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }),
+        fetch(`${API_BASE_URL}/hotels/operations/categories`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        })
+      ]);
+
+      if (roomsRes.ok) {
+        const roomsData = await roomsRes.json();
+        if (Array.isArray(roomsData) && roomsData.length > 0) {
+          setRooms(roomsData);
+        }
       }
-      return r;
-    }));
+
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        setCategories(catData);
+        if (catData.length > 0 && !newRoomCategory) {
+          setNewRoomCategory(catData[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch rooms:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const toggleBukhari = (roomId: string) => {
-    setRooms(prev => prev.map(r => {
-      if (r.id === roomId) {
-        const next = !r.bukhariActive;
-        toast.success(`Room ${r.roomNumber} Bukhari Heating ${next ? 'Activated' : 'Extinguished'}`);
-        return { ...r, bukhariActive: next };
-      }
-      return r;
-    }));
+  useEffect(() => {
+    fetchRoomsAndCategories();
+  }, [token]);
+
+  const toggleBukhari = async (room: Room) => {
+    const nextVal = !room.bukhariActive;
+    // Optimistic UI update
+    setRooms(prev => prev.map(r => r.id === room.id ? { ...r, bukhariActive: nextVal } : r));
+
+    try {
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      await fetch(`${API_BASE_URL}/hotels/operations/rooms/${room.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ bukhariActive: nextVal })
+      });
+      toast.success(`Room ${room.roomNumber} Bukhari Heating ${nextVal ? 'Activated' : 'Extinguished'}`);
+    } catch (err) {
+      toast.error('Failed to update heating status');
+      fetchRoomsAndCategories();
+    }
+  };
+
+  const handleUpdateHousekeeping = async (roomId: string, newHk: string) => {
+    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, housekeeping: newHk } : r));
+
+    try {
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      await fetch(`${API_BASE_URL}/hotels/operations/rooms/${roomId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          housekeeping: newHk,
+          operationalStatus: newHk === 'CLEAN' ? 'AVAILABLE_CLEAN' : 'AVAILABLE_DIRTY'
+        })
+      });
+      toast.success(`Room housekeeping updated to ${newHk}`);
+    } catch (err) {
+      toast.error('Failed to update housekeeping');
+      fetchRoomsAndCategories();
+    }
+  };
+
+  const handleCreateRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoomNumber.trim()) {
+      toast.error('Please enter a room number');
+      return;
+    }
+
+    try {
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      const selectedCat = categories.find(c => c.id === newRoomCategory);
+      const hotelId = (selectedCat as any)?.hotelId || undefined;
+
+      const res = await fetch(`${API_BASE_URL}/hotels/operations/rooms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          hotelId,
+          categoryId: newRoomCategory || undefined,
+          roomNumber: newRoomNumber.trim(),
+          floor: newRoomFloor,
+          status: 'AVAILABLE',
+          operationalStatus: 'AVAILABLE_CLEAN',
+          housekeeping: 'CLEAN'
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to create room');
+
+      toast.success(`Physical Room ${newRoomNumber} registered!`);
+      setCreateModalOpen(false);
+      setNewRoomNumber('');
+      fetchRoomsAndCategories();
+    } catch (err: any) {
+      toast.error(err.message || 'Error registering room');
+    }
   };
 
   const availableCount = rooms.filter(r => r.status === 'AVAILABLE').length;
   const occupiedCount = rooms.filter(r => r.status === 'OCCUPIED').length;
-  const occupancyPct = Math.round((occupiedCount / rooms.length) * 100);
+  const maintenanceCount = rooms.filter(r => r.status === 'MAINTENANCE').length;
+  const occupancyPct = rooms.length > 0 ? Math.round((occupiedCount / rooms.length) * 100) : 0;
+
+  // Filtered rooms
+  const filteredRooms = rooms.filter(r => {
+    const matchesSearch = r.roomNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.category?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.guestName || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (statusFilter === 'AVAILABLE') return r.status === 'AVAILABLE';
+    if (statusFilter === 'OCCUPIED') return r.status === 'OCCUPIED';
+    if (statusFilter === 'DIRTY') return r.housekeeping === 'DIRTY';
+    if (statusFilter === 'MAINTENANCE') return r.status === 'MAINTENANCE';
+
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -112,32 +263,85 @@ export const LiveOccupancyGrid: React.FC = () => {
         </div>
       </div>
 
+      {/* Search, Filter & Action Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {['ALL', 'AVAILABLE', 'OCCUPIED', 'DIRTY', 'MAINTENANCE'].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setStatusFilter(filter)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                statusFilter === filter
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {filter === 'ALL' && 'All Suites'}
+              {filter === 'AVAILABLE' && 'Available Clean'}
+              {filter === 'OCCUPIED' && 'Occupied'}
+              {filter === 'DIRTY' && 'Needs Cleaning'}
+              {filter === 'MAINTENANCE' && 'Maintenance'}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search room # or guest..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 w-48 text-xs rounded-xl"
+            />
+          </div>
+
+          <Button
+            size="sm"
+            onClick={() => setCreateModalOpen(true)}
+            className="rounded-xl text-xs font-bold gap-1.5 h-9 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Suite</span>
+          </Button>
+        </div>
+      </div>
+
       {/* Room Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {rooms.map((room) => {
+        {filteredRooms.map((room) => {
           const isAvail = room.status === 'AVAILABLE';
           const isOcc = room.status === 'OCCUPIED';
           const isRes = room.status === 'RESERVED';
+          const isMaint = room.status === 'MAINTENANCE';
 
           return (
             <Card 
               key={room.id}
               className={`rounded-3xl border transition-all overflow-hidden ${
-                isAvail ? 'border-emerald-500/30 bg-emerald-500/5' :
-                isOcc ? 'border-primary/30 bg-card' :
-                isRes ? 'border-purple-500/30 bg-purple-500/5' : 'border-border bg-muted/30'
+                isAvail ? 'border-emerald-500/30 bg-card hover:border-emerald-500/60' :
+                isOcc ? 'border-blue-500/40 bg-blue-500/5' :
+                isRes ? 'border-purple-500/30 bg-purple-500/5' : 
+                'border-rose-500/30 bg-rose-500/5'
               }`}
             >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-base text-foreground">
-                    #{room.roomNumber}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-lg text-foreground">
+                      #{room.roomNumber}
+                    </span>
+                    {room.floor && (
+                      <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">
+                        {room.floor}
+                      </Badge>
+                    )}
+                  </div>
                   <Badge 
                     className={`text-[10px] font-bold ${
-                      isAvail ? 'bg-emerald-500 text-white' :
-                      isOcc ? 'bg-primary text-primary-foreground' :
-                      isRes ? 'bg-purple-500 text-white' : 'bg-muted text-muted-foreground'
+                      isAvail ? 'bg-emerald-600 text-white' :
+                      isOcc ? 'bg-blue-600 text-white' :
+                      isRes ? 'bg-purple-600 text-white' : 'bg-rose-600 text-white'
                     }`}
                   >
                     {room.status}
@@ -145,23 +349,30 @@ export const LiveOccupancyGrid: React.FC = () => {
                 </div>
 
                 <div>
-                  <h5 className="font-semibold text-xs text-foreground line-clamp-1">{room.category}</h5>
+                  <h5 className="font-semibold text-xs text-foreground line-clamp-1">
+                    {room.category?.name || 'Deluxe Suite'}
+                  </h5>
                   {room.guestName ? (
-                    <p className="text-[11px] text-primary font-medium mt-0.5 line-clamp-1">
+                    <p className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-0.5 line-clamp-1">
                       Guest: {room.guestName}
                     </p>
                   ) : (
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Vacant & Clean</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                      <span>Housekeeping:</span>
+                      <strong className={room.housekeeping === 'CLEAN' ? 'text-emerald-500' : 'text-rose-500'}>
+                        {room.housekeeping}
+                      </strong>
+                    </p>
                   )}
                 </div>
 
-                {/* Bukhari Heating Toggle */}
-                <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                {/* Bukhari Heating Toggle & Housekeeping Selector */}
+                <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
                   <button
-                    onClick={() => toggleBukhari(room.id)}
-                    className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${
+                    onClick={() => toggleBukhari(room)}
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-colors ${
                       room.bukhariActive 
-                        ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' 
+                        ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30' 
                         : 'bg-muted text-muted-foreground'
                     }`}
                   >
@@ -169,20 +380,100 @@ export const LiveOccupancyGrid: React.FC = () => {
                     <span>{room.bukhariActive ? 'Bukhari Hot' : 'Heating Off'}</span>
                   </button>
 
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => toggleRoomStatus(room.id)}
-                    className="text-[11px] h-7 px-2 hover:bg-muted"
+                  <Select
+                    value={room.housekeeping}
+                    onValueChange={(val) => handleUpdateHousekeeping(room.id, val)}
                   >
-                    Toggle
-                  </Button>
+                    <SelectTrigger className="h-7 text-[10px] w-24 rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CLEAN">Clean</SelectItem>
+                      <SelectItem value="DIRTY">Dirty</SelectItem>
+                      <SelectItem value="INSPECTED">Inspected</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {/* Add Suite Modal */}
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <BedDouble className="w-5 h-5 text-amber-500" />
+              <span>Register Physical Suite / Room</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateRoom} className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                Room Number
+              </label>
+              <Input
+                placeholder="e.g. 105 or Suite 3"
+                value={newRoomNumber}
+                onChange={(e) => setNewRoomNumber(e.target.value)}
+                className="rounded-xl h-11 font-mono font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                Floor / Wing
+              </label>
+              <Input
+                placeholder="e.g. 1st Floor / Cedar Wing"
+                value={newRoomFloor}
+                onChange={(e) => setNewRoomFloor(e.target.value)}
+                className="rounded-xl h-11"
+              />
+            </div>
+
+            {categories.length > 0 && (
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Room Category
+                </label>
+                <Select value={newRoomCategory} onValueChange={setNewRoomCategory}>
+                  <SelectTrigger className="rounded-xl h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} — ₹{c.basePrice.toLocaleString('en-IN')}/night
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateModalOpen(false)}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md"
+              >
+                Register Suite
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

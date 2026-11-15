@@ -10,13 +10,25 @@ import {
   Menu,
   Sparkles,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Calendar,
+  Wrench,
+  Layers
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
-export type HospitalityTab = 'overview' | 'reservations' | 'inventory' | 'tariffs' | 'amenities' | 'payouts';
+export type HospitalityTab = 
+  | 'overview' 
+  | 'calendar'
+  | 'reservations' 
+  | 'inventory' 
+  | 'housekeeping'
+  | 'maintenance'
+  | 'tariffs' 
+  | 'amenities' 
+  | 'payouts';
 
 interface HospitalitySidebarProps {
   activeTab: HospitalityTab;
@@ -37,8 +49,11 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
 
   const navItems = [
     { id: 'overview' as HospitalityTab, label: 'Front Desk Overview', icon: Building2 },
+    { id: 'calendar' as HospitalityTab, label: 'Rack & Calendar', icon: Calendar, badge: 'Grid' },
     { id: 'reservations' as HospitalityTab, label: 'Guest Reservations', icon: CalendarCheck2, badge: 'Live' },
     { id: 'inventory' as HospitalityTab, label: 'Room Categories & Grid', icon: BedDouble },
+    { id: 'housekeeping' as HospitalityTab, label: 'Housekeeping CMS', icon: Sparkles },
+    { id: 'maintenance' as HospitalityTab, label: 'Maintenance & Repairs', icon: Wrench },
     { id: 'tariffs' as HospitalityTab, label: 'Seasonal Tariffs & Meals', icon: SlidersHorizontal },
     { id: 'amenities' as HospitalityTab, label: 'Heating & Winter Ops', icon: Flame },
     { id: 'payouts' as HospitalityTab, label: 'Settlement & Bank Dues', icon: Receipt },
@@ -98,7 +113,7 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
               </div>
               {item.badge && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                  isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/10 text-primary'
+                  isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
                 }`}>
                   {item.badge}
                 </span>
@@ -108,46 +123,46 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
         })}
       </nav>
 
-      {/* Hospitality Hotline */}
-      <div className="p-4 border-t border-border/50 bg-muted/30 m-3 rounded-2xl">
-        <div className="flex items-center gap-2 mb-1.5">
-          <PhoneCall className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold text-foreground">Hotelier Help Desk</span>
+      {/* Bottom Emergency Support Card */}
+      <div className="p-4 border-t border-border/50">
+        <div className="p-3 bg-muted/40 rounded-2xl border border-border/60 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+            <PhoneCall className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Srinagar Ground Support</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            24/7 winter emergency & allocation desk: +91 94190 00000
+          </p>
         </div>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Need immediate voucher resolution or guest displacement assistance?
-        </p>
-        <span className="text-xs font-bold text-primary block mt-2">
-          +91 (194) 250-KASHMIR
-        </span>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Mobile Bar */}
-      <div className="lg:hidden flex items-center justify-between p-4 bg-card border-b border-border sticky top-0 z-30">
-        <div>
-          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Hospitality OS</span>
-          <h3 className="font-bold text-foreground text-sm line-clamp-1">{propertyName || 'Hotel Dashboard'}</h3>
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-72 border-r border-border/60 bg-card/40 shrink-0">
+        <NavContent />
+      </aside>
+
+      {/* Mobile Drawer Trigger */}
+      <div className="lg:hidden p-4 border-b border-border/50 bg-card flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-bold text-sm text-foreground">{propertyName || 'Hospitality Desk'}</span>
         </div>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="rounded-xl">
-              <Menu className="w-5 h-5" />
+            <Button variant="outline" size="sm" className="rounded-xl gap-2">
+              <Menu className="w-4 h-4" />
+              <span>Menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-80">
+          <SheetContent side="left" className="p-0 w-72">
             <NavContent />
           </SheetContent>
         </Sheet>
       </div>
-
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-72 shrink-0 border-r border-border/70 bg-card h-[calc(100vh-4rem)] sticky top-16 shadow-sm overflow-hidden">
-        <NavContent />
-      </aside>
     </>
   );
 };

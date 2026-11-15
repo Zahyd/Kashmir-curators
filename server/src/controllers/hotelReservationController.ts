@@ -631,3 +631,189 @@ export const rejectPublicReservation = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to decline reservation' });
   }
 };
+
+// Check-In Guest with identity verification and room occupancy transition
+export const checkInGuest = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { assignedRoomNumber, guestIdType, guestIdNumber } = req.body;
+    const p = prisma as any;
+
+    const reservation = await p.hotelReservation.findUnique({ where: { id } });
+    if (!reservation) return res.status(404).json({ error: 'Reservation not found' });
+
+    let roomRecord = null;
+    if (assignedRoomNumber) {
+      roomRecord = await p.hotelRoom.findFirst({
+        where: { hotelId: reservation.hotelId, roomNumber: assignedRoomNumber }
+      });
+
+      if (roomRecord) {
+        if (roomRecord.status === 'MAINTENANCE' || roomRecord.operationalStatus === 'UNDER_MAINTENANCE') {
+          return res.status(400).json({ error: `Room ${assignedRoomNumber} is currently under maintenance. Please assign an available clean room.` });
+        }
+        if (roomRecord.housekeeping === 'DIRTY') {
+          return res.status(400).json({ error: `Room ${assignedRoomNumber} is dirty. Housekeeping must clean the room before check-in.` });
+        }
+      }
+    }
+
+    let history = [];
+    try { history = JSON.parse(reservation.auditLogs || '[]'); } catch (e) { history = []; }
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Guest Checked-In',
+      user: req.user?.name || req.user?.email || 'Front Desk',
+      details: `Checked-in to Room ${assignedRoomNumber || 'Allocated'}. ID: ${guestIdType || 'Verified'} - ${guestIdNumber || 'Verified'}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id },
+      data: {
+        status: 'Checked-In',
+        checkInTime: new Date(),
+        assignedRoomId: roomRecord ? roomRecord.id : undefined,
+        assignedRoomNumber: assignedRoomNumber || reservation.assignedRoomNumber,
+        guestIdType: guestIdType || reservation.guestIdType,
+        guestIdNumber: guestIdNumber || reservation.guestIdNumber,
+        guestIdVerified: true,
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true }
+    });
+
+    if (roomRecord) {
+      await p.hotelRoom.update({
+        where: { id: roomRecord.id },
+        data: {
+          status: 'OCCUPIED',
+          operationalStatus: 'OCCUPIED',
+          currentReservationId: id
+        }
+      });
+    }
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'GUEST_CHECKED_IN',
+        message: `${reservation.guestName} checked in to Room ${assignedRoomNumber || ''}`
+      });
+    }
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to check in guest' });
+  }
+};
+
+// Check-Out Guest with automatic housekeeping turnover task
+export const checkOutGuest = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const p = prisma as any;
+
+    const reservation = await p.hotelReservation.findUnique({ where: { id } });
+    if (!reservation) return res.status(404).json({ error: 'Reservation not found' });
+
+    let history = [];
+    try { history = JSON.parse(reservation.auditLogs || '[]'); } catch (e) { history = []; }
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Guest Checked-Out',
+      user: req.user?.name || req.user?.email || 'Front Desk',
+      details: `Checked-out from Room ${reservation.assignedRoomNumber || 'assigned'}. Turnover cleaning scheduled.`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id },
+      data: {
+        status: 'Checked-Out',
+        checkOutTime: new Date(),
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true }
+    });
+
+    if (reservation.assignedRoomNumber) {
+      const room = await p.hotelRoom.findFirst({
+        where: { hotelId: reservation.hotelId, roomNumber: reservation.assignedRoomNumber }
+      });
+      if (room) {
+        await p.hotelRoom.update({
+          where: { id: room.id },
+          data: {
+            status: 'AVAILABLE',
+            operationalStatus: 'AVAILABLE_DIRTY',
+            housekeeping: 'DIRTY',
+            currentReservationId: null
+          }
+        });
+
+        await p.housekeepingTask.create({
+          data: {
+            hotelId: reservation.hotelId,
+            roomNumber: reservation.assignedRoomNumber,
+            taskType: 'TURNOVER',
+            priority: 'HIGH',
+            status: 'DIRTY',
+            notes: `Turnover cleaning post checkout for ${reservation.guestName}`
+          }
+        });
+      }
+    }
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'GUEST_CHECKED_OUT',
+        message: `${reservation.guestName} checked out`
+      });
+    }
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to check out guest' });
+  }
+};
+
+// Reassign Room
+export const assignRoom = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { roomNumber } = req.body;
+    const p = prisma as any;
+
+    const reservation = await p.hotelReservation.findUnique({ where: { id } });
+    if (!reservation) return res.status(404).json({ error: 'Reservation not found' });
+
+    const roomRecord = await p.hotelRoom.findFirst({
+      where: { hotelId: reservation.hotelId, roomNumber }
+    });
+
+    if (!roomRecord) {
+      return res.status(404).json({ error: `Room ${roomNumber} does not exist at this property.` });
+    }
+
+    let history = [];
+    try { history = JSON.parse(reservation.auditLogs || '[]'); } catch (e) { history = []; }
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Room Assigned / Changed',
+      user: req.user?.name || req.user?.email || 'Front Desk',
+      details: `Room changed to ${roomNumber}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id },
+      data: {
+        assignedRoomId: roomRecord.id,
+        assignedRoomNumber: roomNumber,
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true }
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};

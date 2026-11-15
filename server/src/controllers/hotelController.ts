@@ -156,102 +156,166 @@ export const deleteHotel = async (req: any, res: Response) => {
 // --- Hospitality Operations Dashboard & KPIs ---
 export const getHotelsDashboard = async (req: any, res: Response) => {
   try {
+    const { hotelId } = req.query;
+    
+    // Target hotel or first available active hotel
+    const targetHotel = hotelId 
+      ? await prisma.hotel.findUnique({ where: { id: String(hotelId) } }) 
+      : await prisma.hotel.findFirst({ where: { isActive: true } });
+
+    const currentHotelId = targetHotel ? targetHotel.id : (hotelId ? String(hotelId) : undefined);
+    const scopedFilter = currentHotelId ? { hotelId: currentHotelId } : {};
+
     const totalHotels = await prisma.hotel.count();
     const activeHotels = await prisma.hotel.count({ where: { isActive: true } });
-    const totalRooms = await prisma.hotelRoom.count();
-    const occupiedRooms = await prisma.hotelRoom.count({ where: { status: 'OCCUPIED' } });
-    const maintenanceRooms = await prisma.hotelRoom.count({ where: { status: 'MAINTENANCE' } });
     
-    const availableRooms = totalRooms - occupiedRooms - maintenanceRooms;
-    const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 68; // fallback average
+    // Physical Room counts
+    const totalRooms = await prisma.hotelRoom.count({ where: scopedFilter });
+    const occupiedRooms = await prisma.hotelRoom.count({ 
+      where: { ...scopedFilter, status: 'OCCUPIED' } 
+    });
+    const maintenanceRooms = await prisma.hotelRoom.count({ 
+      where: { ...scopedFilter, status: 'MAINTENANCE' } 
+    });
+    const reservedRooms = await prisma.hotelRoom.count({
+      where: { ...scopedFilter, operationalStatus: 'RESERVED' }
+    });
+    const availableRooms = Math.max(0, totalRooms - occupiedRooms - maintenanceRooms);
+    const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const today = new Date(`${todayStr}T00:00:00Z`);
+    // Housekeeping status counts
+    const cleanRooms = await prisma.hotelRoom.count({ where: { ...scopedFilter, housekeeping: 'CLEAN' } });
+    const dirtyRooms = await prisma.hotelRoom.count({ where: { ...scopedFilter, housekeeping: 'DIRTY' } });
+    const inspectedRooms = await prisma.hotelRoom.count({ where: { ...scopedFilter, housekeeping: 'INSPECTED' } });
 
-    const checkIns = await prisma.hotelReservation.count({
+    // Date bounds for arrivals and departures
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const todayCheckIns = await prisma.hotelReservation.count({
       where: {
-        checkIn: {
-          gte: today,
-          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-        }
+        ...scopedFilter,
+        checkIn: { gte: startOfToday, lt: endOfToday },
+        status: { notIn: ['Cancelled', 'Rejected'] }
       }
     });
 
-    const checkOuts = await prisma.hotelReservation.count({
+    const todayCheckOuts = await prisma.hotelReservation.count({
       where: {
-        checkOut: {
-          gte: today,
-          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-        }
+        ...scopedFilter,
+        checkOut: { gte: startOfToday, lt: endOfToday },
+        status: { notIn: ['Cancelled', 'Rejected'] }
       }
     });
 
     const pendingConfirmations = await prisma.hotelReservation.count({
-      where: { status: 'Pending' }
+      where: { ...scopedFilter, status: 'Pending' }
     });
 
-    const unpaidReservations = await prisma.hotelReservation.findMany({
-      where: { paymentStatus: 'Unpaid' }
-    });
-    const pendingPayments = unpaidReservations.reduce((sum, r) => sum + r.totalAmount, 0);
-
-    const activeReservations = await prisma.hotelReservation.findMany({
+    // In-house active reservations today
+    const inHouseReservations = await prisma.hotelReservation.findMany({
       where: {
-        status: { in: ['Confirmed', 'Hold'] }
+        ...scopedFilter,
+        status: { in: ['Confirmed', 'Checked-In', 'Hold'] },
+        checkIn: { lte: now },
+        checkOut: { gte: now }
       }
     });
 
-    // Sum revenue today and monthly revenue
-    let revenueToday = 0;
-    let monthlyRevenue = 0;
-    let commissionDue = 0;
+    // Daily room revenue
+    const revenueToday = inHouseReservations.reduce((acc, r) => {
+      const nights = Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / (1000 * 60 * 60 * 24)));
+      return acc + (r.totalAmount / nights);
+    }, 0);
 
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-
-    activeReservations.forEach(r => {
-      const checkInDate = new Date(r.checkIn);
-      const checkOutDate = new Date(r.checkOut);
-      const isTodayInBooking = new Date(todayStr) >= checkInDate && new Date(todayStr) <= checkOutDate;
-      const isThisMonth = checkInDate >= startOfMonth;
-
-      if (isTodayInBooking) {
-        revenueToday += r.totalAmount;
-      }
-      if (isThisMonth) {
-        monthlyRevenue += r.totalAmount;
-        commissionDue += r.totalAmount * (r.commissionRate || 0.1);
+    // Monthly volume
+    const monthlyReservations = await prisma.hotelReservation.findMany({
+      where: {
+        ...scopedFilter,
+        status: { in: ['Confirmed', 'Checked-In', 'Checked-Out'] },
+        checkIn: { gte: startOfMonth }
       }
     });
 
-    // Fallbacks if no live bookings yet
-    if (revenueToday === 0) revenueToday = 45000;
-    if (monthlyRevenue === 0) monthlyRevenue = 840000;
-    if (commissionDue === 0) commissionDue = 84000;
+    const monthlyRevenue = monthlyReservations.reduce((sum, r) => sum + r.totalAmount, 0);
+    const monthlyNetPayable = monthlyReservations.reduce((sum, r) => sum + r.hotelDues, 0);
+    const commissionDue = monthlyReservations.reduce((sum, r) => sum + (r.totalAmount - r.hotelDues), 0);
 
-    const hotels = await prisma.hotel.findMany();
-    const sumRatings = hotels.reduce((sum, h) => sum + (h.rating || 0), 0);
-    const averageRating = hotels.length > 0 ? parseFloat((sumRatings / hotels.length).toFixed(1)) : 4.6;
+    // Outstanding settlements
+    const totalHotelDuesPayable = await prisma.hotelReservation.aggregate({
+      where: {
+        ...scopedFilter,
+        status: { in: ['Confirmed', 'Checked-In', 'Checked-Out'] }
+      },
+      _sum: { hotelDues: true }
+    });
+
+    const totalSettledPayouts = await prisma.vendorSettlement.aggregate({
+      where: {
+        ...scopedFilter,
+        status: 'COMPLETED'
+      },
+      _sum: { netPaid: true }
+    });
+
+    const outstandingSettlement = Math.max(
+      0, 
+      (totalHotelDuesPayable._sum.hotelDues || 0) - (totalSettledPayouts._sum.netPaid || 0)
+    );
+
+    // Winter operations log
+    const latestWinterLog = currentHotelId ? await prisma.winterOpsLog.findFirst({
+      where: { hotelId: currentHotelId },
+      orderBy: { createdAt: 'desc' }
+    }) : null;
 
     const maintenanceRequests = await prisma.maintenanceRequest.count({
-      where: { status: { in: ['PENDING', 'IN_PROGRESS'] } }
+      where: { ...scopedFilter, status: { in: ['PENDING', 'IN_PROGRESS'] } }
     });
 
-    const alertsCount = await prisma.hotelRoom.count({ where: { housekeeping: 'DIRTY' } }) + maintenanceRequests;
+    const alertsCount = dirtyRooms + maintenanceRequests;
 
     res.json({
+      hotel: targetHotel ? { 
+        id: targetHotel.id, 
+        name: targetHotel.name, 
+        location: targetHotel.location,
+        starRating: targetHotel.starRating 
+      } : null,
       totalHotels,
       activeHotels,
-      availableRooms: totalRooms > 0 ? availableRooms : 28, // fallback
-      occupiedRooms: totalRooms > 0 ? occupiedRooms : 14,   // fallback
-      todayCheckIns: checkIns || 4,
-      todayCheckOuts: checkOuts || 2,
-      pendingConfirmations,
+      totalRooms,
+      availableRooms,
+      occupiedRooms,
+      reservedRooms,
+      maintenanceRooms,
       occupancyRate,
-      revenueToday,
-      monthlyRevenue,
-      averageRating,
-      pendingPayments,
-      commissionDue,
+      todayCheckIns,
+      todayCheckOuts,
+      pendingConfirmations,
+      revenueToday: Math.round(revenueToday),
+      monthlyRevenue: Math.round(monthlyRevenue),
+      monthlyNetPayable: Math.round(monthlyNetPayable),
+      commissionDue: Math.round(commissionDue),
+      outstandingSettlement: Math.round(outstandingSettlement),
+      housekeeping: {
+        clean: cleanRooms,
+        dirty: dirtyRooms,
+        inspected: inspectedRooms
+      },
+      winterOps: latestWinterLog || {
+        bukhariStatus: 'OPERATIONAL',
+        firewoodStockDays: 14,
+        generatorStatus: 'STANDBY',
+        generatorFuelPct: 90,
+        generatorRuntimeHrs: 22.5,
+        gridPowerStatus: 'LIVE',
+        boilerHotWater: 'ACTIVE',
+        snowRoadClearance: 'CLEAR',
+        shikaraGhatStatus: 'OPEN'
+      },
       maintenanceRequests,
       alertsCount
     });
@@ -364,7 +428,19 @@ export const getHotelRooms = async (req: Request, res: Response) => {
 };
 
 export const createHotelRoom = async (req: any, res: Response) => {
-  const { hotelId, categoryId, roomNumber, floor, status, housekeeping } = req.body;
+  const { 
+    hotelId, 
+    categoryId, 
+    roomNumber, 
+    floor, 
+    status, 
+    operationalStatus,
+    housekeeping,
+    bukhariActive,
+    electricWarmerActive,
+    assignedHousekeeper,
+    housekeepingPriority
+  } = req.body;
   try {
     const room = await prisma.hotelRoom.create({
       data: {
@@ -373,7 +449,12 @@ export const createHotelRoom = async (req: any, res: Response) => {
         roomNumber,
         floor,
         status: status || 'AVAILABLE',
-        housekeeping: housekeeping || 'CLEAN'
+        operationalStatus: operationalStatus || 'AVAILABLE_CLEAN',
+        housekeeping: housekeeping || 'CLEAN',
+        bukhariActive: Boolean(bukhariActive),
+        electricWarmerActive: Boolean(electricWarmerActive),
+        assignedHousekeeper,
+        housekeepingPriority: housekeepingPriority || 'NORMAL'
       }
     });
 
@@ -392,16 +473,36 @@ export const createHotelRoom = async (req: any, res: Response) => {
 
 export const updateHotelRoom = async (req: any, res: Response) => {
   const { id } = req.params;
-  const { status, housekeeping, roomNumber, floor } = req.body;
+  const { 
+    status, 
+    operationalStatus,
+    housekeeping, 
+    roomNumber, 
+    floor,
+    bukhariActive,
+    electricWarmerActive,
+    assignedHousekeeper,
+    housekeepingPriority,
+    maintenanceNotes
+  } = req.body;
+
   try {
+    const updateData: any = {};
+    if (status !== undefined) updateData.status = status;
+    if (operationalStatus !== undefined) updateData.operationalStatus = operationalStatus;
+    if (housekeeping !== undefined) updateData.housekeeping = housekeeping;
+    if (roomNumber !== undefined) updateData.roomNumber = roomNumber;
+    if (floor !== undefined) updateData.floor = floor;
+    if (bukhariActive !== undefined) updateData.bukhariActive = Boolean(bukhariActive);
+    if (electricWarmerActive !== undefined) updateData.electricWarmerActive = Boolean(electricWarmerActive);
+    if (assignedHousekeeper !== undefined) updateData.assignedHousekeeper = assignedHousekeeper;
+    if (housekeepingPriority !== undefined) updateData.housekeepingPriority = housekeepingPriority;
+    if (maintenanceNotes !== undefined) updateData.maintenanceNotes = maintenanceNotes;
+
     const room = await prisma.hotelRoom.update({
       where: { id },
-      data: {
-        status,
-        housekeeping,
-        roomNumber,
-        floor
-      }
+      data: updateData,
+      include: { category: true }
     });
 
     if (req.io) {
@@ -589,6 +690,270 @@ export const createHotelReview = async (req: any, res: Response) => {
     });
 
     res.status(201).json(review);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- Housekeeping CMS ---
+export const getHousekeepingTasks = async (req: Request, res: Response) => {
+  const { hotelId, status, priority } = req.query;
+  try {
+    const where: any = {};
+    if (hotelId) where.hotelId = String(hotelId);
+    if (status) where.status = String(status);
+    if (priority) where.priority = String(priority);
+
+    const tasks = await prisma.housekeepingTask.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(tasks);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const createHousekeepingTask = async (req: any, res: Response) => {
+  const { hotelId, roomNumber, taskType, priority, assignedTo, notes } = req.body;
+  try {
+    const task = await prisma.housekeepingTask.create({
+      data: {
+        hotelId,
+        roomNumber,
+        taskType: taskType || 'TURNOVER',
+        priority: priority || 'NORMAL',
+        status: 'DIRTY',
+        assignedTo,
+        notes
+      }
+    });
+
+    const room = await prisma.hotelRoom.findFirst({
+      where: { hotelId, roomNumber }
+    });
+    if (room) {
+      await prisma.hotelRoom.update({
+        where: { id: room.id },
+        data: {
+          housekeeping: 'DIRTY',
+          operationalStatus: room.status === 'OCCUPIED' ? 'OCCUPIED' : 'AVAILABLE_DIRTY',
+          assignedHousekeeper: assignedTo,
+          housekeepingPriority: priority || 'NORMAL'
+        }
+      });
+    }
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'HOUSEKEEPING_TASK_CREATED',
+        message: `Housekeeping task logged for room ${roomNumber}`
+      });
+    }
+
+    res.status(201).json(task);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateHousekeepingTask = async (req: any, res: Response) => {
+  const { id } = req.params;
+  const { status, assignedTo, notes, linenChanged, inspectedBy } = req.body;
+  try {
+    const updateData: any = {};
+    if (status !== undefined) {
+      updateData.status = status;
+      if (status === 'CLEAN' || status === 'INSPECTED') {
+        updateData.completedAt = new Date();
+      }
+    }
+    if (assignedTo !== undefined) updateData.assignedTo = assignedTo;
+    if (notes !== undefined) updateData.notes = notes;
+    if (linenChanged !== undefined) updateData.linenChanged = Boolean(linenChanged);
+    if (inspectedBy !== undefined) updateData.inspectedBy = inspectedBy;
+
+    const task = await prisma.housekeepingTask.update({
+      where: { id },
+      data: updateData
+    });
+
+    // Synchronize room housekeeping status
+    const room = await prisma.hotelRoom.findFirst({
+      where: { hotelId: task.hotelId, roomNumber: task.roomNumber }
+    });
+
+    if (room) {
+      let roomHk = 'DIRTY';
+      let operationalStatus = room.operationalStatus;
+
+      if (task.status === 'CLEAN') {
+        roomHk = 'CLEAN';
+        if (room.status === 'AVAILABLE') operationalStatus = 'AVAILABLE_CLEAN';
+      } else if (task.status === 'INSPECTED') {
+        roomHk = 'INSPECTED';
+        if (room.status === 'AVAILABLE') operationalStatus = 'AVAILABLE_CLEAN';
+      } else if (task.status === 'IN_PROGRESS') {
+        roomHk = 'DIRTY';
+      }
+
+      await prisma.hotelRoom.update({
+        where: { id: room.id },
+        data: {
+          housekeeping: roomHk,
+          operationalStatus,
+          assignedHousekeeper: task.assignedTo
+        }
+      });
+    }
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'HOUSEKEEPING_TASK_UPDATED',
+        message: `Room ${task.roomNumber} housekeeping is now ${task.status}`
+      });
+    }
+
+    res.json(task);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteHousekeepingTask = async (req: any, res: Response) => {
+  const { id } = req.params;
+  try {
+    await prisma.housekeepingTask.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- Winter Operations & Heating Readiness ---
+export const getWinterOpsStatus = async (req: Request, res: Response) => {
+  const { hotelId } = req.query;
+  try {
+    const log = await prisma.winterOpsLog.findFirst({
+      where: hotelId ? { hotelId: String(hotelId) } : {},
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!log) {
+      return res.json({
+        bukhariStatus: 'OPERATIONAL',
+        firewoodStockDays: 14,
+        generatorStatus: 'STANDBY',
+        generatorFuelPct: 90,
+        generatorRuntimeHrs: 22.5,
+        gridPowerStatus: 'LIVE',
+        boilerHotWater: 'ACTIVE',
+        snowRoadClearance: 'CLEAR',
+        shikaraGhatStatus: 'OPEN',
+        notes: 'Kiln-dried pine firewood fully stocked in woodstore.'
+      });
+    }
+    res.json(log);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateWinterOpsStatus = async (req: any, res: Response) => {
+  const {
+    hotelId,
+    bukhariStatus,
+    firewoodStockDays,
+    generatorStatus,
+    generatorFuelPct,
+    generatorRuntimeHrs,
+    gridPowerStatus,
+    boilerHotWater,
+    snowRoadClearance,
+    shikaraGhatStatus,
+    notes
+  } = req.body;
+
+  try {
+    const log = await prisma.winterOpsLog.create({
+      data: {
+        hotelId,
+        bukhariStatus: bukhariStatus || 'OPERATIONAL',
+        firewoodStockDays: Number(firewoodStockDays || 7),
+        generatorStatus: generatorStatus || 'STANDBY',
+        generatorFuelPct: Number(generatorFuelPct || 85),
+        generatorRuntimeHrs: Number(generatorRuntimeHrs || 0),
+        gridPowerStatus: gridPowerStatus || 'LIVE',
+        boilerHotWater: boilerHotWater || 'ACTIVE',
+        snowRoadClearance: snowRoadClearance || 'CLEAR',
+        shikaraGhatStatus: shikaraGhatStatus || 'OPEN',
+        notes,
+        updatedBy: req.user?.name || 'Hotel Duty Manager'
+      }
+    });
+
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
+        type: 'WINTER_OPS_UPDATED',
+        message: `Winter operations status updated`
+      });
+    }
+
+    res.status(201).json(log);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- Settlement Ledger & Financial Breakdown ---
+export const getSettlementLedger = async (req: Request, res: Response) => {
+  const { hotelId } = req.query;
+  try {
+    const scopedFilter = hotelId ? { hotelId: String(hotelId) } : {};
+
+    const reservations = await prisma.hotelReservation.findMany({
+      where: {
+        ...scopedFilter,
+        status: { in: ['Confirmed', 'Checked-In', 'Checked-Out'] }
+      },
+      orderBy: { checkOut: 'desc' }
+    });
+
+    const settlements = await prisma.vendorSettlement.findMany({
+      where: scopedFilter,
+      orderBy: { payoutDate: 'desc' }
+    });
+
+    const totalGrossRevenue = reservations.reduce((s, r) => s + r.totalAmount, 0);
+    const totalCommissions = reservations.reduce((s, r) => s + (r.totalAmount - r.hotelDues), 0);
+    const totalHotelDues = reservations.reduce((s, r) => s + r.hotelDues, 0);
+    const totalSettled = settlements.filter(s => s.status === 'COMPLETED').reduce((s, p) => s + p.netPaid, 0);
+    const outstandingDues = Math.max(0, totalHotelDues - totalSettled);
+
+    res.json({
+      summary: {
+        totalGrossRevenue,
+        totalCommissions,
+        totalHotelDues,
+        totalSettled,
+        outstandingDues,
+        nextSettlementDate: 'Every Friday (Weekly NEFT)'
+      },
+      reservations: reservations.map(r => ({
+        id: r.id,
+        bookingRef: r.bookingReference || `KCH-${r.id.slice(0, 6).toUpperCase()}`,
+        guestName: r.guestName,
+        checkIn: r.checkIn,
+        checkOut: r.checkOut,
+        roomType: r.roomType,
+        grossAmount: r.totalAmount,
+        commissionRate: r.commissionRate,
+        netPayable: r.hotelDues,
+        status: r.status,
+        paymentStatus: r.paymentStatus
+      })),
+      settlements
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

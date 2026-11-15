@@ -20,7 +20,14 @@ import {
   getVendorSettlements,
   createVendorSettlement,
   getHotelReviews,
-  createHotelReview
+  createHotelReview,
+  getHousekeepingTasks,
+  createHousekeepingTask,
+  updateHousekeepingTask,
+  deleteHousekeepingTask,
+  getWinterOpsStatus,
+  updateWinterOpsStatus,
+  getSettlementLedger
 } from '../controllers/hotelController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -47,8 +54,19 @@ router.post('/operations/maintenance', authenticateToken, createMaintenanceReque
 router.patch('/operations/maintenance/:id', authenticateToken, updateMaintenanceRequest);
 
 // Settlements & Commissions
+router.get('/operations/settlements/ledger', authenticateToken, getSettlementLedger);
 router.get('/operations/settlements', authenticateToken, getVendorSettlements);
 router.post('/operations/settlements', authenticateToken, createVendorSettlement);
+
+// Housekeeping Tasks
+router.get('/operations/housekeeping', authenticateToken, getHousekeepingTasks);
+router.post('/operations/housekeeping', authenticateToken, createHousekeepingTask);
+router.patch('/operations/housekeeping/:id', authenticateToken, updateHousekeepingTask);
+router.delete('/operations/housekeeping/:id', authenticateToken, deleteHousekeepingTask);
+
+// Winter Operations & Heating
+router.get('/operations/winter-ops', authenticateToken, getWinterOpsStatus);
+router.post('/operations/winter-ops', authenticateToken, updateWinterOpsStatus);
 
 // Hotel Reviews
 router.get('/operations/reviews', authenticateToken, getHotelReviews);

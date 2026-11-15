@@ -11,7 +11,17 @@ import {
   Award,
   Sparkles,
   Zap,
-  PhoneCall
+  PhoneCall,
+  Calendar,
+  Wrench,
+  Receipt,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  Droplet,
+  Fuel,
+  Car
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +34,11 @@ import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import HospitalitySidebar, { HospitalityTab } from '../components/HospitalitySidebar';
 import LiveOccupancyGrid from '../components/LiveOccupancyGrid';
 import ReservationApprovalDesk from '../components/ReservationApprovalDesk';
+import ReservationCalendar from '../components/ReservationCalendar';
+import HousekeepingBoard from '../components/HousekeepingBoard';
+import MaintenanceDesk from '../components/MaintenanceDesk';
+import WinterOpsCockpit from '../components/WinterOpsCockpit';
+import SettlementLedgerView from '../components/SettlementLedgerView';
 import SeasonalTariffManager from '../components/SeasonalTariffManager';
 import HospitalityPayoutModal from '../components/HospitalityPayoutModal';
 import Navbar from '@/components/layout/Navbar';
@@ -35,66 +50,120 @@ export const HospitalityDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
 
-  // Stats
-  const [metrics, setMetrics] = useState({
-    occupancyPct: 78,
-    todayArrivals: 3,
-    pendingVouchers: 2,
-    monthlyPayoutDues: 184500
+  // Authoritative database-driven KPI state
+  const [metrics, setMetrics] = useState<any>({
+    hotel: { name: 'Chinar Heritage Estate & Houseboats', location: 'Nigeen Lake, Srinagar' },
+    totalRooms: 12,
+    availableRooms: 6,
+    occupiedRooms: 5,
+    reservedRooms: 1,
+    maintenanceRooms: 0,
+    occupancyRate: 75,
+    todayCheckIns: 3,
+    todayCheckOuts: 2,
+    pendingConfirmations: 2,
+    revenueToday: 54500,
+    monthlyRevenue: 980000,
+    monthlyNetPayable: 812000,
+    outstandingSettlement: 184500,
+    housekeeping: { clean: 8, dirty: 3, inspected: 1 },
+    winterOps: {
+      bukhariStatus: 'OPERATIONAL',
+      firewoodStockDays: 14,
+      generatorStatus: 'STANDBY',
+      generatorFuelPct: 90,
+      gridPowerStatus: 'LIVE',
+      boilerHotWater: 'ACTIVE',
+      snowRoadClearance: 'CLEAR',
+      shikaraGhatStatus: 'OPEN'
+    },
+    alertsCount: 3
   });
 
+  const fetchDashboardKPIs = async () => {
+    try {
+      setIsLoading(true);
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      const res = await fetch(`${API_BASE_URL}/hotels/operations/dashboard`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMetrics(data);
+      }
+    } catch (err) {
+      console.error('Failed to load dashboard KPIs:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Real-time socket connection for incoming reservations
+    fetchDashboardKPIs();
+
+    // Setup real-time websocket synchronization
     const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
-    
     socket.on('connect', () => {
       if (user?.id) socket.emit('join-user', user.id);
+      socket.emit('join-room', 'admin-room');
+    });
+
+    socket.on('new-system-event', (data: any) => {
+      if (data.type === 'GUEST_CHECKED_IN' || data.type === 'GUEST_CHECKED_OUT' || data.type === 'HOUSEKEEPING_TASK_UPDATED') {
+        toast.info(data.message || 'Front desk event received', { icon: '🏨' });
+        fetchDashboardKPIs();
+      }
     });
 
     socket.on('booking-updated', (data: any) => {
-      toast.info('New Guest Booking Event Received', {
-        description: `${data.booking?.itemName || 'Room'} status: ${data.booking?.status}`,
+      toast.info('Guest Booking Event', {
+        description: `${data.booking?.itemName || 'Suite'} status: ${data.booking?.status}`,
         icon: '🏨'
       });
+      fetchDashboardKPIs();
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [user?.id]);
+  }, [user?.id, token]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col selection:bg-amber-500 selection:text-black">
       <Navbar />
 
-      <div className="flex-1 flex flex-col lg:flex-row">
+      <div className="flex-1 flex flex-col lg:flex-row pt-20">
         {/* Dedicated Hospitality Sidebar */}
         <HospitalitySidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          propertyName={user?.name || 'Nigeen Royal Cedar Houseboat & Chalets'}
-          propertyType="Heritage Houseboat & Mountain Chalet Host"
+          propertyName={metrics.hotel?.name || user?.name || 'Chinar Heritage Estate & Houseboats'}
+          propertyType={metrics.hotel?.location || 'Nigeen Lake, Srinagar'}
           isVerified={true}
         />
 
-        {/* Main Content Workspace */}
+        {/* Main Workspace */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
           {/* Top Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/50 pb-5">
             <div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Kashmir Hospitality Operations
+                  Kashmir Curators PMS & Operations
                 </span>
               </div>
               <h1 className="text-2xl font-black text-foreground tracking-tight mt-1">
-                {activeTab === 'overview' && 'Front Desk Operations & Occupancy'}
-                {activeTab === 'reservations' && 'Guest Booking Vouchers & Arrivals'}
-                {activeTab === 'inventory' && 'Suites, Chalets & Room Categories'}
-                {activeTab === 'tariffs' && 'Seasonal Rates & Meal Plans'}
-                {activeTab === 'amenities' && 'Winter Heating & Power Systems'}
-                {activeTab === 'payouts' && 'Bank Settlements & Platform Ledger'}
+                {activeTab === 'overview' && 'Front Desk Command & Live Occupancy'}
+                {activeTab === 'calendar' && 'Room Rack & Reservation Calendar'}
+                {activeTab === 'reservations' && 'Guest Reservations & Voucher Approvals'}
+                {activeTab === 'inventory' && 'Physical Suites & Room Categories'}
+                {activeTab === 'housekeeping' && 'Housekeeping & Turnover Readiness'}
+                {activeTab === 'maintenance' && 'Maintenance Tickets & Room Blocking'}
+                {activeTab === 'tariffs' && 'Seasonal Tariffs & Meal Plan Add-ons'}
+                {activeTab === 'amenities' && 'Heating, Power & Winter Road Ops'}
+                {activeTab === 'payouts' && 'Settlement Ledger & Bank Payouts'}
               </h1>
             </div>
 
@@ -102,61 +171,175 @@ export const HospitalityDashboard: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => toast.success('Front desk synced with live booking engines!')}
-                className="rounded-xl text-xs gap-1.5"
+                onClick={fetchDashboardKPIs}
+                disabled={isLoading}
+                className="rounded-xl text-xs gap-1.5 h-9"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Refresh Grid</span>
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>Sync KPIs</span>
               </Button>
             </div>
           </div>
 
-          {/* TAB 1: OVERVIEW */}
+          {/* TAB 1: FRONT DESK OVERVIEW */}
           {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Metric Cards */}
+            <div className="space-y-6 animate-fade-in">
+              {/* 4 Primary Operational KPIs */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="rounded-3xl border border-border/70 p-5 bg-card">
-                  <span className="text-xs font-semibold text-muted-foreground">Live Occupancy</span>
-                  <p className="text-3xl font-black text-foreground mt-2">{metrics.occupancyPct}%</p>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" /> High winter demand
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">Live Occupancy</span>
+                    <Badge variant="outline" className="text-[10px] font-bold border-emerald-500/30 text-emerald-600">
+                      {metrics.availableRooms} Available
+                    </Badge>
+                  </div>
+                  <p className="text-3xl font-black text-foreground mt-2 font-mono">
+                    {metrics.occupancyRate}%
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                    <span>{metrics.occupiedRooms} Occupied</span>
+                    <span>•</span>
+                    <span>{metrics.totalRooms} Registered Suites</span>
                   </p>
                 </Card>
 
                 <Card className="rounded-3xl border border-border/70 p-5 bg-card">
-                  <span className="text-xs font-semibold text-muted-foreground">Today's Check-Ins</span>
-                  <p className="text-3xl font-black text-foreground mt-2">{metrics.todayArrivals} Guests</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Shikara crossing notified</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">Today's Front Desk</span>
+                    <Badge className="bg-blue-600 text-white text-[10px] font-bold">
+                      In-House
+                    </Badge>
+                  </div>
+                  <div className="flex items-baseline gap-3 mt-2">
+                    <p className="text-3xl font-black text-foreground font-mono">
+                      {metrics.todayCheckIns}
+                    </p>
+                    <span className="text-xs font-bold text-muted-foreground">Arrivals</span>
+                    <span className="text-xs text-muted-foreground">/</span>
+                    <p className="text-xl font-black text-muted-foreground font-mono">
+                      {metrics.todayCheckOuts}
+                    </p>
+                    <span className="text-xs text-muted-foreground">Departures</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">Check-in due & room keys staged</p>
                 </Card>
 
-                <Card className="rounded-3xl border border-border/70 p-5 bg-card">
-                  <span className="text-xs font-semibold text-muted-foreground">Pending Voucher Confirmations</span>
-                  <p className="text-3xl font-black text-amber-500 mt-2">{metrics.pendingVouchers}</p>
+                <Card className="rounded-3xl border border-amber-500/40 p-5 bg-amber-500/5 dark:bg-amber-500/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">Pending Vouchers</span>
+                    <Clock className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <p className="text-3xl font-black text-amber-600 dark:text-amber-400 mt-2 font-mono">
+                    {metrics.pendingConfirmations}
+                  </p>
                   <button 
                     onClick={() => setActiveTab('reservations')}
-                    className="text-[11px] text-primary hover:underline font-medium mt-1 block"
+                    className="text-[11px] text-primary hover:underline font-bold mt-1 flex items-center gap-1"
                   >
-                    Review requests &rarr;
+                    <span>Confirm reservation requests</span>
+                    <ArrowRight className="w-3 h-3" />
                   </button>
                 </Card>
 
-                <Card className="rounded-3xl border border-border/70 p-5 bg-card">
-                  <span className="text-xs font-semibold text-muted-foreground">Net Payout Accrued</span>
-                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
-                    ₹{metrics.monthlyPayoutDues.toLocaleString('en-IN')}
+                <Card className="rounded-3xl border border-emerald-500/30 p-5 bg-emerald-500/5 dark:bg-emerald-500/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Outstanding Settlement</span>
+                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <p className="text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-2">
+                    ₹{(metrics.outstandingSettlement || 0).toLocaleString('en-IN')}
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Direct NEFT weekly settlement</p>
+                  <button
+                    onClick={() => setActiveTab('payouts')}
+                    className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline font-bold mt-1 block"
+                  >
+                    Scheduled weekly NEFT payout &rarr;
+                  </button>
                 </Card>
               </div>
 
-              {/* Live Room Occupancy Grid */}
+              {/* Operations Highlights: Housekeeping + Winter Telemetry */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Housekeeping Readiness */}
+                <Card className="p-6 rounded-3xl border border-border bg-card space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-500" />
+                      <span>Housekeeping & Room Readiness</span>
+                    </h4>
+                    <button
+                      onClick={() => setActiveTab('housekeeping')}
+                      className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
+                    >
+                      Open Task Board &rarr;
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                      <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">Clean</span>
+                      <p className="text-xl font-black font-mono text-emerald-600 mt-0.5">{metrics.housekeeping?.clean || 0}</p>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                      <span className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-400 block">Needs Clean</span>
+                      <p className="text-xl font-black font-mono text-rose-600 mt-0.5">{metrics.housekeeping?.dirty || 0}</p>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+                      <span className="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-400 block">Inspected</span>
+                      <p className="text-xl font-black font-mono text-blue-600 mt-0.5">{metrics.housekeeping?.inspected || 0}</p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Sub-Zero Heating Readiness */}
+                <Card className="p-6 rounded-3xl border border-border bg-card space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-amber-500" />
+                      <span>Winter Heating & Power Standard</span>
+                    </h4>
+                    <button
+                      onClick={() => setActiveTab('amenities')}
+                      className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
+                    >
+                      Telemetry Cockpit &rarr;
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 rounded-2xl bg-muted/40 border border-border/60">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">Bukhari</span>
+                      <p className="text-sm font-black text-amber-600 dark:text-amber-400 mt-1">
+                        {metrics.winterOps?.bukhariStatus || 'ACTIVE'}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-muted/40 border border-border/60">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">Generator Fuel</span>
+                      <p className="text-sm font-black font-mono text-foreground mt-1">
+                        {metrics.winterOps?.generatorFuelPct || 90}%
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-muted/40 border border-border/60">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">Road Access</span>
+                      <p className="text-sm font-black text-foreground mt-1 truncate">
+                        {metrics.winterOps?.snowRoadClearance || 'CLEAR'}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Physical Room Grid Overview */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg text-foreground">Room & Suite Availability</h3>
-                  <Badge variant="outline" className="text-xs text-emerald-600 dark:text-emerald-400">
-                    Live Booking Engine Sync
-                  </Badge>
+                  <button
+                    onClick={() => setActiveTab('calendar')}
+                    className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                  >
+                    <span>View Drag-and-Drop Calendar Rack</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <LiveOccupancyGrid />
               </div>
@@ -168,103 +351,60 @@ export const HospitalityDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 2: RESERVATIONS */}
-          {activeTab === 'reservations' && (
-            <ReservationApprovalDesk />
+          {/* TAB 2: RESERVATION RACK CALENDAR */}
+          {activeTab === 'calendar' && (
+            <div className="space-y-6 animate-fade-in">
+              <ReservationCalendar onSelectReservation={() => setActiveTab('reservations')} />
+            </div>
           )}
 
-          {/* TAB 3: INVENTORY */}
+          {/* TAB 3: RESERVATIONS & VOUCHERS */}
+          {activeTab === 'reservations' && (
+            <div className="space-y-6 animate-fade-in">
+              <ReservationApprovalDesk />
+            </div>
+          )}
+
+          {/* TAB 4: ROOM INVENTORY & CATEGORIES */}
           {activeTab === 'inventory' && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-fade-in">
               <LiveOccupancyGrid />
             </div>
           )}
 
-          {/* TAB 4: TARIFFS */}
-          {activeTab === 'tariffs' && (
-            <SeasonalTariffManager />
-          )}
-
-          {/* TAB 5: AMENITIES & WINTER HEATING */}
-          {activeTab === 'amenities' && (
-            <div className="space-y-6">
-              <Card className="rounded-3xl border border-border/70 p-6 bg-card space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                    <Flame className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-foreground">Kashmir Winter Heating & Power Standard</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Guaranteed heating standards build five-star reviews on Kashmir Connect.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                  <div className="p-4 bg-muted/40 rounded-2xl border border-border/50 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-foreground">Bukhari Heating</span>
-                      <Badge className="bg-emerald-500 text-white text-[10px]">Active</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Kiln-dried pine firewood stocked. 24/7 attendant on call for night heating refuels.
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-muted/40 rounded-2xl border border-border/50 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-foreground">Electric Bed Warmers</span>
-                      <Badge className="bg-emerald-500 text-white text-[10px]">Operational</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Dual temperature controller fitted in all Master Suites.
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-muted/40 rounded-2xl border border-border/50 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-foreground">Silent Generator Backup</span>
-                      <Badge className="bg-emerald-500 text-white text-[10px]">Full Tank</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Automatic transfer switch ensures zero blackout during winter snowfall.
-                    </p>
-                  </div>
-                </div>
-              </Card>
+          {/* TAB 5: HOUSEKEEPING CMS */}
+          {activeTab === 'housekeeping' && (
+            <div className="space-y-6 animate-fade-in">
+              <HousekeepingBoard />
             </div>
           )}
 
-          {/* TAB 6: SETTLEMENTS */}
-          {activeTab === 'payouts' && (
-            <Card className="rounded-3xl border border-border/70 p-6 bg-card space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-bold text-lg text-foreground">Bank Settlements & Payouts</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Weekly automated direct-to-bank settlement for all completed guest departures.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setPayoutModalOpen(true)}
-                  className="rounded-xl text-xs font-bold gap-2 shrink-0"
-                >
-                  <Building2 className="w-3.5 h-3.5" />
-                  <span>Configure Bank / UPI Account</span>
-                </Button>
-              </div>
+          {/* TAB 6: MAINTENANCE DESK */}
+          {activeTab === 'maintenance' && (
+            <div className="space-y-6 animate-fade-in">
+              <MaintenanceDesk />
+            </div>
+          )}
 
-              <div className="mt-4 p-6 border border-dashed rounded-2xl flex flex-col items-center justify-center text-center space-y-2">
-                <Award className="w-10 h-10 text-emerald-500/40" />
-                <p className="font-bold text-base text-foreground">
-                  ₹{metrics.monthlyPayoutDues.toLocaleString('en-IN')} Scheduled for Friday
-                </p>
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Beneficiary: Jammu & Kashmir Bank Ltd • Account ending in 8941
-                </p>
-              </div>
-            </Card>
+          {/* TAB 7: TARIFFS & MEALS */}
+          {activeTab === 'tariffs' && (
+            <div className="space-y-6 animate-fade-in">
+              <SeasonalTariffManager />
+            </div>
+          )}
+
+          {/* TAB 8: WINTER HEATING & POWER OPS */}
+          {activeTab === 'amenities' && (
+            <div className="space-y-6 animate-fade-in">
+              <WinterOpsCockpit />
+            </div>
+          )}
+
+          {/* TAB 9: SETTLEMENT & BANK DUES */}
+          {activeTab === 'payouts' && (
+            <div className="space-y-6 animate-fade-in">
+              <SettlementLedgerView onOpenPayoutModal={() => setPayoutModalOpen(true)} />
+            </div>
           )}
         </main>
       </div>
