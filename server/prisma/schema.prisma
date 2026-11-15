@@ -453,46 +453,73 @@ model PackageReview {
 }
 
 model HotelReservation {
-  id               String    @id @default(uuid())
-  inquiryId        String?
-  inquiry          Inquiry?  @relation(fields: [inquiryId], references: [id])
-  hotelId          String
-  hotel            Hotel     @relation(fields: [hotelId], references: [id])
-  guestName        String
-  guestEmail       String?
-  guestPhone       String?
-  checkIn          DateTime
-  checkOut         DateTime
-  roomType         String
-  roomsCount       Int       @default(1)
-  mealPlan         String    // EP, CP, MAP, AP
-  specialRequests  String?
-  status           String    @default("Pending") // Pending, Sent, Confirmed, Hold, Rejected, Cancelled
-  paymentStatus    String    @default("Unpaid")  // Unpaid, Partially Paid, Paid
-  bookingReference String?
-  contractRate     Float     @default(0)
-  seasonalPricing  Float?
-  commissionRate   Float     @default(0)
-  totalAmount      Float     @default(0)
-  profitMargin     Float     @default(0)
-  hotelDues        Float     @default(0)
-  holdUntil        DateTime? // hold countdown timer
-  assignedRoomId   String?
-  assignedRoomNumber String?
-  adults           Int       @default(2)
-  children         Int       @default(0)
-  guestIdType      String?
-  guestIdNumber    String?
-  guestIdVerified  Boolean   @default(false)
-  checkInTime      DateTime?
-  checkOutTime     DateTime?
-  agentName        String?
-  internalNotes    String?
-  createdById      String?
-  createdBy        User?     @relation("UserReservations", fields: [createdById], references: [id])
-  auditLogs        String?   // JSON string of updates/actions
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                      String    @id @default(uuid())
+  inquiryId               String?
+  inquiry                 Inquiry?  @relation(fields: [inquiryId], references: [id])
+  hotelId                 String
+  hotel                   Hotel     @relation(fields: [hotelId], references: [id])
+  guestName               String
+  guestEmail              String?
+  guestPhone              String?
+  checkIn                 DateTime
+  checkOut                DateTime
+  roomType                String
+  roomsCount              Int       @default(1)
+  mealPlan                String    // EP, CP, MAP, AP
+  specialRequests         String?
+  status                  String    @default("Pending") // Pending, Sent, Confirmed, Hold, Rejected, Cancelled
+  confirmationStage       String    @default("PENDING_RESPONSE") // PENDING_RESPONSE, AVAILABILITY_CONFIRMED, ALTERNATIVE_OFFERED, HOTEL_CONFIRMED, REJECTED_UNAVAILABLE, EXPIRED, CANCELLED
+  paymentStatus           String    @default("Unpaid")  // Unpaid, Partially Paid, Paid
+  bookingReference        String?
+  contractRate            Float     @default(0)
+  seasonalPricing         Float?
+  commissionRate          Float     @default(0)
+  totalAmount             Float     @default(0)
+  profitMargin            Float     @default(0)
+  hotelDues               Float     @default(0)
+  holdUntil               DateTime? // hold countdown timer
+  assignedRoomId          String?
+  assignedRoomNumber      String?
+  adults                  Int       @default(2)
+  children                Int       @default(0)
+  guestIdType             String?
+  guestIdNumber           String?
+  guestIdVerified         Boolean   @default(false)
+  checkInTime             DateTime?
+  checkOutTime            DateTime?
+  agentName               String?
+  internalNotes           String?
+  createdById             String?
+  createdBy               User?     @relation("UserReservations", fields: [createdById], references: [id])
+  auditLogs               String?   // JSON string of updates/actions
+
+  // Hotel Reception Confirmation Portal Fields
+  secureToken             String?   @unique
+  tokenExpiresAt          DateTime?
+  confirmationDeadline    DateTime?
+  receptionContact        String?
+  receptionEmail          String?
+  receptionPhone          String?
+  hotelConfirmationNumber String?
+  confirmedRoomType       String?
+  confirmedRoomsCount     Int?
+  confirmedTariff         Float?
+  confirmedTaxes          Float?
+  confirmedMealPlan       String?
+  confirmationVoucherUrl  String?
+  receptionNotes          String?
+  rejectionReason         String?
+  alternativeRoomType     String?
+  alternativeTariff       Float?
+  alternativeDates        String?
+  alternativeNotes        String?
+  clarificationRequest    String?
+  clarificationResponse   String?
+  respondedAt             DateTime?
+  respondedBy             String?
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 }
 
 model AgentProfile {
@@ -819,4 +846,26 @@ model TripSafetyCard {
   safetyStatus      String   @default("SAFE") // SAFE, ROUTE_MONITORED, ASSISTANCE_REQUESTED
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+model PortalAccessKey {
+  id              String    @id @default(uuid())
+  portalType      String    // HOSPITALITY, SALES, DRIVER, VENDOR, OPERATIONS
+  accessKey       String    @unique // e.g. KC-HOSP-98421 or KC-SALE-78120
+  assignedName    String    // Teammate or Partner Name
+  assignedContact String?   // Email or Phone number
+  designation     String?   // e.g. "Senior Reservation Officer"
+  propertyScope   String?   // "ALL" or specific hotel ID / names
+  status          String    @default("ACTIVE") // ACTIVE, REVOKED, EXPIRED
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  usageCount      Int       @default(0)
+  createdByName   String?   // SuperAdmin who created it
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([accessKey])
+  @@index([portalType])
+  @@index([status])
 }

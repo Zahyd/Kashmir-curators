@@ -368,7 +368,7 @@ function HotelPartnerDashboard({ user, token, handleLogout }: { user: any; token
   const fetchReservations = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/reservations`, {
+      const res = await fetch(`${API_BASE_URL}/hospitality`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -388,8 +388,8 @@ function HotelPartnerDashboard({ user, token, handleLogout }: { user: any; token
     toast.loading(`${action === 'confirm' ? 'Confirming' : 'Declining'} reservation...`);
     try {
       const endpoint = action === 'confirm' 
-        ? `${API_BASE_URL}/reservations/${id}/confirm` 
-        : `${API_BASE_URL}/reservations/${id}`;
+        ? `${API_BASE_URL}/hospitality/${id}/confirm` 
+        : `${API_BASE_URL}/hospitality/${id}`;
       
       const res = await fetch(endpoint, {
         method: action === 'confirm' ? 'POST' : 'PATCH',

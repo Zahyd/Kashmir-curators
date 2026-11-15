@@ -50,7 +50,7 @@ export default function HotelConfirm() {
 
   const fetchReservationDetails = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/reservations/public/${reservationId}`);
+      const response = await fetch(`${API_BASE_URL}/hospitality/public/${reservationId}`);
       if (!response.ok) throw new Error('Reservation details not found');
       const data = await response.json();
       setReservation(data);
@@ -66,7 +66,7 @@ export default function HotelConfirm() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/reservations/public/${reservationId}/confirm`, {
+      const response = await fetch(`${API_BASE_URL}/hospitality/public/${reservationId}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bookingReference: confirmRef })
@@ -89,7 +89,7 @@ export default function HotelConfirm() {
     }
     setSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/reservations/public/${reservationId}/reject`, {
+      const response = await fetch(`${API_BASE_URL}/hospitality/public/${reservationId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: declineReason })

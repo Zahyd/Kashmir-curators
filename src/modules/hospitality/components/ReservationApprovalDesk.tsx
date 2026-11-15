@@ -110,7 +110,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [resRes, roomsRes, catRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotel-reservations${hotelParam}`, {
+        fetch(`${API_BASE_URL}/hospitality${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         }),
         fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
@@ -169,7 +169,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
       const rate = Number(newContractRate) || 0;
       const total = rate * count * nights;
 
-      const res = await fetch(`${API_BASE_URL}/hotel-reservations`, {
+      const res = await fetch(`${API_BASE_URL}/hospitality`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -221,8 +221,8 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
       const endpoint = action === 'Confirmed' 
-        ? `${API_BASE_URL}/hotel-reservations/${id}/confirm`
-        : `${API_BASE_URL}/hotel-reservations/${id}`;
+        ? `${API_BASE_URL}/hospitality/${id}/confirm`
+        : `${API_BASE_URL}/hospitality/${id}`;
 
       const res = await fetch(endpoint, {
         method: action === 'Confirmed' ? 'POST' : 'PATCH',
@@ -267,7 +267,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
 
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
-      const res = await fetch(`${API_BASE_URL}/hotel-reservations/${checkInRes.id}/check-in`, {
+      const res = await fetch(`${API_BASE_URL}/hospitality/${checkInRes.id}/check-in`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -303,7 +303,7 @@ export const ReservationApprovalDesk: React.FC<ReservationApprovalDeskProps> = (
 
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
-      const res = await fetch(`${API_BASE_URL}/hotel-reservations/${resItem.id}/check-out`, {
+      const res = await fetch(`${API_BASE_URL}/hospitality/${resItem.id}/check-out`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

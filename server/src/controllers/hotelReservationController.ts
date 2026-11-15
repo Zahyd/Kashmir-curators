@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { notificationService } from '../services/notificationService';
@@ -147,6 +148,8 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
       checkOut,
       roomType,
       roomsCount,
+      adults,
+      children,
       mealPlan,
       specialRequests,
       status,
@@ -155,7 +158,12 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
       contractRate,
       seasonalPricing,
       commissionRate,
-      totalAmount
+      totalAmount,
+      bookingReference,
+      agentName,
+      internalNotes,
+      confirmationDeadline,
+      tokenExpiresInHours
     } = req.body;
 
     const nights = calculateNights(checkIn, checkOut);
@@ -165,12 +173,15 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
     const commRate = Number(commissionRate) || 0;
     const grossTotal = Number(totalAmount) || 0;
 
+    // Fetch hotel partner details for reception contact autofill
+    const hotelRecord = await p.hotel.findUnique({ where: { id: hotelId } });
+    const receptionEmail = req.body.receptionEmail || hotelRecord?.contactEmail || null;
+    const receptionPhone = req.body.receptionPhone || hotelRecord?.contactPhone || null;
+    const receptionContact = req.body.receptionContact || hotelRecord?.contactName || 'Front Desk / Reservations';
+
     // Net Cost calculation: (contractRate + seasonalPricing) * roomsCount * nights
     const netCost = (cRate + sPrice) * rooms * nights;
     
-    // Profit margin calculation:
-    // If commission structure is used, profit can be computed as: Gross * (commRate / 100)
-    // Otherwise: grossTotal - netCost
     let profit = grossTotal - netCost;
     if (commRate > 0) {
       profit = grossTotal * (commRate / 100);
@@ -179,13 +190,21 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
 
     const hasConflict = await checkDuplicateConflict(hotelId, guestName, checkIn, checkOut);
 
+    // Cryptographically secure token for account-free reception link
+    const secureToken = crypto.randomBytes(32).toString('hex');
+    const expiryHours = Number(tokenExpiresInHours) || 48;
+    const tokenExpiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
+    const deadline = confirmationDeadline ? new Date(confirmationDeadline) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const generatedRef = bookingReference || `KC-HTL-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
     // Initial audit log
     const auditLogs = JSON.stringify([
       {
         timestamp: new Date().toISOString(),
-        action: 'Created',
+        action: 'Reservation Dispatched to Hotel',
         user: req.user?.name || req.user?.email || 'Operations Desk',
-        details: `Reservation initialized at ${status} status.`
+        details: `Voucher reference ${generatedRef} dispatched to ${hotelRecord?.name || 'Hotel'} (${receptionContact}). Deadline: ${deadline.toLocaleString()}.`
       }
     ]);
 
@@ -198,12 +217,16 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
         guestPhone: guestPhone || null,
         checkIn: new Date(checkIn),
         checkOut: new Date(checkOut),
-        roomType,
+        roomType: roomType || 'Standard Category',
         roomsCount: rooms,
+        adults: Number(adults) || 2,
+        children: Number(children) || 0,
         mealPlan: mealPlan || 'EP',
         specialRequests: specialRequests || null,
         status: status || 'Pending',
+        confirmationStage: 'PENDING_RESPONSE',
         paymentStatus: paymentStatus || 'Unpaid',
+        bookingReference: generatedRef,
         holdUntil: holdUntil ? new Date(holdUntil) : null,
         contractRate: cRate,
         seasonalPricing: sPrice,
@@ -212,6 +235,14 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
         profitMargin: profit,
         hotelDues: hotelDues,
         createdById: req.user?.id || null,
+        agentName: agentName || (req.user?.name ? `${req.user.name} (B2B Desk)` : 'Kashmir Curators Desk'),
+        internalNotes: internalNotes || null,
+        secureToken,
+        tokenExpiresAt,
+        confirmationDeadline: deadline,
+        receptionContact,
+        receptionEmail,
+        receptionPhone,
         auditLogs
       },
       include: {
@@ -223,7 +254,7 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
         type: 'CREATE',
-        message: `New reservation for ${guestName} created`,
+        message: `New reservation voucher ${generatedRef} for ${guestName} dispatched to ${hotelRecord?.name || 'hotel'}`,
         booking: { ...reservation, entityType: 'reservation' }
       });
     }
@@ -500,28 +531,78 @@ export const deleteReservation = async (req: AuthRequest, res: Response) => {
 export const getPublicReservation = async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
-    const reservation = await p.hotelReservation.findUnique({
-      where: { id: req.params.id },
+    const lookupKey = req.params.tokenOrId || req.params.id;
+
+    if (!lookupKey) {
+      return res.status(400).json({ error: 'Missing reservation identifier or token' });
+    }
+
+    const reservation = await p.hotelReservation.findFirst({
+      where: {
+        OR: [
+          { secureToken: lookupKey },
+          { id: lookupKey }
+        ]
+      },
       include: { hotel: true }
     });
 
     if (!reservation) {
-      return res.status(404).json({ error: 'Reservation details not found' });
+      return res.status(404).json({ error: 'Reservation details not found or link is invalid' });
     }
 
-    // Return only non-sensitive particulars for public viewing
+    const isExpired = reservation.tokenExpiresAt ? new Date() > new Date(reservation.tokenExpiresAt) : false;
+
+    // Return non-sensitive particulars for public reception view
     res.json({
+      isExpired,
       id: reservation.id,
+      secureToken: reservation.secureToken,
+      bookingReference: reservation.bookingReference,
       hotelName: reservation.hotel.name,
       hotelLocation: reservation.hotel.location,
+      hotelImage: reservation.hotel.image,
+      hotelContactName: reservation.hotel.contactName,
+      hotelContactEmail: reservation.hotel.contactEmail,
+      hotelContactPhone: reservation.hotel.contactPhone,
       guestName: reservation.guestName,
+      guestPhone: reservation.guestPhone,
       checkIn: reservation.checkIn,
       checkOut: reservation.checkOut,
+      nights: calculateNights(reservation.checkIn, reservation.checkOut),
       roomType: reservation.roomType,
       roomsCount: reservation.roomsCount,
+      adults: reservation.adults,
+      children: reservation.children,
       mealPlan: reservation.mealPlan,
       specialRequests: reservation.specialRequests,
-      status: reservation.status
+      contractRate: reservation.contractRate,
+      estimatedNetTotal: (reservation.contractRate || 0) * (reservation.roomsCount || 1) * calculateNights(reservation.checkIn, reservation.checkOut),
+      status: reservation.status,
+      confirmationStage: reservation.confirmationStage || 'PENDING_RESPONSE',
+      confirmationDeadline: reservation.confirmationDeadline,
+      tokenExpiresAt: reservation.tokenExpiresAt,
+      receptionContact: reservation.receptionContact,
+      receptionEmail: reservation.receptionEmail,
+      receptionPhone: reservation.receptionPhone,
+      hotelConfirmationNumber: reservation.hotelConfirmationNumber,
+      confirmedRoomType: reservation.confirmedRoomType,
+      confirmedRoomsCount: reservation.confirmedRoomsCount,
+      confirmedTariff: reservation.confirmedTariff,
+      confirmedTaxes: reservation.confirmedTaxes,
+      confirmedMealPlan: reservation.confirmedMealPlan,
+      confirmationVoucherUrl: reservation.confirmationVoucherUrl,
+      receptionNotes: reservation.receptionNotes,
+      rejectionReason: reservation.rejectionReason,
+      alternativeRoomType: reservation.alternativeRoomType,
+      alternativeTariff: reservation.alternativeTariff,
+      alternativeDates: reservation.alternativeDates,
+      alternativeNotes: reservation.alternativeNotes,
+      clarificationRequest: reservation.clarificationRequest,
+      clarificationResponse: reservation.clarificationResponse,
+      respondedAt: reservation.respondedAt,
+      respondedBy: reservation.respondedBy,
+      agentName: reservation.agentName
     });
   } catch (error: any) {
     console.error('[ReservationsController] Public fetch error:', error);
@@ -529,106 +610,526 @@ export const getPublicReservation = async (req: Request, res: Response) => {
   }
 };
 
-// Public confirm endpoint called from hotel confirmation landing page
-export const confirmPublicReservation = async (req: Request, res: Response) => {
+// 1. Reception confirms room availability (stage: AVAILABILITY_CONFIRMED)
+export const receptionConfirmAvailability = async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
-    const { id } = req.params;
-    const { bookingReference } = req.body;
+    const lookupKey = req.params.tokenOrId || req.params.id;
+    const { receptionistName, notes } = req.body;
 
-    const existing = await p.hotelReservation.findUnique({ where: { id } });
+    const existing = await p.hotelReservation.findFirst({
+      where: { OR: [{ secureToken: lookupKey }, { id: lookupKey }] },
+      include: { hotel: true }
+    });
+
     if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+    if (existing.tokenExpiresAt && new Date() > new Date(existing.tokenExpiresAt)) {
+      return res.status(410).json({ error: 'Confirmation link has expired. Please contact Kashmir Curators.' });
+    }
 
     let history = [];
-    try {
-      history = JSON.parse(existing.auditLogs || '[]');
-    } catch (e) {
-      history = [];
-    }
+    try { history = JSON.parse(existing.auditLogs || '[]'); } catch (e) { history = []; }
 
     history.push({
       timestamp: new Date().toISOString(),
-      action: 'Confirmed by Hotel Partner',
-      user: 'Hotel Partner via Web Link',
-      details: `Reservation confirmed directly by hotel. Reference code: ${bookingReference || 'N/A'}`
+      action: 'Availability Confirmed by Hotel Reception',
+      user: receptionistName || existing.hotel.contactName || 'Hotel Reception Staff',
+      details: `Availability verified and reserved. Notes: ${notes || 'Rooms blocked awaiting final confirmation.'}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id: existing.id },
+      data: {
+        confirmationStage: 'AVAILABILITY_CONFIRMED',
+        respondedAt: new Date(),
+        respondedBy: receptionistName || existing.receptionContact || 'Hotel Reception',
+        receptionNotes: notes || existing.receptionNotes,
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'AVAILABILITY_CONFIRMED',
+        message: `Hotel ${updated.hotel.name} confirmed room availability for ${updated.guestName}`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Room availability confirmed successfully.',
+      reservation: updated
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] Confirm availability error:', error);
+    res.status(500).json({ error: 'Failed to record availability confirmation' });
+  }
+};
+
+// 2. Reception confirms final booking (stage: HOTEL_CONFIRMED, status: Confirmed)
+export const receptionConfirmBooking = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const lookupKey = req.params.tokenOrId || req.params.id;
+    const {
+      hotelConfirmationNumber,
+      confirmedRoomType,
+      confirmedRoomsCount,
+      confirmedTariff,
+      confirmedTaxes,
+      confirmedMealPlan,
+      confirmationVoucherUrl,
+      receptionNotes,
+      respondedBy
+    } = req.body;
+
+    if (!hotelConfirmationNumber) {
+      return res.status(400).json({ error: 'Hotel Booking Confirmation Reference is required' });
+    }
+
+    const existing = await p.hotelReservation.findFirst({
+      where: { OR: [{ secureToken: lookupKey }, { id: lookupKey }] },
+      include: { hotel: true }
+    });
+
+    if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+    if (existing.tokenExpiresAt && new Date() > new Date(existing.tokenExpiresAt)) {
+      return res.status(410).json({ error: 'Confirmation link has expired. Please contact Kashmir Curators.' });
+    }
+
+    const nights = calculateNights(existing.checkIn, existing.checkOut);
+    const rooms = Number(confirmedRoomsCount) || existing.roomsCount || 1;
+    const tariff = Number(confirmedTariff) || existing.contractRate || 0;
+    const recalculatedDues = tariff * rooms * nights;
+
+    let history = [];
+    try { history = JSON.parse(existing.auditLogs || '[]'); } catch (e) { history = []; }
+
+    const responder = respondedBy || existing.receptionContact || 'Hotel Reception Manager';
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Final Hotel Booking Confirmed',
+      user: responder,
+      details: `Guaranteed booking confirmed by hotel reception. Hotel Ref: ${hotelConfirmationNumber}. Rate: ₹${tariff}/night. Meal Plan: ${confirmedMealPlan || existing.mealPlan}. Notes: ${receptionNotes || 'Confirmed as requested.'}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id: existing.id },
+      data: {
+        status: 'Confirmed',
+        confirmationStage: 'HOTEL_CONFIRMED',
+        hotelConfirmationNumber,
+        bookingReference: hotelConfirmationNumber,
+        confirmedRoomType: confirmedRoomType || existing.roomType,
+        confirmedRoomsCount: rooms,
+        confirmedTariff: tariff,
+        confirmedTaxes: confirmedTaxes ? Number(confirmedTaxes) : undefined,
+        confirmedMealPlan: confirmedMealPlan || existing.mealPlan,
+        confirmationVoucherUrl: confirmationVoucherUrl || existing.confirmationVoucherUrl,
+        receptionNotes: receptionNotes || existing.receptionNotes,
+        respondedAt: new Date(),
+        respondedBy: responder,
+        contractRate: tariff > 0 ? tariff : existing.contractRate,
+        hotelDues: recalculatedDues > 0 ? recalculatedDues : existing.hotelDues,
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'HOTEL_CONFIRMED',
+        message: `Hotel ${updated.hotel.name} confirmed reservation ${hotelConfirmationNumber} for ${updated.guestName}!`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Reservation booking successfully confirmed and guaranteed.',
+      reservation: updated
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] Public confirm booking error:', error);
+    res.status(500).json({ error: 'Failed to submit hotel booking confirmation' });
+  }
+};
+
+// Backward-compatible confirm endpoint
+export const confirmPublicReservation = async (req: Request, res: Response) => {
+  const { bookingReference, hotelConfirmationNumber } = req.body;
+  req.body.hotelConfirmationNumber = hotelConfirmationNumber || bookingReference || 'HOTEL-CONFIRMED';
+  return receptionConfirmBooking(req, res);
+};
+
+// 3. Reception proposes alternative room category, rates, or dates (stage: ALTERNATIVE_OFFERED)
+export const receptionOfferAlternative = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const lookupKey = req.params.tokenOrId || req.params.id;
+    const {
+      alternativeRoomType,
+      alternativeTariff,
+      alternativeDates,
+      alternativeNotes,
+      respondedBy
+    } = req.body;
+
+    const existing = await p.hotelReservation.findFirst({
+      where: { OR: [{ secureToken: lookupKey }, { id: lookupKey }] },
+      include: { hotel: true }
+    });
+
+    if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+    if (existing.tokenExpiresAt && new Date() > new Date(existing.tokenExpiresAt)) {
+      return res.status(410).json({ error: 'Confirmation link has expired. Please contact Kashmir Curators.' });
+    }
+
+    let history = [];
+    try { history = JSON.parse(existing.auditLogs || '[]'); } catch (e) { history = []; }
+
+    const responder = respondedBy || existing.receptionContact || 'Hotel Reception Desk';
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Alternative Proposed by Hotel',
+      user: responder,
+      details: `Hotel proposed alternative: Category: ${alternativeRoomType || 'Same'} | Tariff: ₹${alternativeTariff || 'N/A'}/night | Dates: ${alternativeDates || 'Same'}. Note: ${alternativeNotes || 'Awaiting Kashmir Curators approval.'}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id: existing.id },
+      data: {
+        confirmationStage: 'ALTERNATIVE_OFFERED',
+        alternativeRoomType: alternativeRoomType || null,
+        alternativeTariff: alternativeTariff ? Number(alternativeTariff) : null,
+        alternativeDates: alternativeDates || null,
+        alternativeNotes: alternativeNotes || null,
+        respondedAt: new Date(),
+        respondedBy: responder,
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'ALTERNATIVE_OFFERED',
+        message: `Hotel ${updated.hotel.name} proposed an alternative for ${updated.guestName}`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Alternative proposal transmitted to Kashmir Curators desk.',
+      reservation: updated
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] Propose alternative error:', error);
+    res.status(500).json({ error: 'Failed to record alternative proposal' });
+  }
+};
+
+// 4. Reception rejects request as unavailable (stage: REJECTED_UNAVAILABLE, status: Rejected)
+export const rejectPublicReservation = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const lookupKey = req.params.tokenOrId || req.params.id;
+    const { reason, respondedBy } = req.body;
+
+    const existing = await p.hotelReservation.findFirst({
+      where: { OR: [{ secureToken: lookupKey }, { id: lookupKey }] },
+      include: { hotel: true }
+    });
+
+    if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+
+    let history = [];
+    try { history = JSON.parse(existing.auditLogs || '[]'); } catch (e) { history = []; }
+
+    const responder = respondedBy || existing.receptionContact || 'Hotel Partner';
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Declined as Unavailable by Hotel',
+      user: responder,
+      details: `Reservation declined by hotel. Reason: ${reason || 'Sold Out / Unavailable'}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id: existing.id },
+      data: {
+        status: 'Rejected',
+        confirmationStage: 'REJECTED_UNAVAILABLE',
+        rejectionReason: reason || 'Rooms unavailable for requested dates',
+        respondedAt: new Date(),
+        respondedBy: responder,
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'UPDATE',
+        message: `Hotel ${updated.hotel.name} DECLINED reservation for ${updated.guestName}: ${reason || 'Sold Out'}`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json({ success: true, message: 'Reservation decline recorded successfully', reservation: updated });
+  } catch (error: any) {
+    console.error('[ReservationsController] Public decline error:', error);
+    res.status(500).json({ error: 'Failed to decline reservation' });
+  }
+};
+
+// 5. Reception requests clarification
+export const receptionRequestClarification = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const lookupKey = req.params.tokenOrId || req.params.id;
+    const { question, respondedBy } = req.body;
+
+    if (!question) {
+      return res.status(400).json({ error: 'Question or query is required' });
+    }
+
+    const existing = await p.hotelReservation.findFirst({
+      where: { OR: [{ secureToken: lookupKey }, { id: lookupKey }] },
+      include: { hotel: true }
+    });
+
+    if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+
+    let history = [];
+    try { history = JSON.parse(existing.auditLogs || '[]'); } catch (e) { history = []; }
+
+    const responder = respondedBy || existing.receptionContact || 'Hotel Reception Staff';
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Clarification Requested by Hotel Reception',
+      user: responder,
+      details: `Hotel inquiry: "${question}"`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id: existing.id },
+      data: {
+        clarificationRequest: question,
+        respondedAt: new Date(),
+        respondedBy: responder,
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'CLARIFICATION_REQUESTED',
+        message: `Hotel ${updated.hotel.name} requested clarification for ${updated.guestName}: "${question}"`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Question sent to Kashmir Curators Operations Desk.',
+      reservation: updated
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] Request clarification error:', error);
+    res.status(500).json({ error: 'Failed to submit clarification request' });
+  }
+};
+
+// 6. Employee accepts hotel's proposed alternative (Authenticated)
+export const employeeAcceptAlternative = async (req: AuthRequest, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+
+    const existing = await p.hotelReservation.findUnique({
+      where: { id },
+      include: { hotel: true }
+    });
+
+    if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+    if (!existing.alternativeRoomType && !existing.alternativeTariff && !existing.alternativeDates) {
+      return res.status(400).json({ error: 'No alternative proposal found on this reservation' });
+    }
+
+    const nights = calculateNights(existing.checkIn, existing.checkOut);
+    const rooms = existing.roomsCount || 1;
+    const newRate = existing.alternativeTariff || existing.contractRate;
+    const newRoomType = existing.alternativeRoomType || existing.roomType;
+    const recalculatedDues = newRate * rooms * nights;
+
+    let history = [];
+    try { history = JSON.parse(existing.auditLogs || '[]'); } catch (e) { history = []; }
+
+    const employeeName = req.user?.name || req.user?.email || 'Operations Desk';
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Alternative Proposal Accepted by Kashmir Curators',
+      user: employeeName,
+      details: `Accepted hotel proposal: Room Category -> ${newRoomType}, Contract Rate -> ₹${newRate}/night. Booking confirmed.`
     });
 
     const updated = await p.hotelReservation.update({
       where: { id },
       data: {
         status: 'Confirmed',
-        bookingReference: bookingReference || existing.bookingReference,
+        confirmationStage: 'HOTEL_CONFIRMED',
+        roomType: newRoomType,
+        contractRate: newRate,
+        hotelDues: recalculatedDues,
         auditLogs: JSON.stringify(history)
       },
-      include: {
-        hotel: true,
-        inquiry: true
-      }
+      include: { hotel: true, inquiry: true }
     });
 
-    if ((req as any).io) {
-      (req as any).io.to('admin-room').emit('new-system-event', {
+    if (req.io) {
+      req.io.to('admin-room').emit('new-system-event', {
         type: 'UPDATE',
-        message: `Hotel Reservation CONFIRMED by Hotel: ${updated.hotel.name} for ${updated.guestName}`,
+        message: `Alternative for ${updated.guestName} at ${updated.hotel.name} accepted by ${employeeName}`,
         booking: { ...updated, entityType: 'reservation' }
       });
     }
 
-    res.json({ success: true, message: 'Reservation confirmed successfully', reservation: updated });
+    res.json({
+      success: true,
+      message: 'Hotel proposal accepted and reservation confirmed!',
+      reservation: updated
+    });
   } catch (error: any) {
-    console.error('[ReservationsController] Public confirm error:', error);
-    res.status(500).json({ error: 'Failed to confirm reservation' });
+    console.error('[ReservationsController] Accept alternative error:', error);
+    res.status(500).json({ error: 'Failed to accept alternative proposal' });
   }
 };
 
-// Public reject endpoint called from hotel confirmation landing page
-export const rejectPublicReservation = async (req: Request, res: Response) => {
+// 7. Regenerate secure token and extend deadline (Authenticated)
+export const regenerateSecureToken = async (req: AuthRequest, res: Response) => {
   try {
     const p = prisma as any;
     const { id } = req.params;
-    const { reason } = req.body;
+    const { extendHours } = req.body;
 
-    const existing = await p.hotelReservation.findUnique({ where: { id } });
+    const existing = await p.hotelReservation.findUnique({
+      where: { id },
+      include: { hotel: true }
+    });
+
     if (!existing) return res.status(404).json({ error: 'Reservation not found' });
 
+    const newToken = crypto.randomBytes(32).toString('hex');
+    const hours = Number(extendHours) || 48;
+    const newExpiry = new Date(Date.now() + hours * 60 * 60 * 1000);
+    const newDeadline = new Date(Date.now() + Math.min(hours, 24) * 60 * 60 * 1000);
+
     let history = [];
-    try {
-      history = JSON.parse(existing.auditLogs || '[]');
-    } catch (e) {
-      history = [];
-    }
+    try { history = JSON.parse(existing.auditLogs || '[]'); } catch (e) { history = []; }
+
+    const employeeName = req.user?.name || req.user?.email || 'Operations Desk';
 
     history.push({
       timestamp: new Date().toISOString(),
-      action: 'Declined by Hotel Partner',
-      user: 'Hotel Partner via Web Link',
-      details: `Reservation declined by hotel. Reason: ${reason || 'Not specified'}`
+      action: 'Secure Token Regenerated',
+      user: employeeName,
+      details: `Generated new reception confirmation link. Extended deadline to ${newDeadline.toLocaleString()}.`
     });
 
     const updated = await p.hotelReservation.update({
       where: { id },
       data: {
-        status: 'Rejected',
+        secureToken: newToken,
+        tokenExpiresAt: newExpiry,
+        confirmationDeadline: newDeadline,
+        confirmationStage: existing.confirmationStage === 'EXPIRED' ? 'PENDING_RESPONSE' : existing.confirmationStage,
         auditLogs: JSON.stringify(history)
       },
-      include: {
-        hotel: true,
-        inquiry: true
+      include: { hotel: true, inquiry: true }
+    });
+
+    res.json({
+      success: true,
+      message: 'Secure link successfully regenerated with fresh expiry.',
+      reservation: updated
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] Regenerate token error:', error);
+    res.status(500).json({ error: 'Failed to regenerate secure link' });
+  }
+};
+
+// 8. Send / Resend Reception Portal Email (Authenticated)
+export const sendReceptionEmail = async (req: AuthRequest, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+    const { recipientEmail } = req.body;
+
+    const reservation = await p.hotelReservation.findUnique({
+      where: { id },
+      include: { hotel: true }
+    });
+
+    if (!reservation) return res.status(404).json({ error: 'Reservation not found' });
+
+    const targetEmail = recipientEmail || reservation.receptionEmail || reservation.hotel.contactEmail;
+    if (!targetEmail) {
+      return res.status(400).json({ error: 'No reception email found. Please provide an email address.' });
+    }
+
+    const referer = req.headers.referer || req.headers.origin || 'https://kashmir-connect-main.vercel.app';
+    let cleanOrigin = 'https://kashmir-connect-main.vercel.app';
+    try {
+      const urlObj = new URL(referer);
+      cleanOrigin = urlObj.origin;
+    } catch (e) {
+      if (referer.startsWith('http')) cleanOrigin = referer;
+    }
+
+    const tokenOrId = reservation.secureToken || reservation.id;
+    const publicUrl = `${cleanOrigin}/hotel/confirm/${tokenOrId}`;
+
+    await notificationService.sendHotelReservationRequest(reservation, publicUrl);
+
+    let history = [];
+    try { history = JSON.parse(reservation.auditLogs || '[]'); } catch (e) { history = []; }
+
+    const employeeName = req.user?.name || req.user?.email || 'Operations Desk';
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Reception Email Dispatched',
+      user: employeeName,
+      details: `Confirmation portal link emailed to ${targetEmail}.`
+    });
+
+    await p.hotelReservation.update({
+      where: { id },
+      data: {
+        receptionEmail: targetEmail,
+        status: reservation.status === 'Pending' ? 'Sent' : reservation.status,
+        auditLogs: JSON.stringify(history)
       }
     });
 
-    if ((req as any).io) {
-      (req as any).io.to('admin-room').emit('new-system-event', {
-        type: 'UPDATE',
-        message: `Hotel Reservation DECLINED by Hotel: ${updated.hotel.name} for ${updated.guestName}`,
-        booking: { ...updated, entityType: 'reservation' }
-      });
-    }
-
-    res.json({ success: true, message: 'Reservation declined successfully', reservation: updated });
+    res.json({
+      success: true,
+      message: `Reservation portal email successfully dispatched to ${targetEmail}`,
+      publicUrl
+    });
   } catch (error: any) {
-    console.error('[ReservationsController] Public decline error:', error);
-    res.status(500).json({ error: 'Failed to decline reservation' });
+    console.error('[ReservationsController] Send reception email error:', error);
+    res.status(500).json({ error: 'Failed to send reception portal email' });
   }
 };
 

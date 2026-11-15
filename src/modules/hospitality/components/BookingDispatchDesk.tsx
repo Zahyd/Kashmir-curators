@@ -37,8 +37,9 @@ import { useAuth } from '@/contexts/AuthContext';
 export interface BookingVoucher {
   id: string;
   bookingReference?: string;
+  secureToken?: string;
   hotelId: string;
-  hotel?: { name: string; location: string; contactPhone?: string };
+  hotel?: { name: string; location: string; contactPhone?: string; contactEmail?: string };
   guestName: string;
   guestPhone?: string;
   guestEmail?: string;
@@ -48,6 +49,7 @@ export interface BookingVoucher {
   checkOut: string;
   mealPlan: 'EP' | 'CP' | 'MAP' | 'AP';
   status: 'Pending' | 'Confirmed' | 'Checked-In' | 'Checked-Out' | 'Hold' | 'Rejected' | 'Cancelled';
+  confirmationStage?: 'PENDING_RESPONSE' | 'AVAILABILITY_CONFIRMED' | 'ALTERNATIVE_OFFERED' | 'HOTEL_CONFIRMED' | 'REJECTED_UNAVAILABLE' | 'EXPIRED' | 'CANCELLED';
   paymentStatus?: string;
   totalAmount: number;
   hotelDues: number;
@@ -56,6 +58,17 @@ export interface BookingVoucher {
   agentName?: string;
   assignedRoomNumber?: string;
   adults?: number;
+  hotelConfirmationNumber?: string;
+  confirmedRoomType?: string;
+  confirmedTariff?: number;
+  alternativeRoomType?: string;
+  alternativeTariff?: number;
+  alternativeDates?: string;
+  alternativeNotes?: string;
+  clarificationRequest?: string;
+  receptionNotes?: string;
+  tokenExpiresAt?: string;
+  confirmationDeadline?: string;
   createdAt: string;
 }
 
@@ -147,7 +160,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
     try {
       setIsLoading(true);
       const authToken = token || localStorage.getItem('auth_token') || '';
-      const res = await fetch(`${API_BASE_URL}/hotel-reservations`, {
+      const res = await fetch(`${API_BASE_URL}/hospitality`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       if (res.ok) {
@@ -182,7 +195,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
       const rate = Number(ratePerNight) || 12000;
       const grossTotal = rate * count * nights;
 
-      const res = await fetch(`${API_BASE_URL}/hotel-reservations`, {
+      const res = await fetch(`${API_BASE_URL}/hospitality`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -235,7 +248,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   const handleConfirmVoucher = async (voucherId: string, guest: string) => {
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
-      const res = await fetch(`${API_BASE_URL}/hotel-reservations/${voucherId}/confirm`, {
+      const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -259,7 +272,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
 
     try {
       const authToken = token || localStorage.getItem('auth_token') || '';
-      const res = await fetch(`${API_BASE_URL}/hotel-reservations/${voucherId}`, {
+      const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -277,10 +290,58 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
     }
   };
 
+  // Accept alternative proposed by hotel
+  const handleAcceptAlternative = async (voucherId: string, guest: string) => {
+    try {
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/accept-alternative`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (!res.ok) throw new Error('Failed to accept alternative');
+
+      toast.success(`Alternative accepted for ${guest}! Booking confirmed.`, {
+        icon: '✅'
+      });
+      fetchVouchers();
+    } catch (err: any) {
+      toast.error(err.message || 'Error accepting alternative');
+    }
+  };
+
+  // Regenerate expiring link and extend deadline
+  const handleRegenerateLink = async (voucherId: string) => {
+    try {
+      const authToken = token || localStorage.getItem('auth_token') || '';
+      const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}/regenerate-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ extendHours: 48 })
+      });
+
+      if (!res.ok) throw new Error('Failed to regenerate link');
+
+      toast.success('Secure reception link regenerated with 48h validity!', {
+        icon: '🔗'
+      });
+      fetchVouchers();
+    } catch (err: any) {
+      toast.error(err.message || 'Error regenerating link');
+    }
+  };
+
   // WhatsApp Voucher Formatter
   const handleShareWhatsAppVoucher = (v: BookingVoucher) => {
     const hotelPhone = v.hotel?.contactPhone?.replace(/\D/g, '') || '';
     const nights = Math.max(1, Math.ceil((new Date(v.checkOut).getTime() - new Date(v.checkIn).getTime()) / (1000 * 60 * 60 * 24)));
+    const portalUrl = `${window.location.origin}/hospitality?tab=reception&token=${v.secureToken || v.id}`;
     
     const message = 
 `*HOTEL BOOKING VOUCHER — KASHMIR CURATORS DMC*
@@ -298,7 +359,10 @@ Ref: *${v.bookingReference || v.id.slice(0, 8)}*
 💰 *Contract Net Payable:* ₹${v.hotelDues?.toLocaleString('en-IN') || v.totalAmount?.toLocaleString('en-IN')}
 Status: *CONFIRMED BY KASHMIR CURATORS*
 
-_Please acknowledge this voucher and reserve room keys. Thank you._`;
+🔗 *Confirm & Upload Voucher Online:*
+${portalUrl}
+
+_Please click the portal link above to confirm room availability and assign your hotel CRS confirmation number. Thank you._`;
 
     const encoded = encodeURIComponent(message);
     const targetUrl = hotelPhone 
@@ -526,9 +590,47 @@ _Please acknowledge this voucher and reserve room keys. Thank you._`;
                     </div>
                   )}
 
+                  {/* Alternative Offered Banner */}
+                  {v.confirmationStage === 'ALTERNATIVE_OFFERED' && (
+                    <div className="p-3.5 bg-purple-500/10 rounded-2xl text-xs border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <strong className="text-purple-600 dark:text-purple-400 flex items-center gap-1.5 font-bold">
+                          <Sparkles className="w-4 h-4" />
+                          Hotel Proposed Alternative Modification:
+                        </strong>
+                        <p className="text-foreground">
+                          Category: <strong>{v.alternativeRoomType || v.roomType}</strong> • Rate: <strong>₹{(v.alternativeTariff || v.contractRate).toLocaleString('en-IN')}/nt</strong> {v.alternativeDates && `• Dates: ${v.alternativeDates}`}
+                        </p>
+                        {v.alternativeNotes && <p className="text-muted-foreground italic">"{v.alternativeNotes}"</p>}
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAcceptAlternative(v.id, v.guestName)}
+                        className="rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shrink-0 shadow-sm"
+                      >
+                        Accept Proposal & Confirm
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Hotel Confirmation Reference Code */}
+                  {v.hotelConfirmationNumber && (
+                    <div className="p-3 bg-emerald-500/10 rounded-2xl text-xs border border-emerald-500/30 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                        <span className="text-foreground font-bold">
+                          Hotel CRS Confirmation Code: <span className="font-mono text-sm text-emerald-600 dark:text-emerald-400">{v.hotelConfirmationNumber}</span>
+                        </span>
+                      </div>
+                      {v.receptionNotes && (
+                        <span className="text-muted-foreground italic truncate max-w-xs text-[11px]">"{v.receptionNotes}"</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Action Buttons Row */}
                   <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -536,7 +638,35 @@ _Please acknowledge this voucher and reserve room keys. Thank you._`;
                         className="rounded-xl text-xs font-bold gap-1.5 h-9 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
                       >
                         <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>WhatsApp Voucher to Hotelier</span>
+                        <span>WhatsApp Voucher & Link</span>
+                      </Button>
+
+                      {/* Open in Reception Portal */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          window.location.href = `/hospitality?tab=reception&id=${v.id}`;
+                        }}
+                        className="rounded-xl text-xs font-bold gap-1.5 h-9 text-foreground hover:bg-muted"
+                      >
+                        <Building2 className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Open Reception Desk</span>
+                      </Button>
+
+                      {/* Copy Link */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const url = `${window.location.origin}/hospitality?tab=reception&token=${v.secureToken || v.id}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success('Reception portal link copied!');
+                        }}
+                        className="rounded-xl text-xs text-muted-foreground hover:text-foreground h-9 gap-1"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>Copy Link</span>
                       </Button>
                     </div>
 
@@ -548,9 +678,21 @@ _Please acknowledge this voucher and reserve room keys. Thank you._`;
                           className="rounded-xl text-xs font-bold gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
                         >
                           <Check className="w-3.5 h-3.5" />
-                          <span>Confirm Voucher</span>
+                          <span>Quick Confirm</span>
                         </Button>
                       )}
+
+                      {/* Regenerate Link */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRegenerateLink(v.id)}
+                        className="rounded-xl text-xs text-muted-foreground hover:text-foreground h-9 gap-1"
+                        title="Extend validity by 48 hours and regenerate link"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Extend 48h</span>
+                      </Button>
 
                       {!isCancelled && (
                         <Button
@@ -560,7 +702,7 @@ _Please acknowledge this voucher and reserve room keys. Thank you._`;
                           className="rounded-xl text-xs text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 h-9"
                         >
                           <X className="w-3.5 h-3.5" />
-                          <span>Release / Cancel</span>
+                          <span>Release</span>
                         </Button>
                       )}
                     </div>

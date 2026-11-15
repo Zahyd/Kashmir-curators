@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { 
   Package, 
   Building, 
@@ -78,6 +78,7 @@ import CMSSeo from '@/components/admin/CMSSeo';
 import CMSReports from '@/components/admin/CMSReports';
 import CMSAuditLogs from '@/components/admin/CMSAuditLogs';
 import CMSSettings from '@/components/admin/CMSSettings';
+import CMSPortalKeys from '@/components/admin/CMSPortalKeys';
 import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
 
 const ROLE_STATS: Record<string, any[]> = {
@@ -109,9 +110,17 @@ const ROLE_STATS: Record<string, any[]> = {
 
 export default function Admin() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { teamUser, isTeamAuthenticated, isTeamLoading, canAccessAdmin, systemEvents, teamLogout } = useTeamAuth();
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeSection, setActiveSection] = useState(() => searchParams.get('section') || searchParams.get('tab') || 'dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const sec = searchParams.get('section') || searchParams.get('tab');
+    if (sec) {
+      setActiveSection(sec);
+    }
+  }, [searchParams]);
   const [dynamicStats, setDynamicStats] = useState<any>(null);
   const [selectedChartPeriod, setSelectedChartPeriod] = useState<'Daily' | 'Weekly' | 'Monthly'>('Monthly');
   const [globalSearch, setGlobalSearch] = useState('');
@@ -534,6 +543,7 @@ export default function Admin() {
       case 'coupons': return <div className="animate-in fade-in duration-300"><CMSCoupons /></div>;
       case 'seo': return <div className="animate-in fade-in duration-300"><CMSSeo /></div>;
       case 'reports': return <div className="animate-in fade-in duration-300"><CMSReports /></div>;
+      case 'portal_keys': return <div className="animate-in fade-in duration-300"><CMSPortalKeys /></div>;
       case 'audit_logs': return <div className="animate-in fade-in duration-300"><CMSAuditLogs /></div>;
       case 'settings': return <div className="animate-in fade-in duration-300"><CMSSettings /></div>;
       default: return null;

@@ -29,7 +29,8 @@ import {
   History,
   Sliders,
   Search,
-  ExternalLink
+  ExternalLink,
+  KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ADMIN_SIDEBAR_ITEMS, ROLE_LABELS } from '@/contexts/TeamAuthContext';
@@ -91,6 +92,7 @@ const allMenuItems: MenuItem[] = [
 
   // System & Governance
   { id: 'seo', label: 'SEO & Search Engine', icon: Globe, category: 'SYSTEM & SETTINGS' },
+  { id: 'portal_keys', label: 'Portal Access Keys', icon: KeyRound, badge: 'Security', category: 'SYSTEM & SETTINGS' },
   { id: 'audit_logs', label: 'Security & Audit Logs', icon: History, category: 'SYSTEM & SETTINGS' },
   { id: 'settings', label: 'Platform Settings', icon: Settings, category: 'SYSTEM & SETTINGS' },
 ];

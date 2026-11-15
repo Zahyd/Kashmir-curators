@@ -49,6 +49,7 @@ import walletRoutes from './routes/walletRoutes';
 import safetyCardRoutes from './routes/safetyCardRoutes';
 import aiRoutes from './routes/aiRoutes';
 import vaultRoutes from './routes/vaultRoutes';
+import portalAccessRoutes from './routes/portalAccessRoutes';
 import { handleStripeWebhook } from './controllers/paymentController';
 import prisma from './lib/prisma';
 
@@ -180,7 +181,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/reservations', hotelReservationRoutes);
+app.use('/api/hospitality', hotelReservationRoutes);
 app.use('/api/flights', flightRoutes);
 app.use('/api/content', blogRoutes);
 app.use('/api/site-content', siteContentRoutes);
@@ -196,6 +197,7 @@ app.use('/api/wallets', walletRoutes);
 app.use('/api/safety-card', safetyCardRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/vault', vaultRoutes);
+app.use('/api/portal-keys', portalAccessRoutes);
 app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers

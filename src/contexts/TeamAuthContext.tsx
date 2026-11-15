@@ -26,12 +26,12 @@ const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
     'dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
     'hotels', 'cabs', 'activities', 'reviews', 'faqs', 'media', 'inquiries', 
     'customers', 'bookings', 'reservations', 'disruptions', 'payments', 'coupons', 
-    'seo', 'reports', 'users', 'audit_logs', 'settings', 'revenue', 'content', 'planner',
+    'seo', 'reports', 'users', 'portal_keys', 'audit_logs', 'settings', 'revenue', 'content', 'planner',
     'assign_leads', 'view_financials', 'sales_portal'
   ],
   operations: [
     'dashboard', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 
-    'assign_leads', 'audit_logs'
+    'assign_leads', 'portal_keys', 'audit_logs'
   ],
   sales: [
     'sales_portal', 'builder', 'payments', 'vault', 'work_log', 'performance'
@@ -51,9 +51,9 @@ export const ADMIN_SIDEBAR_ITEMS: Record<TeamRole, string[]> = {
     'dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 
     'hotels', 'cabs', 'activities', 'reviews', 'faqs', 'media', 'inquiries', 
     'bookings', 'reservations', 'disruptions', 'payments', 'coupons', 
-    'seo', 'reports', 'users', 'audit_logs', 'settings', 'revenue', 'content', 'planner'
+    'seo', 'reports', 'users', 'portal_keys', 'audit_logs', 'settings', 'revenue', 'content', 'planner'
   ],
-  operations: ['dashboard', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 'audit_logs'],
+  operations: ['dashboard', 'disruptions', 'inquiries', 'reservations', 'bookings', 'hotels', 'cabs', 'portal_keys', 'audit_logs'],
   sales: [],
   marketing: ['dashboard', 'page_builder', 'destinations', 'packages', 'itinerary_builder', 'activities', 'reviews', 'faqs', 'media', 'seo', 'coupons'],
   finance: ['dashboard', 'revenue', 'payments', 'coupons', 'reports', 'audit_logs'],

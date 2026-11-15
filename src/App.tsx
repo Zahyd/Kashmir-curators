@@ -81,6 +81,8 @@ const App = () => {
                   <Route path="/sales/" element={<SalesAuth />} />
                   <Route path="/payment-request/:paymentId" element={<PaymentRequest />} />
                   <Route path="/hotel/confirm/:reservationId" element={<HotelConfirm />} />
+                  <Route path="/hotel/confirm/:tokenOrId" element={<HotelConfirm />} />
+                  <Route path="/reception/confirm/:tokenOrId" element={<HotelConfirm />} />
                   <Route path="/agent/apply" element={<AgencyOnboardingPage />} />
                   <Route path="/agent/status" element={<AgencyStatusPage />} />
                   <Route path="/agent/pricing" element={<AgentPricingPage />} />

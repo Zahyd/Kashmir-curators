@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export type HospitalityTab = 
+  | 'reception'
   | 'dispatch'
   | 'hotels'
   | 'accommodations'
@@ -39,8 +40,9 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const navItems = [
+    { id: 'reception' as HospitalityTab, label: 'Hotel Reception Portal', icon: Building2, badge: 'Live Desk' },
     { id: 'dispatch' as HospitalityTab, label: 'Send Booking & Vouchers', icon: Send, badge: 'Dispatch' },
-    { id: 'hotels' as HospitalityTab, label: 'Hotels & Houseboats (CRUD)', icon: Building2, badge: 'Directory' },
+    { id: 'hotels' as HospitalityTab, label: 'Hotels & Houseboats (CRUD)', icon: Layers, badge: 'Directory' },
     { id: 'accommodations' as HospitalityTab, label: 'Accommodations & Rooms', icon: BedDouble, badge: 'Inventory' },
     { id: 'tariffs' as HospitalityTab, label: 'Seasonal Tariffs & Rates', icon: SlidersHorizontal },
     { id: 'settlement' as HospitalityTab, label: 'Settlement & Bank Dues', icon: Receipt },

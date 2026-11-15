@@ -237,7 +237,7 @@ export default function CMSReservations() {
       if (checkInEnd) params.append('checkInEnd', checkInEnd);
       if (searchTerm) params.append('search', searchTerm);
 
-      const response = await fetch(`${API_BASE_URL}/reservations?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/hospitality?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -764,7 +764,7 @@ export default function CMSReservations() {
           holdUntil: stay.holdUntil ? new Date(stay.holdUntil).toISOString() : null
         };
         
-        const response = await fetch(`${API_BASE_URL}/reservations/${activeReservation.id}`, {
+        const response = await fetch(`${API_BASE_URL}/hospitality/${activeReservation.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -808,7 +808,7 @@ export default function CMSReservations() {
             holdUntil: stay.holdUntil ? new Date(stay.holdUntil).toISOString() : null
           };
           
-          const response = await fetch(`${API_BASE_URL}/reservations`, {
+          const response = await fetch(`${API_BASE_URL}/hospitality`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -846,7 +846,7 @@ export default function CMSReservations() {
     const token = localStorage.getItem('teamToken');
     
     try {
-      const response = await fetch(`${API_BASE_URL}/reservations/${id}/send`, {
+      const response = await fetch(`${API_BASE_URL}/hospitality/${id}/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -880,7 +880,7 @@ export default function CMSReservations() {
     const token = localStorage.getItem('teamToken');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/reservations/${activeReservation.id}/confirm`, {
+      const response = await fetch(`${API_BASE_URL}/hospitality/${activeReservation.id}/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -910,7 +910,7 @@ export default function CMSReservations() {
     const token = localStorage.getItem('teamToken');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/reservations/${itemToDelete.id}`, {
+      const response = await fetch(`${API_BASE_URL}/hospitality/${itemToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -74,7 +74,7 @@ export const ReservationCalendar: React.FC<ReservationCalendarProps> = ({
         fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/hotel-reservations${hotelParam}`, {
+        fetch(`${API_BASE_URL}/hospitality${hotelParam}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         })
       ]);
