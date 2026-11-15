@@ -53,10 +53,6 @@ export const AgentDashboard: React.FC = () => {
   // Lead Detail Drawer State
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<string | null>(null);
   const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
-    confirmedRevenue: 0,
-    commissionEarned: 0
-  });
-  const [isLoading, setIsLoading] = useState(false);
 
   // SaaS Subscription & White-Label State (Clean Default: STARTER)
   const [currentPlan, setCurrentPlan] = useState<SaaSPlanId>(
