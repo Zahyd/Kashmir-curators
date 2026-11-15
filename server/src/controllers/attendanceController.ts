@@ -65,7 +65,7 @@ export const clockIn = async (req: AuthRequest, res: Response) => {
         loginAt: now,
         lastActivityAt: now,
         isActive: true,
-        assignedDesk: req.body.assignedDesk || 'Central Reservations'
+        assignedDesk: req.body?.assignedDesk || 'Central Reservations'
       }
     });
 

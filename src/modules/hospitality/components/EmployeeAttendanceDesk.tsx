@@ -122,7 +122,10 @@ export const EmployeeAttendanceDesk: React.FC = () => {
       const authToken = getHospitalityToken(token);
       fetch(`${API_BASE_URL}/attendance/pulse`, {
         method: 'POST',
-        headers: getHospitalityHeaders(authToken)
+        headers: {
+          'Content-Type': 'application/json',
+          ...getHospitalityHeaders(authToken)
+        }
       }).catch(() => {});
     }, 120000);
 
@@ -136,7 +139,10 @@ export const EmployeeAttendanceDesk: React.FC = () => {
       const authToken = getHospitalityToken(token);
       const res = await fetch(`${API_BASE_URL}/attendance/clock-in`, {
         method: 'POST',
-        headers: getHospitalityHeaders(authToken),
+        headers: {
+          'Content-Type': 'application/json',
+          ...getHospitalityHeaders(authToken)
+        },
         body: JSON.stringify({ assignedDesk: 'Kashmir Hospitality Central Desk' })
       });
       const data = await res.json();
@@ -158,7 +164,10 @@ export const EmployeeAttendanceDesk: React.FC = () => {
       const authToken = getHospitalityToken(token);
       const res = await fetch(`${API_BASE_URL}/attendance/break`, {
         method: 'POST',
-        headers: getHospitalityHeaders(authToken)
+        headers: {
+          'Content-Type': 'application/json',
+          ...getHospitalityHeaders(authToken)
+        }
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to toggle break');
@@ -181,7 +190,10 @@ export const EmployeeAttendanceDesk: React.FC = () => {
       const authToken = getHospitalityToken(token);
       const res = await fetch(`${API_BASE_URL}/attendance/clock-out`, {
         method: 'POST',
-        headers: getHospitalityHeaders(authToken)
+        headers: {
+          'Content-Type': 'application/json',
+          ...getHospitalityHeaders(authToken)
+        }
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to clock out');
