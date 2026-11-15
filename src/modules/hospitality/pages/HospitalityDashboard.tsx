@@ -61,12 +61,12 @@ export const HospitalityDashboard: React.FC = () => {
     }
   });
 
-  const isSuperAdminOrOps = 
+  const canBypass = 
     teamUser?.role === 'admin' || 
     teamUser?.role === 'operations' || 
     user?.role === 'admin';
 
-  const isUnlocked = isSuperAdminOrOps || !!session;
+  const isUnlocked = canBypass || !!session;
 
   const handleSignOutDesk = () => {
     localStorage.removeItem('hospitality_session');
