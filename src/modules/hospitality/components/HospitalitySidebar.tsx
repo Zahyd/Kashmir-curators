@@ -8,7 +8,8 @@ import {
   Menu,
   ShieldCheck,
   Send,
-  Layers
+  Layers,
+  UserCheck
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 export type HospitalityTab = 
   | 'reception'
   | 'dispatch'
+  | 'attendance'
   | 'hotels'
   | 'accommodations'
   | 'tariffs'
@@ -42,6 +44,7 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
   const navItems = [
     { id: 'reception' as HospitalityTab, label: 'Hotel Reception Portal', icon: Building2, badge: 'Live Desk' },
     { id: 'dispatch' as HospitalityTab, label: 'Send Booking & Vouchers', icon: Send, badge: 'Dispatch' },
+    { id: 'attendance' as HospitalityTab, label: 'Employee Attendance & Presence', icon: UserCheck, badge: 'Live Radar' },
     { id: 'hotels' as HospitalityTab, label: 'Hotels & Houseboats (CRUD)', icon: Layers, badge: 'Directory' },
     { id: 'accommodations' as HospitalityTab, label: 'Accommodations & Rooms', icon: BedDouble, badge: 'Inventory' },
     { id: 'tariffs' as HospitalityTab, label: 'Seasonal Tariffs & Rates', icon: SlidersHorizontal },

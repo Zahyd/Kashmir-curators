@@ -32,6 +32,7 @@ import AccommodationManager from '../components/AccommodationManager';
 import SeasonalTariffManager from '../components/SeasonalTariffManager';
 import SettlementLedgerView from '../components/SettlementLedgerView';
 import HospitalityPayoutModal from '../components/HospitalityPayoutModal';
+import { EmployeeAttendanceDesk } from '../components/EmployeeAttendanceDesk';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
@@ -162,6 +163,7 @@ export const HospitalityDashboard: React.FC = () => {
                 <h1 className="text-2xl font-black text-foreground tracking-tight mt-1">
                   {activeTab === 'reception' && 'Hotel Reception Confirmation Portal (Live Front Desk)'}
                   {activeTab === 'dispatch' && 'Live Hotel Booking & Voucher Dispatch Desk'}
+                  {activeTab === 'attendance' && 'Employee Operations, Working Hours & Live Presence'}
                   {activeTab === 'hotels' && 'Partner Hotels & Houseboats (Directory & CRUD)'}
                   {activeTab === 'accommodations' && 'Accommodations & Live Inventory Matrix'}
                   {activeTab === 'tariffs' && 'Seasonal Tariffs & Contract Multipliers'}
@@ -238,6 +240,13 @@ export const HospitalityDashboard: React.FC = () => {
           {activeTab === 'dispatch' && (
             <div className="space-y-6 animate-fade-in">
               <BookingDispatchDesk initialHotelId={selectedHotelId} />
+            </div>
+          )}
+
+          {/* TAB: EMPLOYEE ATTENDANCE & LIVE RADAR */}
+          {activeTab === 'attendance' && (
+            <div className="space-y-6 animate-fade-in">
+              <EmployeeAttendanceDesk />
             </div>
           )}
 

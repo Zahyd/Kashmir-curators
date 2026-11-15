@@ -22,7 +22,8 @@ import {
   Download,
   AlertTriangle,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHospitalityHeaders, getHospitalityToken } from '../utils/hospitalityAuth';
 
 export interface BookingVoucher {
   id: string;
@@ -77,6 +79,10 @@ interface HotelOption {
   name: string;
   location: string;
   contactPhone?: string;
+  contactEmail?: string;
+  receptionEmail?: string;
+  contactName?: string;
+  whatsappNumber?: string;
 }
 
 interface CategoryOption {
@@ -125,6 +131,8 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   const [ratePerNight, setRatePerNight] = useState('14500');
   const [specialRequests, setSpecialRequests] = useState('');
   const [agentName, setAgentName] = useState(user?.name ? `${user.name} (B2B Agent)` : 'Kashmir Curators DMC Desk');
+  const [receptionEmail, setReceptionEmail] = useState('');
+  const [receptionPhone, setReceptionPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 1. Fetch Hotels & Categories for Dropdowns
@@ -155,7 +163,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
     loadMetadata();
   }, [initialHotelId]);
 
-  // Update roomType when hotel changes
+  // Update roomType & hotel reception contacts when hotel changes
   useEffect(() => {
     if (selectedHotelId) {
       const hotelCats = categories.filter(c => c.hotelId === selectedHotelId);
@@ -163,8 +171,13 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
         setRoomType(hotelCats[0].name);
         setRatePerNight(String(hotelCats[0].basePrice));
       }
+      const hotel = hotels.find(h => h.id === selectedHotelId);
+      if (hotel) {
+        setReceptionEmail(hotel.contactEmail || hotel.receptionEmail || '');
+        setReceptionPhone(hotel.contactPhone || hotel.whatsappNumber || '');
+      }
     }
-  }, [selectedHotelId, categories]);
+  }, [selectedHotelId, categories, hotels]);
 
   // 2. Fetch all Dispatched Vouchers & Bookings
   const fetchVouchers = async () => {
@@ -200,7 +213,8 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
 
     try {
       setIsSubmitting(true);
-      const authToken = getAuthToken();
+      const authToken = getHospitalityToken(token);
+      const authHeaders = getHospitalityHeaders(authToken);
       const nights = Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)));
       const count = Number(roomsCount) || 1;
       const rate = Number(ratePerNight) || 12000;
@@ -210,13 +224,15 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
+          ...authHeaders
         },
         body: JSON.stringify({
           hotelId: selectedHotelId,
           guestName: guestName.trim(),
           guestPhone: guestPhone.trim(),
           guestEmail: guestEmail.trim(),
+          receptionEmail: receptionEmail.trim() || undefined,
+          receptionPhone: receptionPhone.trim() || undefined,
           roomType: roomType || 'Standard Suite',
           roomsCount: count,
           adults: Number(adultsCount) || 2,
@@ -753,6 +769,55 @@ _Please click the portal link above to confirm room availability and assign your
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Hotel Reception Contact Details (Auto-populated & Editable) */}
+            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-bold text-amber-500 text-xs">
+                  <Building2 className="w-4 h-4" />
+                  <span>Hotel Reception Dispatch Contact</span>
+                </div>
+                {receptionEmail ? (
+                  <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Verified Email
+                  </Badge>
+                ) : (
+                  <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-semibold flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Missing Email
+                  </Badge>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
+                    Reception Email (Voucher Recipient) *
+                  </label>
+                  <Input
+                    type="email"
+                    required
+                    placeholder="reception@thekhyber.com"
+                    value={receptionEmail}
+                    onChange={(e) => setReceptionEmail(e.target.value)}
+                    className="rounded-xl h-9 text-xs bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
+                    Reception Phone / WhatsApp
+                  </label>
+                  <Input
+                    type="tel"
+                    placeholder="+91 94190 XXXXX"
+                    value={receptionPhone}
+                    onChange={(e) => setReceptionPhone(e.target.value)}
+                    className="rounded-xl h-9 text-xs bg-background"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Room Type */}

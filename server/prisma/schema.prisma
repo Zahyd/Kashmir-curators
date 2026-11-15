@@ -72,6 +72,19 @@ model Hotel {
   contactName         String?
   contactEmail        String?
   contactPhone        String?
+  receptionEmail      String?
+  reservationsEmail   String?
+  managerName         String?
+  whatsappNumber      String?
+  alternatePhone      String?
+  emergencyContact    String?
+  address             String?
+  cancellationPolicy  String?
+  taxRatePct          Float?             @default(12.0)
+  bankName            String?
+  bankAccountNumber   String?
+  bankIfsc            String?
+  bankAccountName     String?
   paymentTerms        String?
   commissionStructure String?
   seasonalPricing     String?            // JSON string
@@ -868,4 +881,50 @@ model PortalAccessKey {
   @@index([accessKey])
   @@index([portalType])
   @@index([status])
+}
+
+model EmployeeAttendance {
+  id                String    @id @default(uuid())
+  employeeCode      String    // e.g. KC-HOSP-01 or ADMIN001
+  employeeName      String
+  role              String    // hospitality, operations, admin, etc.
+  date              String    // YYYY-MM-DD (Asia/Kolkata timezone standard)
+  firstLoginAt      DateTime  @default(now())
+  lastLogoutAt      DateTime?
+  totalWorkMinutes  Int       @default(0)
+  totalBreakMinutes Int       @default(0)
+  status            String    @default("PRESENT") // PRESENT, HALF_DAY, OVERTIME, ON_BREAK, CLOCKED_OUT
+  shiftName         String    @default("General Operations (09:00 - 18:00)")
+  ipAddress         String?
+  deviceInfo        String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([employeeCode, date])
+  @@index([employeeCode])
+  @@index([date])
+  @@index([status])
+}
+
+model EmployeeSession {
+  id             String    @id @default(uuid())
+  employeeCode   String
+  employeeName   String
+  role           String
+  portalType     String    @default("HOSPITALITY")
+  loginAt        DateTime  @default(now())
+  logoutAt       DateTime?
+  lastActivityAt DateTime  @default(now())
+  isActive       Boolean   @default(true)
+  isOnBreak      Boolean   @default(false)
+  breakStartAt   DateTime?
+  breakMinutes   Int       @default(0)
+  assignedDesk   String?   // e.g. "Gulmarg Desk", "Central Reservations"
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([employeeCode])
+  @@index([isActive])
+  @@index([portalType])
 }

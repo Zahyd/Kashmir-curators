@@ -208,6 +208,15 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
       }
     ]);
 
+    // Validate createdById relation safety
+    let validUserId: string | null = null;
+    if (req.user?.id && req.user?.role !== 'hospitality') {
+      try {
+        const u = await p.user.findUnique({ where: { id: req.user.id } });
+        if (u) validUserId = req.user.id;
+      } catch {}
+    }
+
     const reservation = await p.hotelReservation.create({
       data: {
         inquiryId: inquiryId || null,
@@ -234,7 +243,7 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
         totalAmount: grossTotal,
         profitMargin: profit,
         hotelDues: hotelDues,
-        createdById: req.user?.id || null,
+        createdById: validUserId,
         agentName: agentName || (req.user?.name ? `${req.user.name} (B2B Desk)` : 'Kashmir Curators Desk'),
         internalNotes: internalNotes || null,
         secureToken,
