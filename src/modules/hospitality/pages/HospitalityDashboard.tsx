@@ -310,7 +310,7 @@ export const HospitalityDashboard: React.FC = () => {
           />
 
           {/* Main Workspace */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1700px] w-full mx-auto space-y-6 min-w-0">
+          <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-[1700px] w-full mx-auto space-y-6 min-w-0 pb-24 lg:pb-8">
             {/* Top Operations Header Bar (Ultra-Modern Glassmorphic Surface) */}
             <div className="bg-card/75 border border-border/80 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4 backdrop-blur-md">
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -322,7 +322,7 @@ export const HospitalityDashboard: React.FC = () => {
                       <span className={`w-1.5 h-1.5 rounded-full ${socketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
                       {socketConnected ? 'Live Real-Time CRS' : 'Live Ops Desk'}
                     </span>
-                    <span className="text-[11px] font-semibold text-muted-foreground">
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                       Kashmir Curators Hotel Network • 24/7 Dispatch Matrix
                     </span>
                   </div>
@@ -339,7 +339,7 @@ export const HospitalityDashboard: React.FC = () => {
                 </div>
 
                 {/* Right: Operational Controls Group */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full xl:w-auto justify-start xl:justify-end">
                   {/* Global Command Palette Trigger */}
                   <Button
                     variant="outline"

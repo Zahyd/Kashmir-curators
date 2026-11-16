@@ -535,12 +535,12 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
   const renderResponseForm = (resItem: ReceptionReservation, isInline: boolean = false) => (
     <div className="space-y-6">
       {/* Action Tab Selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1.5 bg-muted/50 rounded-2xl border border-border/60">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-border/60">
         <button
           type="button"
           onClick={() => setActionTab('CONFIRM')}
           className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-            actionTab === 'CONFIRM' ? 'bg-emerald-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            actionTab === 'CONFIRM' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-foreground'
           }`}
         >
           1. Confirm Booking
@@ -549,7 +549,7 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
           type="button"
           onClick={() => setActionTab('AVAILABILITY')}
           className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-            actionTab === 'AVAILABILITY' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            actionTab === 'AVAILABILITY' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-foreground'
           }`}
         >
           2. Availability
@@ -558,7 +558,7 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
           type="button"
           onClick={() => setActionTab('ALTERNATIVE')}
           className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-            actionTab === 'ALTERNATIVE' ? 'bg-purple-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            actionTab === 'ALTERNATIVE' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-foreground'
           }`}
         >
           3. Alternative
@@ -567,7 +567,7 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
           type="button"
           onClick={() => setActionTab('REJECT')}
           className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-            actionTab === 'REJECT' ? 'bg-rose-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            actionTab === 'REJECT' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-foreground'
           }`}
         >
           4. Sold Out
@@ -575,8 +575,8 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
         <button
           type="button"
           onClick={() => setActionTab('CLARIFY')}
-          className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-            actionTab === 'CLARIFY' ? 'bg-amber-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+          className={`col-span-2 sm:col-span-1 py-2 px-2 text-xs font-bold rounded-xl transition-all ${
+            actionTab === 'CLARIFY' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-foreground'
           }`}
         >
           5. Clarification
@@ -1348,7 +1348,7 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none w-full">
         {[
           { id: 'ALL', label: `All Requests (${totalCount})` },
           { id: 'PENDING', label: `Pending Response (${pendingCount})` },
@@ -1360,10 +1360,10 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
           <button
             key={tab.id}
             onClick={() => setStageFilter(tab.id)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all ${
               stageFilter === tab.id
-                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                : 'bg-card border border-border/70 text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                ? 'bg-amber-500 text-slate-950 font-black shadow-sm border border-amber-500'
+                : 'bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white border border-slate-200/90 dark:border-slate-700/80 font-bold'
             }`}
           >
             {tab.label}

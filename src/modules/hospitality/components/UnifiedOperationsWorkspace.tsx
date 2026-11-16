@@ -1197,21 +1197,21 @@ https://kashmir-curators.vercel.app`;
     return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30 font-bold">Pending Response</Badge>;
   };
 
-  // Stay Countdown Indicator (SaaS Modern Real-Icon Badges, No Emojis)
+  // Stay Countdown Indicator (SaaS Modern Real-Icon Badges, No Emojis, High Dark-Mode Contrast)
   const getStayCountdownBadge = (checkIn: string, checkOut: string, status: string) => {
     if (status === 'Checked-In') {
       return (
-        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 shadow-2xs">
+        <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40 text-[10px] font-black flex items-center gap-1 shadow-2xs">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <LogIn className="w-3 h-3 text-emerald-500" />
+          <LogIn className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
           <span>In-House</span>
         </Badge>
       );
     }
     if (status === 'Checked-Out') {
       return (
-        <Badge className="bg-slate-500/15 text-slate-400 border-slate-500/30 text-[10px] font-semibold flex items-center gap-1">
-          <LogOut className="w-3 h-3 text-slate-400" />
+        <Badge className="bg-slate-500/20 text-slate-600 dark:text-slate-300 border-slate-500/40 text-[10px] font-bold flex items-center gap-1">
+          <LogOut className="w-3 h-3 text-slate-500 dark:text-slate-400" />
           <span>Departed</span>
         </Badge>
       );
@@ -1226,24 +1226,24 @@ https://kashmir-curators.vercel.app`;
 
     if (diffDays === 0) {
       return (
-        <Badge className="bg-rose-500/15 text-rose-500 border-rose-500/30 text-[10px] font-bold flex items-center gap-1 animate-pulse shadow-2xs">
-          <AlertCircle className="w-3 h-3 text-rose-500" />
+        <Badge className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border-rose-500/40 text-[10px] font-black flex items-center gap-1 animate-pulse shadow-2xs">
+          <AlertCircle className="w-3 h-3 text-rose-500 dark:text-rose-400" />
           <span>Arriving Today</span>
         </Badge>
       );
     }
     if (diffDays === 1) {
       return (
-        <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-bold flex items-center gap-1 shadow-2xs">
-          <Clock className="w-3 h-3 text-amber-500" />
+        <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/40 text-[10px] font-black flex items-center gap-1 shadow-2xs">
+          <Clock className="w-3 h-3 text-amber-500 dark:text-amber-400" />
           <span>Arriving Tomorrow</span>
         </Badge>
       );
     }
     if (diffDays > 1 && diffDays <= 7) {
       return (
-        <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-[10px] font-mono flex items-center gap-1">
-          <Calendar className="w-3 h-3 text-amber-500" />
+        <Badge variant="outline" className="bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/35 text-[10px] font-mono font-bold flex items-center gap-1">
+          <Calendar className="w-3 h-3 text-sky-500 dark:text-sky-400" />
           <span>In {diffDays} days</span>
         </Badge>
       );
@@ -1427,9 +1427,9 @@ https://kashmir-curators.vercel.app`;
         </div>
 
         {/* Filter Pills & Selectors */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/50 text-xs">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase mr-1 flex items-center gap-1">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-3 border-t border-border/50 text-xs">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full md:w-auto">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mr-1 flex items-center gap-1 shrink-0">
               <Filter className="w-3 h-3" /> Filter:
             </span>
             {[
@@ -1444,10 +1444,10 @@ https://kashmir-curators.vercel.app`;
               <button
                 key={pill.id}
                 onClick={() => setFilterStage(pill.id)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all ${
                   filterStage === pill.id
-                    ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-amber-500 text-slate-950 font-black shadow-sm border border-amber-500'
+                    : 'bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white border border-slate-200/90 dark:border-slate-700/80 font-bold'
                 }`}
               >
                 {pill.label}
@@ -1455,10 +1455,10 @@ https://kashmir-curators.vercel.app`;
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             {/* Destination Selector */}
             <Select value={filterDestination} onValueChange={setFilterDestination}>
-              <SelectTrigger className="h-8 rounded-xl text-xs w-36 bg-background">
+              <SelectTrigger className="h-8 rounded-xl text-xs flex-1 sm:w-36 bg-background dark:bg-slate-900 border-border text-foreground">
                 <SelectValue placeholder="Destination" />
               </SelectTrigger>
               <SelectContent>
@@ -1472,7 +1472,7 @@ https://kashmir-curators.vercel.app`;
 
             {/* Payment Filter */}
             <Select value={filterPayment} onValueChange={setFilterPayment}>
-              <SelectTrigger className="h-8 rounded-xl text-xs w-32 bg-background">
+              <SelectTrigger className="h-8 rounded-xl text-xs flex-1 sm:w-32 bg-background dark:bg-slate-900 border-border text-foreground">
                 <SelectValue placeholder="Payment" />
               </SelectTrigger>
               <SelectContent>
@@ -1501,7 +1501,7 @@ https://kashmir-curators.vercel.app`;
       <Card className="rounded-3xl border border-border/80 bg-card overflow-hidden shadow-sm">
         <div className="p-4 sm:p-5 border-b border-border/50 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <CalendarCheck2 className="w-5 h-5 text-amber-500" />
+            <CalendarCheck2 className="w-5 h-5 text-amber-500 shrink-0" />
             <h2 className="text-base font-black text-foreground">
               Centralized Reservation Operations Desk
             </h2>
@@ -1509,9 +1509,9 @@ https://kashmir-curators.vercel.app`;
               {displayedReservations.length} records
             </Badge>
 
-            {/* Quick Presets Filter Pills */}
-            <div className="hidden xl:flex items-center gap-1.5 ml-3 pl-3 border-l border-border/60">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">Presets:</span>
+            {/* Quick Presets Filter Pills: visible and scrollable on all screen sizes */}
+            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none sm:ml-3 sm:pl-3 sm:border-l sm:border-border/60">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase shrink-0">Presets:</span>
               {[
                 { id: 'ALL', label: 'All' },
                 { id: 'TODAY', label: "Today's Moves" },
@@ -1522,10 +1522,10 @@ https://kashmir-curators.vercel.app`;
                 <button
                   key={p.id}
                   onClick={() => setQuickDateFilter(p.id as any)}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap shrink-0 transition-all ${
                     quickDateFilter === p.id 
-                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40' 
-                      : 'bg-muted/40 text-muted-foreground hover:bg-muted border border-transparent'
+                      ? 'bg-amber-500 text-slate-950 font-black shadow-xs border border-amber-500' 
+                      : 'bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white border border-slate-200/90 dark:border-slate-700/80 font-bold'
                   }`}
                 >
                   {p.label}
@@ -1536,13 +1536,13 @@ https://kashmir-curators.vercel.app`;
 
           <div className="flex flex-wrap items-center gap-2">
             {/* View Mode Switcher: Table List vs Pipeline Kanban */}
-            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-2xl border border-border/60">
+            <div className="flex items-center gap-1 bg-muted/60 dark:bg-slate-900/80 p-1 rounded-2xl border border-border/60">
               <Button
                 variant={viewMode === 'table' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('table')}
                 className={`h-7 px-2.5 text-xs font-bold rounded-xl gap-1.5 transition-all ${
-                  viewMode === 'table' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  viewMode === 'table' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-foreground'
                 }`}
               >
                 <List className="w-3.5 h-3.5" />
@@ -1553,7 +1553,7 @@ https://kashmir-curators.vercel.app`;
                 size="sm"
                 onClick={() => setViewMode('kanban')}
                 className={`h-7 px-2.5 text-xs font-bold rounded-xl gap-1.5 transition-all ${
-                  viewMode === 'kanban' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  viewMode === 'kanban' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-foreground'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -1609,61 +1609,92 @@ https://kashmir-curators.vercel.app`;
             </Button>
           </div>
         ) : viewMode === 'kanban' ? (
-          <div className="p-4 sm:p-5 overflow-x-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 min-w-[1250px] pb-4">
+          <div className="p-3 sm:p-5">
+            {/* Mobile Stage Quick Switcher Tabs (for fast navigation on phones & tablets) */}
+            <div className="flex xl:hidden overflow-x-auto gap-2 pb-2.5 mb-3 scrollbar-none border-b border-border/50">
+              {[
+                { id: 'QUEUE', title: 'Queue', dot: 'bg-amber-500', filter: (r: ReservationRecord) => r.status === 'Pending' || r.confirmationStage === 'PENDING_RESPONSE' },
+                { id: 'AVAIL_VERIFIED', title: 'Avail. Verified', dot: 'bg-blue-500', filter: (r: ReservationRecord) => r.confirmationStage === 'AVAILABILITY_CONFIRMED' },
+                { id: 'CONFIRMED', title: 'Hotel Confirmed', dot: 'bg-emerald-500', filter: (r: ReservationRecord) => r.status === 'Confirmed' || r.confirmationStage === 'HOTEL_CONFIRMED' },
+                { id: 'IN_HOUSE', title: 'In-House', dot: 'bg-emerald-600', filter: (r: ReservationRecord) => r.status === 'Checked-In' },
+                { id: 'EXCEPTIONS', title: 'Departed / Release', dot: 'bg-slate-400', filter: (r: ReservationRecord) => r.status === 'Checked-Out' || r.status === 'Cancelled' || r.status === 'Rejected' || r.confirmationStage === 'ALTERNATIVE_OFFERED' }
+              ].map(stg => (
+                <button
+                  key={stg.id}
+                  onClick={() => {
+                    const el = document.getElementById(`kanban-stage-${stg.id}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 hover:border-amber-500/50"
+                >
+                  <span className={`w-2 h-2 rounded-full ${stg.dot}`} />
+                  <span>{stg.title}</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-black">
+                    {displayedReservations.filter(stg.filter).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Responsive Pipeline Column Grid (Horizontal snap-scroll on phones/tablets, 5-col on desktop) */}
+            <div className="flex xl:grid xl:grid-cols-5 gap-3.5 sm:gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-thin">
               {[
                 {
                   id: 'QUEUE',
                   title: '1. Front Desk Queue',
                   dot: 'bg-amber-500',
-                  badge: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+                  badge: 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/40',
                   filter: (r: ReservationRecord) => r.status === 'Pending' || r.confirmationStage === 'PENDING_RESPONSE'
                 },
                 {
                   id: 'AVAIL_VERIFIED',
                   title: '2. Avail. Verified',
                   dot: 'bg-blue-500',
-                  badge: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
+                  badge: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
                   filter: (r: ReservationRecord) => r.confirmationStage === 'AVAILABILITY_CONFIRMED'
                 },
                 {
                   id: 'CONFIRMED',
                   title: '3. Hotel CRS Confirmed',
                   dot: 'bg-emerald-500',
-                  badge: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+                  badge: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
                   filter: (r: ReservationRecord) => r.status === 'Confirmed' || r.confirmationStage === 'HOTEL_CONFIRMED'
                 },
                 {
                   id: 'IN_HOUSE',
                   title: '4. In-House Stays',
                   dot: 'bg-emerald-600',
-                  badge: 'bg-emerald-600/15 text-emerald-600 border-emerald-600/30',
+                  badge: 'bg-emerald-600/20 text-emerald-600 dark:text-emerald-300 border-emerald-600/40',
                   filter: (r: ReservationRecord) => r.status === 'Checked-In'
                 },
                 {
                   id: 'EXCEPTIONS',
                   title: '5. Departed / Release',
                   dot: 'bg-slate-400',
-                  badge: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+                  badge: 'bg-slate-500/20 text-slate-600 dark:text-slate-300 border-slate-500/40',
                   filter: (r: ReservationRecord) => r.status === 'Checked-Out' || r.status === 'Cancelled' || r.status === 'Rejected' || r.confirmationStage === 'ALTERNATIVE_OFFERED'
                 }
               ].map(col => {
                 const colItems = displayedReservations.filter(col.filter);
                 return (
-                  <div key={col.id} className="bg-muted/30 border border-border/70 rounded-3xl p-3.5 flex flex-col gap-3 min-h-[550px]">
+                  <div 
+                    key={col.id} 
+                    id={`kanban-stage-${col.id}`}
+                    className="w-[86vw] sm:w-[330px] xl:w-auto shrink-0 snap-start bg-slate-100/60 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800/90 rounded-3xl p-3.5 flex flex-col gap-3 min-h-[520px]"
+                  >
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${col.dot}`} />
                         <span className="font-extrabold text-xs text-foreground tracking-tight">{col.title}</span>
                       </div>
-                      <Badge variant="outline" className={`font-mono text-[10px] font-bold ${col.badge}`}>
+                      <Badge variant="outline" className={`font-mono text-[10px] font-black ${col.badge}`}>
                         {colItems.length}
                       </Badge>
                     </div>
 
                     <div className="space-y-3 overflow-y-auto max-h-[620px] pr-0.5">
                       {colItems.length === 0 ? (
-                        <div className="py-16 text-center text-[11px] text-muted-foreground/60 border border-dashed border-border/60 rounded-2xl">
+                        <div className="py-16 text-center text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-950/40 border border-dashed border-slate-200 dark:border-slate-800/80 rounded-2xl">
                           No bookings in stage
                         </div>
                       ) : (
@@ -1676,14 +1707,14 @@ https://kashmir-curators.vercel.app`;
                           return (
                             <div 
                               key={res.id} 
-                              className="bg-card border border-border/80 hover:border-amber-500/50 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all space-y-2.5 text-xs group"
+                              className="bg-card dark:bg-slate-900 border border-border/80 dark:border-slate-800 hover:border-amber-500/50 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all space-y-2.5 text-xs group"
                             >
-                              <div className="flex items-start justify-between gap-2 border-b border-border/50 pb-2">
+                              <div className="flex items-start justify-between gap-2 border-b border-border/50 dark:border-slate-800/80 pb-2">
                                 <div className="min-w-0">
                                   <h4 className="font-bold text-foreground text-xs truncate">
                                     {res.hotel?.name || 'Partner Hotel'}
                                   </h4>
-                                  <span className="text-[10px] text-muted-foreground truncate block">
+                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block">
                                     {res.destination || res.hotel?.location?.split(',')[0] || 'Kashmir'}
                                   </span>
                                 </div>
@@ -1695,33 +1726,33 @@ https://kashmir-curators.vercel.app`;
                               <div className="space-y-1">
                                 <div className="flex items-center justify-between">
                                   <strong className="text-foreground text-xs font-black truncate">{res.guestName}</strong>
-                                  <span className="text-[10px] font-semibold text-muted-foreground">{res.adults || 2} Adults</span>
+                                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{res.adults || 2} Adults</span>
                                 </div>
-                                <div className="text-[11px] text-muted-foreground font-mono truncate">{res.guestPhone || 'No Phone'}</div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">{res.guestPhone || 'No Phone'}</div>
                               </div>
 
-                              <div className="bg-muted/40 rounded-xl p-2 text-[11px] space-y-1 border border-border/50">
+                              <div className="bg-slate-100/70 dark:bg-slate-950/80 rounded-xl p-2.5 text-[11px] space-y-1.5 border border-slate-200/80 dark:border-slate-800/90">
                                 <div className="flex items-center justify-between gap-1">
-                                  <span className="text-muted-foreground">Stay:</span>
+                                  <span className="text-slate-500 dark:text-slate-400 font-medium">Stay:</span>
                                   <div className="flex flex-wrap items-center justify-end gap-1">
-                                    <span className="font-semibold text-foreground">
+                                    <span className="font-bold text-foreground">
                                       {new Date(res.checkIn).toLocaleDateString([], { month: 'short', day: 'numeric' })} - {new Date(res.checkOut).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                     </span>
                                     {getStayCountdownBadge(res.checkIn, res.checkOut, res.status)}
                                   </div>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-muted-foreground">Plan:</span>
-                                  <span className="font-bold text-amber-600 dark:text-amber-400">{res.roomsCount}x {res.roomType} ({res.mealPlan})</span>
+                                  <span className="text-slate-500 dark:text-slate-400 font-medium">Plan:</span>
+                                  <span className="font-black text-amber-600 dark:text-amber-300">{res.roomsCount}x {res.roomType} ({res.mealPlan})</span>
                                 </div>
-                                <div className="flex items-center justify-between pt-1 border-t border-border/40 font-mono">
-                                  <span className="text-muted-foreground font-sans">Net Dues:</span>
-                                  <span className="font-black text-emerald-500">₹{(res.hotelDues || res.totalAmount).toLocaleString('en-IN')}</span>
+                                <div className="flex items-center justify-between pt-1 border-t border-border/40 dark:border-slate-800 font-mono">
+                                  <span className="text-slate-500 dark:text-slate-400 font-sans">Net Dues:</span>
+                                  <span className="font-black text-emerald-600 dark:text-emerald-400">₹{(res.hotelDues || res.totalAmount).toLocaleString('en-IN')}</span>
                                 </div>
                               </div>
 
                               {/* Card Action Row */}
-                              <div className="flex items-center justify-between pt-1 border-t border-border/40 gap-1">
+                              <div className="flex items-center justify-between pt-1 border-t border-border/40 dark:border-slate-800 gap-1">
                                 <div className="flex items-center gap-1">
                                   {/* WhatsApp */}
                                   <Button
@@ -1747,7 +1778,7 @@ https://kashmir-curators.vercel.app`;
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleOpenEdit(res)}
-                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+                                    className="h-7 w-7 p-0 text-slate-500 dark:text-slate-400 hover:text-foreground rounded-lg"
                                     title="Edit Booking"
                                   >
                                     <Pencil className="w-3 h-3 text-blue-500" />
@@ -1763,7 +1794,7 @@ https://kashmir-curators.vercel.app`;
                                       fetchAiLogs(res.id);
                                       setDetailDrawerOpen(true);
                                     }}
-                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+                                    className="h-7 w-7 p-0 text-slate-500 dark:text-slate-400 hover:text-foreground rounded-lg"
                                     title="View Dossier"
                                   >
                                     <Eye className="w-3 h-3 text-amber-500" />
@@ -1820,10 +1851,10 @@ https://kashmir-curators.vercel.app`;
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto w-full scrollbar-thin">
             <Table>
-              <TableHeader className="bg-muted/40">
-                <TableRow className="border-border/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <TableHeader className="bg-slate-100/70 dark:bg-slate-900/90">
+                <TableRow className="border-border/60 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                   <TableHead className="w-10">
                     <input
                       ref={(el) => {
@@ -1860,8 +1891,8 @@ https://kashmir-curators.vercel.app`;
                   return (
                     <TableRow 
                       key={res.id} 
-                      className={`border-border/40 transition-colors ${
-                        isSelected ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-muted/30'
+                      className={`border-border/40 dark:border-slate-800 transition-colors ${
+                        isSelected ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-slate-100/60 dark:hover:bg-slate-800/50'
                       }`}
                     >
                       {/* Checkbox */}

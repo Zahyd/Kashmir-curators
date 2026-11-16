@@ -715,34 +715,36 @@ ${portalUrl}`;
               placeholder="Search guest or ref #..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 w-48 sm:w-60 text-xs rounded-xl"
+              className="pl-9 h-10 w-full sm:w-60 text-xs rounded-xl"
             />
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchVouchers}
-            disabled={isLoading}
-            className="rounded-xl text-xs gap-1.5 h-10"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Sync</span>
-          </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchVouchers}
+              disabled={isLoading}
+              className="rounded-xl text-xs gap-1.5 h-10"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>Sync</span>
+            </Button>
 
-          <Button
-            size="sm"
-            onClick={() => setDispatchModalOpen(true)}
-            className="rounded-xl text-xs font-bold gap-1.5 h-10 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 shrink-0"
-          >
-            <Send className="w-4 h-4" />
-            <span>+ Send Booking to Hotel</span>
-          </Button>
+            <Button
+              size="sm"
+              onClick={() => setDispatchModalOpen(true)}
+              className="rounded-xl text-xs font-bold gap-1.5 h-10 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 shrink-0"
+            >
+              <Send className="w-4 h-4" />
+              <span>+ Send Booking to Hotel</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Filter Tabs (Horizontally scrollable on mobile, high contrast in dark mode) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full">
         {[
           { id: 'ALL', label: 'All Dispatched Vouchers' },
           { id: 'PENDING', label: 'Pending Hotel Confirmation' },
@@ -753,10 +755,10 @@ ${portalUrl}`;
           <button
             key={tab.id}
             onClick={() => setStatusFilter(tab.id)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all ${
               statusFilter === tab.id
-                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+                ? 'bg-amber-500 text-slate-950 font-black shadow-sm border border-amber-500'
+                : 'bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white border border-slate-200/90 dark:border-slate-700/80 font-bold'
             }`}
           >
             {tab.label}

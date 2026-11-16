@@ -360,6 +360,46 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
       >
         <NavContent collapsed={isCollapsed} />
       </aside>
+
+      {/* Mobile Bottom Quick-Navigation Bar (Sticky at bottom on phones/tablets) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-border/80 dark:border-slate-800 px-3 py-1 flex items-center justify-around shadow-2xl">
+        {[
+          { id: 'overview' as HospitalityTab, label: 'Overview', icon: LayoutDashboard },
+          { id: 'reception' as HospitalityTab, label: 'Reception', icon: Building2 },
+          { id: 'dispatch' as HospitalityTab, label: 'Dispatch', icon: Send },
+          { id: 'attendance' as HospitalityTab, label: 'Presence', icon: UserCheck },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onTabChange(item.id)}
+              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+                isActive
+                  ? 'text-amber-500 font-black'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-foreground font-semibold'
+              }`}
+            >
+              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-amber-500/20 text-amber-500' : ''}`}>
+                <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : ''}`} />
+              </div>
+              <span className="text-[10px] tracking-tight">{item.label}</span>
+            </button>
+          );
+        })}
+
+        {/* All Desks Drawer Trigger */}
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-foreground font-semibold transition-all"
+        >
+          <div className="p-1 rounded-xl">
+            <Menu className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] tracking-tight">More</span>
+        </button>
+      </div>
     </>
   );
 };
