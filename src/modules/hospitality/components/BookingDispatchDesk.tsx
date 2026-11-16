@@ -26,7 +26,15 @@ import {
   CheckCircle2,
   Trash2,
   FileText,
-  Copy
+  Copy,
+  Calendar,
+  AlertCircle,
+  LogIn,
+  LogOut,
+  Zap,
+  Snowflake,
+  Mountain,
+  Waves
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -594,13 +602,24 @@ ${portalUrl}`;
     toast.success('Formatted luxury voucher text copied to clipboard!');
   };
 
-  // Stay Countdown Indicator
+  // Stay Countdown Indicator (SaaS Modern Icon Badges)
   const getStayCountdownBadge = (checkIn: string, checkOut: string, status: string) => {
     if (status === 'Checked-In') {
-      return <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold">🟢 In-House</Badge>;
+      return (
+        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold flex items-center gap-1.5 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <LogIn className="w-3 h-3 text-emerald-500" />
+          <span>In-House</span>
+        </Badge>
+      );
     }
     if (status === 'Checked-Out') {
-      return <Badge className="bg-slate-500/15 text-slate-400 border-slate-500/30 text-[10px]">Departed</Badge>;
+      return (
+        <Badge className="bg-slate-500/15 text-slate-400 border-slate-500/30 text-[10px] font-semibold flex items-center gap-1.5">
+          <LogOut className="w-3 h-3 text-slate-400" />
+          <span>Departed</span>
+        </Badge>
+      );
     }
     if (status === 'Cancelled' || status === 'Rejected') {
       return null;
@@ -611,13 +630,28 @@ ${portalUrl}`;
     const diffDays = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      return <Badge className="bg-rose-500/15 text-rose-500 border-rose-500/30 text-[10px] font-bold animate-pulse">🔴 Arriving Today</Badge>;
+      return (
+        <Badge className="bg-rose-500/15 text-rose-500 border-rose-500/30 text-[10px] font-bold flex items-center gap-1.5 animate-pulse shadow-2xs">
+          <AlertCircle className="w-3 h-3 text-rose-500" />
+          <span>Arriving Today</span>
+        </Badge>
+      );
     }
     if (diffDays === 1) {
-      return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-bold">⏳ Arriving Tomorrow</Badge>;
+      return (
+        <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-bold flex items-center gap-1.5 shadow-2xs">
+          <Clock className="w-3 h-3 text-amber-500" />
+          <span>Arriving Tomorrow</span>
+        </Badge>
+      );
     }
     if (diffDays > 1 && diffDays <= 7) {
-      return <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-[10px] font-mono">In {diffDays} days</Badge>;
+      return (
+        <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-[10px] font-mono flex items-center gap-1.5">
+          <Calendar className="w-3 h-3 text-amber-500" />
+          <span>In {diffDays} days</span>
+        </Badge>
+      );
     }
     return null;
   };
@@ -1251,27 +1285,31 @@ ${portalUrl}`;
                 onChange={(e) => setSpecialRequests(e.target.value)}
                 className="rounded-xl h-10"
               />
-              {/* Quick Kashmiri Preference Chips */}
+              {/* Quick Kashmiri Preference Chips (Real Lucide Icons) */}
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {[
-                  '🔥 Bukhari Pre-Lit',
-                  '⚡ Dual Electric Blankets',
-                  '🛶 Shikara Ghat 2',
-                  '❄️ 4x4 Snow Vehicle',
-                  '🏔️ Lake View Room',
-                  '🍽️ Pure Veg Meals'
-                ].map(chip => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => {
-                      setSpecialRequests(prev => prev ? `${prev}, ${chip}` : chip);
-                    }}
-                    className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-muted/70 hover:bg-amber-500/15 text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 border border-border/70 transition-all"
-                  >
-                    + {chip}
-                  </button>
-                ))}
+                  { label: 'Bukhari Pre-Lit', icon: Flame },
+                  { label: 'Dual Electric Blankets', icon: Zap },
+                  { label: 'Shikara Ghat 2', icon: Waves },
+                  { label: '4x4 Snow Vehicle', icon: Snowflake },
+                  { label: 'Lake/Mountain View', icon: Mountain },
+                  { label: 'Pure Veg Meals', icon: Utensils }
+                ].map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => {
+                        setSpecialRequests(prev => prev ? `${prev}, ${item.label}` : item.label);
+                      }}
+                      className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-muted/70 hover:bg-amber-500/15 text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 border border-border/70 transition-all flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Icon className="w-3 h-3 text-amber-500 shrink-0" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

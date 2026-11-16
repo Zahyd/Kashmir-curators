@@ -1109,6 +1109,60 @@ https://kashmir-curators.vercel.app`;
     return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30 font-bold">Pending Response</Badge>;
   };
 
+  // Stay Countdown Indicator (SaaS Modern Real-Icon Badges, No Emojis)
+  const getStayCountdownBadge = (checkIn: string, checkOut: string, status: string) => {
+    if (status === 'Checked-In') {
+      return (
+        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <LogIn className="w-3 h-3 text-emerald-500" />
+          <span>In-House</span>
+        </Badge>
+      );
+    }
+    if (status === 'Checked-Out') {
+      return (
+        <Badge className="bg-slate-500/15 text-slate-400 border-slate-500/30 text-[10px] font-semibold flex items-center gap-1">
+          <LogOut className="w-3 h-3 text-slate-400" />
+          <span>Departed</span>
+        </Badge>
+      );
+    }
+    if (status === 'Cancelled' || status === 'Rejected') {
+      return null;
+    }
+
+    const now = new Date();
+    const start = new Date(checkIn);
+    const diffDays = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return (
+        <Badge className="bg-rose-500/15 text-rose-500 border-rose-500/30 text-[10px] font-bold flex items-center gap-1 animate-pulse shadow-2xs">
+          <AlertCircle className="w-3 h-3 text-rose-500" />
+          <span>Arriving Today</span>
+        </Badge>
+      );
+    }
+    if (diffDays === 1) {
+      return (
+        <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-bold flex items-center gap-1 shadow-2xs">
+          <Clock className="w-3 h-3 text-amber-500" />
+          <span>Arriving Tomorrow</span>
+        </Badge>
+      );
+    }
+    if (diffDays > 1 && diffDays <= 7) {
+      return (
+        <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-[10px] font-mono flex items-center gap-1">
+          <Calendar className="w-3 h-3 text-amber-500" />
+          <span>In {diffDays} days</span>
+        </Badge>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       {/* 1. EXECUTIVE 4-CARD OPERATIONAL METRIC COCKPIT */}
@@ -1559,11 +1613,14 @@ https://kashmir-curators.vercel.app`;
                               </div>
 
                               <div className="bg-muted/40 rounded-xl p-2 text-[11px] space-y-1 border border-border/50">
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between gap-1">
                                   <span className="text-muted-foreground">Stay:</span>
-                                  <span className="font-semibold text-foreground">
-                                    {new Date(res.checkIn).toLocaleDateString([], { month: 'short', day: 'numeric' })} - {new Date(res.checkOut).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                  </span>
+                                  <div className="flex flex-wrap items-center justify-end gap-1">
+                                    <span className="font-semibold text-foreground">
+                                      {new Date(res.checkIn).toLocaleDateString([], { month: 'short', day: 'numeric' })} - {new Date(res.checkOut).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                    </span>
+                                    {getStayCountdownBadge(res.checkIn, res.checkOut, res.status)}
+                                  </div>
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">Plan:</span>
@@ -1776,8 +1833,11 @@ https://kashmir-curators.vercel.app`;
                         <div className="font-medium text-foreground">
                           {new Date(res.checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} — {new Date(res.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         </div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">
-                          {nights} {nights === 1 ? 'night' : 'nights'} • {res.roomsCount || 1} room(s)
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground">
+                            {nights} {nights === 1 ? 'night' : 'nights'} • {res.roomsCount || 1} room(s)
+                          </span>
+                          {getStayCountdownBadge(res.checkIn, res.checkOut, res.status)}
                         </div>
                       </TableCell>
 
