@@ -62,6 +62,7 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST", "PATCH", "DELETE"]
   }
 });
+app.set('io', io);
 
 const PORT = process.env.PORT || 5000;
 
@@ -219,9 +220,13 @@ app.get('/db-check', async (req, res) => {
 });
 
 import { cronService } from './services/cronService';
+import { emailQueueService } from './services/emailQueueService';
 
-// Initialize background cron workers
+// Initialize background cron workers & asynchronous email queue
 cronService.initialize();
+emailQueueService.initQueue().catch((err: any) => {
+  console.warn('[ServerBoot] Email queue background worker notice:', err.message);
+});
 
 httpServer.listen(PORT, () => {
   console.log(`Real-Time Server is running on port ${PORT}`);

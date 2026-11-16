@@ -9,13 +9,15 @@ import {
   ShieldCheck,
   Send,
   Layers,
-  UserCheck
+  UserCheck,
+  LayoutDashboard
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export type HospitalityTab = 
+  | 'overview'
   | 'reception'
   | 'dispatch'
   | 'attendance'
@@ -42,6 +44,7 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const navItems = [
+    { id: 'overview' as HospitalityTab, label: 'Operations Dashboard', icon: LayoutDashboard, badge: 'Command' },
     { id: 'reception' as HospitalityTab, label: 'Hotel Reception Portal', icon: Building2, badge: 'Live Desk' },
     { id: 'dispatch' as HospitalityTab, label: 'Send Booking & Vouchers', icon: Send, badge: 'Dispatch' },
     { id: 'attendance' as HospitalityTab, label: 'Employee Attendance & Presence', icon: UserCheck, badge: 'Live Radar' },

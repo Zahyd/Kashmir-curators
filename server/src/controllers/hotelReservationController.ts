@@ -44,16 +44,41 @@ const checkDuplicateConflict = async (hotelId: string, guestName: string, checkI
   return !!overlapping;
 };
 
-// Retrieve all reservations
+// Retrieve all reservations with enhanced multi-parameter filtering
 export const getReservations = async (req: AuthRequest, res: Response) => {
   try {
     const p = prisma as any;
-    const { status, hotelId, checkInStart, checkInEnd, search } = req.query;
+    const {
+      status,
+      lifecycleStatus,
+      confirmationStage,
+      hotelId,
+      destination,
+      assignedEmployee,
+      paymentStatus,
+      source,
+      checkInStart,
+      checkInEnd,
+      search
+    } = req.query;
 
     const where: any = {};
-    if (status) where.status = status as string;
-    if (hotelId) where.hotelId = hotelId as string;
+    if (status && status !== 'ALL') where.status = status as string;
+    if (lifecycleStatus && lifecycleStatus !== 'ALL') where.lifecycleStatus = lifecycleStatus as string;
+    if (confirmationStage && confirmationStage !== 'ALL') where.confirmationStage = confirmationStage as string;
+    if (hotelId && hotelId !== 'ALL') where.hotelId = hotelId as string;
+    if (destination && destination !== 'ALL') where.destination = { contains: destination as string, mode: 'insensitive' };
+    if (paymentStatus && paymentStatus !== 'ALL') where.paymentStatus = paymentStatus as string;
+    if (source && source !== 'ALL') where.bookingSource = source as string;
     
+    if (assignedEmployee && assignedEmployee !== 'ALL') {
+      where.OR = [
+        { assignedEmployeeName: { contains: assignedEmployee as string, mode: 'insensitive' } },
+        { assignedEmployeeCode: { contains: assignedEmployee as string, mode: 'insensitive' } },
+        { agentName: { contains: assignedEmployee as string, mode: 'insensitive' } }
+      ];
+    }
+
     if (checkInStart || checkInEnd) {
       where.checkIn = {};
       if (checkInStart) where.checkIn.gte = new Date(checkInStart as string);
@@ -61,10 +86,15 @@ export const getReservations = async (req: AuthRequest, res: Response) => {
     }
 
     if (search) {
+      const searchStr = (search as string).trim();
       where.OR = [
-        { guestName: { contains: search as string, mode: 'insensitive' } },
-        { guestEmail: { contains: search as string, mode: 'insensitive' } },
-        { bookingReference: { contains: search as string, mode: 'insensitive' } }
+        { guestName: { contains: searchStr, mode: 'insensitive' } },
+        { guestEmail: { contains: searchStr, mode: 'insensitive' } },
+        { guestPhone: { contains: searchStr, mode: 'insensitive' } },
+        { bookingReference: { contains: searchStr, mode: 'insensitive' } },
+        { hotelConfirmationNumber: { contains: searchStr, mode: 'insensitive' } },
+        { roomType: { contains: searchStr, mode: 'insensitive' } },
+        { destination: { contains: searchStr, mode: 'insensitive' } }
       ];
     }
 
@@ -72,7 +102,11 @@ export const getReservations = async (req: AuthRequest, res: Response) => {
       where,
       include: {
         hotel: true,
-        inquiry: true
+        inquiry: true,
+        emailDispatches: {
+          orderBy: { createdAt: 'desc' },
+          take: 5
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -98,6 +132,151 @@ export const getReservations = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('[ReservationsController] Fetch error:', error.message);
     res.status(500).json({ error: 'Failed to retrieve hotel reservations' });
+  }
+};
+
+// Retrieve accurate operational KPIs derived from real database records
+export const getHospitalityKpis = async (req: AuthRequest, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { hotelId } = req.query;
+    const scopedFilter: any = {};
+    if (hotelId && hotelId !== 'ALL') {
+      scopedFilter.hotelId = String(hotelId);
+    }
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const in48Hours = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const [
+      totalReservations,
+      pendingHotelResponses,
+      availabilityVerified,
+      alternativeOffered,
+      hotelConfirmed,
+      guestVoucherDispatched,
+      guestCheckedIn,
+      cancelledReservations,
+      upcomingCheckIns,
+      todayCheckOuts,
+      revenueAgg,
+      hotelDuesAgg,
+      settledAgg
+    ] = await Promise.all([
+      p.hotelReservation.count({ where: scopedFilter }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          OR: [
+            { confirmationStage: 'PENDING_RESPONSE' },
+            { lifecycleStatus: 'SENT_TO_HOTEL' },
+            { status: 'Pending' }
+          ],
+          status: { notIn: ['Cancelled', 'Rejected'] }
+        } 
+      }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          confirmationStage: 'AVAILABILITY_CONFIRMED' 
+        } 
+      }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          confirmationStage: 'ALTERNATIVE_OFFERED' 
+        } 
+      }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          OR: [
+            { confirmationStage: 'HOTEL_CONFIRMED' },
+            { status: 'Confirmed' }
+          ]
+        } 
+      }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          OR: [
+            { guestVoucherDispatched: true },
+            { lifecycleStatus: 'VOUCHER_SENT' }
+          ]
+        } 
+      }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          OR: [
+            { status: 'Checked-In' },
+            { lifecycleStatus: 'GUEST_CHECKED_IN' }
+          ]
+        } 
+      }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          OR: [
+            { status: 'Cancelled' },
+            { status: 'Rejected' },
+            { confirmationStage: 'CANCELLED' },
+            { confirmationStage: 'REJECTED_UNAVAILABLE' }
+          ]
+        } 
+      }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          checkIn: { gte: startOfToday, lte: in48Hours },
+          status: { notIn: ['Cancelled', 'Rejected'] }
+        } 
+      }),
+      p.hotelReservation.count({ 
+        where: { 
+          ...scopedFilter, 
+          checkOut: { gte: startOfToday, lt: endOfToday },
+          status: { notIn: ['Cancelled', 'Rejected'] }
+        } 
+      }),
+      p.hotelReservation.aggregate({
+        where: { ...scopedFilter, status: { notIn: ['Cancelled', 'Rejected'] } },
+        _sum: { totalAmount: true }
+      }),
+      p.hotelReservation.aggregate({
+        where: { ...scopedFilter, status: { in: ['Confirmed', 'Checked-In', 'Checked-Out'] } },
+        _sum: { hotelDues: true }
+      }),
+      p.vendorSettlement.aggregate({
+        where: { ...scopedFilter, status: 'COMPLETED' },
+        _sum: { netPaid: true }
+      })
+    ]);
+
+    const totalRevenue = revenueAgg._sum.totalAmount || 0;
+    const totalDues = hotelDuesAgg._sum.hotelDues || 0;
+    const totalPaid = settledAgg._sum.netPaid || 0;
+    const outstandingHotelPayments = Math.max(0, totalDues - totalPaid);
+
+    res.json({
+      totalReservations,
+      pendingHotelResponses,
+      availabilityVerified,
+      alternativeOffered,
+      hotelConfirmed,
+      guestVoucherDispatched,
+      guestCheckedIn,
+      cancelledReservations,
+      upcomingCheckIns,
+      todayCheckOuts,
+      totalRevenue,
+      outstandingHotelPayments
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] KPI fetch error:', error);
+    res.status(500).json({ error: 'Failed to retrieve operational KPIs' });
   }
 };
 
@@ -150,6 +329,7 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
       roomsCount,
       adults,
       children,
+      childrenAges,
       mealPlan,
       specialRequests,
       status,
@@ -163,21 +343,50 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
       agentName,
       internalNotes,
       confirmationDeadline,
-      tokenExpiresInHours
+      tokenExpiresInHours,
+      destination,
+      travelAgent,
+      bookingSource,
+      bedConfiguration,
+      requestedTariff,
+      agreedWholesaleRate,
+      taxGstRate,
+      extraBedPolicy,
+      advanceReceived,
+      outstandingAmount,
+      idempotencyKey,
+      assignedEmployeeName,
+      assignedEmployeeCode,
+      dispatchEmailImmediately
     } = req.body;
+
+    // Idempotency check: if reservation already exists with this key, return it
+    if (idempotencyKey) {
+      const existingKeyRes = await p.hotelReservation.findUnique({
+        where: { idempotencyKey },
+        include: {
+          hotel: true,
+          inquiry: true,
+          emailDispatches: { orderBy: { createdAt: 'desc' } }
+        }
+      });
+      if (existingKeyRes) {
+        return res.status(200).json(existingKeyRes);
+      }
+    }
 
     const nights = calculateNights(checkIn, checkOut);
     const rooms = Number(roomsCount) || 1;
-    const cRate = Number(contractRate) || 0;
+    const cRate = Number(agreedWholesaleRate) || Number(contractRate) || 0;
     const sPrice = Number(seasonalPricing) || 0;
     const commRate = Number(commissionRate) || 0;
     const grossTotal = Number(totalAmount) || 0;
 
     // Fetch hotel partner details for reception contact autofill
     const hotelRecord = await p.hotel.findUnique({ where: { id: hotelId } });
-    const receptionEmail = req.body.receptionEmail || hotelRecord?.contactEmail || null;
-    const receptionPhone = req.body.receptionPhone || hotelRecord?.contactPhone || null;
-    const receptionContact = req.body.receptionContact || hotelRecord?.contactName || 'Front Desk / Reservations';
+    const receptionEmail = req.body.receptionEmail || hotelRecord?.receptionEmail || hotelRecord?.contactEmail || null;
+    const receptionPhone = req.body.receptionPhone || hotelRecord?.whatsappNumber || hotelRecord?.contactPhone || null;
+    const receptionContact = req.body.receptionContact || hotelRecord?.managerName || hotelRecord?.contactName || 'Front Desk / Reservations';
 
     // Net Cost calculation: (contractRate + seasonalPricing) * roomsCount * nights
     const netCost = (cRate + sPrice) * rooms * nights;
@@ -198,13 +407,16 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
 
     const generatedRef = bookingReference || `KC-HTL-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
+    const employeeName = assignedEmployeeName || req.user?.name || req.user?.assignedName || req.user?.email || 'Operations Desk';
+    const employeeCode = assignedEmployeeCode || req.user?.accessKey || req.user?.code || 'KC-OPS-01';
+
     // Initial audit log
     const auditLogs = JSON.stringify([
       {
         timestamp: new Date().toISOString(),
         action: 'Reservation Dispatched to Hotel',
-        user: req.user?.name || req.user?.email || 'Operations Desk',
-        details: `Voucher reference ${generatedRef} dispatched to ${hotelRecord?.name || 'Hotel'} (${receptionContact}). Deadline: ${deadline.toLocaleString()}.`
+        user: employeeName,
+        details: `Voucher reference ${generatedRef} dispatched to ${hotelRecord?.name || 'Hotel'} (${receptionContact}). Target: ${receptionEmail || 'Desk'}. Deadline: ${deadline.toLocaleString()}.`
       }
     ]);
 
@@ -216,6 +428,8 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
         if (u) validUserId = req.user.id;
       } catch {}
     }
+
+    const initialLifecycle = (receptionEmail && dispatchEmailImmediately !== false) ? 'SENT_TO_HOTEL' : 'NEW';
 
     const reservation = await p.hotelReservation.create({
       data: {
@@ -230,10 +444,12 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
         roomsCount: rooms,
         adults: Number(adults) || 2,
         children: Number(children) || 0,
+        childrenAges: childrenAges || null,
         mealPlan: mealPlan || 'EP',
         specialRequests: specialRequests || null,
-        status: status || 'Pending',
+        status: status || (receptionEmail && dispatchEmailImmediately !== false ? 'Sent' : 'Pending'),
         confirmationStage: 'PENDING_RESPONSE',
+        lifecycleStatus: initialLifecycle,
         paymentStatus: paymentStatus || 'Unpaid',
         bookingReference: generatedRef,
         holdUntil: holdUntil ? new Date(holdUntil) : null,
@@ -244,7 +460,20 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
         profitMargin: profit,
         hotelDues: hotelDues,
         createdById: validUserId,
-        agentName: agentName || (req.user?.name ? `${req.user.name} (B2B Desk)` : 'Kashmir Curators Desk'),
+        agentName: agentName || employeeName,
+        assignedEmployeeName: employeeName,
+        assignedEmployeeCode: employeeCode,
+        destination: destination || hotelRecord?.location || 'Kashmir',
+        travelAgent: travelAgent || null,
+        bookingSource: bookingSource || 'B2B_PORTAL',
+        bedConfiguration: bedConfiguration || 'Standard Bedding',
+        requestedTariff: Number(requestedTariff) || cRate,
+        agreedWholesaleRate: cRate,
+        taxGstRate: Number(taxGstRate) || 12.0,
+        extraBedPolicy: extraBedPolicy || null,
+        advanceReceived: Number(advanceReceived) || 0,
+        outstandingAmount: Number(outstandingAmount) || (grossTotal - (Number(advanceReceived) || 0)),
+        idempotencyKey: idempotencyKey || null,
         internalNotes: internalNotes || null,
         secureToken,
         tokenExpiresAt,
@@ -256,9 +485,29 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
       },
       include: {
         hotel: true,
-        inquiry: true
+        inquiry: true,
+        emailDispatches: true
       }
     });
+
+    // Auto-dispatch email to hotel reception if email provided and not explicitly disabled
+    if (receptionEmail && dispatchEmailImmediately !== false) {
+      try {
+        const referer = req.headers.referer || req.headers.origin || 'https://kashmir-curators.vercel.app';
+        let cleanOrigin = 'https://kashmir-curators.vercel.app';
+        try {
+          const urlObj = new URL(referer);
+          cleanOrigin = urlObj.origin;
+        } catch (e) {
+          if (referer.startsWith('http')) cleanOrigin = referer;
+        }
+        const publicUrl = `${cleanOrigin}/hospitality?tab=reception&token=${secureToken}`;
+
+        await notificationService.sendHotelReservationRequest(reservation, publicUrl, idempotencyKey);
+      } catch (emailErr: any) {
+        console.error('[ReservationsController] Immediate email dispatch error:', emailErr.message);
+      }
+    }
 
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
@@ -1325,5 +1574,243 @@ export const assignRoom = async (req: AuthRequest, res: Response) => {
     res.json(updated);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Dispatch final guest booking voucher with approval
+export const dispatchGuestVoucher = async (req: AuthRequest, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+    const { recipientEmail, customNotes } = req.body;
+
+    const reservation = await p.hotelReservation.findUnique({
+      where: { id },
+      include: { hotel: true }
+    });
+
+    if (!reservation) return res.status(404).json({ error: 'Reservation not found' });
+
+    const targetEmail = recipientEmail || reservation.guestEmail;
+    if (!targetEmail) {
+      return res.status(400).json({ error: 'Guest email address is required to dispatch voucher.' });
+    }
+
+    const referer = req.headers.referer || req.headers.origin || 'https://kashmir-curators.vercel.app';
+    let cleanOrigin = 'https://kashmir-curators.vercel.app';
+    try {
+      const urlObj = new URL(referer);
+      cleanOrigin = urlObj.origin;
+    } catch (e) {
+      if (referer.startsWith('http')) cleanOrigin = referer;
+    }
+
+    const tokenOrId = reservation.secureToken || reservation.id;
+    const voucherUrl = `${cleanOrigin}/hotel/confirm/${tokenOrId}?view=voucher`;
+    const employeeName = req.user?.name || req.user?.assignedName || req.user?.email || 'Operations Officer';
+
+    const dispatchResult = await notificationService.sendGuestBookingVoucher(
+      { ...reservation, guestEmail: targetEmail },
+      voucherUrl
+    );
+
+    let history = [];
+    try { history = JSON.parse(reservation.auditLogs || '[]'); } catch (e) { history = []; }
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Guest Booking Voucher Dispatched',
+      user: employeeName,
+      details: `Official guest voucher dispatched to ${targetEmail}. Provider: ${(dispatchResult as any)?.provider || 'SYSTEM'}. Message ID: ${(dispatchResult as any)?.messageId || 'N/A'}.${customNotes ? ` Notes: "${customNotes}"` : ''}`
+    });
+
+    const updated = await p.hotelReservation.update({
+      where: { id },
+      data: {
+        guestEmail: targetEmail,
+        guestVoucherDispatched: true,
+        guestVoucherDispatchedAt: new Date(),
+        voucherApprovedBy: employeeName,
+        voucherApprovedAt: new Date(),
+        lifecycleStatus: 'VOUCHER_SENT',
+        auditLogs: JSON.stringify(history)
+      },
+      include: { hotel: true, inquiry: true, emailDispatches: true }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'VOUCHER_DISPATCHED',
+        message: `Official booking voucher for ${updated.guestName} dispatched to ${targetEmail}`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Booking voucher successfully dispatched to ${targetEmail}!`,
+      dispatchResult,
+      reservation: updated
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] Dispatch guest voucher error:', error);
+    res.status(500).json({ error: error.message || 'Failed to dispatch guest booking voucher' });
+  }
+};
+
+// Resend reservation emails (availability, confirmation, voucher, reminder, cancellation)
+export const resendReservationEmail = async (req: AuthRequest, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+    const { emailType, recipientEmail } = req.body;
+
+    const reservation = await p.hotelReservation.findUnique({
+      where: { id },
+      include: { hotel: true }
+    });
+
+    if (!reservation) return res.status(404).json({ error: 'Reservation not found' });
+
+    const referer = req.headers.referer || req.headers.origin || 'https://kashmir-curators.vercel.app';
+    let cleanOrigin = 'https://kashmir-curators.vercel.app';
+    try {
+      const urlObj = new URL(referer);
+      cleanOrigin = urlObj.origin;
+    } catch (e) {
+      if (referer.startsWith('http')) cleanOrigin = referer;
+    }
+    const publicUrl = `${cleanOrigin}/hospitality?tab=reception&token=${reservation.secureToken || reservation.id}`;
+    const voucherUrl = `${cleanOrigin}/hotel/confirm/${reservation.secureToken || reservation.id}?view=voucher`;
+
+    let result: any;
+    const employeeName = req.user?.name || req.user?.assignedName || req.user?.email || 'Operations Officer';
+
+    switch (emailType) {
+      case 'AVAILABILITY_REQUEST':
+        result = await notificationService.sendHotelAvailabilityRequest(
+          { ...reservation, receptionEmail: recipientEmail || reservation.receptionEmail },
+          publicUrl
+        );
+        break;
+      case 'CONFIRMATION_REQUEST':
+      default:
+        result = await notificationService.sendHotelReservationRequest(
+          { ...reservation, receptionEmail: recipientEmail || reservation.receptionEmail },
+          publicUrl
+        );
+        break;
+      case 'BOOKING_CONFIRMATION':
+        result = await notificationService.sendHotelBookingConfirmedNotice(
+          { ...reservation, receptionEmail: recipientEmail || reservation.receptionEmail },
+          publicUrl
+        );
+        break;
+      case 'GUEST_VOUCHER':
+        result = await notificationService.sendGuestBookingVoucher(
+          { ...reservation, guestEmail: recipientEmail || reservation.guestEmail },
+          voucherUrl
+        );
+        break;
+      case 'CANCELLATION':
+        result = await notificationService.sendBookingCancellationNotice(
+          { ...reservation, receptionEmail: recipientEmail || reservation.receptionEmail },
+          'Resent operational cancellation notice'
+        );
+        break;
+      case 'REMINDER':
+        result = await notificationService.sendHotelResponseReminder(
+          { ...reservation, receptionEmail: recipientEmail || reservation.receptionEmail },
+          publicUrl
+        );
+        break;
+    }
+
+    let history = [];
+    try { history = JSON.parse(reservation.auditLogs || '[]'); } catch (e) { history = []; }
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: `Email Dispatched (${emailType || 'CONFIRMATION_REQUEST'})`,
+      user: employeeName,
+      details: `Dispatched to ${recipientEmail || reservation.receptionEmail || reservation.guestEmail}. Provider: ${result?.provider || 'SYSTEM'}. Status: ${result?.success ? 'Delivered' : 'Failed'}`
+    });
+
+    await p.hotelReservation.update({
+      where: { id },
+      data: { auditLogs: JSON.stringify(history) }
+    });
+
+    res.json({
+      success: result?.success ?? true,
+      message: `Email dispatch processed successfully. Provider: ${result?.provider}`,
+      result
+    });
+  } catch (error: any) {
+    console.error('[ReservationsController] Resend email error:', error);
+    res.status(500).json({ error: error.message || 'Failed to dispatch email' });
+  }
+};
+
+// Retrieve email delivery logs for reservation
+export const getReservationEmailLogs = async (req: AuthRequest, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+    const logs = await p.emailDispatchRecord.findMany({
+      where: { reservationId: id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(logs);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to retrieve email dispatch logs' });
+  }
+};
+
+// Manager override for reservation lifecycle and states
+export const managerOverrideStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { id } = req.params;
+    const { newStatus, newLifecycleStatus, newConfirmationStage, reason } = req.body;
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ error: 'A mandatory managerial override justification reason is required.' });
+    }
+
+    const reservation = await p.hotelReservation.findUnique({ where: { id } });
+    if (!reservation) return res.status(404).json({ error: 'Reservation not found' });
+
+    let history = [];
+    try { history = JSON.parse(reservation.auditLogs || '[]'); } catch (e) { history = []; }
+    const employeeName = req.user?.name || req.user?.assignedName || req.user?.email || 'Operations Manager';
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      action: 'Managerial State Override',
+      user: employeeName,
+      details: `Override applied: Status [${reservation.status} -> ${newStatus || reservation.status}], Lifecycle [${reservation.lifecycleStatus || 'N/A'} -> ${newLifecycleStatus || 'N/A'}], Stage [${reservation.confirmationStage || 'N/A'} -> ${newConfirmationStage || 'N/A'}]. Reason: "${reason.trim()}"`
+    });
+
+    const updateData: any = { auditLogs: JSON.stringify(history) };
+    if (newStatus) updateData.status = newStatus;
+    if (newLifecycleStatus) updateData.lifecycleStatus = newLifecycleStatus;
+    if (newConfirmationStage) updateData.confirmationStage = newConfirmationStage;
+
+    const updated = await p.hotelReservation.update({
+      where: { id },
+      data: updateData,
+      include: { hotel: true, inquiry: true, emailDispatches: true }
+    });
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'STATUS_OVERRIDE',
+        message: `Reservation ${reservation.bookingReference || reservation.id} state overridden by ${employeeName}`,
+        booking: { ...updated, entityType: 'reservation' }
+      });
+    }
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to apply status override' });
   }
 };

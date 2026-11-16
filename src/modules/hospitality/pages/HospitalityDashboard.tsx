@@ -11,7 +11,9 @@ import {
   ShieldCheck,
   CheckCircle2,
   DollarSign,
-  KeyRound
+  KeyRound,
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +26,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 
 import HospitalitySidebar, { HospitalityTab } from '../components/HospitalitySidebar';
+import { UnifiedOperationsWorkspace } from '../components/UnifiedOperationsWorkspace';
 import HotelReceptionPortal from '../components/HotelReceptionPortal';
 import HospitalityAuthGate, { HospitalitySession } from '../components/HospitalityAuthGate';
 import BookingDispatchDesk from '../components/BookingDispatchDesk';
@@ -49,7 +52,13 @@ export const HospitalityDashboard: React.FC = () => {
   const { teamUser } = useTeamAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const initialTab = (searchParams.get('tab') as HospitalityTab) || 'reception';
+
+  // Check if an external hotel partner is accessing via direct reservation link
+  const queryToken = searchParams.get('token');
+  const queryId = searchParams.get('id');
+  const isExternalPartnerView = Boolean(queryToken || queryId);
+
+  const initialTab = (searchParams.get('tab') as HospitalityTab) || (isExternalPartnerView ? 'reception' : 'overview');
   const [activeTab, setActiveTab] = useState<HospitalityTab>(initialTab);
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
 
@@ -68,7 +77,7 @@ export const HospitalityDashboard: React.FC = () => {
     teamUser?.role === 'operations' || 
     user?.role === 'admin';
 
-  const isUnlocked = canBypass || !!session;
+  const isUnlocked = isExternalPartnerView || canBypass || !!session;
 
   const handleSignOutDesk = () => {
     localStorage.removeItem('hospitality_session');
@@ -128,6 +137,58 @@ export const HospitalityDashboard: React.FC = () => {
 
   const currentHotel = hotelsList.find(h => h.id === selectedHotelId);
 
+  // -------------------------------------------------------------
+  // EXTERNAL HOTEL PARTNER VIEW (Dedicated, Secure, Zero Data Leak)
+  // -------------------------------------------------------------
+  if (isExternalPartnerView) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col selection:bg-amber-500 selection:text-black">
+        <Navbar />
+
+        <div className="flex-1 pt-24 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full py-8 space-y-6">
+          {/* Top Bar for External Reception Partner */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Kashmir Curators Hotel Partner Network
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight mt-1">
+                Hotel Reception Confirmation Portal
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Official external partner desk to verify room availability, confirm reservations, assign hotel CRS numbers, or offer alternatives.
+              </p>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/hospitality?tab=overview')}
+              className="text-xs border-amber-500/30 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 self-start sm:self-auto gap-1.5 rounded-xl font-bold"
+            >
+              <span>Employee Operations Desk</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+
+          <HotelReceptionPortal 
+            selectedHotelId="ALL" 
+            onSwitchProperty={setSelectedHotelId}
+            isExternalPartnerMode={true}
+          />
+        </div>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // INTERNAL EMPLOYEE OPERATIONS DASHBOARD (Unified Workspace)
+  // -------------------------------------------------------------
   return (
     <div className="min-h-screen bg-background flex flex-col selection:bg-amber-500 selection:text-black">
       <Navbar />
@@ -159,6 +220,7 @@ export const HospitalityDashboard: React.FC = () => {
                   </span>
                 </div>
                 <h1 className="text-2xl font-black text-foreground tracking-tight mt-1">
+                  {activeTab === 'overview' && 'Unified Hotel Operations & Reservation Dashboard'}
                   {activeTab === 'reception' && 'Hotel Reception Confirmation Portal (Live Front Desk)'}
                   {activeTab === 'dispatch' && 'Live Hotel Booking & Voucher Dispatch Desk'}
                   {activeTab === 'attendance' && 'Employee Operations, Working Hours & Live Presence'}
@@ -232,78 +294,93 @@ export const HospitalityDashboard: React.FC = () => {
               </div>
             </div>
 
-          {/* TAB 0: HOTEL RECEPTION CONFIRMATION PORTAL */}
-          {activeTab === 'reception' && (
-            <div className="space-y-6 animate-fade-in">
-              <HotelReceptionPortal 
-                selectedHotelId={selectedHotelId} 
-                onSwitchProperty={setSelectedHotelId}
-              />
-            </div>
-          )}
+            {/* TAB 0: UNIFIED OPERATIONS DASHBOARD (OVERVIEW) */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6 animate-fade-in">
+                <UnifiedOperationsWorkspace
+                  selectedHotelId={selectedHotelId}
+                  onSelectHotel={setSelectedHotelId}
+                  onOpenReceptionDesk={() => {
+                    setSelectedHotelId('ALL');
+                    setActiveTab('reception');
+                  }}
+                />
+              </div>
+            )}
 
-          {/* TAB 1: SEND BOOKING & VOUCHERS */}
-          {activeTab === 'dispatch' && (
-            <div className="space-y-6 animate-fade-in">
-              <BookingDispatchDesk initialHotelId={selectedHotelId} />
-            </div>
-          )}
+            {/* TAB 1: HOTEL RECEPTION CONFIRMATION PORTAL */}
+            {activeTab === 'reception' && (
+              <div className="space-y-6 animate-fade-in">
+                <HotelReceptionPortal 
+                  selectedHotelId={selectedHotelId} 
+                  onSwitchProperty={setSelectedHotelId}
+                  isExternalPartnerMode={false}
+                />
+              </div>
+            )}
 
-          {/* TAB: EMPLOYEE ATTENDANCE & LIVE RADAR */}
-          {activeTab === 'attendance' && (
-            <div className="space-y-6 animate-fade-in">
-              <EmployeeAttendanceDesk />
-            </div>
-          )}
+            {/* TAB 2: SEND BOOKING & VOUCHERS */}
+            {activeTab === 'dispatch' && (
+              <div className="space-y-6 animate-fade-in">
+                <BookingDispatchDesk initialHotelId={selectedHotelId} />
+              </div>
+            )}
 
-          {/* TAB 2: HOTELS & HOUSEBOATS CRUD DIRECTORY */}
-          {activeTab === 'hotels' && (
-            <div className="space-y-6 animate-fade-in">
-              <HotelDirectoryManager 
-                onSelectHotelToManage={(id) => {
-                  setSelectedHotelId(id);
-                  setActiveTab('accommodations');
-                }}
-                onSendBookingForHotel={(id) => {
-                  setSelectedHotelId(id);
-                  setActiveTab('dispatch');
-                }}
-              />
-            </div>
-          )}
+            {/* TAB 3: EMPLOYEE ATTENDANCE & LIVE RADAR */}
+            {activeTab === 'attendance' && (
+              <div className="space-y-6 animate-fade-in">
+                <EmployeeAttendanceDesk />
+              </div>
+            )}
 
-          {/* TAB 3: ACCOMMODATIONS & ROOM INVENTORY */}
-          {activeTab === 'accommodations' && (
-            <div className="space-y-6 animate-fade-in">
-              <AccommodationManager 
-                selectedHotelId={selectedHotelId}
-                onHotelChange={setSelectedHotelId}
-                onSendBooking={(id) => {
-                  setSelectedHotelId(id);
-                  setActiveTab('dispatch');
-                }}
-              />
-            </div>
-          )}
+            {/* TAB 4: HOTELS & HOUSEBOATS CRUD DIRECTORY */}
+            {activeTab === 'hotels' && (
+              <div className="space-y-6 animate-fade-in">
+                <HotelDirectoryManager 
+                  onSelectHotelToManage={(id) => {
+                    setSelectedHotelId(id);
+                    setActiveTab('accommodations');
+                  }}
+                  onSendBookingForHotel={(id) => {
+                    setSelectedHotelId(id);
+                    setActiveTab('dispatch');
+                  }}
+                />
+              </div>
+            )}
 
-          {/* TAB 4: SEASONAL TARIFFS */}
-          {activeTab === 'tariffs' && (
-            <div className="space-y-6 animate-fade-in">
-              <SeasonalTariffManager selectedHotelId={selectedHotelId} />
-            </div>
-          )}
+            {/* TAB 5: ACCOMMODATIONS & ROOM INVENTORY */}
+            {activeTab === 'accommodations' && (
+              <div className="space-y-6 animate-fade-in">
+                <AccommodationManager 
+                  selectedHotelId={selectedHotelId}
+                  onHotelChange={setSelectedHotelId}
+                  onSendBooking={(id) => {
+                    setSelectedHotelId(id);
+                    setActiveTab('dispatch');
+                  }}
+                />
+              </div>
+            )}
 
-          {/* TAB 5: SETTLEMENT & BANK DUES */}
-          {activeTab === 'settlement' && (
-            <div className="space-y-6 animate-fade-in">
-              <SettlementLedgerView 
-                selectedHotelId={selectedHotelId}
-                onOpenPayoutModal={() => setPayoutModalOpen(true)} 
-              />
-            </div>
-          )}
-        </main>
-      </div>
+            {/* TAB 6: SEASONAL TARIFFS */}
+            {activeTab === 'tariffs' && (
+              <div className="space-y-6 animate-fade-in">
+                <SeasonalTariffManager selectedHotelId={selectedHotelId} />
+              </div>
+            )}
+
+            {/* TAB 7: SETTLEMENT & BANK DUES */}
+            {activeTab === 'settlement' && (
+              <div className="space-y-6 animate-fade-in">
+                <SettlementLedgerView 
+                  selectedHotelId={selectedHotelId}
+                  onOpenPayoutModal={() => setPayoutModalOpen(true)} 
+                />
+              </div>
+            )}
+          </main>
+        </div>
       )}
 
       <HospitalityPayoutModal
@@ -317,3 +394,4 @@ export const HospitalityDashboard: React.FC = () => {
 };
 
 export default HospitalityDashboard;
+

@@ -16,7 +16,10 @@
   "type": "commonjs",
   "dependencies": {
     "@duffel/api": "^4.25.0",
+    "@google/genai": "^3.3.0",
     "@prisma/client": "^6.19.3",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.3.1",
     "@sentry/node": "^10.53.1",
     "@sentry/profiling-node": "^10.53.1",
     "@types/bcryptjs": "^2.4.6",
@@ -43,6 +46,7 @@
     "multer-storage-cloudinary": "^4.0.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7",
+    "pg-boss": "^12.38.2",
     "prisma": "^6.19.3",
     "resend": "^6.12.3",
     "socket.io": "^4.8.3",
@@ -50,7 +54,8 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "twilio": "^6.0.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/helmet": "^0.0.48",

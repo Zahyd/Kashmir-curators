@@ -531,8 +531,96 @@ model HotelReservation {
   respondedAt             DateTime?
   respondedBy             String?
 
+  // SaaS Operations & Lifecycle Enhancements
+  lifecycleStatus         String    @default("NEW") // NEW, HOTEL_REQUEST_DRAFT, SENT_TO_HOTEL, PENDING_HOTEL_RESPONSE, AVAILABILITY_CONFIRMED, HOTEL_CONFIRMED, VOUCHER_GENERATED, VOUCHER_SENT, GUEST_CHECKED_IN, COMPLETED, ALTERNATIVE_OFFERED, HOTEL_DECLINED, SOLD_OUT, CANCELLED, EXPIRED, PAYMENT_PENDING, PAYMENT_COMPLETED, NO_SHOW
+  assignedEmployeeName    String?
+  assignedEmployeeCode    String?
+  childrenAges            String?
+  bookingSource           String?   @default("B2B_PORTAL") // B2B_PORTAL, DIRECT_WEBSITE, CONCIERGE, WHATSAPP, PHONE
+  travelAgent             String?
+  destination             String?
+  bedConfiguration        String?
+  requestedTariff         Float?
+  agreedWholesaleRate     Float?
+  taxGstRate              Float?    @default(12.0)
+  extraBedPolicy          String?
+  advanceReceived         Float?    @default(0)
+  outstandingAmount       Float?    @default(0)
+  guestVoucherDispatched  Boolean   @default(false)
+  guestVoucherDispatchedAt DateTime?
+  voucherApprovedBy       String?
+  voucherApprovedAt       DateTime?
+  idempotencyKey          String?   @unique
+  emailDispatches         EmailDispatchRecord[]
+  inboundEmails           InboundEmailLog[]
+  aiAgentActions          AiAgentActionLog[]
+
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
+}
+
+model EmailDispatchRecord {
+  id               String            @id @default(uuid())
+  reservationId    String
+  reservation      HotelReservation  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  emailType        String            // AVAILABILITY_REQUEST, CONFIRMATION_REQUEST, BOOKING_CONFIRMATION, REJECTION_ALTERNATIVE, GUEST_VOUCHER, CANCELLATION, REMINDER, EMPLOYEE_NOTIFICATION
+  recipientEmail   String
+  recipientName    String?
+  subject          String
+  status           String            @default("PENDING") // PENDING, SENT, DELIVERED, FAILED, RETRYING
+  provider         String            @default("GMAIL_SMTP") // GMAIL_SMTP, RESEND, SYSTEM
+  messageId        String?
+  attempts         Int               @default(1)
+  maxAttempts      Int               @default(3)
+  lastAttemptAt    DateTime          @default(now())
+  errorMessage     String?
+  idempotencyKey   String?           @unique
+  deliveryMetadata String?           // JSON payload snapshot or response metadata
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([reservationId])
+  @@index([status])
+  @@index([recipientEmail])
+}
+
+model InboundEmailLog {
+  id              String            @id @default(uuid())
+  reservationId   String?
+  reservation     HotelReservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  fromEmail       String
+  fromName        String?
+  toEmail         String            @default("reservations@kashmircurators.com")
+  subject         String
+  rawBody         String            // raw plain text / html received from hotel
+  parsedIntent    String?           // CONFIRM_BOOKING, CONFIRM_AVAILABILITY, OFFER_ALTERNATIVE, REJECT_SOLD_OUT, CLARIFICATION, OTHER
+  parsedData      String?           // JSON formatted extracted data (CRS, roomType, tariff, mealPlan, etc.)
+  aiConfidence    Float?            // 0.0 to 1.0
+  aiModel         String?           @default("gemini-2.5-flash")
+  status          String            @default("PROCESSED") // PENDING, PROCESSED, HUMAN_REVIEW, FAILED
+  errorMessage    String?
+  processedAt     DateTime?         @default(now())
+  createdAt       DateTime          @default(now())
+
+  @@index([reservationId])
+  @@index([fromEmail])
+  @@index([status])
+}
+
+model AiAgentActionLog {
+  id              String            @id @default(uuid())
+  reservationId   String?
+  reservation     HotelReservation? @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  actionType      String            // INBOUND_PARSED, CONFIRMATION_AUTO_APPLIED, ALTERNATIVE_DETECTED, REJECTION_PROCESSED, SMART_FOLLOWUP_DISPATCHED, VOUCHER_DRAFTED, HUMAN_OVERRIDE
+  title           String
+  description     String
+  metadata        String?           // JSON data snapshot
+  confidence      Float?
+  triggeredBy     String            @default("AI_AGENT") // AI_AGENT, CRON_SCHEDULER, HUMAN_OFFICER
+  createdAt       DateTime          @default(now())
+
+  @@index([reservationId])
+  @@index([actionType])
 }
 
 model AgentProfile {

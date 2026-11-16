@@ -33,7 +33,8 @@ interface PublicReservation {
 }
 
 export default function HotelConfirm() {
-  const { reservationId } = useParams<{ reservationId: string }>();
+  const params = useParams<{ reservationId?: string; tokenOrId?: string }>();
+  const activeId = params.tokenOrId || params.reservationId;
   const [reservation, setReservation] = useState<PublicReservation | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -43,14 +44,14 @@ export default function HotelConfirm() {
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
-    if (reservationId) {
+    if (activeId) {
       fetchReservationDetails();
     }
-  }, [reservationId]);
+  }, [activeId]);
 
   const fetchReservationDetails = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/hospitality/public/${reservationId}`);
+      const response = await fetch(`${API_BASE_URL}/hospitality/public/${activeId}`);
       if (!response.ok) throw new Error('Reservation details not found');
       const data = await response.json();
       setReservation(data);
@@ -64,12 +65,18 @@ export default function HotelConfirm() {
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeId) return;
     setSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/hospitality/public/${reservationId}/confirm`, {
+      const response = await fetch(`${API_BASE_URL}/hospitality/public/${activeId}/confirm-booking`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingReference: confirmRef })
+        body: JSON.stringify({ 
+          hotelConfirmationNumber: confirmRef.trim(),
+          confirmedTariff: (reservation as any)?.contractRate || undefined,
+          confirmedRoomType: reservation?.roomType || undefined,
+          confirmedMealPlan: reservation?.mealPlan || undefined
+        })
       });
       if (!response.ok) throw new Error('Failed to submit confirmation');
       setSuccessMsg('confirmed');
@@ -83,13 +90,14 @@ export default function HotelConfirm() {
 
   const handleDecline = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeId) return;
     if (!declineReason.trim()) {
       toast.error('Please specify a reason for declining the reservation.');
       return;
     }
     setSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/hospitality/public/${reservationId}/reject`, {
+      const response = await fetch(`${API_BASE_URL}/hospitality/public/${activeId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: declineReason })

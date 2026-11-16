@@ -3,6 +3,36 @@ import prisma from '../lib/prisma';
 async function main() {
   console.log('Seeding rich hospitality data into Neon DB...');
 
+  // 0. Ensure Portal Access Keys exist for Hospitality Desk
+  const p = prisma as any;
+  await p.portalAccessKey.upsert({
+    where: { accessKey: 'KC-HOSP-ALPHA1' },
+    update: { status: 'ACTIVE' },
+    create: {
+      portalType: 'HOSPITALITY',
+      accessKey: 'KC-HOSP-ALPHA1',
+      assignedName: 'Reservation Desk Officer',
+      assignedContact: 'operations@kashmircurators.com',
+      designation: 'Senior Reservation Officer',
+      propertyScope: 'ALL',
+      status: 'ACTIVE'
+    }
+  });
+
+  await p.portalAccessKey.upsert({
+    where: { accessKey: 'KC-HOSP-ALPHA2' },
+    update: { status: 'ACTIVE' },
+    create: {
+      portalType: 'HOSPITALITY',
+      accessKey: 'KC-HOSP-ALPHA2',
+      assignedName: 'Hospitality Dispatch Lead',
+      assignedContact: 'dispatch@kashmircurators.com',
+      designation: 'Operations Lead',
+      propertyScope: 'ALL',
+      status: 'ACTIVE'
+    }
+  });
+
   const lalit = await prisma.hotel.findFirst({ where: { id: 'hotel-1' } });
   if (!lalit) {
     console.error('Hotel Lalit not found');

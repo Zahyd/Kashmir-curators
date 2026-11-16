@@ -49,6 +49,109 @@ class CronService {
         console.error('[Cron Service] Retention Purge Failed:', error);
       }
     });
+
+    // 5. Hourly Hotel Reservation Response Reminder & Expiration Scanner
+    cron.schedule('30 * * * *', async () => {
+      try {
+        await this.runHotelResponseReminders();
+      } catch (error) {
+        console.error('[Cron Service] Hotel Response Reminder Scan Failed:', error);
+      }
+    });
+
+    // 6. Every 15 minutes: Reconcile Stale Employee Active Sessions
+    cron.schedule('*/15 * * * *', async () => {
+      try {
+        await this.reconcileStaleSessions();
+      } catch (error) {
+        console.error('[Cron Service] Session Reconciliation Failed:', error);
+      }
+    });
+  }
+
+  private async runHotelResponseReminders() {
+    const now = new Date();
+    const p = prisma as any;
+
+    // Find reservations pending hotel response where confirmation deadline passed or token expires soon
+    const pendingReservations = await p.hotelReservation.findMany({
+      where: {
+        confirmationStage: 'PENDING_RESPONSE',
+        status: { notIn: ['Cancelled', 'Rejected', 'Confirmed'] },
+        receptionEmail: { not: null }
+      },
+      include: { 
+        hotel: true,
+        emailDispatches: {
+          where: { emailType: 'REMINDER' }
+        }
+      }
+    });
+
+    const { aiAgentService } = await import('./aiAgentService');
+
+    for (const res of pendingReservations) {
+      const reminderCount = (res.emailDispatches?.length || 0) + 1;
+      
+      // Stop automated reminders after 4 attempts to avoid spamming
+      if (reminderCount > 4) continue;
+
+      try {
+        const { subject, html, urgencyLevel } = await aiAgentService.generateSmartFollowUp({
+          reservation: res,
+          attemptCount: reminderCount
+        });
+
+        const recipient = res.receptionEmail || res.hotel?.contactEmail || 'operations@kashmircurators.com';
+
+        await notificationService.sendTrackedEmail({
+          reservationId: res.id,
+          emailType: 'REMINDER',
+          to: recipient,
+          recipientName: res.hotel?.name || 'Hotel Reception',
+          subject,
+          html
+        });
+
+        await p.aiAgentActionLog.create({
+          data: {
+            reservationId: res.id,
+            actionType: 'SMART_FOLLOWUP_DISPATCHED',
+            title: `AI Smart Reminder #${reminderCount} (${urgencyLevel})`,
+            description: `Autonomous cron follow-up sent to ${recipient} for ${res.guestName}.`,
+            confidence: 0.99,
+            triggeredBy: 'CRON_SCHEDULER'
+          }
+        });
+
+        if (io) {
+          io.to('admin-room').emit('new-system-event', {
+            type: 'RESPONSE_REMINDER',
+            message: `AI Agent dispatched ${urgencyLevel.toLowerCase()} reminder #${reminderCount} to ${res.hotel?.name || 'Hotel'} for ${res.guestName}`,
+            booking: { id: res.id, entityType: 'reservation' }
+          });
+        }
+      } catch (err: any) {
+        console.warn(`[CronService] Failed AI follow-up for reservation ${res.id}:`, err.message);
+      }
+    }
+  }
+
+  private async reconcileStaleSessions() {
+    const p = prisma as any;
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+    // If an employee session had no heartbeat pulse in 30 minutes, mark as inactive
+    await p.employeeSession.updateMany({
+      where: {
+        isActive: true,
+        lastActivityAt: { lt: thirtyMinutesAgo }
+      },
+      data: {
+        isActive: false,
+        logoutAt: new Date()
+      }
+    });
   }
 
   private async runOverdueReminderScan() {

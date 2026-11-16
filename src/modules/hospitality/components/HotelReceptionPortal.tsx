@@ -102,11 +102,13 @@ export interface ReceptionReservation {
 interface HotelReceptionPortalProps {
   selectedHotelId?: string;
   onSwitchProperty?: (hotelId: string) => void;
+  isExternalPartnerMode?: boolean;
 }
 
 export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({ 
   selectedHotelId, 
-  onSwitchProperty 
+  onSwitchProperty,
+  isExternalPartnerMode = false
 }) => {
   const { token, user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -150,10 +152,82 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
   // Voucher Print Preview Modal
   const [voucherPreviewRes, setVoucherPreviewRes] = useState<ReceptionReservation | null>(null);
 
-  // Load Reservations
+  // Load Reservations (Supports both external partner public access and authenticated internal desk)
   const fetchReservations = async () => {
     try {
       setIsLoading(true);
+
+      // If accessing via direct public secure token or booking id
+      if (queryToken || queryId) {
+        const publicLookup = queryToken || queryId;
+        try {
+          const pubRes = await fetch(`${API_BASE_URL}/hospitality/public/${publicLookup}`);
+          if (pubRes.ok) {
+            const pubData = await pubRes.json();
+            const formattedItem: ReceptionReservation = {
+              id: pubData.id,
+              secureToken: pubData.secureToken,
+              bookingReference: pubData.bookingReference,
+              hotelId: pubData.hotelId || 'PARTNER_HOTEL',
+              hotel: {
+                id: pubData.hotelId || 'PARTNER_HOTEL',
+                name: pubData.hotelName,
+                location: pubData.hotelLocation,
+                contactName: pubData.hotelContactName,
+                contactEmail: pubData.hotelContactEmail,
+                contactPhone: pubData.hotelContactPhone,
+                image: pubData.hotelImage
+              },
+              guestName: pubData.guestName,
+              guestPhone: pubData.guestPhone,
+              guestEmail: pubData.guestEmail,
+              roomType: pubData.roomType,
+              roomsCount: pubData.roomsCount,
+              adults: pubData.adults,
+              children: pubData.children,
+              checkIn: pubData.checkIn,
+              checkOut: pubData.checkOut,
+              mealPlan: pubData.mealPlan,
+              specialRequests: pubData.specialRequests,
+              status: pubData.status,
+              confirmationStage: pubData.confirmationStage,
+              paymentStatus: 'Direct Voucher',
+              totalAmount: pubData.estimatedNetTotal || 0,
+              contractRate: pubData.contractRate || 0,
+              hotelDues: pubData.estimatedNetTotal || 0,
+              tokenExpiresAt: pubData.tokenExpiresAt,
+              confirmationDeadline: pubData.confirmationDeadline,
+              hotelConfirmationNumber: pubData.hotelConfirmationNumber,
+              confirmedRoomType: pubData.confirmedRoomType,
+              confirmedRoomsCount: pubData.confirmedRoomsCount,
+              confirmedTariff: pubData.confirmedTariff,
+              confirmedTaxes: pubData.confirmedTaxes,
+              confirmedMealPlan: pubData.confirmedMealPlan,
+              confirmationVoucherUrl: pubData.confirmationVoucherUrl,
+              receptionNotes: pubData.receptionNotes,
+              rejectionReason: pubData.rejectionReason,
+              alternativeRoomType: pubData.alternativeRoomType,
+              alternativeTariff: pubData.alternativeTariff,
+              alternativeDates: pubData.alternativeDates,
+              alternativeNotes: pubData.alternativeNotes,
+              clarificationRequest: pubData.clarificationRequest,
+              clarificationResponse: pubData.clarificationResponse,
+              respondedAt: pubData.respondedAt,
+              respondedBy: pubData.respondedBy,
+              agentName: pubData.agentName,
+              createdAt: pubData.createdAt || new Date().toISOString()
+            };
+
+            setReservations([formattedItem]);
+            initiateResponseModal(formattedItem);
+            setIsLoading(false);
+            return;
+          }
+        } catch (pubErr) {
+          console.warn('Public token lookup failed, trying authenticated endpoint:', pubErr);
+        }
+      }
+
       const headers = getHospitalityHeaders(token);
       const url = `${API_BASE_URL}/hospitality${selectedHotelId && selectedHotelId !== 'ALL' ? `?hotelId=${selectedHotelId}` : ''}`;
       const res = await fetch(url, { headers });
@@ -401,12 +475,22 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
   };
 
   // Filter by selected hotel first (strict isolation)
-  const propertyReservations = reservations.filter(r => {
-    if (selectedHotelId && selectedHotelId !== 'ALL' && r.hotelId !== selectedHotelId) {
-      return false;
+  const isDirectLookup = Boolean(isExternalPartnerMode || queryToken || queryId);
+  const propertyReservations = isDirectLookup
+    ? reservations
+    : reservations.filter(r => {
+        if (selectedHotelId && selectedHotelId !== 'ALL' && r.hotelId !== selectedHotelId) {
+          return false;
+        }
+        return true;
+      });
+
+  // Auto-initiate form if in direct lookup mode
+  useEffect(() => {
+    if (isDirectLookup && propertyReservations.length > 0 && !selectedRes) {
+      initiateResponseModal(propertyReservations[0]);
     }
-    return true;
-  });
+  }, [isDirectLookup, propertyReservations, selectedRes]);
 
   // KPI Calculations
   const totalCount = propertyReservations.length;
@@ -446,6 +530,718 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
     if (hours < 4) return { label: `${hours}h ${mins}m remaining`, isUrgent: true, isExpired: false };
     return { label: `${hours}h ${mins}m left`, isUrgent: false, isExpired: false };
   };
+
+  // Helper renderer for response form
+  const renderResponseForm = (resItem: ReceptionReservation, isInline: boolean = false) => (
+    <div className="space-y-6">
+      {/* Action Tab Selector */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1.5 bg-muted/50 rounded-2xl border border-border/60">
+        <button
+          type="button"
+          onClick={() => setActionTab('CONFIRM')}
+          className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
+            actionTab === 'CONFIRM' ? 'bg-emerald-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          1. Confirm Booking
+        </button>
+        <button
+          type="button"
+          onClick={() => setActionTab('AVAILABILITY')}
+          className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
+            actionTab === 'AVAILABILITY' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          2. Availability
+        </button>
+        <button
+          type="button"
+          onClick={() => setActionTab('ALTERNATIVE')}
+          className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
+            actionTab === 'ALTERNATIVE' ? 'bg-purple-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          3. Alternative
+        </button>
+        <button
+          type="button"
+          onClick={() => setActionTab('REJECT')}
+          className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
+            actionTab === 'REJECT' ? 'bg-rose-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          4. Sold Out
+        </button>
+        <button
+          type="button"
+          onClick={() => setActionTab('CLARIFY')}
+          className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
+            actionTab === 'CLARIFY' ? 'bg-amber-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          5. Clarification
+        </button>
+      </div>
+
+      {/* TAB 1: CONFIRM FINAL BOOKING */}
+      {actionTab === 'CONFIRM' && (
+        <form onSubmit={handleSubmitConfirmBooking} className="space-y-4">
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs space-y-1">
+            <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Confirm Guaranteed Room Allocation</span>
+            </div>
+            <p className="text-muted-foreground">
+              Enter your property's internal booking reference or CRS confirmation code. This guarantees the booking and notifies the Kashmir Curators team.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">
+                Hotel Booking / CRS Ref # <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                required
+                placeholder="e.g. LALIT-SXR-2026-981"
+                value={hotelConfirmationNumber}
+                onChange={(e) => setHotelConfirmationNumber(e.target.value)}
+                className="rounded-xl text-xs font-mono font-bold"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">Confirmed Room Category</label>
+              <Input
+                value={confirmedRoomType}
+                onChange={(e) => setConfirmedRoomType(e.target.value)}
+                placeholder="e.g. Deluxe Heritage Room"
+                className="rounded-xl text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">Confirmed Tariff / Nt (₹)</label>
+              <Input
+                type="number"
+                value={confirmedTariff}
+                onChange={(e) => setConfirmedTariff(e.target.value)}
+                className="rounded-xl text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">Applicable Taxes (₹)</label>
+              <Input
+                type="number"
+                value={confirmedTaxes}
+                onChange={(e) => setConfirmedTaxes(e.target.value)}
+                placeholder="0"
+                className="rounded-xl text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">Confirmed Meal Plan</label>
+              <Select value={confirmedMealPlan} onValueChange={setConfirmedMealPlan}>
+                <SelectTrigger className="rounded-xl text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EP">EP (Room Only)</SelectItem>
+                  <SelectItem value="CP">CP (Bed & Breakfast)</SelectItem>
+                  <SelectItem value="MAP">MAP (Breakfast + Dinner)</SelectItem>
+                  <SelectItem value="AP">AP (All Meals)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Special Check-in / Heating Instructions</label>
+            <Textarea
+              rows={2}
+              value={receptionNotes}
+              onChange={(e) => setReceptionNotes(e.target.value)}
+              placeholder="e.g. Check-in 14:00. Electric blanket on bed. Bukhari fueled for evening."
+              className="rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">Confirmation Document / Voucher URL</label>
+              <Input
+                value={confirmationVoucherUrl}
+                onChange={(e) => setConfirmationVoucherUrl(e.target.value)}
+                placeholder="https://... (Optional voucher link)"
+                className="rounded-xl text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">Receptionist / Manager Name</label>
+              <Input
+                value={responderName}
+                onChange={(e) => setResponderName(e.target.value)}
+                placeholder="Your name / title"
+                className="rounded-xl text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="pt-3 flex items-center justify-between gap-3">
+            {!isInline && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedRes(null)}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5 ml-auto shadow-sm"
+            >
+              {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              <span>Submit Guaranteed Hotel Confirmation</span>
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {/* TAB 2: CONFIRM AVAILABILITY ONLY */}
+      {actionTab === 'AVAILABILITY' && (
+        <div className="space-y-4">
+          <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-xs space-y-1">
+            <div className="flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Confirm Room Availability (Hold Stage)</span>
+            </div>
+            <p className="text-muted-foreground">
+              Use this option to confirm that rooms are available and held on block, while final hotel CRS numbers are being processed.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Hold Notes / Remarks</label>
+            <Textarea
+              rows={3}
+              value={receptionNotes}
+              onChange={(e) => setReceptionNotes(e.target.value)}
+              placeholder="e.g. 1x Deluxe Room held until 18:00 tomorrow. Final guest vouchers accepted."
+              className="rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Receptionist / Duty Manager Name</label>
+            <Input
+              value={responderName}
+              onChange={(e) => setResponderName(e.target.value)}
+              placeholder="Your name / title"
+              className="rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="pt-3 flex items-center justify-between gap-3">
+            {!isInline && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedRes(null)}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+            )}
+            <Button
+              type="button"
+              onClick={handleSubmitConfirmAvailability}
+              disabled={isSubmitting}
+              className="rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white gap-1.5 ml-auto"
+            >
+              {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CalendarCheck2 className="w-3.5 h-3.5" />}
+              <span>Verify & Hold Room Inventory</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: PROPOSE ALTERNATIVE */}
+      {actionTab === 'ALTERNATIVE' && (
+        <form onSubmit={handleSubmitAlternative} className="space-y-4">
+          <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-2xl text-xs space-y-1">
+            <div className="flex items-center gap-2 font-bold text-purple-600 dark:text-purple-400">
+              <Sparkles className="w-4 h-4" />
+              <span>Propose Alternative Category, Rates, or Dates</span>
+            </div>
+            <p className="text-muted-foreground">
+              If requested room is unavailable or rates differ, offer an alternative category or revised dates to keep the reservation.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">Proposed Alternative Category</label>
+              <Input
+                placeholder="e.g. Maharaja Suite / Executive Cottage"
+                value={altRoomType}
+                onChange={(e) => setAltRoomType(e.target.value)}
+                className="rounded-xl text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground">Proposed Tariff / Nt (₹)</label>
+              <Input
+                type="number"
+                placeholder="e.g. 18500"
+                value={altTariff}
+                onChange={(e) => setAltTariff(e.target.value)}
+                className="rounded-xl text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Alternative Available Dates (Optional)</label>
+            <Input
+              placeholder="e.g. Nov 20 to Nov 23"
+              value={altDates}
+              onChange={(e) => setAltDates(e.target.value)}
+              className="rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Remarks for Kashmir Curators Operations Desk</label>
+            <Textarea
+              rows={2}
+              value={altNotes}
+              onChange={(e) => setAltNotes(e.target.value)}
+              placeholder="Explain upgrade benefits or reason for alternative proposal..."
+              className="rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="pt-3 flex items-center justify-between gap-3">
+            {!isInline && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedRes(null)}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white gap-1.5 ml-auto"
+            >
+              {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              <span>Submit Alternative Proposal</span>
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {/* TAB 4: DECLINE / 100% SOLD OUT */}
+      {actionTab === 'REJECT' && (
+        <form onSubmit={handleSubmitRejection} className="space-y-4">
+          <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-xs space-y-1">
+            <div className="flex items-center gap-2 font-bold text-rose-600 dark:text-rose-400">
+              <XCircle className="w-4 h-4" />
+              <span>Decline Reservation Request</span>
+            </div>
+            <p className="text-muted-foreground">
+              Mark reservation as unavailable so Kashmir Curators operations desk can immediately reroute the guest to an alternative property.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Primary Reason for Unavailability</label>
+            <Select value={rejectionReason} onValueChange={setRejectionReason}>
+              <SelectTrigger className="rounded-xl text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="100% Sold Out / No Inventory">100% Sold Out / No Inventory</SelectItem>
+                <SelectItem value="Property Under Annual Winter Maintenance">Property Under Annual Winter Maintenance</SelectItem>
+                <SelectItem value="Full Buyout / VIP Government Protocol">Full Buyout / VIP Government Protocol</SelectItem>
+                <SelectItem value="Requested Room Category Out of Order">Requested Room Category Out of Order</SelectItem>
+                <SelectItem value="Blackout Dates / Rates Dispute">Blackout Dates / Rates Dispute</SelectItem>
+                <SelectItem value="Other">Other Specific Reason</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Detailed Remarks / Reason</label>
+            <Textarea
+              rows={2}
+              value={rejectionNotes}
+              onChange={(e) => setRejectionNotes(e.target.value)}
+              placeholder="e.g. Fully booked due to winter ski tournament..."
+              className="rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="pt-3 flex items-center justify-between gap-3">
+            {!isInline && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedRes(null)}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white gap-1.5 ml-auto"
+            >
+              {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+              <span>Confirm Decline as Unavailable</span>
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {/* TAB 5: SEND CLARIFICATION QUESTION */}
+      {actionTab === 'CLARIFY' && (
+        <form onSubmit={handleSubmitClarification} className="space-y-4">
+          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-1">
+            <div className="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
+              <HelpCircle className="w-4 h-4" />
+              <span>Inquire / Request Clarification</span>
+            </div>
+            <p className="text-muted-foreground">
+              Send a direct query to Kashmir Curators operations desk regarding guest flight timing, bed preferences, meal plans, or payments.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Your Question or Inquiry</label>
+            <Textarea
+              rows={3}
+              value={clarificationQuestion}
+              onChange={(e) => setClarificationQuestion(e.target.value)}
+              placeholder="e.g. Please confirm if guest requires extra bed or airport pickup vehicle..."
+              className="rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="pt-3 flex items-center justify-between gap-3">
+            {!isInline && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedRes(null)}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5 ml-auto"
+            >
+              {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <HelpCircle className="w-3.5 h-3.5" />}
+              <span>Send Question to Operations Desk</span>
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+
+  // -------------------------------------------------------------
+  // EXTERNAL PARTNER DIRECT LOOKUP VIEW (Direct Hero Workspace)
+  // -------------------------------------------------------------
+  if (isDirectLookup) {
+    if (isLoading) {
+      return (
+        <Card className="rounded-3xl border border-border/80 bg-card p-12 text-center animate-pulse space-y-4 max-w-3xl mx-auto">
+          <RefreshCw className="w-10 h-10 text-amber-500 animate-spin mx-auto" />
+          <h3 className="text-lg font-bold text-foreground">Loading Official Reservation Request...</h3>
+          <p className="text-xs text-muted-foreground">Connecting securely with Kashmir Curators reservation network...</p>
+        </Card>
+      );
+    }
+
+    if (propertyReservations.length === 0) {
+      return (
+        <Card className="rounded-3xl border border-amber-500/30 bg-card p-8 sm:p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-500">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <h3 className="text-xl font-black text-foreground">Reservation Request Not Found</h3>
+          <p className="text-sm text-muted-foreground">
+            The reservation request <span className="font-mono text-amber-500 font-bold">{queryToken || queryId || 'specified'}</span> could not be located in our partner network. The reservation may have been processed, cancelled, or the link has expired.
+          </p>
+          <div className="p-4 bg-muted/40 rounded-2xl text-xs text-muted-foreground border border-border text-left space-y-1.5">
+            <div className="font-bold text-foreground">Kashmir Curators Operations Concierge:</div>
+            <div>• Urgent Front Desk Hotline: <strong className="text-foreground">+91 94190 88201</strong></div>
+            <div>• WhatsApp Partner Desk: <strong className="text-foreground">+91 98201 54321</strong></div>
+            <div>• Email: <strong className="text-foreground">operations@kashmircurators.com</strong></div>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => fetchReservations()}
+            className="rounded-xl text-xs gap-1.5 font-bold mx-auto"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Loading Request</span>
+          </Button>
+        </Card>
+      );
+    }
+
+    const heroRes = propertyReservations[0];
+    const checkInDate = new Date(heroRes.checkIn);
+    const checkOutDate = new Date(heroRes.checkOut);
+    const nights = Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const deadline = getDeadlineInfo(heroRes.confirmationDeadline, heroRes.tokenExpiresAt);
+
+    const isPending = heroRes.confirmationStage === 'PENDING_RESPONSE' || heroRes.status === 'Pending';
+    const isAvail = heroRes.confirmationStage === 'AVAILABILITY_CONFIRMED';
+    const isAlt = heroRes.confirmationStage === 'ALTERNATIVE_OFFERED';
+    const isConfirmed = heroRes.confirmationStage === 'HOTEL_CONFIRMED' || heroRes.status === 'Confirmed';
+    const isRejected = heroRes.confirmationStage === 'REJECTED_UNAVAILABLE' || heroRes.status === 'Rejected';
+
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        {/* Main Dossier Card */}
+        <Card className="rounded-3xl border border-border/80 bg-card overflow-hidden shadow-sm">
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* Top Bar: Property Name + Reference + Stage Badge */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-muted/80 flex items-center justify-center font-bold text-sm text-foreground shrink-0 border border-border">
+                  <Building2 className="w-6 h-6 text-amber-500" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-xl text-foreground">
+                      {heroRes.hotel?.name || 'Partner Hotel'}
+                    </h3>
+                    <Badge variant="outline" className="font-mono text-xs font-bold text-amber-500 border-amber-500/30">
+                      #{heroRes.bookingReference || heroRes.id.slice(0, 8)}
+                    </Badge>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {heroRes.hotel?.location || 'Kashmir'} • Dispatched by {heroRes.agentName || 'Kashmir Curators Operations Desk'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {isPending && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs font-bold gap-1 ${
+                      deadline.isUrgent ? 'text-rose-500 border-rose-500/40 bg-rose-500/10 animate-pulse' : 'text-amber-500 border-amber-500/40'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{deadline.label}</span>
+                  </Badge>
+                )}
+
+                <Badge
+                  className={`text-xs font-bold px-3 py-1.5 ${
+                    isPending ? 'bg-amber-500 text-slate-950 animate-pulse' :
+                    isAvail ? 'bg-blue-600 text-white' :
+                    isAlt ? 'bg-purple-600 text-white' :
+                    isConfirmed ? 'bg-emerald-600 text-white' :
+                    'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {isPending && 'Pending Reception Response'}
+                  {isAvail && 'Room Availability Confirmed'}
+                  {isAlt && 'Alternative Proposed'}
+                  {isConfirmed && 'Hotel Booking Confirmed'}
+                  {isRejected && 'Sold Out / Unavailable'}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Stay Particulars Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/20 rounded-2xl border border-border/60 text-xs">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Lead Guest</span>
+                <strong className="text-foreground text-sm font-bold block truncate">{heroRes.guestName}</strong>
+                <span className="text-[11px] text-muted-foreground font-mono">{heroRes.guestPhone || 'Phone upon arrival'}</span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Dates of Stay</span>
+                <span className="font-semibold text-foreground block">
+                  {checkInDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} – {checkOutDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+                <span className="text-[11px] text-amber-600 dark:text-amber-400 font-bold">
+                  {nights} Night{nights > 1 ? 's' : ''} • {heroRes.roomsCount} Room(s) • {heroRes.adults || 2} Adults
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Requested Accommodation</span>
+                <span className="font-bold text-foreground block truncate">{heroRes.roomType}</span>
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-0.5 border-border">
+                  Plan: {heroRes.mealPlan} ({heroRes.mealPlan === 'EP' ? 'Room Only' : heroRes.mealPlan === 'CP' ? 'Bed & Breakfast' : heroRes.mealPlan === 'MAP' ? 'Bkfst+Dinner' : 'All Meals'})
+                </Badge>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Contract Net Rate</span>
+                <span className="font-mono text-base font-black text-emerald-600 dark:text-emerald-400 block">
+                  ₹{(heroRes.contractRate || 0).toLocaleString('en-IN')}<span className="text-[10px] font-normal text-muted-foreground">/nt</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  Est. Net: ₹{((heroRes.contractRate || 0) * (heroRes.roomsCount || 1) * nights).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Special Instructions & Bukhari */}
+            {heroRes.specialRequests && (
+              <div className="p-3.5 bg-amber-500/10 rounded-2xl text-xs flex items-center gap-2 text-foreground border border-amber-500/20">
+                <Flame className="w-4 h-4 text-amber-500 shrink-0" />
+                <span><strong>Special Requests & Heating:</strong> {heroRes.specialRequests}</span>
+              </div>
+            )}
+
+            {/* Existing CRS Reference if Confirmed */}
+            {isConfirmed && heroRes.hotelConfirmationNumber && (
+              <div className="p-4 bg-emerald-500/10 rounded-2xl text-xs border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                  <div>
+                    <span className="text-emerald-700 dark:text-emerald-300 font-bold block">
+                      Confirmed Hotel CRS Reference: <span className="font-mono text-sm">{heroRes.hotelConfirmationNumber}</span>
+                    </span>
+                    <span className="text-muted-foreground text-[11px]">
+                      {heroRes.confirmedRoomType || heroRes.roomType} @ ₹{heroRes.confirmedTariff || heroRes.contractRate}/nt • {heroRes.confirmedMealPlan || heroRes.mealPlan}
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  onClick={() => setVoucherPreviewRes(heroRes)}
+                  className="rounded-xl text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>View Printable Voucher</span>
+                </Button>
+              </div>
+            )}
+
+            {/* Interactive Response Form */}
+            <div className="border-t border-border/60 pt-5">
+              <h4 className="text-sm font-black text-foreground mb-3 flex items-center gap-2">
+                <span>Reception Response & Confirmation Desk</span>
+                <Badge variant="outline" className="text-[10px] font-mono text-amber-500 border-amber-500/30">
+                  Select Action
+                </Badge>
+              </h4>
+              {renderResponseForm(heroRes, true)}
+            </div>
+          </div>
+        </Card>
+
+        {/* OFFICIAL VOUCHER PRINT MODAL */}
+        <Dialog open={!!voucherPreviewRes} onOpenChange={(open) => !open && setVoucherPreviewRes(null)}>
+          <DialogContent className="max-w-xl bg-card border-border rounded-3xl p-6 sm:p-8">
+            {voucherPreviewRes && (
+              <div className="space-y-6">
+                <div className="text-center border-b border-border pb-4 space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">
+                    Official Hotel Booking Confirmation Voucher
+                  </span>
+                  <h3 className="text-xl font-black text-foreground">Kashmir Curators DMC</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Partner Property: <strong>{voucherPreviewRes.hotel?.name || 'Partner Hotel'}</strong>
+                  </p>
+                </div>
+
+                <div className="p-4 bg-muted/40 rounded-2xl border border-border space-y-3 text-xs">
+                  <div className="flex justify-between items-center pb-2 border-b border-border/60">
+                    <span className="text-muted-foreground">Hotel Confirmation / CRS Ref:</span>
+                    <strong className="font-mono text-sm text-foreground">{voucherPreviewRes.hotelConfirmationNumber || voucherPreviewRes.bookingReference}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Lead Guest Name:</span>
+                    <strong className="text-foreground">{voucherPreviewRes.guestName}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Check-In / Check-Out:</span>
+                    <span className="font-semibold text-foreground">
+                      {new Date(voucherPreviewRes.checkIn).toLocaleDateString()} to {new Date(voucherPreviewRes.checkOut).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Room Category & Count:</span>
+                    <span className="font-bold text-foreground">{voucherPreviewRes.confirmedRoomsCount || voucherPreviewRes.roomsCount}x {voucherPreviewRes.confirmedRoomType || voucherPreviewRes.roomType}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Meal Plan:</span>
+                    <span className="font-bold text-amber-500">{voucherPreviewRes.confirmedMealPlan || voucherPreviewRes.mealPlan}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-border/60">
+                    <span className="text-muted-foreground font-bold">Confirmed Contract Rate:</span>
+                    <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      ₹{(voucherPreviewRes.confirmedTariff || voucherPreviewRes.contractRate || 0).toLocaleString('en-IN')}/nt
+                    </span>
+                  </div>
+                </div>
+
+                {voucherPreviewRes.receptionNotes && (
+                  <div className="p-3 bg-muted/30 rounded-xl text-xs text-muted-foreground border border-border/50">
+                    <strong>Special Instructions:</strong> {voucherPreviewRes.receptionNotes}
+                  </div>
+                )}
+
+                <DialogFooter className="flex justify-between items-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.print()}
+                    className="rounded-xl text-xs font-bold gap-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print Voucher</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setVoucherPreviewRes(null)}
+                    className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950"
+                  >
+                    Done
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // INTERNAL EMPLOYEE RECEPTION QUEUE VIEW
+  // -------------------------------------------------------------
 
   return (
     <div className="space-y-6">
@@ -826,425 +1622,8 @@ export const HotelReceptionPortal: React.FC<HotelReceptionPortalProps> = ({
                 </p>
               </DialogHeader>
 
-              {/* Action Tab Selector */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1.5 bg-muted/50 rounded-2xl border border-border/60">
-                <button
-                  type="button"
-                  onClick={() => setActionTab('CONFIRM')}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-                    actionTab === 'CONFIRM' ? 'bg-emerald-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  1. Confirm Booking
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActionTab('AVAILABILITY')}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-                    actionTab === 'AVAILABILITY' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  2. Availability
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActionTab('ALTERNATIVE')}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-                    actionTab === 'ALTERNATIVE' ? 'bg-purple-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  3. Alternative
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActionTab('REJECT')}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-                    actionTab === 'REJECT' ? 'bg-rose-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  4. Sold Out
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActionTab('CLARIFY')}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl transition-all ${
-                    actionTab === 'CLARIFY' ? 'bg-amber-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  5. Clarification
-                </button>
-              </div>
-
-              {/* TAB 1: CONFIRM FINAL BOOKING */}
-              {actionTab === 'CONFIRM' && (
-                <form onSubmit={handleSubmitConfirmBooking} className="space-y-4">
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs space-y-1">
-                    <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>Confirm Guaranteed Room Allocation</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Enter your property's internal booking reference or CRS confirmation code. This guarantees the booking and notifies the guest.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">
-                        Hotel Booking / CRS Ref # <span className="text-rose-500">*</span>
-                      </label>
-                      <Input
-                        required
-                        placeholder="e.g. LALIT-SXR-2026-981"
-                        value={hotelConfirmationNumber}
-                        onChange={(e) => setHotelConfirmationNumber(e.target.value)}
-                        className="rounded-xl text-xs font-mono font-bold"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">Confirmed Room Category</label>
-                      <Input
-                        value={confirmedRoomType}
-                        onChange={(e) => setConfirmedRoomType(e.target.value)}
-                        placeholder="e.g. Deluxe Heritage Room"
-                        className="rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">Confirmed Tariff / Nt (₹)</label>
-                      <Input
-                        type="number"
-                        value={confirmedTariff}
-                        onChange={(e) => setConfirmedTariff(e.target.value)}
-                        className="rounded-xl text-xs font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">Applicable Taxes (₹)</label>
-                      <Input
-                        type="number"
-                        value={confirmedTaxes}
-                        onChange={(e) => setConfirmedTaxes(e.target.value)}
-                        placeholder="0"
-                        className="rounded-xl text-xs font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">Confirmed Meal Plan</label>
-                      <Select value={confirmedMealPlan} onValueChange={setConfirmedMealPlan}>
-                        <SelectTrigger className="rounded-xl text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="EP">EP (Room Only)</SelectItem>
-                          <SelectItem value="CP">CP (Bed & Breakfast)</SelectItem>
-                          <SelectItem value="MAP">MAP (Breakfast + Dinner)</SelectItem>
-                          <SelectItem value="AP">AP (All Meals)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">Special Check-in / Heating Instructions</label>
-                    <Textarea
-                      rows={2}
-                      value={receptionNotes}
-                      onChange={(e) => setReceptionNotes(e.target.value)}
-                      placeholder="e.g. Check-in 14:00. Electric blanket on bed. Bukhari fueled for evening."
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">Confirmation Document / Voucher URL</label>
-                      <Input
-                        value={confirmationVoucherUrl}
-                        onChange={(e) => setConfirmationVoucherUrl(e.target.value)}
-                        placeholder="https://... (Optional voucher link)"
-                        className="rounded-xl text-xs font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">Receptionist / Manager Name</label>
-                      <Input
-                        value={responderName}
-                        onChange={(e) => setResponderName(e.target.value)}
-                        placeholder="Your name / title"
-                        className="rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <DialogFooter className="pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setSelectedRes(null)}
-                      className="rounded-xl text-xs"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5"
-                    >
-                      {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                      <span>Submit Guaranteed Hotel Confirmation</span>
-                    </Button>
-                  </DialogFooter>
-                </form>
-              )}
-
-              {/* TAB 2: CONFIRM AVAILABILITY ONLY */}
-              {actionTab === 'AVAILABILITY' && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-xs space-y-1">
-                    <div className="flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Confirm Room Availability (Hold Stage)</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Use this quick option to confirm that rooms are available and held on block, while final hotel CRS numbers are being processed.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">Hold Notes / Remarks</label>
-                    <Textarea
-                      rows={3}
-                      value={receptionNotes}
-                      onChange={(e) => setReceptionNotes(e.target.value)}
-                      placeholder="e.g. 1x Heritage Room held. Ready for voucher."
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">Receptionist Name</label>
-                    <Input
-                      value={responderName}
-                      onChange={(e) => setResponderName(e.target.value)}
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <DialogFooter className="pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setSelectedRes(null)}
-                      className="rounded-xl text-xs"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      disabled={isSubmitting}
-                      onClick={handleSubmitConfirmAvailability}
-                      className="rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white gap-1.5"
-                    >
-                      {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                      <span>Confirm Rooms Available</span>
-                    </Button>
-                  </DialogFooter>
-                </div>
-              )}
-
-              {/* TAB 3: PROPOSE ALTERNATIVE */}
-              {actionTab === 'ALTERNATIVE' && (
-                <form onSubmit={handleSubmitAlternative} className="space-y-4">
-                  <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-2xl text-xs space-y-1">
-                    <div className="flex items-center gap-2 font-bold text-purple-600 dark:text-purple-400">
-                      <Sparkles className="w-4 h-4" />
-                      <span>Propose Alternative Category, Tariff, or Dates</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      If the requested room category is sold out or rates vary, suggest your available options to Kashmir Curators.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">Proposed Room Category</label>
-                      <Input
-                        value={altRoomType}
-                        onChange={(e) => setAltRoomType(e.target.value)}
-                        placeholder="e.g. Deluxe Lake Facing Suite"
-                        className="rounded-xl text-xs"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground">Proposed Contract Tariff / Nt (₹)</label>
-                      <Input
-                        type="number"
-                        value={altTariff}
-                        onChange={(e) => setAltTariff(e.target.value)}
-                        placeholder="e.g. 16500"
-                        className="rounded-xl text-xs font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">Alternative Available Dates</label>
-                    <Input
-                      value={altDates}
-                      onChange={(e) => setAltDates(e.target.value)}
-                      placeholder="e.g. Available starting Nov 22 or Dec 1"
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">Explanation / Notes to Kashmir Curators</label>
-                    <Textarea
-                      rows={2}
-                      value={altNotes}
-                      onChange={(e) => setAltNotes(e.target.value)}
-                      placeholder="e.g. Standard suites fully booked due to corporate summit; upgraded Deluxe room available with breakfast included."
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <DialogFooter className="pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setSelectedRes(null)}
-                      className="rounded-xl text-xs"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white gap-1.5"
-                    >
-                      {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                      <span>Submit Alternative Proposal</span>
-                    </Button>
-                  </DialogFooter>
-                </form>
-              )}
-
-              {/* TAB 4: REJECT AS UNAVAILABLE */}
-              {actionTab === 'REJECT' && (
-                <form onSubmit={handleSubmitRejection} className="space-y-4">
-                  <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-xs space-y-1">
-                    <div className="flex items-center gap-2 font-bold text-rose-600 dark:text-rose-400">
-                      <XCircle className="w-4 h-4" />
-                      <span>Decline Request as Unavailable</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Select the primary reason for declining so Kashmir Curators can promptly rearrange guest accommodations.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">Reason for Unavailability</label>
-                    <Select value={rejectionReason} onValueChange={setRejectionReason}>
-                      <SelectTrigger className="rounded-xl text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="100% Sold Out / No Inventory">100% Sold Out / No Inventory</SelectItem>
-                        <SelectItem value="Property Closed / Winter Renovation">Property Closed / Winter Renovation</SelectItem>
-                        <SelectItem value="Minimum Length of Stay Not Met">Minimum Length of Stay Not Met</SelectItem>
-                        <SelectItem value="Contract Tariff Mismatch">Contract Tariff Mismatch</SelectItem>
-                        <SelectItem value="Private Event / Buyout">Private Event / Property Buyout</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">Additional Notes</label>
-                    <Textarea
-                      rows={2}
-                      value={rejectionNotes}
-                      onChange={(e) => setRejectionNotes(e.target.value)}
-                      placeholder="Optional notes for operations team..."
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <DialogFooter className="pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setSelectedRes(null)}
-                      className="rounded-xl text-xs"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white gap-1.5"
-                    >
-                      {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                      <span>Confirm Decline Request</span>
-                    </Button>
-                  </DialogFooter>
-                </form>
-              )}
-
-              {/* TAB 5: ASK CLARIFICATION */}
-              {actionTab === 'CLARIFY' && (
-                <form onSubmit={handleSubmitClarification} className="space-y-4">
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-1">
-                    <div className="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
-                      <HelpCircle className="w-4 h-4" />
-                      <span>Request Clarification from Kashmir Curators</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Send a direct query to our 24/7 destination operations desk regarding flight schedules, heater requests, or guest preferences.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">Your Question or Inquiry</label>
-                    <Textarea
-                      required
-                      rows={3}
-                      value={clarificationQuestion}
-                      onChange={(e) => setClarificationQuestion(e.target.value)}
-                      placeholder="e.g. Please clarify flight arrival timing for Shikara boat transfer coordination."
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <DialogFooter className="pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setSelectedRes(null)}
-                      className="rounded-xl text-xs"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5"
-                    >
-                      {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <HelpCircle className="w-3.5 h-3.5" />}
-                      <span>Send Question to Operations Desk</span>
-                    </Button>
-                  </DialogFooter>
-                </form>
-              )}
+              {/* Reusable Response Form */}
+              {renderResponseForm(selectedRes, false)}
             </div>
           )}
         </DialogContent>
