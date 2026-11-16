@@ -96,6 +96,12 @@ interface BookingDispatchDeskProps {
   initialHotelId?: string;
 }
 
+const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+  </svg>
+);
+
 export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initialHotelId }) => {
   const { token, user } = useAuth();
   const [vouchers, setVouchers] = useState<BookingVoucher[]>([]);
@@ -123,6 +129,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   const [receptionEmail, setReceptionEmail] = useState('');
   const [receptionPhone, setReceptionPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dispatchMethod, setDispatchMethod] = useState<'WHATSAPP' | 'EMAIL' | null>(null);
 
   // 1. Fetch Hotels & Categories for Dropdowns
   useEffect(() => {
@@ -197,16 +204,39 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
     fetchVouchers();
   }, [token, initialHotelId]);
 
-  // Handle Dispatch Booking Submission
-  const handleDispatchBooking = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedHotelId || !guestName.trim() || !checkIn || !checkOut) {
-      toast.error('Please fill in hotel, guest name, and travel dates');
+  // Handle Dispatch Booking Submission via WhatsApp or Email
+  const handleExecuteDispatch = async (method: 'WHATSAPP' | 'EMAIL') => {
+    if (!selectedHotelId) {
+      toast.error('Please choose a partner hotel or houseboat');
+      return;
+    }
+    if (!guestName.trim()) {
+      toast.error('Please enter the primary guest name');
+      return;
+    }
+    if (!checkIn || !checkOut) {
+      toast.error('Please specify check-in and check-out dates');
+      return;
+    }
+    if (new Date(checkOut) <= new Date(checkIn)) {
+      toast.error('Check-out date must be after check-in date');
+      return;
+    }
+
+    const hotel = hotels.find(h => h.id === selectedHotelId);
+    const targetEmail = receptionEmail.trim() || hotel?.contactEmail || hotel?.receptionEmail || '';
+    const rawPhone = receptionPhone.trim() || hotel?.contactPhone || hotel?.whatsappNumber || '';
+    const cleanDigits = rawPhone.replace(/\D/g, '');
+
+    if (method === 'EMAIL' && !targetEmail) {
+      toast.error('Please provide a reception email address to dispatch via email');
       return;
     }
 
     try {
       setIsSubmitting(true);
+      setDispatchMethod(method);
+
       const authToken = getHospitalityToken(token);
       const authHeaders = getHospitalityHeaders(authToken);
       const nights = Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)));
@@ -225,9 +255,9 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
           guestName: guestName.trim(),
           guestPhone: guestPhone.trim(),
           guestEmail: guestEmail.trim(),
-          receptionEmail: receptionEmail.trim() || undefined,
-          receptionPhone: receptionPhone.trim() || undefined,
-          roomType: roomType || 'Standard Suite',
+          receptionEmail: targetEmail || undefined,
+          receptionPhone: rawPhone || undefined,
+          roomType: roomType || 'Standard Category',
           roomsCount: count,
           adults: Number(adultsCount) || 2,
           checkIn: new Date(checkIn).toISOString(),
@@ -237,8 +267,9 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
           totalAmount: grossTotal,
           status: 'Pending',
           paymentStatus: 'Paid',
-          specialRequests,
-          agentName
+          specialRequests: specialRequests.trim() || undefined,
+          agentName,
+          dispatchEmailImmediately: method === 'EMAIL'
         })
       });
 
@@ -247,10 +278,106 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
         throw new Error(err.error || 'Failed to dispatch booking');
       }
 
-      toast.success(`Booking voucher dispatched to hotel!`, {
-        description: `Guest ${guestName} (${nights} nights) sent for hotel confirmation.`,
-        icon: '📨'
-      });
+      const createdData = await res.json();
+      const bookingRef = createdData.bookingReference || `KC-HTL-${createdData.id?.slice(0, 8).toUpperCase()}`;
+      const secureToken = createdData.secureToken || createdData.id;
+      const portalUrl = `${window.location.origin}/hospitality?tab=reception&token=${secureToken}`;
+
+      const hotelName = hotel?.name || createdData.hotel?.name || 'Partner Hotel';
+      const hotelLocation = hotel?.location || createdData.hotel?.location || 'Kashmir';
+      const checkInFormatted = new Date(checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      const checkOutFormatted = new Date(checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      if (method === 'WHATSAPP') {
+        const whatsappMsg = 
+`*HOTEL BOOKING RESERVATION VOUCHER — KASHMIR CURATORS DMC*
+Ref: *#${bookingRef}*
+--------------------------------------------------
+🏨 *Hotel / Property:* ${hotelName} (${hotelLocation})
+👤 *Lead Guest:* ${guestName.trim()} (${adultsCount} Adult${Number(adultsCount) > 1 ? 's' : ''})
+📞 *Guest Contact:* ${guestPhone.trim() || 'On File'}
+✉️ *Guest Email:* ${guestEmail.trim() || 'On File'}
+📅 *Check-In:* ${checkInFormatted}
+📅 *Check-Out:* ${checkOutFormatted} (${nights} Night${nights > 1 ? 's' : ''})
+🛏️ *Accommodation:* ${count}x ${roomType || 'Standard Category'}
+🍽️ *Meal Plan:* ${mealPlan}
+💰 *Contract Net Rate:* ₹${Number(rate).toLocaleString('en-IN')}/night (Total: ₹${grossTotal.toLocaleString('en-IN')})
+❄️ *Winter / Special Requests:* ${specialRequests.trim() || 'Standard Bukhari heating / VIP arrival setup'}
+--------------------------------------------------
+⚡ *1-Click Instant Reception Confirmation Link:*
+${portalUrl}
+
+_Please click the portal link above to confirm room availability and assign your hotel confirmation number._
+— Kashmir Curators DMC Reservation Desk`;
+
+        const waNumber = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+        const waUrl = waNumber 
+          ? `https://wa.me/${waNumber}?text=${encodeURIComponent(whatsappMsg)}`
+          : `https://wa.me/?text=${encodeURIComponent(whatsappMsg)}`;
+
+        window.open(waUrl, '_blank');
+
+        toast.success(`Booking voucher dispatched via WhatsApp!`, {
+          description: `Voucher #${bookingRef} opened for ${hotelName}.`,
+          icon: '💬'
+        });
+      } else {
+        // DIRECT EMAIL REDIRECT & BACKGROUND SYSTEM DISPATCH
+        const emailSubject = `[Reservation Voucher #${bookingRef}] Booking Confirmation - ${guestName.trim()} - ${hotelName} (${checkInFormatted} to ${checkOutFormatted})`;
+
+        const emailBody = 
+`Attn: Front Desk / Reservations Department - ${hotelName}
+
+Greetings from Kashmir Curators DMC Central Reservations Desk.
+
+Please find below the official booking reservation voucher details for guaranteed guest arrival:
+
+====================================================
+KASHMIR CURATORS • OFFICIAL HOTEL RESERVATION VOUCHER
+====================================================
+Booking Reference: #${bookingRef}
+Property: ${hotelName} (${hotelLocation})
+Lead Guest: ${guestName.trim()}
+Guest Contact: ${guestPhone.trim() || 'On File'}
+Guest Email: ${guestEmail.trim() || 'On File'}
+
+STAY DETAILS:
+Check-In Date: ${checkInFormatted}
+Check-Out Date: ${checkOutFormatted} (${nights} Night${nights > 1 ? 's' : ''})
+Room Category: ${count}x ${roomType || 'Standard Category'}
+Occupancy: ${adultsCount} Adult${Number(adultsCount) > 1 ? 's' : ''}
+Meal Plan: ${mealPlan}
+
+FINANCIAL LEDGER & BILLING:
+Contracted Net Rate: ₹${Number(rate).toLocaleString('en-IN')} per night
+Total Payable Amount: ₹${grossTotal.toLocaleString('en-IN')}
+Billing Status: Guaranteed Payment by Kashmir Curators DMC Operations Desk
+
+SPECIAL REQUESTS & WINTER PREFERENCES:
+${specialRequests.trim() || 'Central Bukhari heating confirmed / Standard VIP arrival.'}
+
+====================================================
+1-CLICK RECEPTION CONFIRMATION PORTAL:
+${portalUrl}
+
+Kindly open the secure portal link above to verify room availability and enter your hotel confirmation / folio number.
+
+Warm regards,
+${agentName}
+Kashmir Curators DMC Central Reservations Desk
+Hotline: +91 91038 95888 | operations@kashmircurators.com
+https://kashmir-curators.vercel.app`;
+
+        const mailtoLink = `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+
+        // Directly redirect to email client with all details as requested
+        window.location.href = mailtoLink;
+
+        toast.success(`Booking saved & redirecting to Email!`, {
+          description: `Email draft opened for ${targetEmail} with prefilled voucher #${bookingRef}.`,
+          icon: '📨'
+        });
+      }
 
       setDispatchModalOpen(false);
       setGuestName('');
@@ -262,6 +389,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
       toast.error(err.message || 'Error dispatching booking');
     } finally {
       setIsSubmitting(false);
+      setDispatchMethod(null);
     }
   };
 
@@ -743,9 +871,12 @@ _Please click the portal link above to confirm room availability and assign your
               <Send className="w-5 h-5 text-amber-500" />
               <span>Dispatch Booking Voucher to Hotel</span>
             </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Direct integration: Save reservation & transmit formatted voucher via WhatsApp or direct Email redirect.
+            </p>
           </DialogHeader>
 
-          <form onSubmit={handleDispatchBooking} className="space-y-4 py-2 text-xs">
+          <form onSubmit={(e) => { e.preventDefault(); handleExecuteDispatch('EMAIL'); }} className="space-y-4 py-2 text-xs">
             {/* Property Selection */}
             <div>
               <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
@@ -980,23 +1111,48 @@ _Please click the portal link above to confirm room availability and assign your
               />
             </div>
 
-            <DialogFooter className="pt-2">
+            <DialogFooter className="pt-3 border-t border-border/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setDispatchModalOpen(false)}
-                className="rounded-xl text-xs"
+                disabled={isSubmitting}
+                className="rounded-xl text-xs text-muted-foreground hover:text-foreground h-10 order-last sm:order-first"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md gap-1.5"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>{isSubmitting ? 'Dispatching...' : 'Dispatch Voucher to Hotel'}</span>
-              </Button>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+                {/* 1. WHATSAPP DISPATCH BUTTON */}
+                <Button
+                  type="button"
+                  onClick={() => handleExecuteDispatch('WHATSAPP')}
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto rounded-xl text-xs font-bold bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md shadow-emerald-500/20 gap-2 h-10 px-4 transition-all"
+                >
+                  {isSubmitting && dispatchMethod === 'WHATSAPP' ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <WhatsAppIcon className="w-4 h-4 fill-white" />
+                  )}
+                  <span>{isSubmitting && dispatchMethod === 'WHATSAPP' ? 'Opening WhatsApp...' : 'Dispatch via WhatsApp'}</span>
+                </Button>
+
+                {/* 2. DIRECT EMAIL REDIRECT BUTTON */}
+                <Button
+                  type="button"
+                  onClick={() => handleExecuteDispatch('EMAIL')}
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 gap-2 h-10 px-4 transition-all"
+                >
+                  {isSubmitting && dispatchMethod === 'EMAIL' ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isSubmitting && dispatchMethod === 'EMAIL' ? 'Opening Email...' : 'Dispatch via Email'}</span>
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>
