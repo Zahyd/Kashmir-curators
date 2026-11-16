@@ -24,7 +24,9 @@ import {
   ArrowRight,
   Sparkles,
   CheckCircle2,
-  Trash2
+  Trash2,
+  FileText,
+  Copy
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -536,6 +538,90 @@ _Please click the portal link above to confirm room availability and assign your
     window.open(targetUrl, '_blank');
   };
 
+  // Direct Email Client Voucher Redirect
+  const handleDirectEmailVoucher = (v: BookingVoucher) => {
+    const nights = Math.max(1, Math.ceil((new Date(v.checkOut).getTime() - new Date(v.checkIn).getTime()) / (1000 * 60 * 60 * 24)));
+    const portalUrl = `${window.location.origin}/hospitality?tab=reception&token=${v.secureToken || v.id}`;
+    const targetEmail = v.hotel?.contactEmail || '';
+    const checkInFormatted = new Date(v.checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const checkOutFormatted = new Date(v.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    
+    const subject = `[Official Voucher #${v.bookingReference || v.id.slice(0, 8)}] ${v.guestName} - ${v.hotel?.name || 'Hotel'} (${checkInFormatted} to ${checkOutFormatted})`;
+    const body = 
+`Attn: Front Desk / Reservations - ${v.hotel?.name || 'Partner Hotel'}
+
+Greetings from Kashmir Curators Destination Management Company.
+
+Please find the official reservation details for the upcoming guest:
+
+• Booking Reference: #${v.bookingReference || v.id.slice(0, 8)}
+• Guest Name: ${v.guestName} (${v.adults || 2} Adults)
+• Contact Phone: ${v.guestPhone || 'On File'}
+• Check-In: ${checkInFormatted}
+• Check-Out: ${checkOutFormatted} (${nights} Nights)
+• Room Category: ${v.roomType} (${v.roomsCount} Room(s))
+• Meal Plan: ${v.mealPlan}
+• Special Kashmir Preferences: ${v.specialRequests || 'Standard Bukhari heating / winter amenities requested'}
+• Contract Net Dues: ₹${(v.hotelDues || v.totalAmount).toLocaleString('en-IN')}
+
+1-Click Online Reception Confirmation Link:
+${portalUrl}
+
+Please open the link to confirm room availability and assign your hotel CRS confirmation number.
+
+Warm regards,
+Kashmir Curators Central Reservations`;
+
+    window.location.href = `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  // Copy Full Formatted Voucher to Clipboard
+  const handleCopyFormattedVoucher = (v: BookingVoucher) => {
+    const nights = Math.max(1, Math.ceil((new Date(v.checkOut).getTime() - new Date(v.checkIn).getTime()) / (1000 * 60 * 60 * 24)));
+    const checkInFormatted = new Date(v.checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const checkOutFormatted = new Date(v.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const portalUrl = `${window.location.origin}/hospitality?tab=reception&token=${v.secureToken || v.id}`;
+    const text = `*KASHMIR CURATORS DMC — RESERVATION VOUCHER*
+Ref: #${v.bookingReference || v.id.slice(0, 8)}
+Hotel: ${v.hotel?.name || 'Partner Hotel'} (${v.hotel?.location || 'Kashmir'})
+Guest: ${v.guestName} (${v.adults || 2} Adults)
+Stay Dates: ${checkInFormatted} to ${checkOutFormatted} (${nights} Nights)
+Room: ${v.roomsCount || 1}x ${v.roomType} (${v.mealPlan})
+Contract Net Payable: ₹${(v.hotelDues || v.totalAmount).toLocaleString('en-IN')}
+1-Click Partner Reception Desk:
+${portalUrl}`;
+    navigator.clipboard.writeText(text);
+    toast.success('Formatted luxury voucher text copied to clipboard!');
+  };
+
+  // Stay Countdown Indicator
+  const getStayCountdownBadge = (checkIn: string, checkOut: string, status: string) => {
+    if (status === 'Checked-In') {
+      return <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold">🟢 In-House</Badge>;
+    }
+    if (status === 'Checked-Out') {
+      return <Badge className="bg-slate-500/15 text-slate-400 border-slate-500/30 text-[10px]">Departed</Badge>;
+    }
+    if (status === 'Cancelled' || status === 'Rejected') {
+      return null;
+    }
+
+    const now = new Date();
+    const start = new Date(checkIn);
+    const diffDays = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return <Badge className="bg-rose-500/15 text-rose-500 border-rose-500/30 text-[10px] font-bold animate-pulse">🔴 Arriving Today</Badge>;
+    }
+    if (diffDays === 1) {
+      return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-bold">⏳ Arriving Tomorrow</Badge>;
+    }
+    if (diffDays > 1 && diffDays <= 7) {
+      return <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-[10px] font-mono">In {diffDays} days</Badge>;
+    }
+    return null;
+  };
+
   // Filtered Vouchers
   const filteredVouchers = vouchers.filter(v => {
     if (initialHotelId && initialHotelId !== 'ALL' && v.hotelId !== initialHotelId) {
@@ -698,6 +784,7 @@ _Please click the portal link above to confirm room availability and assign your
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {getStayCountdownBadge(v.checkIn, v.checkOut, v.status)}
                       <Badge 
                         className={`text-xs font-bold px-3 py-1 ${
                           isPending ? 'bg-amber-500 text-slate-950 animate-pulse' :
@@ -806,7 +893,31 @@ _Please click the portal link above to confirm room availability and assign your
                         className="rounded-xl text-xs font-bold gap-1.5 h-9 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
                       >
                         <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>WhatsApp Voucher & Link</span>
+                        <span>WhatsApp Voucher</span>
+                      </Button>
+
+                      {/* Direct Email Redirect Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDirectEmailVoucher(v)}
+                        className="rounded-xl text-xs font-bold gap-1.5 h-9 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                        title="Open default email client with pre-composed voucher"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Email Redirect</span>
+                      </Button>
+
+                      {/* Copy Formatted Voucher */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyFormattedVoucher(v)}
+                        className="rounded-xl text-xs text-muted-foreground hover:text-foreground h-9 gap-1"
+                        title="Copy Formatted Voucher Text"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-blue-500" />
+                        <span className="hidden sm:inline">Copy Text</span>
                       </Button>
 
                       {/* Open in Reception Portal */}
@@ -1140,6 +1251,28 @@ _Please click the portal link above to confirm room availability and assign your
                 onChange={(e) => setSpecialRequests(e.target.value)}
                 className="rounded-xl h-10"
               />
+              {/* Quick Kashmiri Preference Chips */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {[
+                  '🔥 Bukhari Pre-Lit',
+                  '⚡ Dual Electric Blankets',
+                  '🛶 Shikara Ghat 2',
+                  '❄️ 4x4 Snow Vehicle',
+                  '🏔️ Lake View Room',
+                  '🍽️ Pure Veg Meals'
+                ].map(chip => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => {
+                      setSpecialRequests(prev => prev ? `${prev}, ${chip}` : chip);
+                    }}
+                    className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-muted/70 hover:bg-amber-500/15 text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 border border-border/70 transition-all"
+                  >
+                    + {chip}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <DialogFooter className="pt-3 border-t border-border/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">

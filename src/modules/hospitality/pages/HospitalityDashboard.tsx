@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Building2, 
   CalendarCheck2, 
@@ -14,11 +14,28 @@ import {
   KeyRound,
   ArrowRight,
   ExternalLink,
-  LogOut
+  LogOut,
+  Command as CommandIcon,
+  Search,
+  Wifi,
+  Sparkles,
+  Layers,
+  UserCheck,
+  LayoutDashboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  CommandDialog, 
+  CommandInput, 
+  CommandList, 
+  CommandEmpty, 
+  CommandGroup, 
+  CommandItem, 
+  CommandSeparator,
+  CommandShortcut 
+} from '@/components/ui/command';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,7 +68,7 @@ interface HotelItem {
 export const HospitalityDashboard: React.FC = () => {
   const { user, token, logout } = useAuth();
   const { teamUser, teamLogout } = useTeamAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // Check if an external hotel partner is accessing via direct reservation link
@@ -62,6 +79,35 @@ export const HospitalityDashboard: React.FC = () => {
   const initialTab = (searchParams.get('tab') as HospitalityTab) || (isExternalPartnerView ? 'reception' : 'overview');
   const [activeTab, setActiveTab] = useState<HospitalityTab>(initialTab);
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
+
+  // Collapsible sidebar state (persisted)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('hospitality_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('hospitality_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Sync tab changes with URL search params without page reload
+  const handleTabChange = useCallback((newTab: HospitalityTab) => {
+    setActiveTab(newTab);
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', newTab);
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
 
   // Hospitality Desk Access Key Session State
   const [session, setSession] = useState<HospitalitySession | null>(() => {
@@ -119,12 +165,53 @@ export const HospitalityDashboard: React.FC = () => {
     fetchHotels();
   }, []);
 
+  // Keyboard Shortcuts: Cmd+K / Ctrl+K & Alt+1..8 Tab Hotkeys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle Command Palette with Cmd+K / Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(open => !open);
+        return;
+      }
+
+      // Fast tab switching with Alt+1..8
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const keyMap: Record<string, HospitalityTab> = {
+          '1': 'overview',
+          '2': 'reception',
+          '3': 'dispatch',
+          '4': 'attendance',
+          '5': 'hotels',
+          '6': 'accommodations',
+          '7': 'tariffs',
+          '8': 'settlement',
+        };
+
+        if (keyMap[e.key]) {
+          e.preventDefault();
+          handleTabChange(keyMap[e.key]);
+          toast.info(`Switched to: ${keyMap[e.key].toUpperCase()}`, { duration: 1500 });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleTabChange]);
+
   useEffect(() => {
     // Setup real-time websocket synchronization
     const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
+
     socket.on('connect', () => {
+      setSocketConnected(true);
       if (user?.id) socket.emit('join-user', user.id);
       socket.emit('join-room', 'admin-room');
+    });
+
+    socket.on('disconnect', () => {
+      setSocketConnected(false);
     });
 
     socket.on('new-system-event', (data: any) => {
@@ -210,18 +297,21 @@ export const HospitalityDashboard: React.FC = () => {
         </div>
       ) : (
         <div className="flex-1 flex flex-col lg:flex-row pt-20">
-          {/* Dedicated Hospitality Sidebar */}
+          {/* Dedicated Collapsible Hospitality Sidebar */}
           <HospitalitySidebar
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             propertyName={selectedHotelId === 'ALL' ? 'All Kashmir Portfolio' : (currentHotel?.name || 'Kashmir Hotel Directory')}
             propertyType={selectedHotelId === 'ALL' ? 'Kashmir DMC Network' : (currentHotel?.location || 'Jammu & Kashmir')}
             isVerified={true}
+            onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={handleToggleSidebarCollapse}
           />
 
           {/* Main Workspace */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6 min-w-0">
-            {/* Top Operations Header Bar */}
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1700px] w-full mx-auto space-y-6 min-w-0">
+            {/* Top Operations Header Bar (Ultra-Modern Glassmorphic Surface) */}
             <div className="bg-card/75 border border-border/80 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4 backdrop-blur-md">
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                 
@@ -229,8 +319,8 @@ export const HospitalityDashboard: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] tracking-wider uppercase">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Live Ops Desk
+                      <span className={`w-1.5 h-1.5 rounded-full ${socketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                      {socketConnected ? 'Live Real-Time CRS' : 'Live Ops Desk'}
                     </span>
                     <span className="text-[11px] font-semibold text-muted-foreground">
                       Kashmir Curators Hotel Network • 24/7 Dispatch Matrix
@@ -248,8 +338,23 @@ export const HospitalityDashboard: React.FC = () => {
                   </h1>
                 </div>
 
-                {/* Right: Operational Controls Group (Property Selector, Officer Chip, Bell, Keys) */}
+                {/* Right: Operational Controls Group */}
                 <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
+                  {/* Global Command Palette Trigger */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCommandPaletteOpen(true)}
+                    className="h-9 px-3 bg-background/80 border-border/80 hover:border-amber-500/50 hover:bg-amber-500/10 rounded-2xl gap-2 text-xs font-bold text-muted-foreground hover:text-foreground transition-all shadow-xs"
+                    title="Open Command Palette (⌘K)"
+                  >
+                    <Search className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="hidden sm:inline">Search / Jump</span>
+                    <kbd className="hidden md:inline px-1.5 py-0.2 rounded bg-muted border border-border text-[9px] font-mono">
+                      ⌘K
+                    </kbd>
+                  </Button>
+
                   {/* Property Selector */}
                   {hotelsList.length > 0 && (
                     <div className="flex items-center gap-1.5 bg-background/90 border border-border/80 rounded-2xl px-2.5 py-1 shadow-sm hover:border-amber-500/40 transition-colors">
@@ -334,7 +439,7 @@ export const HospitalityDashboard: React.FC = () => {
                   onSelectHotel={setSelectedHotelId}
                   onOpenReceptionDesk={() => {
                     setSelectedHotelId('ALL');
-                    setActiveTab('reception');
+                    handleTabChange('reception');
                   }}
                 />
               </div>
@@ -371,11 +476,11 @@ export const HospitalityDashboard: React.FC = () => {
                 <HotelDirectoryManager 
                   onSelectHotelToManage={(id) => {
                     setSelectedHotelId(id);
-                    setActiveTab('accommodations');
+                    handleTabChange('accommodations');
                   }}
                   onSendBookingForHotel={(id) => {
                     setSelectedHotelId(id);
-                    setActiveTab('dispatch');
+                    handleTabChange('dispatch');
                   }}
                 />
               </div>
@@ -389,7 +494,7 @@ export const HospitalityDashboard: React.FC = () => {
                   onHotelChange={setSelectedHotelId}
                   onSendBooking={(id) => {
                     setSelectedHotelId(id);
-                    setActiveTab('dispatch');
+                    handleTabChange('dispatch');
                   }}
                 />
               </div>
@@ -415,6 +520,145 @@ export const HospitalityDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* Futuristic Command Palette Dialog (Cmd+K / Ctrl+K) */}
+      <CommandDialog open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen}>
+        <CommandInput placeholder="Type a command, hotel name, or operation..." />
+        <CommandList>
+          <CommandEmpty>No matching operations found.</CommandEmpty>
+          
+          <CommandGroup heading="Operations Desks">
+            <CommandItem
+              onSelect={() => {
+                handleTabChange('overview');
+                setCommandPaletteOpen(false);
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              <LayoutDashboard className="w-4 h-4 text-amber-500" />
+              <span>Operations Dashboard (Cockpit & Reservations)</span>
+              <CommandShortcut>Alt+1</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() => {
+                handleTabChange('reception');
+                setCommandPaletteOpen(false);
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              <Building2 className="w-4 h-4 text-amber-500" />
+              <span>Hotel Reception Confirmation Portal (Live Desk)</span>
+              <CommandShortcut>Alt+2</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() => {
+                handleTabChange('dispatch');
+                setCommandPaletteOpen(false);
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              <Send className="w-4 h-4 text-amber-500" />
+              <span>Send Booking & Vouchers (Dispatch Desk)</span>
+              <CommandShortcut>Alt+3</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() => {
+                handleTabChange('attendance');
+                setCommandPaletteOpen(false);
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              <UserCheck className="w-4 h-4 text-amber-500" />
+              <span>Employee Attendance & Presence Radar</span>
+              <CommandShortcut>Alt+4</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() => {
+                handleTabChange('hotels');
+                setCommandPaletteOpen(false);
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              <Layers className="w-4 h-4 text-amber-500" />
+              <span>Hotels & Houseboats Directory (CRUD)</span>
+              <CommandShortcut>Alt+5</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() => {
+                handleTabChange('accommodations');
+                setCommandPaletteOpen(false);
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              <BedDouble className="w-4 h-4 text-amber-500" />
+              <span>Accommodations & Live Room Inventory</span>
+              <CommandShortcut>Alt+6</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() => {
+                handleTabChange('tariffs');
+                setCommandPaletteOpen(false);
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-amber-500" />
+              <span>Seasonal Tariffs & Rates Matrix</span>
+              <CommandShortcut>Alt+7</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() => {
+                handleTabChange('settlement');
+                setCommandPaletteOpen(false);
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              <Receipt className="w-4 h-4 text-amber-500" />
+              <span>Settlement Ledger & Supplier Bank Dues</span>
+              <CommandShortcut>Alt+8</CommandShortcut>
+            </CommandItem>
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          <CommandGroup heading="Kashmir Partner Hotels">
+            <CommandItem
+              onSelect={() => {
+                setSelectedHotelId('ALL');
+                setCommandPaletteOpen(false);
+                toast.success('Viewing All Kashmir Properties');
+              }}
+              className="gap-2 cursor-pointer font-bold text-amber-500"
+            >
+              <Building2 className="w-4 h-4" />
+              <span>🌟 All Kashmir Properties (Full Network)</span>
+            </CommandItem>
+            {hotelsList.map((h) => (
+              <CommandItem
+                key={h.id}
+                onSelect={() => {
+                  setSelectedHotelId(h.id);
+                  setCommandPaletteOpen(false);
+                  toast.success(`Switched focus to: ${h.name}`);
+                }}
+                className="gap-2 cursor-pointer"
+              >
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <span className="truncate">{h.name}</span>
+                <span className="text-[10px] text-muted-foreground font-mono ml-auto">
+                  {h.location.split(',')[0]}
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+
       <HospitalityPayoutModal
         isOpen={payoutModalOpen}
         onClose={() => setPayoutModalOpen(false)}
@@ -426,4 +670,3 @@ export const HospitalityDashboard: React.FC = () => {
 };
 
 export default HospitalityDashboard;
-

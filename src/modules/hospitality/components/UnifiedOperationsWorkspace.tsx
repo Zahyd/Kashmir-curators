@@ -39,7 +39,9 @@ import {
   History,
   SendHorizontal,
   Trash2,
-  Pencil
+  Pencil,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -194,6 +196,10 @@ export const UnifiedOperationsWorkspace: React.FC<UnifiedOperationsWorkspaceProp
   const [voucherModalOpen, setVoucherModalOpen] = useState(false);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [overrideModalOpen, setOverrideModalOpen] = useState(false);
+
+  // View Mode: Table List vs Interactive Kanban Pipeline
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [quickDateFilter, setQuickDateFilter] = useState<'ALL' | 'TODAY' | 'NEXT_48H' | 'IN_HOUSE' | 'HIGH_VALUE'>('ALL');
 
   // Delete & Bulk Action States
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -367,26 +373,49 @@ export const UnifiedOperationsWorkspace: React.FC<UnifiedOperationsWorkspaceProp
     fetchReservations();
   };
 
-  // Filtered reservations in memory if instant search
+  // Filtered reservations in memory if instant search & quick presets
   const displayedReservations = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
     return reservations.filter(r => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        r.guestName?.toLowerCase().includes(q) ||
-        r.bookingReference?.toLowerCase().includes(q) ||
-        r.hotelConfirmationNumber?.toLowerCase().includes(q) ||
-        r.hotel?.name?.toLowerCase().includes(q) ||
-        r.guestPhone?.includes(q) ||
-        r.guestEmail?.toLowerCase().includes(q) ||
-        r.destination?.toLowerCase().includes(q)
-      );
+      // 1. Text Search Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matches = 
+          r.guestName?.toLowerCase().includes(q) ||
+          r.bookingReference?.toLowerCase().includes(q) ||
+          r.hotelConfirmationNumber?.toLowerCase().includes(q) ||
+          r.hotel?.name?.toLowerCase().includes(q) ||
+          r.guestPhone?.includes(q) ||
+          r.guestEmail?.toLowerCase().includes(q) ||
+          r.destination?.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+
+      // 2. Quick Presets Filter
+      if (quickDateFilter === 'TODAY') {
+        const checkInStr = (r.checkIn || '').split('T')[0];
+        const checkOutStr = (r.checkOut || '').split('T')[0];
+        if (checkInStr !== todayStr && checkOutStr !== todayStr) return false;
+      } else if (quickDateFilter === 'NEXT_48H') {
+        const checkInDate = new Date(r.checkIn);
+        if (checkInDate < now || checkInDate > in48h) return false;
+      } else if (quickDateFilter === 'IN_HOUSE') {
+        if (r.status !== 'Checked-In') return false;
+      } else if (quickDateFilter === 'HIGH_VALUE') {
+        if ((r.totalAmount || 0) < 40000) return false;
+      }
+
+      return true;
     });
-  }, [reservations, searchQuery]);
+  }, [reservations, searchQuery, quickDateFilter]);
 
   // Reset Filters
   const handleResetFilters = () => {
     setSearchQuery('');
+    setQuickDateFilter('ALL');
     setFilterStage('ALL');
     setFilterDestination('ALL');
     setFilterPayment('ALL');
@@ -1326,41 +1355,93 @@ https://kashmir-curators.vercel.app`;
         </div>
       </Card>
 
-      {/* 3. COMPREHENSIVE RESERVATION MANAGEMENT TABLE */}
+      {/* 3. COMPREHENSIVE RESERVATION MANAGEMENT DESK */}
       <Card className="rounded-3xl border border-border/80 bg-card overflow-hidden shadow-sm">
-        <div className="p-4 sm:p-5 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+        <div className="p-4 sm:p-5 border-b border-border/50 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <CalendarCheck2 className="w-5 h-5 text-amber-500" />
             <h2 className="text-base font-black text-foreground">
               Centralized Reservation Operations Desk
             </h2>
-            <Badge variant="outline" className="font-mono text-xs text-muted-foreground ml-2">
+            <Badge variant="outline" className="font-mono text-xs text-muted-foreground ml-1">
               {displayedReservations.length} records
             </Badge>
+
+            {/* Quick Presets Filter Pills */}
+            <div className="hidden xl:flex items-center gap-1.5 ml-3 pl-3 border-l border-border/60">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Presets:</span>
+              {[
+                { id: 'ALL', label: 'All' },
+                { id: 'TODAY', label: "Today's Moves" },
+                { id: 'NEXT_48H', label: 'Next 48H' },
+                { id: 'IN_HOUSE', label: 'In-House' },
+                { id: 'HIGH_VALUE', label: 'VIP (₹40k+)' }
+              ].map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setQuickDateFilter(p.id as any)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                    quickDateFilter === p.id 
+                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40' 
+                      : 'bg-muted/40 text-muted-foreground hover:bg-muted border border-transparent'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Bulk Selection Notification Bar */}
-          {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-2xl text-xs font-bold animate-fade-in">
-              <span>{selectedIds.length} selected</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Mode Switcher: Table List vs Pipeline Kanban */}
+            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-2xl border border-border/60">
               <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => setBulkDeleteModalOpen(true)}
-                className="h-7 px-2.5 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl gap-1 shadow-sm"
+                onClick={() => setViewMode('table')}
+                className={`h-7 px-2.5 text-xs font-bold rounded-xl gap-1.5 transition-all ${
+                  viewMode === 'table' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
-                <Trash2 className="w-3 h-3" />
-                <span>Delete Selected</span>
+                <List className="w-3.5 h-3.5" />
+                <span>Table</span>
               </Button>
               <Button
+                variant={viewMode === 'kanban' ? 'default' : 'ghost'}
                 size="sm"
-                variant="ghost"
-                onClick={() => setSelectedIds([])}
-                className="h-7 px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground rounded-xl"
+                onClick={() => setViewMode('kanban')}
+                className={`h-7 px-2.5 text-xs font-bold rounded-xl gap-1.5 transition-all ${
+                  viewMode === 'kanban' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
-                Deselect
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Pipeline</span>
               </Button>
             </div>
-          )}
+
+            {/* Bulk Selection Notification Bar */}
+            {selectedIds.length > 0 && (
+              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-2xl text-xs font-bold animate-fade-in">
+                <span>{selectedIds.length} selected</span>
+                <Button
+                  size="sm"
+                  onClick={() => setBulkDeleteModalOpen(true)}
+                  className="h-7 px-2.5 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl gap-1 shadow-sm"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Delete</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedIds([])}
+                  className="h-7 px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground rounded-xl"
+                >
+                  Deselect
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
@@ -1384,6 +1465,214 @@ https://kashmir-curators.vercel.app`;
             >
               + Dispatch Reservation
             </Button>
+          </div>
+        ) : viewMode === 'kanban' ? (
+          <div className="p-4 sm:p-5 overflow-x-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 min-w-[1250px] pb-4">
+              {[
+                {
+                  id: 'QUEUE',
+                  title: '1. Front Desk Queue',
+                  dot: 'bg-amber-500',
+                  badge: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+                  filter: (r: ReservationRecord) => r.status === 'Pending' || r.confirmationStage === 'PENDING_RESPONSE'
+                },
+                {
+                  id: 'AVAIL_VERIFIED',
+                  title: '2. Avail. Verified',
+                  dot: 'bg-blue-500',
+                  badge: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
+                  filter: (r: ReservationRecord) => r.confirmationStage === 'AVAILABILITY_CONFIRMED'
+                },
+                {
+                  id: 'CONFIRMED',
+                  title: '3. Hotel CRS Confirmed',
+                  dot: 'bg-emerald-500',
+                  badge: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+                  filter: (r: ReservationRecord) => r.status === 'Confirmed' || r.confirmationStage === 'HOTEL_CONFIRMED'
+                },
+                {
+                  id: 'IN_HOUSE',
+                  title: '4. In-House Stays',
+                  dot: 'bg-emerald-600',
+                  badge: 'bg-emerald-600/15 text-emerald-600 border-emerald-600/30',
+                  filter: (r: ReservationRecord) => r.status === 'Checked-In'
+                },
+                {
+                  id: 'EXCEPTIONS',
+                  title: '5. Departed / Release',
+                  dot: 'bg-slate-400',
+                  badge: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+                  filter: (r: ReservationRecord) => r.status === 'Checked-Out' || r.status === 'Cancelled' || r.status === 'Rejected' || r.confirmationStage === 'ALTERNATIVE_OFFERED'
+                }
+              ].map(col => {
+                const colItems = displayedReservations.filter(col.filter);
+                return (
+                  <div key={col.id} className="bg-muted/30 border border-border/70 rounded-3xl p-3.5 flex flex-col gap-3 min-h-[550px]">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                        <span className="font-extrabold text-xs text-foreground tracking-tight">{col.title}</span>
+                      </div>
+                      <Badge variant="outline" className={`font-mono text-[10px] font-bold ${col.badge}`}>
+                        {colItems.length}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-3 overflow-y-auto max-h-[620px] pr-0.5">
+                      {colItems.length === 0 ? (
+                        <div className="py-16 text-center text-[11px] text-muted-foreground/60 border border-dashed border-border/60 rounded-2xl">
+                          No bookings in stage
+                        </div>
+                      ) : (
+                        colItems.map(res => {
+                          const nights = Math.max(1, Math.ceil((new Date(res.checkOut).getTime() - new Date(res.checkIn).getTime()) / (1000 * 60 * 60 * 24)));
+                          const isPending = res.status === 'Pending' || res.confirmationStage === 'PENDING_RESPONSE';
+                          const isConfirmed = res.status === 'Confirmed' || res.confirmationStage === 'HOTEL_CONFIRMED';
+                          const isCheckedIn = res.status === 'Checked-In';
+
+                          return (
+                            <div 
+                              key={res.id} 
+                              className="bg-card border border-border/80 hover:border-amber-500/50 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all space-y-2.5 text-xs group"
+                            >
+                              <div className="flex items-start justify-between gap-2 border-b border-border/50 pb-2">
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-foreground text-xs truncate">
+                                    {res.hotel?.name || 'Partner Hotel'}
+                                  </h4>
+                                  <span className="text-[10px] text-muted-foreground truncate block">
+                                    {res.destination || res.hotel?.location?.split(',')[0] || 'Kashmir'}
+                                  </span>
+                                </div>
+                                <Badge variant="outline" className="font-mono text-[9px] text-amber-500 border-amber-500/30 shrink-0">
+                                  {res.bookingReference || res.id.slice(0, 6)}
+                                </Badge>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <strong className="text-foreground text-xs font-black truncate">{res.guestName}</strong>
+                                  <span className="text-[10px] font-semibold text-muted-foreground">{res.adults || 2} Adults</span>
+                                </div>
+                                <div className="text-[11px] text-muted-foreground font-mono truncate">{res.guestPhone || 'No Phone'}</div>
+                              </div>
+
+                              <div className="bg-muted/40 rounded-xl p-2 text-[11px] space-y-1 border border-border/50">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Stay:</span>
+                                  <span className="font-semibold text-foreground">
+                                    {new Date(res.checkIn).toLocaleDateString([], { month: 'short', day: 'numeric' })} - {new Date(res.checkOut).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Plan:</span>
+                                  <span className="font-bold text-amber-600 dark:text-amber-400">{res.roomsCount}x {res.roomType} ({res.mealPlan})</span>
+                                </div>
+                                <div className="flex items-center justify-between pt-1 border-t border-border/40 font-mono">
+                                  <span className="text-muted-foreground font-sans">Net Dues:</span>
+                                  <span className="font-black text-emerald-500">₹{(res.hotelDues || res.totalAmount).toLocaleString('en-IN')}</span>
+                                </div>
+                              </div>
+
+                              {/* Card Action Row */}
+                              <div className="flex items-center justify-between pt-1 border-t border-border/40 gap-1">
+                                <div className="flex items-center gap-1">
+                                  {/* WhatsApp */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const hotelPhone = (res.hotel?.whatsappNumber || res.hotel?.contactPhone || res.guestPhone || '').replace(/[^0-9]/g, '');
+                                      const checkInFormatted = new Date(res.checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                                      const checkOutFormatted = new Date(res.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                                      const portalUrl = `${window.location.origin}/hospitality?tab=reception&token=${res.secureToken || res.id}`;
+                                      const msg = `*KASHMIR CURATORS DMC — RESERVATION VOUCHER*\nRef: #${res.bookingReference || res.id.slice(0, 8)}\nHotel: ${res.hotel?.name || 'Hotel'}\nGuest: ${res.guestName}\nDates: ${checkInFormatted} to ${checkOutFormatted} (${nights} Nights)\nRoom: ${res.roomsCount}x ${res.roomType} (${res.mealPlan})\nContract: ₹${(res.totalAmount || 0).toLocaleString('en-IN')}\nPortal Link: ${portalUrl}`;
+                                      const waNum = hotelPhone.length === 10 ? `91${hotelPhone}` : hotelPhone;
+                                      window.open(waNum ? `https://wa.me/${waNum}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                                    }}
+                                    className="h-7 w-7 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-lg"
+                                    title="WhatsApp Voucher"
+                                  >
+                                    <MessageSquare className="w-3 h-3" />
+                                  </Button>
+
+                                  {/* Edit */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenEdit(res)}
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+                                    title="Edit Booking"
+                                  >
+                                    <Pencil className="w-3 h-3 text-blue-500" />
+                                  </Button>
+
+                                  {/* Details */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedRes(res);
+                                      setTargetEmail(res.guestEmail || res.receptionEmail || '');
+                                      fetchAiLogs(res.id);
+                                      setDetailDrawerOpen(true);
+                                    }}
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+                                    title="View Dossier"
+                                  >
+                                    <Eye className="w-3 h-3 text-amber-500" />
+                                  </Button>
+
+                                  {/* Delete */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setResToDelete(res);
+                                      setDeleteModalOpen(true);
+                                    }}
+                                    className="h-7 w-7 p-0 text-rose-500 hover:bg-rose-500/10 rounded-lg"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+
+                                {/* Contextual action button */}
+                                {isPending && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleQuickConfirm(res.id, res.guestName)}
+                                    className="h-6 px-2 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg"
+                                  >
+                                    Confirm
+                                  </Button>
+                                )}
+                                {isConfirmed && !isCheckedIn && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedRes(res);
+                                      setCheckInRoomNumber(res.assignedRoomNumber || '');
+                                      setCheckInModalOpen(true);
+                                    }}
+                                    className="h-6 px-2 text-[10px] font-bold text-emerald-600 border-emerald-500/30 rounded-lg"
+                                  >
+                                    Check-In
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
