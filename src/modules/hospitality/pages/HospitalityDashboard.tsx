@@ -209,88 +209,97 @@ export const HospitalityDashboard: React.FC = () => {
           />
 
           {/* Main Workspace */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
-            {/* Top Bar with Property Selector and Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/50 pb-5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Kashmir Curators Hotel Network & Dispatch Desk
-                  </span>
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6 min-w-0">
+            {/* Top Operations Header Bar */}
+            <div className="bg-card/75 border border-border/80 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4 backdrop-blur-md">
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                
+                {/* Left: Live Indicator & Page Title */}
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] tracking-wider uppercase">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Live Ops Desk
+                    </span>
+                    <span className="text-[11px] font-semibold text-muted-foreground">
+                      Kashmir Curators Hotel Network • 24/7 Dispatch Matrix
+                    </span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                    {activeTab === 'overview' && 'Unified Hotel Operations & Reservation Dashboard'}
+                    {activeTab === 'reception' && 'Hotel Reception Confirmation Portal (Live Front Desk)'}
+                    {activeTab === 'dispatch' && 'Live Hotel Booking & Voucher Dispatch Desk'}
+                    {activeTab === 'attendance' && 'Employee Operations, Working Hours & Live Presence'}
+                    {activeTab === 'hotels' && 'Partner Hotels & Houseboats (Directory & CRUD)'}
+                    {activeTab === 'accommodations' && 'Accommodations & Live Inventory Matrix'}
+                    {activeTab === 'tariffs' && 'Seasonal Tariffs & Contract Multipliers'}
+                    {activeTab === 'settlement' && 'Settlement Ledger & Supplier Bank Dues'}
+                  </h1>
                 </div>
-                <h1 className="text-2xl font-black text-foreground tracking-tight mt-1">
-                  {activeTab === 'overview' && 'Unified Hotel Operations & Reservation Dashboard'}
-                  {activeTab === 'reception' && 'Hotel Reception Confirmation Portal (Live Front Desk)'}
-                  {activeTab === 'dispatch' && 'Live Hotel Booking & Voucher Dispatch Desk'}
-                  {activeTab === 'attendance' && 'Employee Operations, Working Hours & Live Presence'}
-                  {activeTab === 'hotels' && 'Partner Hotels & Houseboats (Directory & CRUD)'}
-                  {activeTab === 'accommodations' && 'Accommodations & Live Inventory Matrix'}
-                  {activeTab === 'tariffs' && 'Seasonal Tariffs & Contract Multipliers'}
-                  {activeTab === 'settlement' && 'Settlement Ledger & Supplier Bank Dues'}
-                </h1>
-              </div>
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                {hotelsList.length > 0 && (
-                  <div className="flex items-center gap-1.5 bg-card border border-border/80 rounded-2xl px-2 py-1 shadow-sm">
-                    <Building2 className="w-4 h-4 text-amber-500 shrink-0" />
-                    <Select value={selectedHotelId} onValueChange={(val) => setSelectedHotelId(val)}>
-                      <SelectTrigger className="h-8 border-0 bg-transparent text-xs font-bold w-48 sm:w-64 focus:ring-0">
-                        <SelectValue placeholder="Select Property..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL" className="text-xs font-bold text-amber-500">
-                          🌟 All Kashmir Properties (Full Portfolio)
-                        </SelectItem>
-                        {hotelsList.map((h) => (
-                          <SelectItem key={h.id} value={h.id} className="text-xs font-semibold">
-                            {h.name} ({h.location.split(',')[0]})
+                {/* Right: Operational Controls Group (Property Selector, Officer Chip, Bell, Keys) */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
+                  {/* Property Selector */}
+                  {hotelsList.length > 0 && (
+                    <div className="flex items-center gap-1.5 bg-background/90 border border-border/80 rounded-2xl px-2.5 py-1 shadow-sm hover:border-amber-500/40 transition-colors">
+                      <Building2 className="w-4 h-4 text-amber-500 shrink-0" />
+                      <Select value={selectedHotelId} onValueChange={(val) => setSelectedHotelId(val)}>
+                        <SelectTrigger className="h-8 border-0 bg-transparent text-xs font-bold w-44 sm:w-56 focus:ring-0 p-0 text-foreground">
+                          <SelectValue placeholder="Select Property..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border text-foreground">
+                          <SelectItem value="ALL" className="text-xs font-bold text-amber-500">
+                            🌟 All Kashmir Properties (Full Portfolio)
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Active Officer Session Chip */}
-                {session && (
-                  <div className="flex items-center gap-2 bg-card border border-border/80 rounded-2xl px-3 py-1 text-xs shadow-sm">
-                    <div className="flex items-center gap-1.5 text-foreground font-bold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="truncate max-w-[120px]">{session.assignedName}</span>
-                      <Badge variant="outline" className="font-mono text-[10px] text-amber-500 border-amber-500/30">
-                        {session.accessKey}
-                      </Badge>
+                          {hotelsList.map((h) => (
+                            <SelectItem key={h.id} value={h.id} className="text-xs font-semibold">
+                              {h.name} ({h.location.split(',')[0]})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSignOutDesk}
-                      className="h-6 px-2 text-[10px] text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg ml-1 font-bold"
-                    >
-                      Lock Desk
-                    </Button>
-                  </div>
-                )}
+                  )}
 
-                {/* Live In-App Notification Center */}
-                <div className="flex items-center">
+                  {/* Active Officer Session Chip */}
+                  {session && (
+                    <div className="flex items-center gap-2 bg-background/90 border border-border/80 rounded-2xl px-3 py-1 text-xs shadow-sm">
+                      <div className="flex items-center gap-1.5 text-foreground font-bold">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="truncate max-w-[110px]">{session.assignedName}</span>
+                        <Badge variant="outline" className="font-mono text-[9px] text-amber-500 border-amber-500/30 px-1 py-0">
+                          {session.accessKey}
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSignOutDesk}
+                        className="h-6 px-1.5 text-[10px] text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg ml-0.5 font-bold"
+                        title="Lock Desk Session"
+                      >
+                        Lock
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Live Notification Bell */}
                   <NotificationBell />
+
+                  {/* Superadmin Quick Link to Keys Generator */}
+                  {canBypass && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/admin?section=portal_keys')}
+                      className="h-10 px-3 text-xs text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10 rounded-2xl gap-1.5 font-bold shadow-sm"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Keys</span>
+                    </Button>
+                  )}
                 </div>
 
-                {/* Superadmin Quick Link to Keys Generator */}
-                {canBypass && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/admin?section=portal_keys')}
-                    className="h-8 px-3 text-xs text-amber-500 border-amber-500/30 hover:bg-amber-500/10 rounded-2xl gap-1.5 font-bold shadow-sm"
-                  >
-                    <KeyRound className="w-3.5 h-3.5" />
-                    <span>Manage Portal Keys</span>
-                  </Button>
-                )}
               </div>
             </div>
 

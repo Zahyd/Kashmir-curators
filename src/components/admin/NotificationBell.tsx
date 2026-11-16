@@ -181,41 +181,43 @@ export default function NotificationBell() {
         variant="ghost" 
         size="icon" 
         onClick={() => setIsOpen(!isOpen)}
-        className="relative text-white/50 hover:text-white hover:bg-white/5 rounded-2xl w-12 h-12 flex items-center justify-center transition-all duration-300"
+        className="relative text-foreground/80 hover:text-foreground bg-card hover:bg-muted/80 border border-border/80 rounded-2xl w-10 h-10 flex items-center justify-center shadow-sm transition-all focus:ring-2 focus:ring-amber-500/20"
+        title="Operational Notifications & Alerts"
       >
-        <Bell className={cn("w-6 h-6", unreadCount > 0 && "animate-wiggle text-kashmir-gold")} />
+        <Bell className={cn("w-4 h-4 text-foreground/70 transition-transform", unreadCount > 0 && "animate-wiggle text-amber-500")} />
         {unreadCount > 0 && (
-          <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 text-black text-[9px] font-black flex items-center justify-center border-2 border-[#0a0f12] shadow-lg animate-pulse">
-            {unreadCount}
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center shadow-md border-2 border-background animate-pulse">
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </Button>
 
       {/* Glassmorphic Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-4 w-96 rounded-3xl bg-[#0a0f14]/98 border border-white/10 shadow-2xl backdrop-blur-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl bg-card border border-border/80 shadow-2xl backdrop-blur-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           
           {/* Header */}
-          <div className="p-6 border-b border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-kashmir-gold/10 flex items-center justify-center border border-kashmir-gold/20">
-                <Bell className="w-4 h-4 text-kashmir-gold" />
+          <div className="p-4 sm:p-5 border-b border-border/60 bg-muted/20 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                <Bell className="w-4 h-4 text-amber-500" />
               </div>
               <div>
-                <h4 className="text-sm font-black text-white uppercase tracking-widest">Ops Command Feed</h4>
-                <p className="text-[9px] text-white/40 uppercase font-black tracking-widest mt-0.5">{unreadCount} unread reports</p>
+                <h4 className="text-xs font-black text-foreground uppercase tracking-wider">Ops Command Feed</h4>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{unreadCount} unread alerts</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {/* Sound Toggle */}
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={() => setSoundEnabled(!soundEnabled)}
-                className="w-8 h-8 rounded-lg text-white/40 hover:text-white hover:bg-white/5"
+                className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                title={soundEnabled ? "Mute audio chimes" : "Enable audio chimes"}
               >
-                {soundEnabled ? <Volume2 className="w-4 h-4 text-kashmir-gold" /> : <VolumeX className="w-4 h-4" />}
+                {soundEnabled ? <Volume2 className="w-4 h-4 text-amber-500" /> : <VolumeX className="w-4 h-4" />}
               </Button>
               
               {/* Mark All Read */}
@@ -224,8 +226,8 @@ export default function NotificationBell() {
                   variant="ghost" 
                   size="icon" 
                   onClick={markAllRead}
-                  className="w-8 h-8 rounded-lg text-white/40 hover:text-emerald-400 hover:bg-white/5"
-                  title="Mark all as read"
+                  className="w-8 h-8 rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-muted"
+                  title="Mark all alerts as read"
                 >
                   <Check className="w-4 h-4" />
                 </Button>
@@ -234,28 +236,28 @@ export default function NotificationBell() {
           </div>
 
           {/* Search & Filters */}
-          <div className="p-4 border-b border-white/5 space-y-3 bg-white/[0.01]">
+          <div className="p-3.5 border-b border-border/60 space-y-2.5 bg-muted/10">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search alerts by metadata..." 
-                className="w-full pl-9 bg-white/5 border-white/5 text-xs text-white rounded-xl placeholder:text-white/40 h-9"
+                placeholder="Search alerts by reference or guest..." 
+                className="w-full pl-9 bg-background border-border text-xs text-foreground rounded-xl placeholder:text-muted-foreground h-8"
               />
             </div>
             
             {/* Priority Tabs */}
-            <div className="flex gap-1.5">
+            <div className="flex gap-1 bg-muted/50 p-0.5 rounded-xl border border-border/40">
               {(['all', 'high', 'medium', 'low'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setFilter(tab)}
                   className={cn(
-                    "flex-1 py-1 px-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border",
+                    "flex-1 py-1 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
                     filter === tab
-                      ? "bg-white/10 text-white border-white/10 shadow-lg"
-                      : "bg-transparent text-white/40 border-transparent hover:text-white/70"
+                      ? "bg-background text-foreground shadow-sm font-bold"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {tab}
@@ -265,7 +267,7 @@ export default function NotificationBell() {
           </div>
 
           {/* Notifications List */}
-          <div className="flex-1 overflow-y-auto max-h-[350px] custom-scrollbar divide-y divide-white/5">
+          <div className="flex-1 overflow-y-auto max-h-[340px] divide-y divide-border/40">
             {filteredNotifications.length > 0 ? (
               filteredNotifications.map((notif) => (
                 <div 
@@ -278,50 +280,50 @@ export default function NotificationBell() {
                     }
                   }}
                   className={cn(
-                    "p-5 flex gap-4 transition-all hover:bg-white/[0.04] cursor-pointer relative group",
-                    !notif.read && "bg-amber-400/[0.03]"
+                    "p-3.5 flex gap-3 transition-colors hover:bg-muted/40 cursor-pointer relative group text-left",
+                    !notif.read && "bg-amber-500/5"
                   )}
                 >
                   {/* Status Indicator Bar */}
                   {!notif.read && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400" />
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
                   )}
 
                   {/* Priority indicator */}
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-muted/60 border border-border/80 flex items-center justify-center shrink-0 mt-0.5">
                     {notif.type === 'attendance' ? (
-                      <UserCheck className="w-4 h-4 text-emerald-400" />
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
                     ) : notif.priority === 'high' ? (
-                      <ShieldAlert className="w-4 h-4 text-red-400" />
+                      <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
                     ) : (
-                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                     )}
                   </div>
 
                   {/* Body */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-1 gap-2">
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex justify-between items-start gap-2">
                       <h5 className={cn(
                         "text-xs font-bold truncate",
-                        notif.read ? "text-white/60" : "text-white"
+                        notif.read ? "text-muted-foreground" : "text-foreground"
                       )}>
                         {notif.title}
                       </h5>
-                      <span className="text-[8px] text-white/20 font-black uppercase tracking-widest shrink-0 pt-0.5">
+                      <span className="text-[9px] text-muted-foreground font-semibold shrink-0">
                         {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                     
                     <p className={cn(
-                      "text-[11px] leading-relaxed break-words",
-                      notif.read ? "text-white/30" : "text-white/60"
+                      "text-[11px] leading-relaxed line-clamp-2",
+                      notif.read ? "text-muted-foreground" : "text-foreground/80"
                     )}>
                       {notif.message}
                     </p>
                   </div>
 
                   {/* Action Drawer */}
-                  <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-center shrink-0">
+                  <div className="flex flex-col justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     {!notif.read && (
                       <Button 
                         variant="ghost" 
@@ -330,19 +332,20 @@ export default function NotificationBell() {
                           e.stopPropagation();
                           markAsRead(notif.id);
                         }}
-                        className="w-7 h-7 rounded-lg text-emerald-400/60 hover:text-emerald-400 hover:bg-white/5"
+                        className="w-6 h-6 rounded-lg text-emerald-500 hover:bg-emerald-500/10"
                         title="Mark as read"
                       >
-                        <Check className="w-4 h-4" />
+                        <Check className="w-3.5 h-3.5" />
                       </Button>
                     )}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3 opacity-30">
-                <Sparkles className="w-8 h-8 text-kashmir-gold/50" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">No intelligence briefs</p>
+              <div className="p-8 text-center flex flex-col items-center justify-center space-y-2 text-muted-foreground">
+                <Sparkles className="w-6 h-6 text-amber-500/50" />
+                <p className="text-xs font-bold">No active intelligence briefs</p>
+                <p className="text-[10px] text-muted-foreground">All operational alerts have been acknowledged.</p>
               </div>
             )}
           </div>

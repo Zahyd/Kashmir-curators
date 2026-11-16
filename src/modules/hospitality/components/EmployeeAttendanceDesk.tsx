@@ -272,31 +272,31 @@ export const EmployeeAttendanceDesk: React.FC = () => {
     <div className="space-y-6">
       
       {/* Top Banner & Personal Punch Deck */}
-      <div className="bg-gradient-to-r from-[#0b1015] via-[#0d141c] to-[#0b1015] border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-card border border-border/80 rounded-3xl p-6 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
           
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <Badge className="bg-amber-500/10 text-amber-300 border-amber-500/30 text-[10px] font-mono uppercase tracking-widest px-2.5 py-0.5">
+              <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-[10px] font-mono uppercase tracking-widest px-2.5 py-0.5">
                 Authoritative Biometric & Session Radar
               </Badge>
-              <Badge className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px] font-mono uppercase tracking-widest px-2.5 py-0.5">
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px] font-mono uppercase tracking-widest px-2.5 py-0.5">
                 Asia/Kolkata (IST) Active
               </Badge>
             </div>
-            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <UserCheck className="w-7 h-7 text-amber-400" />
+            <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight flex items-center gap-2.5">
+              <UserCheck className="w-6 h-6 text-amber-500" />
               Employee Operations, Working Hours & Live Presence
             </h1>
-            <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
               Track authenticated shifts, productive hours, lunch/tea breaks, and live teammate availability across the Kashmir Curators Hospitality & Reservations network.
             </p>
           </div>
 
           {/* Action Punch Console */}
-          <div className="flex items-center gap-3 bg-black/40 border border-white/10 rounded-2xl p-2">
+          <div className="flex items-center gap-2.5 bg-muted/40 border border-border/80 rounded-2xl p-2 shadow-sm">
             {!isClockedIn ? (
               <Button
                 onClick={handleClockIn}
@@ -410,25 +410,25 @@ export const EmployeeAttendanceDesk: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {presenceList.length === 0 ? (
-            <div className="col-span-4 p-8 text-center bg-[#0b1015]/60 border border-white/10 rounded-2xl text-slate-400">
-              <Users className="w-8 h-8 mx-auto text-slate-600 mb-2" />
-              <p className="text-sm font-semibold">No other team members clocked in right now</p>
-              <p className="text-xs text-slate-500 mt-1">Clock in above to start your shift and register on the live radar.</p>
+            <div className="col-span-4 p-8 text-center bg-card border border-border/80 rounded-3xl text-muted-foreground shadow-sm">
+              <Users className="w-8 h-8 mx-auto text-muted-foreground/60 mb-2" />
+              <p className="text-sm font-semibold text-foreground">No other team members clocked in right now</p>
+              <p className="text-xs text-muted-foreground mt-1">Clock in above to start your shift and register on the live radar.</p>
             </div>
           ) : (
             presenceList.map((member) => (
-              <Card key={member.id} className="bg-[#0b1015]/90 border-white/10 backdrop-blur-md overflow-hidden">
+              <Card key={member.id} className="bg-card border-border/80 shadow-sm backdrop-blur-md overflow-hidden rounded-2xl">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                      <div className="font-bold text-foreground text-xs flex items-center gap-1.5">
                         <span className={cn(
                           "w-2 h-2 rounded-full shrink-0",
                           member.isOnBreak ? "bg-amber-400 animate-pulse" : "bg-emerald-400"
                         )} />
                         <span className="truncate max-w-[140px]">{member.employeeName}</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                      <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
                         {member.employeeCode}
                       </div>
                     </div>
@@ -436,30 +436,30 @@ export const EmployeeAttendanceDesk: React.FC = () => {
                     <Badge className={cn(
                       "text-[9px] uppercase font-bold",
                       member.isOnBreak 
-                        ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                        : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                        ? "bg-amber-500/15 text-amber-500 border-amber-500/30"
+                        : "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
                     )}>
                       {member.isOnBreak ? 'Break' : 'Active'}
                     </Badge>
                   </div>
 
-                  <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="pt-2 border-t border-border/50 grid grid-cols-2 gap-2 text-[11px]">
                     <div>
-                      <div className="text-[9px] uppercase font-bold text-slate-500">Working Today</div>
-                      <div className="font-mono font-bold text-amber-300">
+                      <div className="text-[9px] uppercase font-bold text-muted-foreground">Working Today</div>
+                      <div className="font-mono font-bold text-amber-500">
                         {Math.floor(member.totalWorkMinutes / 60)}h {member.totalWorkMinutes % 60}m
                       </div>
                     </div>
                     <div>
-                      <div className="text-[9px] uppercase font-bold text-slate-500">Active Bookings</div>
-                      <div className="font-mono font-bold text-sky-400">
+                      <div className="text-[9px] uppercase font-bold text-muted-foreground">Active Bookings</div>
+                      <div className="font-mono font-bold text-sky-500">
                         {member.activeReservationsCount} Assigned
                       </div>
                     </div>
                   </div>
 
-                  <div className="text-[10px] text-slate-500 flex items-center gap-1">
-                    <Building2 className="w-3 h-3 text-slate-600" />
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Building2 className="w-3 h-3 text-muted-foreground/60" />
                     <span className="truncate">{member.assignedDesk}</span>
                   </div>
                 </CardContent>
@@ -470,21 +470,21 @@ export const EmployeeAttendanceDesk: React.FC = () => {
       </div>
 
       {/* Attendance History Table */}
-      <Card className="bg-[#0b1015]/90 border-white/10 shadow-2xl overflow-hidden">
-        <CardHeader className="p-4 border-b border-white/10 flex flex-row items-center justify-between">
+      <Card className="bg-card border-border/80 shadow-sm rounded-3xl overflow-hidden">
+        <CardHeader className="p-4 sm:p-5 border-b border-border/60 flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-amber-400" />
+            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-amber-500" />
               My Biometric Attendance History (Past 14 Days)
             </CardTitle>
-            <p className="text-[11px] text-slate-400 mt-0.5">Authoritative server-side records for payroll, shift targets, and compliance.</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Authoritative server-side records for payroll, shift targets, and compliance.</p>
           </div>
 
           <Button
             size="sm"
             variant="outline"
             onClick={handleExportCSV}
-            className="border-white/10 bg-white/[0.02] hover:bg-white/10 text-xs gap-1.5 h-8 text-slate-200"
+            className="border-border bg-background hover:bg-muted text-xs gap-1.5 h-8 text-foreground rounded-xl"
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
@@ -559,17 +559,17 @@ export const EmployeeAttendanceDesk: React.FC = () => {
         </div>
       </Card>
 
-      {/* Luxury In-App Confirmation Modal for Shift Clock-Out */}
+      {/* In-App Confirmation Modal for Shift Clock-Out */}
       <Dialog open={clockOutDialogOpen} onOpenChange={setClockOutDialogOpen}>
-        <DialogContent className="max-w-md bg-[#0a0f14] border border-white/10 rounded-3xl p-6 shadow-2xl text-white">
+        <DialogContent className="max-w-md bg-card border border-border/80 rounded-3xl p-6 shadow-2xl text-foreground">
           <DialogHeader className="text-center">
             <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mx-auto mb-3">
               <LogOut className="w-7 h-7" />
             </div>
-            <DialogTitle className="text-center text-xl font-black text-white">
+            <DialogTitle className="text-center text-xl font-black text-foreground">
               End Shift & Clock Out
             </DialogTitle>
-            <DialogDescription className="text-center text-xs text-white/50 mt-2 leading-relaxed">
+            <DialogDescription className="text-center text-xs text-muted-foreground mt-2 leading-relaxed">
               Are you sure you want to conclude your shift for today? Your total productive working hours, break periods, and logout timestamp will be finalized in the live Kashmir Curators operational registry.
             </DialogDescription>
           </DialogHeader>
@@ -578,7 +578,7 @@ export const EmployeeAttendanceDesk: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={() => setClockOutDialogOpen(false)}
-              className="flex-1 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold text-xs h-11"
+              className="flex-1 rounded-2xl border-border bg-background hover:bg-muted text-foreground font-bold text-xs h-11"
             >
               Continue Shift
             </Button>
