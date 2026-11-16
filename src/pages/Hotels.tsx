@@ -58,10 +58,48 @@ const getHotelCategory = (hotel: CMSHotel) => {
 export default function Hotels() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, addBooking } = useAuth();
+  const { isAuthenticated, addBooking, user } = useAuth();
   const { openLeadModal, openCallbackModal, openWhatsAppLead } = useLeadCapture();
   const { data: hotels = [], isLoading } = useHotels();
   const { data: locations = [] } = useLocations();
+
+  const [whatsappNudgePhone, setWhatsappNudgePhone] = useState('');
+  const [isSubmittingNudge, setIsSubmittingNudge] = useState(false);
+
+  const handleNudgeSubscription = async () => {
+    if (!whatsappNudgePhone.trim()) {
+      toast.error('Please enter your WhatsApp number.');
+      return;
+    }
+    try {
+      setIsSubmittingNudge(true);
+      const res = await fetch(`${API_BASE_URL}/inquiries/track-search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerPhone: whatsappNudgePhone,
+          customerName: (user as any)?.name || 'Valued Traveler',
+          customerEmail: (user as any)?.email,
+          searchType: 'HOTEL',
+          searchedEntity: filters.search || (filters.location ? `${filters.location} Stays` : 'Kashmir Luxury Stays'),
+          destination: filters.location || 'Kashmir Valley',
+          checkIn: bookingData.checkIn || undefined,
+          checkOut: bookingData.checkOut || undefined,
+          delaySeconds: 1800 // 30 minutes
+        })
+      });
+      if (res.ok) {
+        toast.success('AI Concierge Active! Exclusive rates & room hold alerts will be sent to your WhatsApp.');
+        setWhatsappNudgePhone('');
+      } else {
+        toast.error('Could not activate concierge alerts.');
+      }
+    } catch (err) {
+      toast.error('Failed to connect to AI concierge.');
+    } finally {
+      setIsSubmittingNudge(false);
+    }
+  };
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [previewHotel, setPreviewHotel] = useState<CMSHotel | null>(null);
@@ -478,6 +516,35 @@ export default function Hotels() {
                     >
                       <MessageCircle className="w-3.5 h-3.5" /> Chat via WhatsApp
                     </button>
+                  </div>
+                </div>
+
+                {/* AI Concierge WhatsApp & Email Hold Alert */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-600 dark:text-amber-400">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>AI Concierge Room Hold</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-white/60 leading-relaxed font-medium">
+                    Get instant WhatsApp availability alerts & secret winter wholesale rates for your selected dates.
+                  </p>
+                  <div className="space-y-1.5">
+                    <Input
+                      type="tel"
+                      placeholder="Your WhatsApp (+91...)"
+                      value={whatsappNudgePhone}
+                      onChange={(e) => setWhatsappNudgePhone(e.target.value)}
+                      className="h-9 text-xs bg-slate-50 dark:bg-white/[0.04] border-slate-200 dark:border-white/10 rounded-xl"
+                    />
+                    <Button
+                      size="sm"
+                      disabled={isSubmittingNudge || !whatsappNudgePhone.trim()}
+                      onClick={handleNudgeSubscription}
+                      className="w-full h-8 text-[11px] font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center gap-1"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      <span>{isSubmittingNudge ? "Enqueuing..." : "Send Rates to WhatsApp"}</span>
+                    </Button>
                   </div>
                 </div>
               </div>

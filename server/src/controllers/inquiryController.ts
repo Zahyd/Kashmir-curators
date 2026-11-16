@@ -6,6 +6,7 @@ import { PricingService } from '../services/pricingService';
 import { CRMService } from '../services/crmService';
 import { bookingAutomationService } from '../services/bookingAutomationService';
 import { LeadScoringService } from '../services/leadScoringService';
+import { emailQueueService } from '../services/emailQueueService';
 
 
 export const getInquiries = async (req: Request, res: Response) => {
@@ -197,6 +198,22 @@ export const captureQuickLead = async (req: Request, res: Response) => {
         inquiry: finalInquiry,
         message: `New Lead: ${finalInquiry.leadId} (${finalInquiry.customerName}) [${finalInquiry.leadCategory}]`
       });
+    }
+
+    // Schedule an automated AI remarketing follow-up nudge if the lead drops off
+    try {
+      await emailQueueService.enqueueSearchNudge({
+        customerName: finalInquiry.customerName,
+        customerPhone: finalInquiry.phone && finalInquiry.phone !== 'Not Provided' ? finalInquiry.phone : undefined,
+        customerEmail: finalInquiry.email,
+        destination: finalInquiry.destination,
+        searchedEntity: finalInquiry.intentQuery || finalInquiry.destination,
+        checkIn: finalInquiry.travelStartDate || undefined,
+        delaySeconds: 1800, // 30 minutes
+        io: (req as any).io
+      });
+    } catch (nudgeErr: any) {
+      console.warn('Failed to enqueue abandoned lead nudge:', nudgeErr.message);
     }
 
     res.status(201).json({
@@ -563,5 +580,146 @@ export const deleteInquiry = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Delete inquiry error:', error.message);
     res.status(500).json({ error: 'Failed to delete inquiry' });
+  }
+};
+
+/**
+ * Track customer search and optionally enqueue an automated AI remarketing nudge
+ */
+export const trackCustomerSearchIntent = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const {
+      customerName,
+      customerPhone,
+      customerEmail,
+      searchType = 'HOTEL',
+      destination,
+      checkIn,
+      checkOut,
+      guestsCount = 2,
+      roomsCount = 1,
+      budgetTier,
+      searchedEntity,
+      metadata,
+      delaySeconds = 1800 // 30 mins
+    } = req.body;
+
+    const userId = (req as any).user?.id || null;
+
+    const searchIntent = await p.customerSearchIntent.create({
+      data: {
+        userId,
+        customerName: customerName || null,
+        customerPhone: customerPhone || null,
+        customerEmail: customerEmail || null,
+        searchType,
+        destination: destination || null,
+        checkIn: checkIn ? new Date(checkIn) : null,
+        checkOut: checkOut ? new Date(checkOut) : null,
+        guestsCount: Number(guestsCount) || 2,
+        roomsCount: Number(roomsCount) || 1,
+        budgetTier: budgetTier || null,
+        searchedEntity: searchedEntity || null,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+        status: (customerPhone || customerEmail) ? 'NUDGE_ENQUEUED' : 'SEARCHED'
+      }
+    });
+
+    // If contact is provided, schedule automated AI remarketing follow-up
+    let jobResult: any = null;
+    if (customerPhone || customerEmail) {
+      jobResult = await emailQueueService.enqueueSearchNudge({
+        searchIntentId: searchIntent.id,
+        customerName,
+        customerPhone,
+        customerEmail,
+        searchType,
+        searchedEntity,
+        destination,
+        checkIn,
+        checkOut,
+        budgetTier,
+        guestsCount,
+        delaySeconds: Number(delaySeconds) || 1800,
+        io: (req as any).io
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      searchIntentId: searchIntent.id,
+      enqueued: Boolean(jobResult?.enqueued),
+      message: 'Search intent logged. AI nudge scheduled if customer abandons.'
+    });
+  } catch (error: any) {
+    console.error('Track search intent error:', error.message);
+    res.status(500).json({ error: 'Failed to track search intent' });
+  }
+};
+
+/**
+ * Fetch recent search intents for operations visibility
+ */
+export const getCustomerSearchIntents = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const { status, limit = 50 } = req.query;
+    const where: any = {};
+    if (status) where.status = String(status);
+
+    const intents = await p.customerSearchIntent.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: Number(limit) || 50,
+      include: { inquiry: true }
+    });
+
+    res.json(intents);
+  } catch (error: any) {
+    console.error('Fetch search intents error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch search intents' });
+  }
+};
+
+/**
+ * Manually trigger direct search nudge for a specific logged search intent
+ */
+export const triggerDirectSearchNudge = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const id = String(req.params.id);
+
+    const intent = await p.customerSearchIntent.findUnique({
+      where: { id }
+    });
+
+    if (!intent) {
+      return res.status(404).json({ error: 'Search intent record not found' });
+    }
+
+    const result = await emailQueueService.processCustomerSearchNudge({
+      searchIntentId: intent.id,
+      customerName: intent.customerName,
+      customerPhone: intent.customerPhone,
+      customerEmail: intent.customerEmail,
+      searchType: intent.searchType,
+      searchedEntity: intent.searchedEntity,
+      destination: intent.destination,
+      checkIn: intent.checkIn,
+      checkOut: intent.checkOut,
+      budgetTier: intent.budgetTier,
+      guestsCount: intent.guestsCount,
+      io: (req as any).io
+    });
+
+    res.json({
+      success: true,
+      message: 'Direct AI Customer Nudge dispatched successfully!',
+      result
+    });
+  } catch (error: any) {
+    console.error('Direct search nudge error:', error.message);
+    res.status(500).json({ error: 'Failed to trigger customer nudge' });
   }
 };

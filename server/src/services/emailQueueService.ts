@@ -1,5 +1,6 @@
 import { notificationService } from './notificationService';
 import { aiAgentService, InboundParsedResult } from './aiAgentService';
+import { WhatsAppWorkflowEngine } from './whatsappService';
 import prisma from '../lib/prisma';
 
 let bossInstance: any = null;
@@ -78,6 +79,18 @@ export const emailQueueService = {
           await emailQueueService.processInboundEmailDirect({ rawText, fromEmail, subject, reservationId, io });
         } catch (err: any) {
           console.error(`[QueueWorker] Inbound processing failed:`, err.message);
+        }
+      }
+    });
+
+    // Worker 3: Customer Search & Abandoned-Browse Nudge
+    await bossInstance.work('customer:search-nudge', async (jobs: any) => {
+      const jobList = Array.isArray(jobs) ? jobs : [jobs];
+      for (const job of jobList) {
+        try {
+          await emailQueueService.processCustomerSearchNudge(job.data);
+        } catch (err: any) {
+          console.error(`[QueueWorker] Customer search nudge failed:`, err.message);
         }
       }
     });
@@ -216,5 +229,167 @@ export const emailQueueService = {
       aiResult,
       appliedUpdates
     };
+  },
+
+  /**
+   * Enqueue an automated customer abandoned-search nudge with customizable delay
+   */
+  async enqueueSearchNudge(params: {
+    searchIntentId?: string;
+    customerName?: string;
+    customerPhone?: string;
+    customerEmail?: string;
+    searchType?: string;
+    searchedEntity?: string;
+    destination?: string;
+    checkIn?: string | Date;
+    checkOut?: string | Date;
+    budgetTier?: string;
+    guestsCount?: number;
+    delaySeconds?: number;
+    io?: any;
+  }) {
+    if (bossInstance && isStarted) {
+      try {
+        const jobId = await bossInstance.send('customer:search-nudge', params, {
+          retryLimit: 2,
+          retryDelay: 120,
+          startAfter: params.delaySeconds ?? 1800 // default 30 mins
+        });
+        console.log(`[EmailQueueService] Enqueued customer search nudge job: ${jobId} (Delay: ${params.delaySeconds ?? 1800}s)`);
+        return { enqueued: true, jobId };
+      } catch (err: any) {
+        console.warn('[EmailQueueService] Failed to enqueue search nudge, running direct check:', err.message);
+      }
+    }
+
+    // If queue is not running or delay is 0, process direct
+    if ((params.delaySeconds ?? 0) === 0) {
+      return await this.processCustomerSearchNudge(params);
+    }
+    return { enqueued: false, message: 'Deferred until queue triggers.' };
+  },
+
+  /**
+   * Process and send an automated customer search nudge via WhatsApp & Email
+   */
+  async processCustomerSearchNudge(data: {
+    searchIntentId?: string;
+    customerName?: string;
+    customerPhone?: string;
+    customerEmail?: string;
+    searchType?: string;
+    searchedEntity?: string;
+    destination?: string;
+    checkIn?: string | Date;
+    checkOut?: string | Date;
+    budgetTier?: string;
+    guestsCount?: number;
+    io?: any;
+  }) {
+    const p = prisma as any;
+    console.log(`[CustomerNudge] Processing remarketing nudge for ${data.customerName || 'Traveler'} (${data.customerPhone || data.customerEmail})...`);
+
+    // 1. If searchIntentId provided, verify that the customer hasn't converted already
+    if (data.searchIntentId) {
+      const intent = await p.customerSearchIntent.findUnique({
+        where: { id: data.searchIntentId }
+      });
+      if (!intent || intent.status === 'CONVERTED') {
+        console.log(`[CustomerNudge] Intent ${data.searchIntentId} is already converted or removed. Aborting nudge.`);
+        return { aborted: true, reason: 'ALREADY_CONVERTED' };
+      }
+    }
+
+    // 2. Generate customized AI messages (WhatsApp text + HTML Email)
+    const { whatsappText, emailSubject, emailHtml, curatorName } = await aiAgentService.generateCustomerSearchNudge(data);
+
+    let whatsappSent = false;
+    let emailSent = false;
+
+    // 3. Dispatch WhatsApp if customer phone provided
+    if (data.customerPhone) {
+      try {
+        whatsappSent = await WhatsAppWorkflowEngine.executeWhatsAppSenderNode(data.customerPhone, whatsappText);
+        
+        // Log in WhatsAppMessage DB table
+        await p.whatsAppMessage.create({
+          data: {
+            customerPhone: data.customerPhone,
+            direction: 'OUTBOUND',
+            content: whatsappText,
+            senderId: 'SYSTEM',
+            senderName: curatorName,
+            status: whatsappSent ? 'SENT' : 'SIMULATED'
+          }
+        });
+      } catch (waErr: any) {
+        console.warn('[CustomerNudge] WhatsApp delivery error:', waErr.message);
+      }
+    }
+
+    // 4. Dispatch Tracked Email if customer email provided
+    if (data.customerEmail && data.customerEmail.includes('@') && !data.customerEmail.includes('@guest.kashmirconnect.com')) {
+      try {
+        const emailResult = await notificationService.sendTrackedEmail({
+          emailType: 'CUSTOMER_SEARCH_NUDGE',
+          to: data.customerEmail,
+          recipientName: data.customerName || 'Valued Traveler',
+          subject: emailSubject,
+          html: emailHtml,
+          idempotencyKey: data.searchIntentId ? `nudge-${data.searchIntentId}` : undefined
+        });
+        emailSent = emailResult.success;
+      } catch (emailErr: any) {
+        console.warn('[CustomerNudge] Email delivery error:', emailErr.message);
+      }
+    }
+
+    // 5. Update CustomerSearchIntent status
+    if (data.searchIntentId) {
+      const channel = (whatsappSent && emailSent) ? 'BOTH' : whatsappSent ? 'WHATSAPP' : 'EMAIL';
+      await p.customerSearchIntent.update({
+        where: { id: data.searchIntentId },
+        data: {
+          status: 'NUDGE_SENT',
+          nudgeSentAt: new Date(),
+          nudgeChannel: channel
+        }
+      });
+    }
+
+    // 6. Record in AiAgentActionLog
+    await p.aiAgentActionLog.create({
+      data: {
+        actionType: 'CUSTOMER_SEARCH_NUDGE',
+        title: `AI Customer Remarketing Nudge Sent`,
+        description: `Sent personalized WhatsApp (${whatsappSent ? 'Delivered' : 'Simulated'}) & Email (${emailSent ? 'Delivered' : 'Off'}) to ${data.customerName || 'Traveler'} for ${data.searchedEntity || data.destination}.`,
+        metadata: JSON.stringify({
+          phone: data.customerPhone,
+          email: data.customerEmail,
+          destination: data.destination,
+          searchedEntity: data.searchedEntity,
+          whatsappSent,
+          emailSent
+        }),
+        confidence: 0.98,
+        triggeredBy: 'SYSTEM_AUTOMATION'
+      }
+    });
+
+    // 7. Emit live real-time notification
+    if (data.io) {
+      data.io.emit('customer-nudge-dispatched', {
+        searchIntentId: data.searchIntentId,
+        customerName: data.customerName,
+        phone: data.customerPhone,
+        entity: data.searchedEntity || data.destination,
+        whatsappSent,
+        emailSent,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return { success: true, whatsappSent, emailSent };
   }
 };

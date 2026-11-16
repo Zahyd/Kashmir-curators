@@ -207,6 +207,7 @@ model Inquiry {
   reminders              FollowUpReminder[]
   whatsappMessages       WhatsAppMessage[]
   cabReservations        CabReservation[]
+  searchIntents          CustomerSearchIntent[]
   duplicateOfId          String?            // Inquiries flagged as potential duplicates
   lastContactedAt        DateTime?
   nextFollowUpDate       DateTime?
@@ -1015,4 +1016,33 @@ model EmployeeSession {
   @@index([employeeCode])
   @@index([isActive])
   @@index([portalType])
+}
+
+model CustomerSearchIntent {
+  id              String    @id @default(uuid())
+  userId          String?
+  customerName    String?
+  customerPhone   String?
+  customerEmail   String?
+  searchType      String    @default("HOTEL") // "HOTEL", "PACKAGE", "CAB", "ITINERARY"
+  destination     String?   // "Gulmarg", "Pahalgam", "Srinagar"
+  checkIn         DateTime?
+  checkOut        DateTime?
+  guestsCount     Int?      @default(2)
+  roomsCount      Int?      @default(1)
+  budgetTier      String?   // "Luxury", "Premium", "Standard"
+  searchedEntity  String?   // Hotel Name, Package Name, or Car Type
+  metadata        String?   // JSON string of query/filters
+  status          String    @default("SEARCHED") // SEARCHED, NUDGE_ENQUEUED, NUDGE_SENT, CONVERTED, EXPIRED
+  nudgeSentAt     DateTime?
+  nudgeChannel    String?   // "WHATSAPP", "EMAIL", "BOTH"
+  inquiryId       String?
+  inquiry         Inquiry?  @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([customerPhone])
+  @@index([customerEmail])
+  @@index([status])
+  @@index([createdAt])
 }

@@ -342,5 +342,124 @@ EXTRACT THE FOLLOWING IN STRICT JSON FORMAT:
 </html>`;
 
     return { subject, html, urgencyLevel };
+  },
+
+  /**
+   * 3. AI-Powered Customer Search & Abandoned-Browse Nudge Generator
+   * Generates tailored WhatsApp message and luxury HTML email for drop-off remarketing
+   */
+  async generateCustomerSearchNudge(params: {
+    customerName?: string;
+    searchType?: string;
+    destination?: string;
+    searchedEntity?: string;
+    checkIn?: string | Date;
+    checkOut?: string | Date;
+    budgetTier?: string;
+    guestsCount?: number;
+  }): Promise<{
+    whatsappText: string;
+    emailSubject: string;
+    emailHtml: string;
+    curatorName: string;
+  }> {
+    const name = params.customerName && params.customerName !== 'Valued Traveler' ? params.customerName.split(' ')[0] : 'there';
+    const entity = params.searchedEntity || params.destination || 'Kashmir Valley';
+    const destination = params.destination || 'Kashmir';
+    const guests = params.guestsCount || 2;
+    const datesStr = params.checkIn 
+      ? `around ${new Date(params.checkIn).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}` 
+      : 'the upcoming season';
+
+    const curatorName = 'Zahoor Ahmad (Senior Kashmir Travel Curator)';
+
+    // Fallback WhatsApp message
+    let whatsappText = `Salam & Hello ${name}! 🏔️\n\nI noticed you were exploring stays at *${entity}* for ${datesStr}. Winter suites with Bukhari heating and snow views are filling up quickly for those dates.\n\nAs your local Kashmir curator, I can hold an exclusive wholesale rate or customize a private 4x4 snow transit package for you.\n\nWould you like me to share room availability and our secret rates? Just reply to this message! ✨\n\n— *Kashmir Curators Concierge*`;
+
+    // Fallback Email Subject & Body
+    let emailSubject = `Special Inquiry Hold: Your ${entity} Stays in Kashmir (${datesStr})`;
+    let emailHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0b0f19; color: #f8fafc; margin: 0; padding: 24px; }
+    .card { background-color: #111827; border: 1px solid #374151; border-radius: 16px; max-width: 600px; margin: 0 auto; padding: 32px; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: bold; background-color: #f59e0b; color: #000; text-transform: uppercase; margin-bottom: 16px; }
+    .title { font-size: 22px; font-weight: 900; margin: 0 0 10px 0; color: #f8fafc; }
+    .desc { font-size: 14px; color: #94a3b8; line-height: 1.6; }
+    .highlight-box { background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(16,185,129,0.05)); border: 1px solid rgba(245,158,11,0.25); border-radius: 12px; padding: 18px; margin: 20px 0; }
+    .btn { display: inline-block; background-color: #f59e0b; color: #0f172a; font-weight: bold; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-size: 14px; margin-top: 18px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">PRIVATE CONCIERGE HOLD • KASHMIR CURATORS</div>
+    <h2 class="title">Still Planning Your Kashmir Trip, ${name}?</h2>
+    <p class="desc">
+      We noticed you were browsing <strong>${entity}</strong> in <strong>${destination}</strong> for ${datesStr}. 
+      Because prime boutique properties in Kashmir have limited winter inventory with certified Bukhari central heating and scenic views, our team wanted to offer our assistance.
+    </p>
+
+    <div class="highlight-box">
+      <div style="font-size: 13px; font-weight: bold; color: #f59e0b; margin-bottom: 6px;">Exclusive Perks When Booking with Kashmir Curators:</div>
+      <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+        <li>Guaranteed 24-Hour Room Hold at Verified Wholesale Rates</li>
+        <li>Bukhari Central Heating Guarantee & Electric Blankets Included</li>
+        <li>Complimentary Srinagar Airport Pick-up in Heated 4x4 Mountain SUV</li>
+        <li>Dedicated 24/7 Local Concierge in Srinagar & Gulmarg</li>
+      </ul>
+    </div>
+
+    <p class="desc">
+      Click below to resume your booking, or simply reply to this email with your preferred dates. Our local concierge will send you a personalized dossier within 15 minutes:
+    </p>
+
+    <div style="text-align: center;">
+      <a href="https://kashmir-curators.vercel.app/hotels?search=${encodeURIComponent(entity)}" class="btn">
+        View Available Suites & Reserve &rarr;
+      </a>
+    </div>
+
+    <p style="font-size: 11px; color: #64748b; margin-top: 28px; border-top: 1px solid #374151; padding-top: 14px; text-align: center;">
+      Kashmir Curators • Luxury Destination Management • Srinagar, Kashmir • WhatsApp: +91 91037 98448
+    </p>
+  </div>
+</body>
+</html>`;
+
+    // Try AI Enhancement if Gemini is active
+    if (ai) {
+      try {
+        const prompt = `You are the lead travel curator at Kashmir Curators, a luxury travel and hospitality brand in Srinagar.
+A traveler named "${name}" searched our platform for "${entity}" in "${destination}" for dates "${datesStr}" for ${guests} guests, but dropped off before booking.
+
+Write a high-converting, warm, hospitable, and polite follow-up nudge:
+1. Short WhatsApp Message (max 75 words) with emojis (🏔️, ✨, ☕), mentioning winter Bukhari heating, personalized assistance, and inviting them to reply.
+2. Email Subject Line (luxury, enticing, mentioning their destination).
+
+Return pure JSON matching this schema:
+{
+  "whatsappText": "...",
+  "emailSubject": "..."
+}`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+          config: { responseMimeType: 'application/json' }
+        });
+
+        if (response.text) {
+          const parsed = JSON.parse(response.text);
+          if (parsed.whatsappText) whatsappText = parsed.whatsappText;
+          if (parsed.emailSubject) emailSubject = parsed.emailSubject;
+        }
+      } catch (err: any) {
+        console.warn('[aiAgentService] Gemini customer nudge generation fallback:', err.message);
+      }
+    }
+
+    return { whatsappText, emailSubject, emailHtml, curatorName };
   }
 };
