@@ -1039,287 +1039,413 @@ ${portalUrl}`;
         )}
       </div>
 
-      {/* Modal: Send Booking to Hotel */}
+      {/* Modal: Send Booking to Hotel — Ultra-Modern SaaS Command Surface */}
       <Dialog open={dispatchModalOpen} onOpenChange={setDispatchModalOpen}>
-        <DialogContent className="rounded-3xl max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Send className="w-5 h-5 text-amber-500" />
-              <span>Dispatch Booking Voucher to Hotel</span>
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Direct integration: Save reservation & transmit formatted voucher via WhatsApp or direct Email redirect.
-            </p>
-          </DialogHeader>
+        <DialogContent className="rounded-3xl max-w-4xl max-h-[92vh] overflow-y-auto p-0 border border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl">
+          {/* Top Gradient Border */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-emerald-500 to-amber-500 shrink-0" />
 
-          <form onSubmit={(e) => { e.preventDefault(); handleExecuteDispatch('EMAIL'); }} className="space-y-4 py-2 text-xs">
-            {/* Property Selection */}
-            <div>
-              <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                Select Partner Hotel / Houseboat *
-              </label>
-              <Select value={selectedHotelId} onValueChange={setSelectedHotelId}>
-                <SelectTrigger className="rounded-xl h-11 text-xs font-bold">
-                  <SelectValue placeholder="Choose Hotel..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {hotels.map(h => (
-                    <SelectItem key={h.id} value={h.id} className="text-xs">
-                      {h.name} ({h.location.split(',')[0]})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Hotel Reception Contact Details (Auto-populated & Editable) */}
-            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 font-bold text-amber-500 text-xs">
-                  <Building2 className="w-4 h-4" />
-                  <span>Hotel Reception Dispatch Contact</span>
-                </div>
-                {receptionEmail ? (
-                  <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Verified Email
+          {/* Modal Header */}
+          <div className="p-5 sm:p-6 pb-4 border-b border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 shadow-md shadow-amber-500/20 font-bold shrink-0">
+                <Send className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-black text-foreground tracking-tight">
+                    Dispatch Booking Voucher
+                  </h3>
+                  <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold">
+                    Direct CRS Network
                   </Badge>
-                ) : (
-                  <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-semibold flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" />
-                    Missing Email
-                  </Badge>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
-                    Reception Email (Voucher Recipient) *
-                  </label>
-                  <Input
-                    type="email"
-                    required
-                    placeholder="reception@thekhyber.com"
-                    value={receptionEmail}
-                    onChange={(e) => setReceptionEmail(e.target.value)}
-                    className="rounded-xl h-9 text-xs bg-background"
-                  />
                 </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
-                    Reception Phone / WhatsApp
-                  </label>
-                  <Input
-                    type="tel"
-                    placeholder="+91 94190 XXXXX"
-                    value={receptionPhone}
-                    onChange={(e) => setReceptionPhone(e.target.value)}
-                    className="rounded-xl h-9 text-xs bg-background"
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Direct Kashmir hotel integration: generate official voucher with dual WhatsApp transmission and reception routing.
+                </p>
               </div>
             </div>
 
-            {/* Room Type */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Room Category / Tier *
-                </label>
-                {categories.filter(c => c.hotelId === selectedHotelId).length > 0 ? (
-                  <Select 
-                    value={roomType} 
-                    onValueChange={(val) => {
-                      setRoomType(val);
-                      const cat = categories.find(c => c.hotelId === selectedHotelId && c.name === val);
-                      if (cat) setRatePerNight(String(cat.basePrice));
-                    }}
-                  >
-                    <SelectTrigger className="rounded-xl h-10 text-xs">
-                      <SelectValue placeholder="Select Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.filter(c => c.hotelId === selectedHotelId).map(c => (
-                        <SelectItem key={c.id} value={c.name} className="text-xs">
-                          {c.name} — ₹{c.basePrice.toLocaleString('en-IN')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    placeholder="e.g. Deluxe Palace Suite"
-                    value={roomType}
-                    onChange={(e) => setRoomType(e.target.value)}
-                    className="rounded-xl h-10"
-                    required
-                  />
-                )}
-              </div>
+            <Badge variant="outline" className="hidden sm:flex text-xs font-mono text-amber-500 border-amber-500/30 px-2.5 py-1">
+              B2B Dispatch Desk
+            </Badge>
+          </div>
 
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Meal Plan
-                </label>
-                <Select value={mealPlan} onValueChange={(val: any) => setNewMealPlan(val)}>
-                  <SelectTrigger className="rounded-xl h-10 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="EP">EP (Room Only)</SelectItem>
-                    <SelectItem value="CP">CP (Bed & Breakfast)</SelectItem>
-                    <SelectItem value="MAP">MAP (Breakfast & Dinner)</SelectItem>
-                    <SelectItem value="AP">AP (All Meals Included)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          <form onSubmit={(e) => { e.preventDefault(); handleExecuteDispatch('EMAIL'); }}>
+            <div className="p-5 sm:p-6 space-y-6">
+              {/* 2-Column Responsive Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            {/* Guest Details */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Primary Guest Name *
-                </label>
-                <Input
-                  placeholder="e.g. Dr. Rahul & Priya Sharma"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  className="rounded-xl h-10 font-medium"
-                  required
-                />
-              </div>
+                {/* LEFT COLUMN: Property & Guest Particulars (7 Cols) */}
+                <div className="lg:col-span-7 space-y-5">
+                  {/* 1. Property Selector & Reception Node */}
+                  <div className="bg-muted/30 border border-border/70 rounded-2xl p-4 space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-amber-500" />
+                        <span>Select Kashmir Partner Hotel / Houseboat *</span>
+                      </label>
+                      {receptionEmail && (
+                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                          <span>Direct Reception Line</span>
+                        </Badge>
+                      )}
+                    </div>
 
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Phone / WhatsApp *
-                </label>
-                <Input
-                  placeholder="+91 98201..."
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
-                  className="rounded-xl h-10"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Travel Dates */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Check-In Date *
-                </label>
-                <Input
-                  type="date"
-                  value={checkIn}
-                  onChange={(e) => setCheckIn(e.target.value)}
-                  className="rounded-xl h-10"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Check-Out Date *
-                </label>
-                <Input
-                  type="date"
-                  value={checkOut}
-                  onChange={(e) => setCheckOut(e.target.value)}
-                  className="rounded-xl h-10"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Rooms Count & Pricing */}
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Rooms Count
-                </label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={roomsCount}
-                  onChange={(e) => setRoomsCount(e.target.value)}
-                  className="rounded-xl h-10"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Adults Count
-                </label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={adultsCount}
-                  onChange={(e) => setAdultsCount(e.target.value)}
-                  className="rounded-xl h-10"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                  Rate / Night (₹)
-                </label>
-                <Input
-                  type="number"
-                  value={ratePerNight}
-                  onChange={(e) => setRatePerNight(e.target.value)}
-                  className="rounded-xl h-10 font-mono font-bold"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                Special Requests / Winter Preferences
-              </label>
-              <Input
-                placeholder="e.g. Bukhari pre-lit before arrival, Shikara transfer Ghat 2, extra electric blanket..."
-                value={specialRequests}
-                onChange={(e) => setSpecialRequests(e.target.value)}
-                className="rounded-xl h-10"
-              />
-              {/* Quick Kashmiri Preference Chips (Real Lucide Icons) */}
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {[
-                  { label: 'Bukhari Pre-Lit', icon: Flame },
-                  { label: 'Dual Electric Blankets', icon: Zap },
-                  { label: 'Shikara Ghat 2', icon: Waves },
-                  { label: '4x4 Snow Vehicle', icon: Snowflake },
-                  { label: 'Lake/Mountain View', icon: Mountain },
-                  { label: 'Pure Veg Meals', icon: Utensils }
-                ].map(item => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => {
-                        setSpecialRequests(prev => prev ? `${prev}, ${item.label}` : item.label);
+                    <Select 
+                      value={selectedHotelId} 
+                      onValueChange={(val) => {
+                        setSelectedHotelId(val);
+                        const h = hotels.find(item => item.id === val);
+                        if (h) {
+                          setReceptionEmail(h.receptionEmail || h.contactEmail || '');
+                          setReceptionPhone(h.whatsappNumber || h.contactPhone || '');
+                        }
                       }}
-                      className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-muted/70 hover:bg-amber-500/15 text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 border border-border/70 transition-all flex items-center gap-1.5 shadow-2xs"
                     >
-                      <Icon className="w-3 h-3 text-amber-500 shrink-0" />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
+                      <SelectTrigger className="rounded-xl h-11 text-xs font-bold bg-background border-border/80 shadow-xs">
+                        <SelectValue placeholder="Choose Kashmir Hotel / Houseboat..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {hotels.map(h => (
+                          <SelectItem key={h.id} value={h.id} className="text-xs">
+                            <span className="font-bold">{h.name}</span>
+                            <span className="text-muted-foreground ml-1.5">({h.location.split(',')[0]})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Reception Contact Micro-Card */}
+                    <div className="bg-background/80 border border-border/60 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-amber-500" />
+                          <span>Reception Email (Voucher Recipient) *</span>
+                        </label>
+                        <Input
+                          type="email"
+                          required
+                          placeholder="reception@thekhyber.com"
+                          value={receptionEmail}
+                          onChange={(e) => setReceptionEmail(e.target.value)}
+                          className="h-9 text-xs rounded-lg bg-card"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-emerald-500" />
+                          <span>Reception Phone / WhatsApp</span>
+                        </label>
+                        <Input
+                          type="tel"
+                          placeholder="+91 94190 XXXXX"
+                          value={receptionPhone}
+                          onChange={(e) => setReceptionPhone(e.target.value)}
+                          className="h-9 text-xs rounded-lg bg-card"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Lead Guest Details */}
+                  <div className="bg-muted/30 border border-border/70 rounded-2xl p-4 space-y-3.5">
+                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-amber-500" />
+                      <span>Primary Guest Particulars</span>
+                    </label>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Guest Full Name *
+                        </label>
+                        <Input
+                          placeholder="e.g. Dr. Tariq & Aisha Hameed"
+                          value={guestName}
+                          onChange={(e) => setGuestName(e.target.value)}
+                          className="h-10 text-xs font-bold rounded-xl bg-background"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Guest Phone / WhatsApp *
+                        </label>
+                        <Input
+                          placeholder="+91 94198 XXXXX"
+                          value={guestPhone}
+                          onChange={(e) => setGuestPhone(e.target.value)}
+                          className="h-10 text-xs rounded-xl bg-background"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Guest Email Address (Optional for Guest Copy)
+                      </label>
+                      <Input
+                        type="email"
+                        placeholder="guest@example.com"
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        className="h-9 text-xs rounded-xl bg-background"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 3. Bespoke Kashmiri Winter Preferences */}
+                  <div className="bg-muted/30 border border-border/70 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        <span>Curated Kashmir Preferences</span>
+                      </label>
+                      <span className="text-[10px] text-muted-foreground">Click to toggle</span>
+                    </div>
+
+                    {/* Interactive Preference Chips */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: 'Bukhari Pre-Lit', icon: Flame },
+                        { label: 'Dual Electric Blankets', icon: Zap },
+                        { label: 'Shikara Ghat 2', icon: Waves },
+                        { label: '4x4 Snow Vehicle', icon: Snowflake },
+                        { label: 'Lake/Mountain View', icon: Mountain },
+                        { label: 'Pure Veg Meals', icon: Utensils }
+                      ].map(item => {
+                        const Icon = item.icon;
+                        const isSelected = specialRequests.includes(item.label);
+                        return (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => {
+                              setSpecialRequests(prev => {
+                                if (!prev) return item.label;
+                                const parts = prev.split(',').map(s => s.trim()).filter(Boolean);
+                                if (parts.includes(item.label)) {
+                                  return parts.filter(s => s !== item.label).join(', ');
+                                } else {
+                                  return [...parts, item.label].join(', ');
+                                }
+                              });
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 border shadow-2xs ${
+                              isSelected 
+                                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm scale-102' 
+                                : 'bg-background hover:bg-muted/80 text-muted-foreground hover:text-foreground border-border/70'
+                            }`}
+                          >
+                            <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-slate-950 stroke-[2.5]' : 'text-amber-500'}`} />
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <Input
+                      placeholder="Custom requests: Late flight arrival, extra heater, baby cot..."
+                      value={specialRequests}
+                      onChange={(e) => setSpecialRequests(e.target.value)}
+                      className="h-9 text-xs rounded-xl bg-background mt-2"
+                    />
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Stay Horizon, Room Category & Financial Ledger (5 Cols) */}
+                <div className="lg:col-span-5 space-y-5">
+                  {/* 1. Stay Horizon Card */}
+                  <div className="bg-muted/30 border border-border/70 rounded-2xl p-4 space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-amber-500" />
+                        <span>Stay Horizon & Dates *</span>
+                      </label>
+                      {checkIn && checkOut && (
+                        <Badge variant="outline" className="text-[10px] font-bold text-amber-500 border-amber-500/30">
+                          {Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)))} Night(s)
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Check-In</label>
+                        <Input
+                          type="date"
+                          value={checkIn}
+                          onChange={(e) => setCheckIn(e.target.value)}
+                          className="h-10 text-xs rounded-xl bg-background font-medium"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Check-Out</label>
+                        <Input
+                          type="date"
+                          value={checkOut}
+                          onChange={(e) => setCheckOut(e.target.value)}
+                          className="h-10 text-xs rounded-xl bg-background font-medium"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Room Category & Meal Plan */}
+                  <div className="bg-muted/30 border border-border/70 rounded-2xl p-4 space-y-3.5">
+                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <BedDouble className="w-4 h-4 text-amber-500" />
+                      <span>Category & Meal Plan *</span>
+                    </label>
+
+                    <div className="space-y-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Room Category / Tier
+                        </label>
+                        {categories.filter(c => c.hotelId === selectedHotelId).length > 0 ? (
+                          <Select 
+                            value={roomType} 
+                            onValueChange={(val) => {
+                              setRoomType(val);
+                              const cat = categories.find(c => c.hotelId === selectedHotelId && c.name === val);
+                              if (cat) setRatePerNight(String(cat.basePrice));
+                            }}
+                          >
+                            <SelectTrigger className="rounded-xl h-10 text-xs bg-background">
+                              <SelectValue placeholder="Select Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.filter(c => c.hotelId === selectedHotelId).map(c => (
+                                <SelectItem key={c.id} value={c.name} className="text-xs">
+                                  {c.name} — ₹{c.basePrice.toLocaleString('en-IN')}/nt
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            placeholder="e.g. Deluxe Palace Suite"
+                            value={roomType}
+                            onChange={(e) => setRoomType(e.target.value)}
+                            className="rounded-xl h-10 text-xs bg-background"
+                            required
+                          />
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Meal Plan
+                        </label>
+                        <Select value={mealPlan} onValueChange={(val: any) => setNewMealPlan(val)}>
+                          <SelectTrigger className="rounded-xl h-10 text-xs bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="EP">EP — Room Only</SelectItem>
+                            <SelectItem value="CP">CP — Bed & Breakfast</SelectItem>
+                            <SelectItem value="MAP">MAP — Breakfast & Dinner (Recommended)</SelectItem>
+                            <SelectItem value="AP">AP — All Meals Included</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Rooms & Adults Counter */}
+                      <div className="grid grid-cols-2 gap-2.5 pt-1">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Rooms Count
+                          </label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={roomsCount}
+                            onChange={(e) => setRoomsCount(e.target.value)}
+                            className="h-10 text-xs font-bold rounded-xl bg-background"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Adults Count
+                          </label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={adultsCount}
+                            onChange={(e) => setAdultsCount(e.target.value)}
+                            className="h-10 text-xs font-bold rounded-xl bg-background"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Live Commercial Contract Ledger */}
+                  {(() => {
+                    const nights = Math.max(1, (checkIn && checkOut) ? Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)) : 1);
+                    const count = Number(roomsCount) || 1;
+                    const rate = Number(ratePerNight) || 12000;
+                    const gross = rate * count * nights;
+
+                    return (
+                      <div className="bg-gradient-to-br from-amber-500/10 via-card to-emerald-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-3 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                            <DollarSign className="w-4 h-4 text-amber-500" />
+                            <span>Wholesale Contract Rate</span>
+                          </span>
+                          <Badge variant="outline" className="text-[9px] font-mono text-emerald-500 border-emerald-500/30">
+                            Wholesale DMC Tariff
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Rate / Night (₹)
+                          </label>
+                          <Input
+                            type="number"
+                            value={ratePerNight}
+                            onChange={(e) => setRatePerNight(e.target.value)}
+                            className="h-10 text-sm font-mono font-black rounded-xl bg-background text-foreground"
+                          />
+                        </div>
+
+                        <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] text-muted-foreground block">Net Contract Total:</span>
+                            <span className="text-[10px] font-mono text-muted-foreground">
+                              ₹{rate.toLocaleString('en-IN')} × {count}r × {nights}nt
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-mono text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
+                              ₹{gross.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
               </div>
             </div>
 
-            <DialogFooter className="pt-3 border-t border-border/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 bg-muted/40 border-t border-border/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={() => setDispatchModalOpen(false)}
                 disabled={isSubmitting}
-                className="rounded-xl text-xs text-muted-foreground hover:text-foreground h-10 order-last sm:order-first"
+                className="rounded-xl text-xs text-muted-foreground hover:text-foreground h-11 px-4 order-last sm:order-first"
               >
                 Cancel
               </Button>
@@ -1330,10 +1456,10 @@ ${portalUrl}`;
                   type="button"
                   onClick={() => handleExecuteDispatch('WHATSAPP')}
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto rounded-xl text-xs font-bold bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md shadow-emerald-500/20 gap-2 h-10 px-4 transition-all"
+                  className="w-full sm:w-auto rounded-2xl text-xs font-black bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-lg shadow-emerald-500/25 gap-2 h-11 px-5 transition-all"
                 >
                   {isSubmitting && dispatchMethod === 'WHATSAPP' ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <WhatsAppIcon className="w-4 h-4 fill-white" />
                   )}
@@ -1345,17 +1471,17 @@ ${portalUrl}`;
                   type="button"
                   onClick={() => handleExecuteDispatch('EMAIL')}
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 gap-2 h-10 px-4 transition-all"
+                  className="w-full sm:w-auto rounded-2xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/25 gap-2 h-11 px-5 transition-all"
                 >
                   {isSubmitting && dispatchMethod === 'EMAIL' ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Mail className="w-3.5 h-3.5" />
+                    <Mail className="w-4 h-4" />
                   )}
                   <span>{isSubmitting && dispatchMethod === 'EMAIL' ? 'Opening Email...' : 'Dispatch via Email'}</span>
                 </Button>
               </div>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
