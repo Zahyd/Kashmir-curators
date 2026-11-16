@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getHospitalityToken } from '../utils/hospitalityAuth';
+import { getHospitalityToken, getHospitalityHeaders } from '../utils/hospitalityAuth';
 import { toast } from 'sonner';
 
 interface RoomCategory {
@@ -69,16 +69,12 @@ export const LiveOccupancyGrid: React.FC<LiveOccupancyGridProps> = ({ selectedHo
   const fetchRoomsAndCategories = async () => {
     try {
       setIsLoading(true);
-      const authToken = getHospitalityToken(token);
+      const headers = getHospitalityHeaders(token);
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [roomsRes, catRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }),
-        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        })
+        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, { headers }),
+        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, { headers })
       ]);
 
       if (roomsRes.ok) {

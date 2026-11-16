@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getHospitalityToken } from '../utils/hospitalityAuth';
+import { getHospitalityToken, getHospitalityHeaders } from '../utils/hospitalityAuth';
 
 interface RoomCategory {
   id: string;
@@ -121,16 +121,12 @@ export const AccommodationManager: React.FC<AccommodationManagerProps> = ({
     if (!currentHotelId) return;
     try {
       setIsLoading(true);
-      const authToken = getHospitalityToken(token);
+      const headers = getHospitalityHeaders(token);
       const hotelParam = `?hotelId=${encodeURIComponent(currentHotelId)}`;
 
       const [catRes, roomsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }),
-        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        })
+        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, { headers }),
+        fetch(`${API_BASE_URL}/hotels/operations/rooms${hotelParam}`, { headers })
       ]);
 
       if (catRes.ok) {

@@ -147,9 +147,10 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
   useEffect(() => {
     const loadMetadata = async () => {
       try {
+        const headers = getHospitalityHeaders(token);
         const [hotelsRes, catRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/hotels`),
-          fetch(`${API_BASE_URL}/hotels/operations/categories`)
+          fetch(`${API_BASE_URL}/hotels`, { headers }),
+          fetch(`${API_BASE_URL}/hotels/operations/categories`, { headers })
         ]);
 
         if (hotelsRes.ok) {
@@ -169,7 +170,7 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
       }
     };
     loadMetadata();
-  }, [initialHotelId]);
+  }, [initialHotelId, token]);
 
   useEffect(() => {
     if (initialHotelId && initialHotelId !== 'ALL') {

@@ -14,7 +14,7 @@ export interface AuthRequest extends Request {
   user?: any;
 }
 
-export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction, isOptional = false) => {
   const authHeader = (req.headers['authorization'] || '').trim();
   const portalKeyHeader = ((req.headers['x-portal-key'] as string) || '').trim();
   
@@ -37,6 +37,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
   const candidates = [cleanPortalKey, bearerToken].filter(Boolean);
 
   if (candidates.length === 0) {
+    if (isOptional) return next();
     return res.status(401).json({ error: 'Access denied. No authentication token or portal key provided.' });
   }
 
@@ -128,5 +129,13 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
   }
 
+  if (isOptional) {
+    return next();
+  }
+
   return res.status(401).json({ error: 'Invalid or expired session token. Please re-authenticate your hospitality desk session.' });
+};
+
+export const optionalAuthenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+  return authenticateToken(req, res, next, true);
 };

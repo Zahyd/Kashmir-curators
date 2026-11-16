@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getHospitalityToken } from '../utils/hospitalityAuth';
+import { getHospitalityToken, getHospitalityHeaders } from '../utils/hospitalityAuth';
 
 interface SeasonalTariffManagerProps {
   selectedHotelId?: string;
@@ -57,16 +57,12 @@ export const SeasonalTariffManager: React.FC<SeasonalTariffManagerProps> = ({ se
   const fetchTariffsAndCategories = async () => {
     try {
       setIsLoading(true);
-      const authToken = getHospitalityToken(token);
+      const headers = getHospitalityHeaders(token);
       const hotelParam = selectedHotelId ? `?hotelId=${encodeURIComponent(selectedHotelId)}` : '';
 
       const [tariffsRes, catRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/hotels/operations/tariffs${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }),
-        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        })
+        fetch(`${API_BASE_URL}/hotels/operations/tariffs${hotelParam}`, { headers }),
+        fetch(`${API_BASE_URL}/hotels/operations/categories${hotelParam}`, { headers })
       ]);
 
       if (tariffsRes.ok) {

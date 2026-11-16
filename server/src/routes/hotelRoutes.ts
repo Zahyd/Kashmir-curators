@@ -31,7 +31,7 @@ import {
   getSeasonalRates,
   updateSeasonalRate
 } from '../controllers/hotelController';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken, optionalAuthenticate } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -39,17 +39,17 @@ const router = Router();
 router.get('/operations/dashboard', authenticateToken, getHotelsDashboard);
 
 // Room Categories
-router.get('/operations/categories', authenticateToken, getRoomCategories);
+router.get('/operations/categories', optionalAuthenticate, getRoomCategories);
 router.post('/operations/categories', authenticateToken, createRoomCategory);
 router.patch('/operations/categories/:id', authenticateToken, updateRoomCategory);
 router.delete('/operations/categories/:id', authenticateToken, deleteRoomCategory);
 
 // Seasonal Tariffs & Dynamic Rates
-router.get('/operations/tariffs', authenticateToken, getSeasonalRates);
+router.get('/operations/tariffs', optionalAuthenticate, getSeasonalRates);
 router.patch('/operations/tariffs/:id', authenticateToken, updateSeasonalRate);
 
 // Physical Hotel Rooms & Housekeeping
-router.get('/operations/rooms', authenticateToken, getHotelRooms);
+router.get('/operations/rooms', optionalAuthenticate, getHotelRooms);
 router.post('/operations/rooms', authenticateToken, createHotelRoom);
 router.patch('/operations/rooms/:id', authenticateToken, updateHotelRoom);
 router.delete('/operations/rooms/:id', authenticateToken, deleteHotelRoom);
