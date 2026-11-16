@@ -37,7 +37,9 @@ import {
   AlertCircle,
   ExternalLink,
   History,
-  SendHorizontal
+  SendHorizontal,
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -192,6 +194,31 @@ export const UnifiedOperationsWorkspace: React.FC<UnifiedOperationsWorkspaceProp
   const [voucherModalOpen, setVoucherModalOpen] = useState(false);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [overrideModalOpen, setOverrideModalOpen] = useState(false);
+
+  // Delete & Bulk Action States
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [resToDelete, setResToDelete] = useState<ReservationRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Edit / Amend Booking States
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editRes, setEditRes] = useState<ReservationRecord | null>(null);
+  const [editGuestName, setEditGuestName] = useState('');
+  const [editGuestPhone, setEditGuestPhone] = useState('');
+  const [editGuestEmail, setEditGuestEmail] = useState('');
+  const [editCheckIn, setEditCheckIn] = useState('');
+  const [editCheckOut, setEditCheckOut] = useState('');
+  const [editRoomsCount, setEditRoomsCount] = useState('1');
+  const [editRoomType, setEditRoomType] = useState('');
+  const [editMealPlan, setEditMealPlan] = useState('MAP');
+  const [editContractRate, setEditContractRate] = useState('');
+  const [editTotalAmount, setEditTotalAmount] = useState('');
+  const [editStatus, setEditStatus] = useState('Pending');
+  const [editSpecialRequests, setEditSpecialRequests] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Action Form States
   const [targetEmail, setTargetEmail] = useState('');
@@ -634,6 +661,154 @@ https://kashmir-curators.vercel.app`;
     }
   };
 
+  // -------------------------------------------------------------
+  // DELETE & BULK DELETE ACTIONS
+  // -------------------------------------------------------------
+  const handleDeleteReservation = async () => {
+    if (!resToDelete) return;
+    try {
+      setIsDeleting(true);
+      const authToken = getHospitalityToken(token);
+      const headers = getHospitalityHeaders(authToken);
+      const res = await fetch(`${API_BASE_URL}/hospitality/${resToDelete.id}`, {
+        method: 'DELETE',
+        headers
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to delete reservation');
+      }
+
+      setReservations(prev => prev.filter(r => r.id !== resToDelete.id));
+      setSelectedIds(prev => prev.filter(id => id !== resToDelete.id));
+      toast.success(`Reservation #${resToDelete.bookingReference || resToDelete.id.slice(0, 8)} permanently deleted`, {
+        icon: '🗑️'
+      });
+      setDeleteModalOpen(false);
+      setResToDelete(null);
+      fetchKpis();
+    } catch (err: any) {
+      toast.error(err.message || 'Error deleting reservation');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      setIsBulkDeleting(true);
+      const authToken = getHospitalityToken(token);
+      const headers = getHospitalityHeaders(authToken);
+      
+      const results = await Promise.all(
+        selectedIds.map(id => 
+          fetch(`${API_BASE_URL}/hospitality/${id}`, { method: 'DELETE', headers })
+            .then(res => res.ok)
+            .catch(() => false)
+        )
+      );
+
+      const deletedCount = results.filter(Boolean).length;
+      setReservations(prev => prev.filter(r => !selectedIds.includes(r.id)));
+      toast.success(`Successfully purged ${deletedCount} reservation records`, { icon: '🗑️' });
+      setSelectedIds([]);
+      setBulkDeleteModalOpen(false);
+      fetchKpis();
+    } catch (err: any) {
+      toast.error(err.message || 'Error in bulk deletion');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === displayedReservations.length && displayedReservations.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(displayedReservations.map(r => r.id));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  // -------------------------------------------------------------
+  // EDIT / AMEND BOOKING ACTIONS
+  // -------------------------------------------------------------
+  const handleOpenEdit = (res: ReservationRecord) => {
+    setEditRes(res);
+    setEditGuestName(res.guestName || '');
+    setEditGuestPhone(res.guestPhone || '');
+    setEditGuestEmail(res.guestEmail || '');
+    setEditCheckIn(res.checkIn ? new Date(res.checkIn).toISOString().slice(0, 10) : '');
+    setEditCheckOut(res.checkOut ? new Date(res.checkOut).toISOString().slice(0, 10) : '');
+    setEditRoomsCount(String(res.roomsCount || 1));
+    setEditRoomType(res.roomType || 'Deluxe Room');
+    setEditMealPlan(res.mealPlan || 'MAP');
+    setEditContractRate(String(res.contractRate || 0));
+    setEditTotalAmount(String(res.totalAmount || 0));
+    setEditStatus(res.status || 'Pending');
+    setEditSpecialRequests(res.specialRequests || '');
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editRes) return;
+    try {
+      setIsSavingEdit(true);
+      const authToken = getHospitalityToken(token);
+      const headers = getHospitalityHeaders(authToken);
+
+      const count = Number(editRoomsCount) || 1;
+      const rate = Number(editContractRate) || 0;
+      const total = Number(editTotalAmount) || 0;
+
+      const res = await fetch(`${API_BASE_URL}/hospitality/${editRes.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        },
+        body: JSON.stringify({
+          guestName: editGuestName.trim(),
+          guestPhone: editGuestPhone.trim() || undefined,
+          guestEmail: editGuestEmail.trim() || undefined,
+          checkIn: editCheckIn ? new Date(editCheckIn).toISOString() : undefined,
+          checkOut: editCheckOut ? new Date(editCheckOut).toISOString() : undefined,
+          roomsCount: count,
+          roomType: editRoomType,
+          mealPlan: editMealPlan,
+          contractRate: rate,
+          totalAmount: total,
+          status: editStatus,
+          specialRequests: editSpecialRequests.trim() || undefined
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to update reservation');
+      }
+
+      const updatedData = await res.json();
+      setReservations(prev => prev.map(r => r.id === editRes.id ? { ...r, ...updatedData } : r));
+      toast.success(`Reservation #${editRes.bookingReference || editRes.id.slice(0, 8)} updated successfully!`, {
+        icon: '✅'
+      });
+      setEditModalOpen(false);
+      setEditRes(null);
+      fetchKpis();
+    } catch (err: any) {
+      toast.error(err.message || 'Error updating reservation');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   // Fetch AI Agent Logs
   const fetchAiLogs = async (resId?: string) => {
     try {
@@ -907,188 +1082,121 @@ https://kashmir-curators.vercel.app`;
 
   return (
     <div className="space-y-6">
-      {/* 1. OPERATIONAL KPI METRICS CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        {/* Total Reservations */}
+      {/* 1. EXECUTIVE 4-CARD OPERATIONAL METRIC COCKPIT */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Card 1: Stays & In-House Occupancy */}
         <Card 
           onClick={() => setFilterStage('ALL')}
-          className={`cursor-pointer transition-all border rounded-2xl p-3.5 hover:border-amber-500/50 shadow-sm ${
-            filterStage === 'ALL' ? 'bg-amber-500/10 border-amber-500/40 ring-1 ring-amber-500/20' : 'bg-card border-border/70'
+          className={`cursor-pointer transition-all border rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-md relative overflow-hidden group ${
+            filterStage === 'ALL' ? 'bg-card border-amber-500/50 ring-1 ring-amber-500/20' : 'bg-card border-border/80 hover:border-amber-500/40'
           }`}
         >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-            <span>Total Bookings</span>
-            <Layers className="w-3.5 h-3.5 text-amber-500" />
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Building2 className="w-4 h-4 text-amber-500" />
+              <span>Active Portfolio</span>
+            </span>
+            <Badge variant="outline" className="text-[10px] font-mono text-amber-500 border-amber-500/30">
+              {kpisLoading ? '...' : `${kpis.totalReservations} Stays`}
+            </Badge>
           </div>
-          <div className="text-2xl font-black text-foreground mt-1">
+          <div className="text-3xl font-black text-foreground tracking-tight">
             {kpisLoading ? '—' : kpis.totalReservations}
           </div>
-          <span className="text-[10px] text-muted-foreground">Portfolio Volume</span>
+          <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between text-[11px]">
+            <span className="text-emerald-500 font-bold flex items-center gap-1">
+              <LogIn className="w-3 h-3" /> {kpis.guestCheckedIn} In-House
+            </span>
+            <span className="text-muted-foreground">
+              {kpis.upcomingCheckIns} Upcoming
+            </span>
+            <span className="text-muted-foreground">
+              {kpis.todayCheckOuts} Depart
+            </span>
+          </div>
         </Card>
 
-        {/* Pending Hotel Responses */}
+        {/* Card 2: Priority Action Queue */}
         <Card 
           onClick={() => setFilterStage('Pending')}
-          className={`cursor-pointer transition-all border rounded-2xl p-3.5 hover:border-amber-500/50 shadow-sm ${
-            filterStage === 'Pending' ? 'bg-amber-500/10 border-amber-500/40 ring-1 ring-amber-500/20' : 'bg-card border-border/70'
+          className={`cursor-pointer transition-all border rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-md relative overflow-hidden group ${
+            filterStage === 'Pending' ? 'bg-amber-500/10 border-amber-500/50 ring-1 ring-amber-500/20' : 'bg-card border-border/80 hover:border-amber-500/40'
           }`}
         >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-500 flex items-center justify-between">
-            <span>Pending Response</span>
-            <Clock className="w-3.5 h-3.5 text-amber-500" />
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-amber-500" />
+              <span>Front Desk Queue</span>
+            </span>
+            {kpis.pendingHotelResponses > 0 && (
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </span>
+            )}
           </div>
-          <div className="text-2xl font-black text-amber-500 mt-1">
+          <div className="text-3xl font-black text-amber-500 tracking-tight">
             {kpisLoading ? '—' : kpis.pendingHotelResponses}
           </div>
-          <span className="text-[10px] text-muted-foreground">Front Desk Queue</span>
+          <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between text-[11px]">
+            <span className="text-muted-foreground">
+              {kpis.alternativeOffered} Alt. Offered
+            </span>
+            <span className="text-emerald-500 font-bold">
+              {kpis.hotelConfirmed} Confirmed
+            </span>
+            <span className="text-rose-500 font-medium">
+              {kpis.cancelledReservations} Cancelled
+            </span>
+          </div>
         </Card>
 
-        {/* Availability Verified */}
-        <Card 
-          onClick={() => setFilterStage('AVAILABILITY_CONFIRMED')}
-          className={`cursor-pointer transition-all border rounded-2xl p-3.5 hover:border-blue-500/50 shadow-sm ${
-            filterStage === 'AVAILABILITY_CONFIRMED' ? 'bg-blue-500/10 border-blue-500/40 ring-1 ring-blue-500/20' : 'bg-card border-border/70'
-          }`}
-        >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-blue-500 flex items-center justify-between">
-            <span>Avail. Verified</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+        {/* Card 3: Financial Performance & Ledger */}
+        <Card className="bg-card border-border/80 rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-emerald-500/40 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-emerald-500" />
+              <span>Booking Revenue</span>
+            </span>
+            <Badge variant="outline" className="text-[10px] font-mono text-emerald-500 border-emerald-500/30">
+              Gross Ledger
+            </Badge>
           </div>
-          <div className="text-2xl font-black text-blue-500 mt-1">
-            {kpisLoading ? '—' : kpis.availabilityVerified}
-          </div>
-          <span className="text-[10px] text-muted-foreground">Inventory Blocked</span>
-        </Card>
-
-        {/* Alternative Offered */}
-        <Card 
-          onClick={() => setFilterStage('ALTERNATIVE_OFFERED')}
-          className={`cursor-pointer transition-all border rounded-2xl p-3.5 hover:border-purple-500/50 shadow-sm ${
-            filterStage === 'ALTERNATIVE_OFFERED' ? 'bg-purple-500/10 border-purple-500/40 ring-1 ring-purple-500/20' : 'bg-card border-border/70'
-          }`}
-        >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center justify-between">
-            <span>Alt. Offered</span>
-            <RotateCcw className="w-3.5 h-3.5 text-purple-400" />
-          </div>
-          <div className="text-2xl font-black text-purple-400 mt-1">
-            {kpisLoading ? '—' : kpis.alternativeOffered}
-          </div>
-          <span className="text-[10px] text-muted-foreground">Requires Review</span>
-        </Card>
-
-        {/* Hotel Confirmed */}
-        <Card 
-          onClick={() => setFilterStage('Confirmed')}
-          className={`cursor-pointer transition-all border rounded-2xl p-3.5 hover:border-emerald-500/50 shadow-sm ${
-            filterStage === 'Confirmed' ? 'bg-emerald-500/10 border-emerald-500/40 ring-1 ring-emerald-500/20' : 'bg-card border-border/70'
-          }`}
-        >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 flex items-center justify-between">
-            <span>Hotel Confirmed</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-          </div>
-          <div className="text-2xl font-black text-emerald-500 mt-1">
-            {kpisLoading ? '—' : kpis.hotelConfirmed}
-          </div>
-          <span className="text-[10px] text-muted-foreground">Guaranteed CRS</span>
-        </Card>
-
-        {/* Voucher Dispatched */}
-        <Card 
-          onClick={() => setFilterStage('VOUCHER_SENT')}
-          className="bg-card border-border/70 rounded-2xl p-3.5 hover:border-amber-500/50 shadow-sm transition-all"
-        >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-            <span>Voucher Dispatched</span>
-            <FileCheck className="w-3.5 h-3.5 text-amber-500" />
-          </div>
-          <div className="text-2xl font-black text-foreground mt-1">
-            {kpisLoading ? '—' : kpis.guestVoucherDispatched}
-          </div>
-          <span className="text-[10px] text-muted-foreground">Guest Issued</span>
-        </Card>
-
-        {/* Guest Checked-In */}
-        <Card 
-          onClick={() => setFilterStage('Checked-In')}
-          className={`cursor-pointer transition-all border rounded-2xl p-3.5 hover:border-emerald-500/50 shadow-sm ${
-            filterStage === 'Checked-In' ? 'bg-emerald-500/10 border-emerald-500/40 ring-1 ring-emerald-500/20' : 'bg-card border-border/70'
-          }`}
-        >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center justify-between">
-            <span>Checked-In</span>
-            <LogIn className="w-3.5 h-3.5 text-emerald-500" />
-          </div>
-          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-            {kpisLoading ? '—' : kpis.guestCheckedIn}
-          </div>
-          <span className="text-[10px] text-muted-foreground">In-House Stays</span>
-        </Card>
-
-        {/* Cancelled */}
-        <Card 
-          onClick={() => setFilterStage('Cancelled')}
-          className={`cursor-pointer transition-all border rounded-2xl p-3.5 hover:border-rose-500/50 shadow-sm ${
-            filterStage === 'Cancelled' ? 'bg-rose-500/10 border-rose-500/40 ring-1 ring-rose-500/20' : 'bg-card border-border/70'
-          }`}
-        >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-rose-500 flex items-center justify-between">
-            <span>Cancelled</span>
-            <XCircle className="w-3.5 h-3.5 text-rose-500" />
-          </div>
-          <div className="text-2xl font-black text-rose-500 mt-1">
-            {kpisLoading ? '—' : kpis.cancelledReservations}
-          </div>
-          <span className="text-[10px] text-muted-foreground">Released Rooms</span>
-        </Card>
-
-        {/* Upcoming Check-Ins (48h) */}
-        <Card className="bg-card border-border/70 rounded-2xl p-3.5 hover:border-amber-500/50 shadow-sm transition-all">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-            <span>Upcoming (48h)</span>
-            <Calendar className="w-3.5 h-3.5 text-amber-500" />
-          </div>
-          <div className="text-2xl font-black text-foreground mt-1">
-            {kpisLoading ? '—' : kpis.upcomingCheckIns}
-          </div>
-          <span className="text-[10px] text-muted-foreground">Arrivals Alert</span>
-        </Card>
-
-        {/* Today's Check-Outs */}
-        <Card className="bg-card border-border/70 rounded-2xl p-3.5 hover:border-amber-500/50 shadow-sm transition-all">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-            <span>Today's Check-Out</span>
-            <LogOut className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <div className="text-2xl font-black text-foreground mt-1">
-            {kpisLoading ? '—' : kpis.todayCheckOuts}
-          </div>
-          <span className="text-[10px] text-muted-foreground">Departures</span>
-        </Card>
-
-        {/* Total Revenue */}
-        <Card className="bg-card border-border/70 rounded-2xl p-3.5 hover:border-amber-500/50 shadow-sm transition-all col-span-2 sm:col-span-1">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-            <span>Booking Revenue</span>
-            <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-          </div>
-          <div className="text-xl font-black text-emerald-500 mt-1 truncate">
+          <div className="text-2xl sm:text-3xl font-black text-emerald-500 tracking-tight truncate">
             ₹{kpisLoading ? '—' : (kpis.totalRevenue >= 100000 ? `${(kpis.totalRevenue / 100000).toFixed(1)}L` : kpis.totalRevenue.toLocaleString('en-IN'))}
           </div>
-          <span className="text-[10px] text-muted-foreground">Gross Portfolio</span>
+          <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between text-[11px]">
+            <span className="text-muted-foreground">
+              Dues: <strong className="text-foreground">₹{kpisLoading ? '—' : (kpis.outstandingHotelPayments >= 100000 ? `${(kpis.outstandingHotelPayments / 100000).toFixed(1)}L` : kpis.outstandingHotelPayments.toLocaleString('en-IN'))}</strong>
+            </span>
+            <span className="text-emerald-500 font-bold">
+              Margin: ₹{kpisLoading ? '—' : Math.max(0, kpis.totalRevenue - kpis.outstandingHotelPayments).toLocaleString('en-IN')}
+            </span>
+          </div>
         </Card>
 
-        {/* Outstanding Hotel Payments */}
-        <Card className="bg-card border-border/70 rounded-2xl p-3.5 hover:border-amber-500/50 shadow-sm transition-all col-span-2 sm:col-span-1">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-            <span>Supplier Dues</span>
-            <DollarSign className="w-3.5 h-3.5 text-amber-500" />
+        {/* Card 4: Dispatch Matrix & Direct Channels */}
+        <Card className="bg-card border-border/80 rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-sky-500/40 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-sky-500 flex items-center gap-1.5">
+              <SendHorizontal className="w-4 h-4 text-sky-500" />
+              <span>Vouchers & Dispatch</span>
+            </span>
+            <Badge variant="outline" className="text-[10px] font-bold text-sky-500 border-sky-500/30">
+              {kpis.guestVoucherDispatched} Issued
+            </Badge>
           </div>
-          <div className="text-xl font-black text-amber-500 mt-1 truncate">
-            ₹{kpisLoading ? '—' : (kpis.outstandingHotelPayments >= 100000 ? `${(kpis.outstandingHotelPayments / 100000).toFixed(1)}L` : kpis.outstandingHotelPayments.toLocaleString('en-IN'))}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-2xl font-black text-foreground">Multi-Channel</span>
           </div>
-          <span className="text-[10px] text-muted-foreground">Payable Ledger</span>
+          <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between text-[11px]">
+            <span className="text-emerald-500 font-bold flex items-center gap-1">
+              <MessageSquare className="w-3 h-3" /> WhatsApp Live
+            </span>
+            <span className="text-amber-500 font-bold flex items-center gap-1">
+              <Mail className="w-3 h-3" /> Email Redirect
+            </span>
+          </div>
         </Card>
       </div>
 
@@ -1220,7 +1328,7 @@ https://kashmir-curators.vercel.app`;
 
       {/* 3. COMPREHENSIVE RESERVATION MANAGEMENT TABLE */}
       <Card className="rounded-3xl border border-border/80 bg-card overflow-hidden shadow-sm">
-        <div className="p-4 sm:p-5 border-b border-border/50 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CalendarCheck2 className="w-5 h-5 text-amber-500" />
             <h2 className="text-base font-black text-foreground">
@@ -1230,6 +1338,29 @@ https://kashmir-curators.vercel.app`;
               {displayedReservations.length} records
             </Badge>
           </div>
+
+          {/* Bulk Selection Notification Bar */}
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-2xl text-xs font-bold animate-fade-in">
+              <span>{selectedIds.length} selected</span>
+              <Button
+                size="sm"
+                onClick={() => setBulkDeleteModalOpen(true)}
+                className="h-7 px-2.5 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl gap-1 shadow-sm"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Delete Selected</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds([])}
+                className="h-7 px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground rounded-xl"
+              >
+                Deselect
+              </Button>
+            </div>
+          )}
         </div>
 
         {isLoading ? (
@@ -1259,6 +1390,14 @@ https://kashmir-curators.vercel.app`;
             <Table>
               <TableHeader className="bg-muted/40">
                 <TableRow className="border-border/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === displayedReservations.length && displayedReservations.length > 0}
+                      onChange={handleToggleSelectAll}
+                      className="rounded text-amber-500 focus:ring-amber-500 cursor-pointer"
+                    />
+                  </TableHead>
                   <TableHead className="w-36">Reference</TableHead>
                   <TableHead>Primary Guest</TableHead>
                   <TableHead>Hotel & Location</TableHead>
@@ -1267,7 +1406,7 @@ https://kashmir-curators.vercel.app`;
                   <TableHead>Financials</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Voucher</TableHead>
-                  <TableHead className="text-right">Operations Actions</TableHead>
+                  <TableHead className="text-right min-w-[240px]">Operations Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="text-xs">
@@ -1276,9 +1415,25 @@ https://kashmir-curators.vercel.app`;
                   const isPending = res.status === 'Pending' || res.confirmationStage === 'PENDING_RESPONSE';
                   const isConfirmed = res.status === 'Confirmed' || res.confirmationStage === 'HOTEL_CONFIRMED';
                   const isCheckedIn = res.status === 'Checked-In';
+                  const isSelected = selectedIds.includes(res.id);
 
                   return (
-                    <TableRow key={res.id} className="border-border/40 hover:bg-muted/30 transition-colors">
+                    <TableRow 
+                      key={res.id} 
+                      className={`border-border/40 transition-colors ${
+                        isSelected ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-muted/30'
+                      }`}
+                    >
+                      {/* Checkbox */}
+                      <TableCell className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(res.id)}
+                          className="rounded text-amber-500 focus:ring-amber-500 cursor-pointer"
+                        />
+                      </TableCell>
+
                       {/* Booking Reference */}
                       <TableCell className="font-mono font-bold text-amber-500">
                         <div>{res.bookingReference || res.id.slice(0, 8)}</div>
@@ -1377,8 +1532,88 @@ https://kashmir-curators.vercel.app`;
 
                       {/* Actions */}
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* View Detail Drawer */}
+                        <div className="flex items-center justify-end gap-1">
+                          {/* 1. Quick WhatsApp Voucher */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const hotelPhone = res.hotel?.contactPhone?.replace(/\D/g, '') || res.receptionPhone?.replace(/\D/g, '') || '';
+                              const portalUrl = `${window.location.origin}/hospitality?tab=reception&token=${res.secureToken || res.id}`;
+                              const checkInFormatted = new Date(res.checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                              const checkOutFormatted = new Date(res.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                              const msg = 
+`*HOTEL BOOKING RESERVATION VOUCHER — KASHMIR CURATORS DMC*
+Ref: *#${res.bookingReference || res.id.slice(0, 8)}*
+--------------------------------------------------
+🏨 *Hotel:* ${res.hotel?.name || 'Partner Hotel'} (${res.destination || 'Kashmir'})
+👤 *Guest:* ${res.guestName} (${res.adults || 2} Adults)
+📞 *Contact:* ${res.guestPhone || 'On File'}
+📅 *Check-In:* ${checkInFormatted}
+📅 *Check-Out:* ${checkOutFormatted} (${nights} Nights)
+🛏️ *Room:* ${res.roomsCount || 1}x ${res.roomType} (${res.mealPlan})
+💰 *Contract Total:* ₹${(res.totalAmount || 0).toLocaleString('en-IN')}
+--------------------------------------------------
+⚡ *1-Click Reception Portal:*
+${portalUrl}
+
+— Kashmir Curators DMC Reservation Desk`;
+                              const waNum = hotelPhone.length === 10 ? `91${hotelPhone}` : hotelPhone;
+                              const waUrl = waNum ? `https://wa.me/${waNum}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                              window.open(waUrl, '_blank');
+                            }}
+                            className="h-8 w-8 p-0 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-xl"
+                            title="Send WhatsApp Voucher"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {/* 2. Direct Email Redirect */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const targetEmail = res.receptionEmail || res.hotel?.contactEmail || '';
+                              const checkInFormatted = new Date(res.checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                              const checkOutFormatted = new Date(res.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                              const portalUrl = `${window.location.origin}/hospitality?tab=reception&token=${res.secureToken || res.id}`;
+                              const subject = `[Reservation Voucher #${res.bookingReference || res.id.slice(0, 8)}] ${res.guestName} - ${res.hotel?.name || 'Hotel'} (${checkInFormatted} to ${checkOutFormatted})`;
+                              const body = 
+`Attn: Front Desk / Reservations - ${res.hotel?.name || 'Hotel'}
+
+Greetings from Kashmir Curators DMC Operations Desk.
+
+Booking Reference: #${res.bookingReference || res.id.slice(0, 8)}
+Guest: ${res.guestName} (${res.adults || 2} Adults)
+Stay Dates: ${checkInFormatted} to ${checkOutFormatted} (${nights} Nights)
+Room: ${res.roomsCount || 1}x ${res.roomType} (${res.mealPlan})
+Agreed Contract Amount: ₹${(res.totalAmount || 0).toLocaleString('en-IN')}
+
+1-Click Online Confirmation Link:
+${portalUrl}
+
+Warm regards,
+Kashmir Curators DMC Central Reservations`;
+                              window.location.href = `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                            }}
+                            className="h-8 w-8 p-0 text-amber-500 border-amber-500/30 hover:bg-amber-500/10 rounded-xl"
+                            title="Direct Email Redirect"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {/* 3. Edit / Amend Booking */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEdit(res)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl"
+                            title="Edit / Amend Booking"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-blue-500" />
+                          </Button>
+
+                          {/* 4. Details Drawer */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1390,34 +1625,33 @@ https://kashmir-curators.vercel.app`;
                               fetchAiLogs(res.id);
                               setDetailDrawerOpen(true);
                             }}
-                            className="h-8 px-2 text-xs font-bold rounded-lg text-foreground hover:bg-muted"
+                            className="h-8 px-2 text-xs font-bold rounded-xl text-foreground hover:bg-muted"
                             title="View Full Dossier & AI Agent"
                           >
                             <Eye className="w-3.5 h-3.5 text-amber-500 mr-1" />
                             <span>Details</span>
                           </Button>
 
-                          {/* Quick AI Smart Nudge */}
-                          {isPending && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={isNudging}
-                              onClick={() => handleTriggerSmartNudge(res.id)}
-                              className="h-8 px-2 rounded-lg text-xs font-bold text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
-                              title="Send Escalating AI Follow-Up Reminder to Hotel"
-                            >
-                              <Sparkles className="w-3.5 h-3.5 mr-1" />
-                              <span>Nudge</span>
-                            </Button>
-                          )}
+                          {/* 5. DELETE RESERVATION BUTTON */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setResToDelete(res);
+                              setDeleteModalOpen(true);
+                            }}
+                            className="h-8 w-8 p-0 text-rose-500 hover:text-rose-600 hover:bg-rose-500/15 rounded-xl transition-colors"
+                            title="Delete Reservation Permanently"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
 
-                          {/* Quick Confirm */}
+                          {/* Contextual Action: Quick Confirm */}
                           {isPending && (
                             <Button
                               size="sm"
                               onClick={() => handleQuickConfirm(res.id, res.guestName)}
-                              className="h-8 px-2.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
+                              className="h-8 px-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
                               title="Confirm booking"
                             >
                               <Check className="w-3.5 h-3.5 mr-1" />
@@ -1425,7 +1659,7 @@ https://kashmir-curators.vercel.app`;
                             </Button>
                           )}
 
-                          {/* Check-In Action */}
+                          {/* Contextual Action: Check-In */}
                           {isConfirmed && !isCheckedIn && (
                             <Button
                               size="sm"
@@ -1435,46 +1669,12 @@ https://kashmir-curators.vercel.app`;
                                 setCheckInRoomNumber(res.assignedRoomNumber || '');
                                 setCheckInModalOpen(true);
                               }}
-                              className="h-8 px-2 rounded-lg text-xs font-bold text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
+                              className="h-8 px-2 rounded-xl text-xs font-bold text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
                             >
                               <LogIn className="w-3.5 h-3.5 mr-1" />
                               <span>Check-In</span>
                             </Button>
                           )}
-
-                          {/* Dispatch Guest Voucher */}
-                          {isConfirmed && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedRes(res);
-                                setTargetEmail(res.guestEmail || '');
-                                setVoucherModalOpen(true);
-                              }}
-                              className="h-8 px-2 text-xs rounded-lg text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
-                              title="Send Guest Voucher"
-                            >
-                              <FileCheck className="w-3.5 h-3.5 mr-1" />
-                              <span>Voucher</span>
-                            </Button>
-                          )}
-
-                          {/* Resend Email */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedRes(res);
-                              setTargetEmail(res.receptionEmail || res.hotel?.contactEmail || '');
-                              setEmailTemplateType('CONFIRMATION_REQUEST');
-                              setResendEmailModalOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg"
-                            title="Resend Tracked Email"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -2533,6 +2733,307 @@ https://kashmir-curators.vercel.app`;
                   className="rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 px-4"
                 >
                   {isSubmittingAction ? 'Applying...' : 'Apply & Audit Log'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 10. SINGLE DELETE CONFIRMATION MODAL */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-rose-500 flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-rose-500" />
+              <span>Delete Reservation Voucher</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-1.5">
+              Permanently purge this reservation record from the central database.
+            </DialogDescription>
+          </DialogHeader>
+
+          {resToDelete && (
+            <div className="space-y-4 py-2 text-xs">
+              <div className="bg-rose-500/10 border border-rose-500/20 p-3.5 rounded-2xl space-y-1.5">
+                <div className="font-bold text-foreground text-sm">
+                  {resToDelete.guestName}
+                </div>
+                <div className="text-muted-foreground">
+                  {resToDelete.hotel?.name} • {resToDelete.roomType} ({resToDelete.roomsCount || 1} room)
+                </div>
+                <div className="font-mono text-amber-500 text-[11px]">
+                  Ref: #{resToDelete.bookingReference || resToDelete.id.slice(0, 8)}
+                </div>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Are you sure you want to delete this reservation? This action is <strong>irreversible</strong> and will automatically free up any assigned hotel rooms and erase all voucher audit history.
+              </p>
+
+              <DialogFooter className="pt-2 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                  className="rounded-xl text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleDeleteReservation}
+                  disabled={isDeleting}
+                  className="rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white gap-1.5 shadow-md shadow-rose-600/20 px-4"
+                >
+                  {isDeleting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  <span>{isDeleting ? 'Deleting...' : 'Delete Permanently'}</span>
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 11. BULK DELETE CONFIRMATION MODAL */}
+      <Dialog open={bulkDeleteModalOpen} onOpenChange={setBulkDeleteModalOpen}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-rose-500 flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-rose-500" />
+              <span>Bulk Purge {selectedIds.length} Reservations</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-1.5">
+              Warning: You are about to permanently delete multiple bookings simultaneously.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-xs">
+            <div className="bg-rose-500/10 border border-rose-500/20 p-3.5 rounded-2xl text-rose-600 dark:text-rose-400 font-bold">
+              {selectedIds.length} records selected for permanent removal
+            </div>
+
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              This action will completely purge all selected vouchers and update live KPIs. Are you sure you wish to proceed?
+            </p>
+
+            <DialogFooter className="pt-2 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setBulkDeleteModalOpen(false)}
+                disabled={isBulkDeleting}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white gap-1.5 shadow-md shadow-rose-600/20 px-4"
+              >
+                {isBulkDeleting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>{isBulkDeleting ? 'Purging...' : `Purge ${selectedIds.length} Bookings`}</span>
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 12. EDIT / AMEND BOOKING MODAL */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="rounded-3xl max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-amber-500" />
+              <span>Edit / Amend Booking #{editRes?.bookingReference || editRes?.id.slice(0, 8)}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Update guest details, travel dates, room type, tariff rates, or reservation status.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editRes && (
+            <form onSubmit={handleSaveEdit} className="space-y-4 py-2 text-xs">
+              <div className="bg-muted/40 p-3 rounded-2xl border border-border/70 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-foreground">{editRes.hotel?.name || 'Partner Hotel'}</div>
+                  <div className="text-muted-foreground text-[11px]">{editRes.destination || 'Kashmir'}</div>
+                </div>
+                <Badge variant="outline" className="font-mono text-xs text-amber-500 border-amber-500/30">
+                  Ref: #{editRes.bookingReference || editRes.id.slice(0, 8)}
+                </Badge>
+              </div>
+
+              {/* Guest Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Primary Guest Name *
+                  </label>
+                  <Input
+                    required
+                    value={editGuestName}
+                    onChange={(e) => setEditGuestName(e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Guest Phone / WhatsApp
+                  </label>
+                  <Input
+                    type="tel"
+                    value={editGuestPhone}
+                    onChange={(e) => setEditGuestPhone(e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Guest Email
+                  </label>
+                  <Input
+                    type="email"
+                    value={editGuestEmail}
+                    onChange={(e) => setEditGuestEmail(e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Travel Dates */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Check-In Date *
+                  </label>
+                  <Input
+                    type="date"
+                    required
+                    value={editCheckIn}
+                    onChange={(e) => setEditCheckIn(e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Check-Out Date *
+                  </label>
+                  <Input
+                    type="date"
+                    required
+                    value={editCheckOut}
+                    onChange={(e) => setEditCheckOut(e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Room, Meal & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Room Category
+                  </label>
+                  <Input
+                    value={editRoomType}
+                    onChange={(e) => setEditRoomType(e.target.value)}
+                    className="rounded-xl h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Meal Plan
+                  </label>
+                  <Select value={editMealPlan} onValueChange={setEditMealPlan}>
+                    <SelectTrigger className="rounded-xl h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EP">EP (Room Only)</SelectItem>
+                      <SelectItem value="CP">CP (Breakfast)</SelectItem>
+                      <SelectItem value="MAP">MAP (Breakfast & Dinner)</SelectItem>
+                      <SelectItem value="AP">AP (All Meals)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Reservation Status
+                  </label>
+                  <Select value={editStatus} onValueChange={setEditStatus}>
+                    <SelectTrigger className="rounded-xl h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Confirmed">Confirmed</SelectItem>
+                      <SelectItem value="Checked-In">Checked-In</SelectItem>
+                      <SelectItem value="Checked-Out">Checked-Out</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Tariffs */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Contract Rate / Night (₹)
+                  </label>
+                  <Input
+                    type="number"
+                    value={editContractRate}
+                    onChange={(e) => setEditContractRate(e.target.value)}
+                    className="rounded-xl h-9 text-xs font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                    Total Amount (₹)
+                  </label>
+                  <Input
+                    type="number"
+                    value={editTotalAmount}
+                    onChange={(e) => setEditTotalAmount(e.target.value)}
+                    className="rounded-xl h-9 text-xs font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Special Requests */}
+              <div>
+                <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                  Special Requests / Winter Preferences
+                </label>
+                <Textarea
+                  value={editSpecialRequests}
+                  onChange={(e) => setEditSpecialRequests(e.target.value)}
+                  className="rounded-xl text-xs h-16 resize-none"
+                  placeholder="e.g. Bukhari heating pre-lit, Shikara Ghat 2 pickup..."
+                />
+              </div>
+
+              <DialogFooter className="pt-2 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditModalOpen(false)}
+                  disabled={isSavingEdit}
+                  className="rounded-xl text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 px-5 shadow-md shadow-amber-500/20"
+                >
+                  {isSavingEdit ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </form>

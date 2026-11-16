@@ -574,6 +574,11 @@ export const updateReservation = async (req: AuthRequest, res: Response) => {
     if (holdUntil !== undefined) {
       updateData.holdUntil = holdUntil ? new Date(holdUntil) : null;
     }
+    if (req.body.guestName) updateData.guestName = req.body.guestName.trim();
+    if (req.body.guestPhone !== undefined) updateData.guestPhone = req.body.guestPhone.trim();
+    if (req.body.guestEmail !== undefined) updateData.guestEmail = req.body.guestEmail.trim();
+    if (req.body.contractRate !== undefined) updateData.contractRate = Number(req.body.contractRate) || 0;
+    if (req.body.totalAmount !== undefined) updateData.totalAmount = Number(req.body.totalAmount) || 0;
     if (specialRequests !== undefined) updateData.specialRequests = specialRequests;
     if (roomsCount !== undefined) updateData.roomsCount = Number(roomsCount) || 1;
     if (roomType !== undefined) updateData.roomType = roomType;
@@ -766,22 +771,36 @@ export const deleteReservation = async (req: AuthRequest, res: Response) => {
     const p = prisma as any;
     const { id } = req.params;
 
-    const existing = await p.hotelReservation.findUnique({ where: { id } });
+    const existing = await p.hotelReservation.findUnique({ 
+      where: { id },
+      include: { hotel: true }
+    });
     if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+
+    // Free up any room linked to this reservation
+    try {
+      await p.room.updateMany({
+        where: { currentReservationId: id },
+        data: { currentReservationId: null, occupancyStatus: 'VACANT_CLEAN' }
+      });
+    } catch (roomErr: any) {
+      console.warn('[ReservationsController] Room unassign warning:', roomErr.message);
+    }
 
     await p.hotelReservation.delete({ where: { id } });
 
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {
         type: 'DELETE',
-        message: `Reservation for ${existing.guestName} deleted`,
+        message: `Reservation #${existing.bookingReference || id.slice(0, 8)} for ${existing.guestName} deleted`,
         booking: { id, entityType: 'reservation' }
       });
     }
 
-    res.json({ success: true, message: 'Reservation successfully deleted' });
+    res.json({ success: true, message: `Reservation #${existing.bookingReference || id.slice(0, 8)} permanently deleted`, id });
   } catch (error: any) {
-    res.status(500).json({ error: 'Failed to delete reservation' });
+    console.error('[ReservationsController] Delete error:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to delete reservation' });
   }
 };
 

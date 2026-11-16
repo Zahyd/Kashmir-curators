@@ -13,7 +13,8 @@ import {
   DollarSign,
   KeyRound,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,8 +49,8 @@ interface HotelItem {
 }
 
 export const HospitalityDashboard: React.FC = () => {
-  const { user, token } = useAuth();
-  const { teamUser } = useTeamAuth();
+  const { user, token, logout } = useAuth();
+  const { teamUser, teamLogout } = useTeamAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -84,6 +85,16 @@ export const HospitalityDashboard: React.FC = () => {
     localStorage.removeItem('hospitality_token');
     setSession(null);
     toast.info('Hospitality Desk session closed. Portal locked.');
+  };
+
+  const handleComprehensiveLogout = () => {
+    localStorage.removeItem('hospitality_session');
+    localStorage.removeItem('hospitality_token');
+    setSession(null);
+    if (teamLogout) teamLogout();
+    if (logout) logout();
+    toast.success('Signed out of Hospitality Desk successfully.');
+    navigate('/login');
   };
 
   // Property list & Selected Property
@@ -298,6 +309,18 @@ export const HospitalityDashboard: React.FC = () => {
                       <span className="hidden sm:inline">Keys</span>
                     </Button>
                   )}
+
+                  {/* Modern Logout Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleComprehensiveLogout}
+                    className="h-10 px-3.5 text-xs text-rose-500 border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-600 rounded-2xl gap-1.5 font-bold shadow-sm transition-all"
+                    title="Sign Out of Hospitality Operations"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Logout</span>
+                  </Button>
                 </div>
 
               </div>

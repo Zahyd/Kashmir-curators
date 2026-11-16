@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   ArrowRight,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -434,6 +435,24 @@ https://kashmir-curators.vercel.app`;
       fetchVouchers();
     } catch (err: any) {
       toast.error(err.message || 'Error cancelling voucher');
+    }
+  };
+
+  const handleDeleteVoucher = async (voucherId: string, guest: string) => {
+    if (!window.confirm(`Permanently delete reservation voucher for ${guest}? This will purge the record from the database.`)) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/hospitality/${voucherId}`, {
+        method: 'DELETE',
+        headers: getHospitalityHeaders(token)
+      });
+
+      if (!res.ok) throw new Error('Failed to delete voucher');
+
+      toast.success(`Booking voucher for ${guest} permanently deleted.`, { icon: '🗑️' });
+      setVouchers(prev => prev.filter(v => v.id !== voucherId));
+    } catch (err: any) {
+      toast.error(err.message || 'Error deleting voucher');
     }
   };
 
@@ -848,12 +867,24 @@ _Please click the portal link above to confirm room availability and assign your
                           variant="ghost"
                           size="sm"
                           onClick={() => handleCancelVoucher(v.id, v.guestName)}
-                          className="rounded-xl text-xs text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 h-9"
+                          className="rounded-xl text-xs text-amber-500 hover:bg-amber-500/10 hover:text-amber-600 h-9"
                         >
                           <X className="w-3.5 h-3.5" />
                           <span>Release</span>
                         </Button>
                       )}
+
+                      {/* Permanent Delete Button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteVoucher(v.id, v.guestName)}
+                        className="rounded-xl text-xs text-rose-500 hover:bg-rose-500/15 hover:text-rose-600 h-9 px-2.5 gap-1 font-bold transition-colors"
+                        title="Delete Reservation Permanently"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </Button>
                     </div>
                   </div>
                 </div>
