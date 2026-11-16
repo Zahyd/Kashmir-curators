@@ -80,6 +80,8 @@ export interface ReservationRecord {
   guestName: string;
   guestEmail?: string;
   guestPhone?: string;
+  receptionEmail?: string;
+  receptionPhone?: string;
   checkIn: string;
   checkOut: string;
   roomType: string;
@@ -144,6 +146,40 @@ interface OperationalKpis {
   totalRevenue: number;
   outstandingHotelPayments: number;
 }
+
+export const validatePhoneNumber = (phone: string): { isValid: boolean; message?: string } => {
+  if (!phone || !phone.trim()) {
+    return { isValid: false, message: 'Phone number is required' };
+  }
+  const trimmed = phone.trim();
+  if (/[a-zA-Z]/.test(trimmed)) {
+    return { isValid: false, message: 'Phone number cannot contain letters' };
+  }
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length < 10) {
+    return { isValid: false, message: `Phone number is incomplete (${digits.length}/10 digits minimum)` };
+  }
+  if (digits.length > 15) {
+    return { isValid: false, message: `Phone number exceeds max length (${digits.length}/15 digits)` };
+  }
+  if (/^(\d)\1{9,}$/.test(digits)) {
+    return { isValid: false, message: 'Invalid phone number format (repeated digits)' };
+  }
+  if (digits.length === 10) {
+    if (!/^[6-9]\d{9}$/.test(digits)) {
+      return { isValid: false, message: 'Indian mobile numbers must start with 6, 7, 8, or 9' };
+    }
+  } else if (digits.length === 12 && digits.startsWith('91')) {
+    if (!/^91[6-9]\d{9}$/.test(digits)) {
+      return { isValid: false, message: 'Indian mobile numbers must start with 6, 7, 8, or 9 after +91' };
+    }
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    if (!/^0[6-9]\d{9}$/.test(digits)) {
+      return { isValid: false, message: 'Mobile numbers must start with 6, 7, 8, or 9 after 0' };
+    }
+  }
+  return { isValid: true };
+};
 
 interface UnifiedOperationsWorkspaceProps {
   selectedHotelId: string;
@@ -272,6 +308,18 @@ export const UnifiedOperationsWorkspace: React.FC<UnifiedOperationsWorkspaceProp
   const [dispSellingPrice, setDispSellingPrice] = useState('15000');
   const [dispAdvanceReceived, setDispAdvanceReceived] = useState('5000');
   const [dispAutoDispatchEmail, setDispAutoDispatchEmail] = useState(true);
+  const [dispPhoneTouched, setDispPhoneTouched] = useState(false);
+  const [editPhoneTouched, setEditPhoneTouched] = useState(false);
+
+  const dispPhoneValidation = useMemo(() => {
+    if (!dispGuestPhone && !dispPhoneTouched) return { isValid: true, message: '' };
+    return validatePhoneNumber(dispGuestPhone);
+  }, [dispGuestPhone, dispPhoneTouched]);
+
+  const editPhoneValidation = useMemo(() => {
+    if (!editGuestPhone && !editPhoneTouched) return { isValid: true, message: '' };
+    return validatePhoneNumber(editGuestPhone);
+  }, [editGuestPhone, editPhoneTouched]);
 
   // Auto-fill Hotel Reception details when hotel changes in dispatch form
   useEffect(() => {
@@ -489,6 +537,24 @@ export const UnifiedOperationsWorkspace: React.FC<UnifiedOperationsWorkspaceProp
   // Submit Multi-Section Dispatch Form
   const handleDispatchSubmit = async (e?: React.FormEvent, dispatchMode?: 'WHATSAPP' | 'EMAIL') => {
     if (e) e.preventDefault();
+    setDispPhoneTouched(true);
+
+    const phoneVal = validatePhoneNumber(dispGuestPhone);
+    if (!phoneVal.isValid) {
+      toast.error(`Incorrect Guest Phone Number: ${phoneVal.message || 'Please provide a valid 10-digit mobile or international number.'}`);
+      setFormStep('GUEST');
+      return;
+    }
+
+    if (dispReceptionPhone.trim()) {
+      const recVal = validatePhoneNumber(dispReceptionPhone);
+      if (!recVal.isValid) {
+        toast.error(`Incorrect Reception Phone: ${recVal.message}`);
+        setFormStep('HOTEL');
+        return;
+      }
+    }
+
     if (!dispHotelId || !dispGuestName.trim() || !dispCheckIn || !dispCheckOut) {
       toast.error('Please complete mandatory guest name, hotel, and travel dates.');
       return;
@@ -660,6 +726,7 @@ https://kashmir-curators.vercel.app`;
       setDispGuestPhone('');
       setDispGuestEmail('');
       setDispSpecialRequests('');
+      setDispPhoneTouched(false);
       setFormStep('GUEST');
 
       fetchKpis();
@@ -753,6 +820,11 @@ https://kashmir-curators.vercel.app`;
   };
 
   const handleToggleSelectAll = () => {
+    const authToken = getHospitalityToken(token);
+    if (!authToken) {
+      toast.error('Authentication required to select reservations.');
+      return;
+    }
     if (selectedIds.length === displayedReservations.length && displayedReservations.length > 0) {
       setSelectedIds([]);
     } else {
@@ -761,6 +833,11 @@ https://kashmir-curators.vercel.app`;
   };
 
   const handleToggleSelect = (id: string) => {
+    const authToken = getHospitalityToken(token);
+    if (!authToken) {
+      toast.error('Authentication required to manage reservation selection.');
+      return;
+    }
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
@@ -781,12 +858,23 @@ https://kashmir-curators.vercel.app`;
     setEditTotalAmount(String(res.totalAmount || 0));
     setEditStatus(res.status || 'Pending');
     setEditSpecialRequests(res.specialRequests || '');
+    setEditPhoneTouched(false);
     setEditModalOpen(true);
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editRes) return;
+
+    if (editGuestPhone.trim()) {
+      setEditPhoneTouched(true);
+      const phoneVal = validatePhoneNumber(editGuestPhone);
+      if (!phoneVal.isValid) {
+        toast.error(`Incorrect Guest Phone: ${phoneVal.message || 'Please provide a valid 10-digit mobile or international number.'}`);
+        return;
+      }
+    }
+
     try {
       setIsSavingEdit(true);
       const authToken = getHospitalityToken(token);
@@ -1738,10 +1826,16 @@ https://kashmir-curators.vercel.app`;
                 <TableRow className="border-border/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   <TableHead className="w-10">
                     <input
+                      ref={(el) => {
+                        if (el) {
+                          el.indeterminate = selectedIds.length > 0 && selectedIds.length < displayedReservations.length;
+                        }
+                      }}
                       type="checkbox"
                       checked={selectedIds.length === displayedReservations.length && displayedReservations.length > 0}
                       onChange={handleToggleSelectAll}
-                      className="rounded text-amber-500 focus:ring-amber-500 cursor-pointer"
+                      aria-label="Select all reservations"
+                      className="w-4 h-4 rounded border-border/80 text-amber-500 focus:ring-amber-500/40 accent-amber-500 cursor-pointer transition-all"
                     />
                   </TableHead>
                   <TableHead className="w-36">Reference</TableHead>
@@ -1776,7 +1870,8 @@ https://kashmir-curators.vercel.app`;
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleSelect(res.id)}
-                          className="rounded text-amber-500 focus:ring-amber-500 cursor-pointer"
+                          aria-label={`Select reservation ${res.bookingReference || res.id}`}
+                          className="w-4 h-4 rounded border-border/80 text-amber-500 focus:ring-amber-500/40 accent-amber-500 cursor-pointer transition-all"
                         />
                       </TableCell>
 
@@ -2059,7 +2154,25 @@ Kashmir Curators DMC Central Reservations`;
               <button
                 key={step.id}
                 type="button"
-                onClick={() => setFormStep(step.id as any)}
+                onClick={() => {
+                  if (step.id !== 'GUEST') {
+                    setDispPhoneTouched(true);
+                    const val = validatePhoneNumber(dispGuestPhone);
+                    if (!val.isValid) {
+                      toast.error(`Incorrect Phone Number: ${val.message || 'Please enter a valid 10-digit mobile or international number.'}`);
+                      return;
+                    }
+                    if (!dispGuestName.trim()) {
+                      toast.error('Please enter the Primary Guest Name.');
+                      return;
+                    }
+                    if (!dispCheckIn || !dispCheckOut) {
+                      toast.error('Please select both Check-In and Check-Out dates.');
+                      return;
+                    }
+                  }
+                  setFormStep(step.id as any);
+                }}
                 className={`font-bold transition-all ${
                   formStep === step.id ? 'text-amber-500 border-b-2 border-amber-500 pb-1 font-black' : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -2087,16 +2200,48 @@ Kashmir Curators DMC Central Reservations`;
                     />
                   </div>
                   <div>
-                    <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
-                      Guest WhatsApp / Phone *
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold uppercase tracking-wider text-muted-foreground block text-[11px]">
+                        Guest WhatsApp / Phone *
+                      </label>
+                      {dispPhoneTouched && (
+                        dispPhoneValidation.isValid ? (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            Verified Contact
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-red-500 font-bold flex items-center gap-1 animate-pulse">
+                            <AlertCircle className="w-3 h-3 text-red-500" />
+                            Incorrect Phone
+                          </span>
+                        )
+                      )}
+                    </div>
                     <Input
                       required
+                      type="tel"
                       placeholder="+91 98201 XXXXX"
                       value={dispGuestPhone}
-                      onChange={(e) => setDispGuestPhone(e.target.value)}
-                      className="rounded-xl h-10 text-xs"
+                      onChange={(e) => {
+                        setDispGuestPhone(e.target.value);
+                        if (!dispPhoneTouched) setDispPhoneTouched(true);
+                      }}
+                      onBlur={() => setDispPhoneTouched(true)}
+                      className={`rounded-xl h-10 text-xs transition-all ${
+                        dispPhoneTouched && !dispPhoneValidation.isValid
+                          ? 'border-red-500 bg-red-500/5 focus-visible:ring-red-500 text-red-600 dark:text-red-400 font-medium'
+                          : dispPhoneTouched && dispPhoneValidation.isValid
+                          ? 'border-emerald-500/60 bg-emerald-500/5'
+                          : ''
+                      }`}
                     />
+                    {dispPhoneTouched && !dispPhoneValidation.isValid && (
+                      <p className="text-[11px] text-red-500 font-semibold mt-1 flex items-center gap-1 animate-fade-in">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{dispPhoneValidation.message || 'Please enter a valid 10-digit mobile or international number.'}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -2211,7 +2356,27 @@ Kashmir Curators DMC Central Reservations`;
                 </div>
 
                 <div className="pt-2 flex justify-end">
-                  <Button type="button" onClick={() => setFormStep('HOTEL')} className="rounded-xl text-xs font-bold bg-amber-500 text-slate-950">
+                  <Button 
+                    type="button" 
+                    onClick={() => {
+                      setDispPhoneTouched(true);
+                      const val = validatePhoneNumber(dispGuestPhone);
+                      if (!val.isValid) {
+                        toast.error(`Incorrect Phone Number: ${val.message || 'Please enter a valid 10-digit mobile or international number.'}`);
+                        return;
+                      }
+                      if (!dispGuestName.trim()) {
+                        toast.error('Please enter the Primary Guest Name.');
+                        return;
+                      }
+                      if (!dispCheckIn || !dispCheckOut) {
+                        toast.error('Please select both Check-In and Check-Out dates.');
+                        return;
+                      }
+                      setFormStep('HOTEL');
+                    }} 
+                    className="rounded-xl text-xs font-bold bg-amber-500 text-slate-950"
+                  >
                     Next: Hotel & Rooms &rarr;
                   </Button>
                 </div>
@@ -2258,13 +2423,36 @@ Kashmir Curators DMC Central Reservations`;
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Reception Phone</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground block">Reception Phone</label>
+                        {dispReceptionPhone.trim() && (
+                          validatePhoneNumber(dispReceptionPhone).isValid ? (
+                            <span className="text-[9px] text-emerald-500 font-bold flex items-center gap-0.5">
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Valid
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-red-500 font-bold flex items-center gap-0.5">
+                              <AlertCircle className="w-2.5 h-2.5" /> Incorrect
+                            </span>
+                          )
+                        )}
+                      </div>
                       <Input
+                        type="tel"
                         value={dispReceptionPhone}
                         onChange={(e) => setDispReceptionPhone(e.target.value)}
                         placeholder="+91 94190 XXXXX"
-                        className="rounded-xl h-9 text-xs bg-background"
+                        className={`rounded-xl h-9 text-xs bg-background transition-all ${
+                          dispReceptionPhone.trim() && !validatePhoneNumber(dispReceptionPhone).isValid
+                            ? 'border-red-500 bg-red-500/5 text-red-600 focus-visible:ring-red-500'
+                            : ''
+                        }`}
                       />
+                      {dispReceptionPhone.trim() && !validatePhoneNumber(dispReceptionPhone).isValid && (
+                        <p className="text-[10px] text-red-500 mt-0.5">
+                          {validatePhoneNumber(dispReceptionPhone).message}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2427,17 +2615,41 @@ Kashmir Curators DMC Central Reservations`;
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="autoDispatch"
-                    checked={dispAutoDispatchEmail}
-                    onChange={(e) => setDispAutoDispatchEmail(e.target.checked)}
-                    className="rounded text-amber-500 focus:ring-amber-500 w-4 h-4"
-                  />
-                  <label htmlFor="autoDispatch" className="text-xs font-bold text-foreground cursor-pointer">
-                    Automatically dispatch reservation email to hotel reception immediately
-                  </label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-muted/40 rounded-xl border border-border/60">
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      id="autoDispatch"
+                      checked={dispAutoDispatchEmail}
+                      onChange={(e) => {
+                        const authToken = getHospitalityToken(token);
+                        if (!authToken) {
+                          toast.error('Authentication required to configure automated dispatch.');
+                          return;
+                        }
+                        if (e.target.checked && !dispReceptionEmail.trim()) {
+                          toast.error('Verified reception email required to enable automated email dispatch.');
+                          return;
+                        }
+                        setDispAutoDispatchEmail(e.target.checked);
+                      }}
+                      className="w-4 h-4 rounded border-border/80 text-amber-500 focus:ring-amber-500/40 accent-amber-500 cursor-pointer transition-all"
+                    />
+                    <label htmlFor="autoDispatch" className="text-xs font-bold text-foreground cursor-pointer select-none">
+                      Automatically dispatch reservation email to hotel reception immediately
+                    </label>
+                  </div>
+                  {dispReceptionEmail.trim() ? (
+                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold w-fit">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Email Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-500/30 w-fit">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      Reception Email Required
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2.5">
@@ -3230,15 +3442,44 @@ Kashmir Curators DMC Central Reservations`;
                   />
                 </div>
                 <div>
-                  <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">
-                    Guest Phone / WhatsApp
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold uppercase tracking-wider text-muted-foreground block text-[10px]">
+                      Guest Phone / WhatsApp
+                    </label>
+                    {editPhoneTouched && editGuestPhone.trim() && (
+                      editPhoneValidation.isValid ? (
+                        <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">
+                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+                          Valid
+                        </span>
+                      ) : (
+                        <span className="text-[9px] text-red-500 font-bold flex items-center gap-0.5">
+                          <AlertCircle className="w-2.5 h-2.5 text-red-500" />
+                          Incorrect
+                        </span>
+                      )
+                    )}
+                  </div>
                   <Input
                     type="tel"
                     value={editGuestPhone}
-                    onChange={(e) => setEditGuestPhone(e.target.value)}
-                    className="rounded-xl h-9 text-xs"
+                    onChange={(e) => {
+                      setEditGuestPhone(e.target.value);
+                      if (!editPhoneTouched) setEditPhoneTouched(true);
+                    }}
+                    onBlur={() => setEditPhoneTouched(true)}
+                    className={`rounded-xl h-9 text-xs transition-all ${
+                      editPhoneTouched && editGuestPhone.trim() && !editPhoneValidation.isValid
+                        ? 'border-red-500 bg-red-500/5 focus-visible:ring-red-500 text-red-600'
+                        : ''
+                    }`}
                   />
+                  {editPhoneTouched && editGuestPhone.trim() && !editPhoneValidation.isValid && (
+                    <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{editPhoneValidation.message}</span>
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="font-bold uppercase tracking-wider text-muted-foreground block mb-1">

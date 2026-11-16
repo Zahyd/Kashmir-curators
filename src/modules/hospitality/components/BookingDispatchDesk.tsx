@@ -47,6 +47,7 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHospitalityHeaders, getHospitalityToken } from '../utils/hospitalityAuth';
+import { validatePhoneNumber } from './UnifiedOperationsWorkspace';
 
 export interface BookingVoucher {
   id: string;
@@ -226,6 +227,18 @@ export const BookingDispatchDesk: React.FC<BookingDispatchDeskProps> = ({ initia
     if (!guestName.trim()) {
       toast.error('Please enter the primary guest name');
       return;
+    }
+    const guestPhoneVal = validatePhoneNumber(guestPhone);
+    if (!guestPhoneVal.isValid) {
+      toast.error(`Incorrect Guest Phone: ${guestPhoneVal.message || 'Please provide a valid 10-digit mobile or international number.'}`);
+      return;
+    }
+    if (receptionPhone.trim()) {
+      const recVal = validatePhoneNumber(receptionPhone);
+      if (!recVal.isValid) {
+        toast.error(`Incorrect Reception Phone: ${recVal.message}`);
+        return;
+      }
     }
     if (!checkIn || !checkOut) {
       toast.error('Please specify check-in and check-out dates');
@@ -1172,16 +1185,38 @@ ${portalUrl}`;
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                          Guest Phone / WhatsApp *
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Guest Phone / WhatsApp *
+                          </label>
+                          {guestPhone.trim() && (
+                            validatePhoneNumber(guestPhone).isValid ? (
+                              <span className="text-[9px] text-emerald-500 font-bold flex items-center gap-0.5">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Valid
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-red-500 font-bold flex items-center gap-0.5">
+                                <AlertCircle className="w-2.5 h-2.5" /> Incorrect
+                              </span>
+                            )
+                          )}
+                        </div>
                         <Input
                           placeholder="+91 94198 XXXXX"
                           value={guestPhone}
                           onChange={(e) => setGuestPhone(e.target.value)}
-                          className="h-10 text-xs rounded-xl bg-background"
+                          className={`h-10 text-xs rounded-xl bg-background transition-all ${
+                            guestPhone.trim() && !validatePhoneNumber(guestPhone).isValid
+                              ? 'border-red-500 bg-red-500/5 text-red-600 focus-visible:ring-red-500'
+                              : ''
+                          }`}
                           required
                         />
+                        {guestPhone.trim() && !validatePhoneNumber(guestPhone).isValid && (
+                          <p className="text-[10px] text-red-500 mt-0.5">
+                            {validatePhoneNumber(guestPhone).message}
+                          </p>
+                        )}
                       </div>
                     </div>
 
