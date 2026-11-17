@@ -1134,6 +1134,7 @@ export default function Profile() {
           totalSpent={bookings
             .filter(b => b.status === 'confirmed' || b.status === 'completed')
             .reduce((sum, b) => sum + b.totalAmount, 0)}
+          walletBalance={walletBalance}
           onNavigateTab={(tab) => setActiveTab(tab as TabId)}
           onOpenSafetyCard={(id) => setSafetyCardToken(id || activeBookings[0]?.id || '')}
           onShowLatestVoucher={() => {
@@ -1144,10 +1145,11 @@ export default function Profile() {
               });
             }
           }}
+          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
         />
 
         {/* Dashboard Grid Container */}
-        <div className="container mx-auto px-4 -mt-8 relative z-20">
+        <div className="container mx-auto px-4 mt-8 relative z-20">
           <div className="flex flex-col lg:flex-row gap-8">
             
             {/* Modular Profile Sidebar (Desktop + Mobile Strip) */}

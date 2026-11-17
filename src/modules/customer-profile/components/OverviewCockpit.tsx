@@ -17,11 +17,18 @@ import {
   Ticket,
   ChevronRight,
   Clock,
-  LogIn
+  LogIn,
+  CheckCircle2,
+  Navigation,
+  Phone,
+  MessageSquare,
+  Bot,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
 import { CustomerBooking, CustomerInquiry, KashmirLocationAdvisory, ProfileTabId } from '../types';
 
 interface OverviewCockpitProps {
@@ -45,313 +52,294 @@ export const OverviewCockpit: React.FC<OverviewCockpitProps> = ({
   onOpenSafetyCard,
   onShowSlip
 }) => {
-  const [selectedLocId, setSelectedLocId] = useState(advisories[0]?.id || 'srinagar');
-  const activeAdvisory = advisories.find(l => l.id === selectedLocId) || advisories[0];
+  const navigate = useNavigate();
+  const [selectedHotspot, setSelectedHotspot] = useState(advisories[0]?.id || 'srinagar');
+  const activeAdvisory = advisories.find(l => l.id === selectedHotspot) || advisories[0];
 
   const activeBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
   const pendingProposals = inquiries.filter(i => i.status !== 'Booked' && i.status !== 'Lost');
-  const latestBooking = activeBookings[0] || bookings[0];
+  const featuredBooking = activeBookings[0] || bookings[0];
 
   return (
-    <div className="space-y-8 animate-fade-in text-left">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
       
-      {/* 1. EXECUTIVE 4-METRIC COCKPIT */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Metric 1: Bookings & Active Journeys */}
-        <Card 
-          onClick={() => onNavigateTab('trips')}
-          className="bg-slate-900/80 border-white/10 hover:border-amber-500/40 rounded-3xl p-5 shadow-lg cursor-pointer transition-all hover:scale-[1.02] group"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-white/50 flex items-center gap-1.5">
-              <Package className="w-4 h-4 text-amber-400" />
-              <span>Active Bookings</span>
-            </span>
-            <Badge variant="outline" className="font-mono text-[10px] text-amber-400 border-amber-500/30">
-              Live Trips
-            </Badge>
-          </div>
-          <div className="text-3xl font-black text-white tracking-tight">
-            {activeBookings.length}
-          </div>
-          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
-            <span className="text-emerald-400 font-bold flex items-center gap-1">
-              <LogIn className="w-3 h-3" /> {bookings.filter(b => b.status === 'confirmed').length} Confirmed
-            </span>
-            <span>{bookings.filter(b => b.status === 'completed').length} Past</span>
-          </div>
-        </Card>
-
-        {/* Metric 2: Custom Proposals */}
-        <Card 
-          onClick={() => onNavigateTab('proposals')}
-          className="bg-slate-900/80 border-white/10 hover:border-sky-500/40 rounded-3xl p-5 shadow-lg cursor-pointer transition-all hover:scale-[1.02] group"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-              <Compass className="w-4 h-4 text-sky-400" />
-              <span>Custom Proposals</span>
-            </span>
-            {pendingProposals.length > 0 && (
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
-              </span>
-            )}
-          </div>
-          <div className="text-3xl font-black text-white tracking-tight">
-            {pendingProposals.length}
-          </div>
-          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
-            <span>In Curation</span>
-            <span className="text-sky-400 font-bold">Review Route &rarr;</span>
-          </div>
-        </Card>
-
-        {/* Metric 3: Travel Wallet & Credits */}
-        <Card 
-          onClick={() => onNavigateTab('loyalty')}
-          className="bg-slate-900/80 border-white/10 hover:border-emerald-500/40 rounded-3xl p-5 shadow-lg cursor-pointer transition-all hover:scale-[1.02] group"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-              <Wallet className="w-4 h-4 text-emerald-400" />
-              <span>Travel Wallet</span>
-            </span>
-            <Badge variant="outline" className="font-mono text-[10px] text-emerald-400 border-emerald-500/30">
-              Credits
-            </Badge>
-          </div>
-          <div className="text-3xl font-black text-emerald-400 tracking-tight font-mono">
-            ₹{walletBalance.toLocaleString('en-IN')}
-          </div>
-          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
-            <span>Applicable to bookings</span>
-            <span className="text-emerald-400 font-bold">100% Redeemable</span>
-          </div>
-        </Card>
-
-        {/* Metric 4: Loyalty Points */}
-        <Card 
-          onClick={() => onNavigateTab('loyalty')}
-          className="bg-slate-900/80 border-white/10 hover:border-purple-500/40 rounded-3xl p-5 shadow-lg cursor-pointer transition-all hover:scale-[1.02] group"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-              <Crown className="w-4 h-4 text-purple-400" />
-              <span>Loyalty Points</span>
-            </span>
-            <Badge variant="outline" className="font-mono text-[10px] text-purple-400 border-purple-500/30">
-              Rewards
-            </Badge>
-          </div>
-          <div className="text-3xl font-black text-purple-300 tracking-tight font-mono">
-            {loyaltyPoints.toLocaleString('en-IN')}
-          </div>
-          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
-            <span>Points Balance</span>
-            <span className="text-purple-400 font-bold">Redeem Perks &rarr;</span>
-          </div>
-        </Card>
-
-      </div>
-
-      {/* 2. LIVE KASHMIR CLEARANCE HUB & ADVISORY DESK */}
-      {activeAdvisory && (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-slate-950 border border-white/10 rounded-3xl p-6 md:p-8 flex flex-col lg:flex-row items-stretch justify-between gap-8 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-all duration-700" />
+      {/* 1. FEATURED JOURNEY COMMAND CENTER (Primary Hero Card) */}
+      {featuredBooking ? (
+        <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-[#0c141d] border border-amber-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group">
+          {/* Ambient lighting glow */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/15 transition-all duration-700" />
           
-          {/* Left: Weather Display & Location Selector */}
-          <div className="flex flex-col gap-6 lg:border-r border-white/10 lg:pr-8 lg:w-80 shrink-0">
-            <div>
-              <p className="text-[10px] font-black uppercase text-amber-400 tracking-widest mb-3 flex items-center gap-1.5">
-                <CloudSun className="w-3.5 h-3.5" />
-                <span>Live Destination Intelligence</span>
+          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-b border-white/[0.08] pb-6">
+            <div className="space-y-2 max-w-xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
+                  Confirmed Journey
+                </Badge>
+                <span className="font-mono text-xs text-white/50">
+                  Ref: #{featuredBooking.id.slice(-6).toUpperCase()}
+                </span>
+                <span className="text-[11px] text-white/40">
+                  • Booked {new Date(featuredBooking.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+
+              <h2 className="text-xl md:text-3xl font-display font-black text-white tracking-tight">
+                {featuredBooking.itemName}
+              </h2>
+
+              <p className="text-xs md:text-sm text-white/60 flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Valley of Kashmir • Dedicated Operations Coordinator: Faheem</span>
               </p>
-              
-              {/* Selector Tabs */}
-              <div className="grid grid-cols-4 gap-1.5 p-1 bg-black/40 rounded-xl border border-white/5 mb-4">
-                {advisories.map(loc => (
-                  <button
-                    key={loc.id}
-                    type="button"
-                    onClick={() => setSelectedLocId(loc.id)}
-                    className={`py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all duration-300 ${
-                      selectedLocId === loc.id
-                        ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {loc.name.substring(0, 4)}
-                  </button>
-                ))}
-              </div>
             </div>
 
-            <div className="flex items-center gap-5 mt-1">
-              <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md shrink-0 shadow-inner">
-                <CloudSun className="w-8 h-8 text-amber-400 animate-pulse" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-0.5">Live from {activeAdvisory.name}</p>
-                <h3 className="text-3xl font-display font-black text-white tracking-tight">{activeAdvisory.temp.toFixed(1)}°C</h3>
-                <p className="text-xs text-white/60 mt-0.5">{activeAdvisory.condition}</p>
-              </div>
-            </div>
-          </div>
+            {/* Quick Actions for this Journey */}
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <Button
+                size="sm"
+                variant="gold"
+                onClick={() => onNavigateTab('trips')}
+                className="h-10 px-4 rounded-xl text-xs font-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 gap-2 shadow-lg shadow-amber-500/20"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Trip Companion 360°</span>
+              </Button>
 
-          {/* Right: Dynamic Advisories Desk */}
-          <div className="flex-1 flex flex-col justify-between space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-amber-400">
-                <ShieldCheck className="w-5 h-5 animate-pulse text-emerald-400" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-white/80">Ground Operations Clearance</span>
-              </div>
-              <Badge className={`font-bold text-[10px] uppercase px-2.5 py-0.5 tracking-wider shadow-sm ${
-                activeAdvisory.status === 'Open' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
-                activeAdvisory.status === 'Caution' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
-                'bg-rose-500/20 text-rose-300 border-rose-500/30'
-              }`}>
-                {activeAdvisory.status}
-              </Badge>
-            </div>
-            
-            <div className="bg-black/40 border border-white/10 rounded-2xl p-5 text-left flex-1 flex flex-col justify-center">
-              <h4 className="text-sm font-bold text-white mb-2">{activeAdvisory.name} Clearance Notice</h4>
-              <p className="text-xs text-white/80 leading-relaxed">{activeAdvisory.message}</p>
-              <p className="text-[10px] text-white/40 font-medium italic mt-2.5 border-t border-white/10 pt-2">{activeAdvisory.subText}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. ACTIVE TRIP HIGHLIGHT & SAFETY CARD */}
-      {latestBooking && (
-        <div className="bg-slate-900/80 border border-white/10 rounded-3xl p-6 md:p-8 space-y-6 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-            <div>
-              <span className="text-[10px] font-black uppercase text-amber-400 tracking-widest flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Featured Journey</span>
-              </span>
-              <h3 className="text-xl sm:text-2xl font-black text-white mt-1">{latestBooking.itemName}</h3>
-              <p className="text-xs text-white/50">Reference: #{latestBooking.id.toUpperCase().slice(0, 10)}</p>
-            </div>
-
-            <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onOpenSafetyCard(latestBooking.id)}
-                className="h-9 px-3 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20 gap-1.5"
+                onClick={() => onShowSlip({ 
+                  type: (featuredBooking.type === 'package' ? 'hotel' : featuredBooking.type) as 'hotel' | 'flight' | 'cab', 
+                  booking: featuredBooking 
+                })}
+                className="h-10 px-3.5 rounded-xl text-xs font-bold border-white/10 hover:border-amber-500/40 text-white bg-slate-900/80 gap-1.5"
+              >
+                <Ticket className="w-3.5 h-3.5 text-amber-400" />
+                <span>Stay Voucher</span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onOpenSafetyCard(featuredBooking.id)}
+                className="h-10 px-3.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20 gap-1.5"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Safety Pass</span>
               </Button>
-
-              <Button
-                size="sm"
-                onClick={() => onShowSlip({ type: (latestBooking.type === 'package' ? 'hotel' : latestBooking.type) as 'hotel' | 'flight' | 'cab', booking: latestBooking })}
-                className="h-9 px-4 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5 shadow-md"
-              >
-                <Ticket className="w-3.5 h-3.5" />
-                <span>View Voucher</span>
-              </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
-              <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">Departure Date</span>
-              <span className="text-sm font-bold text-white">
-                {new Date(latestBooking.bookingDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
+          {/* Journey Telemetry Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 text-xs relative z-10">
+            <div className="bg-black/30 border border-white/5 p-4 rounded-2xl">
+              <span className="text-[10px] font-black uppercase text-white/40 block mb-1">Accommodation</span>
+              <p className="font-bold text-white truncate">Luxury Heritage Suites</p>
+              <span className="text-[10px] text-amber-400 mt-0.5 block">MAP Plan (Bkf + Din)</span>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
-              <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">Booking Value</span>
-              <span className="text-sm font-bold text-emerald-400 font-mono">
-                ₹{latestBooking.totalAmount.toLocaleString('en-IN')}
-              </span>
+
+            <div className="bg-black/30 border border-white/5 p-4 rounded-2xl">
+              <span className="text-[10px] font-black uppercase text-white/40 block mb-1">Chauffeur Transport</span>
+              <p className="font-bold text-white truncate">Toyota Innova Crysta ZX</p>
+              <span className="text-[10px] text-emerald-400 mt-0.5 block">Chauffeur Assigned</span>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
-              <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">Status</span>
-              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px] font-bold">
-                {latestBooking.status.toUpperCase()}
-              </Badge>
+
+            <div className="bg-black/30 border border-white/5 p-4 rounded-2xl">
+              <span className="text-[10px] font-black uppercase text-white/40 block mb-1">Total Valuation</span>
+              <p className="font-mono font-black text-amber-400 text-sm">₹{featuredBooking.totalAmount.toLocaleString('en-IN')}</p>
+              <span className="text-[10px] text-emerald-400 mt-0.5 block">Verified & Cleared</span>
             </div>
+
+            <div className="bg-black/30 border border-white/5 p-4 rounded-2xl">
+              <span className="text-[10px] font-black uppercase text-white/40 block mb-1">Concierge Lead</span>
+              <p className="font-bold text-white truncate">Faheem • Online</p>
+              <button 
+                onClick={() => onNavigateTab('ai-companion')}
+                className="text-[10px] text-sky-400 hover:underline mt-0.5 flex items-center gap-1"
+              >
+                <span>Live Chat &rarr;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Empty State: AI Voyage Architect Card */
+        <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-[#0c141d] border border-amber-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-400">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Bespoke Voyage Architect</span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-display font-black text-white">
+                Architect Your Bespoke Kashmir Journey
+              </h2>
+              <p className="text-white/60 text-xs md:text-sm leading-relaxed">
+                Submit your private dates and preferences. Our senior destination curators will architect an exclusive itinerary with luxury houseboats, ski lodges, and dedicated 4x4 chauffeur escorts.
+              </p>
+            </div>
+
+            <Button
+              size="lg"
+              variant="gold"
+              onClick={() => navigate('/planner')}
+              className="h-12 px-6 rounded-2xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 gap-2 shadow-lg shadow-amber-500/20 shrink-0"
+            >
+              <Compass className="w-4 h-4" />
+              <span>Start Planning Now</span>
+            </Button>
           </div>
         </div>
       )}
 
-      {/* 4. EXPLORE & BOOK BESPOKE EXPERIENCES */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
-            <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" />
-            <span>Explore Kashmir Services</span>
-          </h2>
-          <Button 
-            variant="ghost" 
+      {/* 2. LIVE KASHMIR HOTSPOT RADAR RIBBON */}
+      <div className="bg-slate-900/70 border border-white/[0.08] rounded-3xl p-5 md:p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-xs md:text-sm font-extrabold uppercase text-white tracking-wider flex items-center gap-2">
+              <CloudSun className="w-4 h-4 text-amber-400" />
+              <span>Live Kashmir Hotspot Intelligence</span>
+            </h3>
+            <p className="text-[11px] text-white/40">Verified temperatures, weather conditions, and operational clearance.</p>
+          </div>
+
+          <Button
             size="sm"
-            onClick={() => onNavigateTab('proposals')}
-            className="text-xs text-amber-400 hover:text-amber-300 font-bold"
+            variant="ghost"
+            onClick={() => onNavigateTab('clearance')}
+            className="text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-xl h-8 px-3 gap-1"
           >
-            Custom Quote &rarr;
+            <span>Full Clearance Hub</span>
+            <ChevronRight className="w-3.5 h-3.5" />
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          <div 
-            onClick={() => window.location.href = '/planner'}
-            className="bg-slate-900/80 border border-amber-500/30 hover:border-amber-500 p-6 rounded-3xl cursor-pointer hover:shadow-xl transition-all group relative overflow-hidden"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <h3 className="font-bold text-white text-base mb-1 group-hover:text-amber-400 transition-colors">Bespoke Planner</h3>
-            <p className="text-xs text-white/50">Architect custom Kashmir luxury itineraries with AI assistance.</p>
-          </div>
-
-          <div 
-            onClick={() => window.location.href = '/packages'}
-            className="bg-slate-900/80 border border-white/10 hover:border-white/30 p-6 rounded-3xl cursor-pointer hover:shadow-xl transition-all group"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/80 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Map className="w-6 h-6 text-amber-400" />
-            </div>
-            <h3 className="font-bold text-white text-base mb-1 group-hover:text-amber-400 transition-colors">Curated Packages</h3>
-            <p className="text-xs text-white/50">Handcrafted seasonal escapes across Gulmarg, Pahalgam, and Sonamarg.</p>
-          </div>
-
-          <div 
-            onClick={() => window.location.href = '/hotels'}
-            className="bg-slate-900/80 border border-white/10 hover:border-white/30 p-6 rounded-3xl cursor-pointer hover:shadow-xl transition-all group"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/80 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Building className="w-6 h-6 text-amber-400" />
-            </div>
-            <h3 className="font-bold text-white text-base mb-1 group-hover:text-amber-400 transition-colors">Estates & Houseboats</h3>
-            <p className="text-xs text-white/50">Verified 5-star alpine chalets and heritage Dal Lake cedar houseboats.</p>
-          </div>
-
-          <div 
-            onClick={() => window.location.href = '/cabs'}
-            className="bg-slate-900/80 border border-white/10 hover:border-white/30 p-6 rounded-3xl cursor-pointer hover:shadow-xl transition-all group"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/80 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Car className="w-6 h-6 text-amber-400" />
-            </div>
-            <h3 className="font-bold text-white text-base mb-1 group-hover:text-amber-400 transition-colors">Chauffeur & 4x4 Fleet</h3>
-            <p className="text-xs text-white/50">Toyota Innova Crysta, Fortuners, and licensed local mountain drivers.</p>
-          </div>
-
+        {/* Hotspots Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {advisories.map((loc) => {
+            const isSelected = selectedHotspot === loc.id;
+            return (
+              <div
+                key={loc.id}
+                onClick={() => setSelectedHotspot(loc.id)}
+                className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                  isSelected 
+                    ? 'bg-black/50 border-amber-500/50 shadow-md' 
+                    : 'bg-black/25 border-white/5 hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-bold text-xs text-white">{loc.name}</span>
+                  <span className={`w-2 h-2 rounded-full ${
+                    loc.status === 'Open' ? 'bg-emerald-400' : loc.status === 'Caution' ? 'bg-amber-400' : 'bg-rose-400'
+                  }`} />
+                </div>
+                <div className="text-xl font-display font-extrabold text-white">
+                  {loc.temp.toFixed(1)}°C
+                </div>
+                <p className="text-[10px] text-white/50 truncate mt-0.5">{loc.condition}</p>
+                <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[9px]">
+                  <span className="text-white/40 uppercase font-mono">{loc.status}</span>
+                  <span className="text-amber-400 font-bold">Clear</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
+
+        {/* Active Hotspot Ground Advisory Capsule */}
+        {activeAdvisory && (
+          <div className="bg-black/40 border border-white/5 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider">
+                {activeAdvisory.name} Operations Advisory
+              </span>
+              <p className="text-white/80 leading-relaxed">{activeAdvisory.message}</p>
+            </div>
+            <Badge className={`text-[9px] font-black uppercase px-2 py-0.5 shrink-0 ${
+              activeAdvisory.status === 'Open' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+              activeAdvisory.status === 'Caution' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+              'bg-rose-500/20 text-rose-400 border-rose-500/30'
+            }`}>
+              {activeAdvisory.status}
+            </Badge>
+          </div>
+        )}
+      </div>
+
+      {/* 3. EXECUTIVE QUICK LAUNCH DOCK */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        {/* Dock Item 1: Bespoke Planner */}
+        <div 
+          onClick={() => navigate('/planner')}
+          className="bg-slate-900/60 hover:bg-slate-900/90 border border-white/[0.08] hover:border-amber-500/40 p-5 rounded-3xl cursor-pointer transition-all hover:scale-[1.02] group shadow-lg flex flex-col justify-between min-h-[140px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+              <Compass className="w-5 h-5" />
+            </div>
+            <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-amber-400 transition-colors" />
+          </div>
+          <div>
+            <h4 className="text-sm font-extrabold text-white group-hover:text-amber-400 transition-colors">Bespoke Planner</h4>
+            <p className="text-[11px] text-white/50 mt-0.5">Design a custom private Kashmir itinerary</p>
+          </div>
+        </div>
+
+        {/* Dock Item 2: Curated Retreats */}
+        <div 
+          onClick={() => navigate('/packages')}
+          className="bg-slate-900/60 hover:bg-slate-900/90 border border-white/[0.08] hover:border-sky-500/40 p-5 rounded-3xl cursor-pointer transition-all hover:scale-[1.02] group shadow-lg flex flex-col justify-between min-h-[140px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform">
+              <Map className="w-5 h-5" />
+            </div>
+            <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-sky-400 transition-colors" />
+          </div>
+          <div>
+            <h4 className="text-sm font-extrabold text-white group-hover:text-sky-400 transition-colors">Curated Retreats</h4>
+            <p className="text-[11px] text-white/50 mt-0.5">Explore premium seasonal packages</p>
+          </div>
+        </div>
+
+        {/* Dock Item 3: Luxury Houseboats & Estates */}
+        <div 
+          onClick={() => navigate('/hotels')}
+          className="bg-slate-900/60 hover:bg-slate-900/90 border border-white/[0.08] hover:border-emerald-500/40 p-5 rounded-3xl cursor-pointer transition-all hover:scale-[1.02] group shadow-lg flex flex-col justify-between min-h-[140px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+              <Building className="w-5 h-5" />
+            </div>
+            <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-emerald-400 transition-colors" />
+          </div>
+          <div>
+            <h4 className="text-sm font-extrabold text-white group-hover:text-emerald-400 transition-colors">Estates & Houseboats</h4>
+            <p className="text-[11px] text-white/50 mt-0.5">Direct reservations at verified 5-star properties</p>
+          </div>
+        </div>
+
+        {/* Dock Item 4: 4x4 Chauffeur Fleet */}
+        <div 
+          onClick={() => navigate('/cabs')}
+          className="bg-slate-900/60 hover:bg-slate-900/90 border border-white/[0.08] hover:border-purple-500/40 p-5 rounded-3xl cursor-pointer transition-all hover:scale-[1.02] group shadow-lg flex flex-col justify-between min-h-[140px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform">
+              <Car className="w-5 h-5" />
+            </div>
+            <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-purple-400 transition-colors" />
+          </div>
+          <div>
+            <h4 className="text-sm font-extrabold text-white group-hover:text-purple-400 transition-colors">Chauffeur & 4x4 Fleet</h4>
+            <p className="text-[11px] text-white/50 mt-0.5">Luxury SUVs with mountain-trained drivers</p>
+          </div>
+        </div>
+
       </div>
 
     </div>
   );
 };
-
-export default OverviewCockpit;
