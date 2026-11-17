@@ -25,6 +25,11 @@ import { ProfileSidebar } from '@/modules/customer-profile/components/ProfileSid
 import { OverviewCockpit } from '@/modules/customer-profile/components/OverviewCockpit';
 import { MyTripsWorkspace } from '@/modules/customer-profile/components/MyTripsWorkspace';
 import { CustomProposalsDesk } from '@/modules/customer-profile/components/CustomProposalsDesk';
+import { AiTravelCompanion } from '@/modules/customer-profile/components/AiTravelCompanion';
+import { PaymentsInvoicesDesk } from '@/modules/customer-profile/components/PaymentsInvoicesDesk';
+import { DocumentVaultDesk } from '@/modules/customer-profile/components/DocumentVaultDesk';
+import { LoyaltyRewardsDesk } from '@/modules/customer-profile/components/LoyaltyRewardsDesk';
+import { AccountSettingsDesk } from '@/modules/customer-profile/components/AccountSettingsDesk';
 import { ProfileTabId } from '@/modules/customer-profile/types';
 
 const typeIcons = {
@@ -1220,528 +1225,68 @@ export default function Profile() {
 
               {/* 4. PAYMENTS & INVOICES TAB */}
               {activeTab === 'payments' && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h2 className="font-display text-3xl font-bold mb-6 text-left">Payments & Invoices</h2>
-                  
-                  {activeBookings.length > 0 && (
-                    <div className="space-y-4 text-left">
-                      <h3 className="text-lg font-bold text-white/80">Pending Installment Plans</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {(() => {
-                          const totalActiveBookingAmount = bookings
-                            .filter(b => b.status === 'confirmed' || b.status === 'pending')
-                            .reduce((sum, b) => sum + b.totalAmount, 0);
-
-                          const installmentPlans = [
-                            { id: 'inst-1', name: '25% Advance Booking Deposit', amount: Math.round(totalActiveBookingAmount * 0.25), due: 'Paid', status: 'paid' },
-                            { id: 'inst-2', name: '50% Hotel Block Booking', amount: Math.round(totalActiveBookingAmount * 0.50), due: 'Due in 5 Days', status: 'pending' },
-                            { id: 'inst-3', name: '25% Balance on Arrival', amount: Math.round(totalActiveBookingAmount * 0.25), due: 'Due on Arrival', status: 'pending' }
-                          ];
-
-                          return installmentPlans.map((installment) => {
-                            const isPaid = paidInstallments[installment.id] || installment.status === 'paid' || installment.amount === 0;
-                            return (
-                              <div key={installment.id} className="bg-[#0c1216]/65 border border-white/10 rounded-2xl p-5 flex flex-col justify-between min-h-[160px]">
-                                <div>
-                                  <Badge className={cn("text-[8px] font-black uppercase px-2 py-0.5 tracking-wider mb-3.5",
-                                    isPaid ? "bg-green-500/20 text-green-400 border-green-500/20" : "bg-kashmir-gold/10 text-kashmir-gold border-kashmir-gold/20"
-                                  )}>
-                                    {isPaid ? 'Paid' : 'Unpaid'}
-                                  </Badge>
-                                  <h4 className="font-bold text-xs text-white leading-normal">{installment.name}</h4>
-                                  <p className="text-[10px] text-white/40 mt-1">{installment.due}</p>
-                                </div>
-                                <div className="flex justify-between items-center mt-4">
-                                  <span className="text-sm font-black text-kashmir-gold">₹{installment.amount.toLocaleString()}</span>
-                                  {!isPaid && (
-                                    <Button 
-                                      size="sm" 
-                                      variant="gold" 
-                                      onClick={() => setSelectedInstallment(installment)}
-                                      className="h-8 rounded-lg text-[10px] font-bold text-black px-3.5"
-                                    >
-                                      Pay Now
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-4 text-left">
-                    <h3 className="text-lg font-bold text-white/80">Transaction History</h3>
-                    <div className="bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead>
-                            <tr className="bg-white/5 border-b border-white/10">
-                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Date</th>
-                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Description</th>
-                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Amount</th>
-                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase">Status</th>
-                              <th className="p-5 text-xs font-bold text-white/50 tracking-widest uppercase text-right">Invoice</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5">
-                            {bookings.map(b => (
-                              <tr key={b.id} className="hover:bg-white/5 transition-colors">
-                                <td className="p-5 text-sm text-white/70">
-                                  {new Date(b.createdAt).toLocaleDateString()}
-                                </td>
-                                <td className="p-5 font-semibold text-white text-left">{b.itemName}</td>
-                                <td className="p-5 font-black text-kashmir-gold">₹{b.totalAmount.toLocaleString()}</td>
-                                <td className="p-5">
-                                  <span className={cn("px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", 
-                                    b.status === 'confirmed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
-                                    b.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-white/10 text-white/60 border border-white/5'
-                                  )}>
-                                    {b.status === 'cancelled' ? 'Refunded' : 'Paid'}
-                                  </span>
-                                </td>
-                                <td className="p-5 text-right">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={() => {
-                                      setActiveInvoice(b);
-                                    }}
-                                    className="text-white/60 hover:text-kashmir-gold hover:bg-white/5 rounded-lg"
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
-                            {bookings.length === 0 && (
-                              <tr>
-                                <td colSpan={5} className="p-12 text-center text-white/40 font-medium">No transactions found.</td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <PaymentsInvoicesDesk
+                  bookings={bookings as any}
+                  paidInstallments={paidInstallments}
+                  onPayInstallment={(installment) => setSelectedInstallment(installment)}
+                  onViewInvoice={(booking) => setActiveInvoice(booking)}
+                />
               )}
 
               {/* 5. DOCUMENT VAULT TAB */}
               {activeTab === 'documents' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="font-display text-3xl font-bold">Document Vault</h2>
-                      <p className="text-white/50 text-xs mt-1">Upload and store ID cards, travel permits, and flight bookings for hotel verification.</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Upload Card */}
-                    <div className="bg-[#0c1216] border border-white/10 rounded-3xl p-6 flex flex-col justify-between min-h-[220px]">
-                      <div>
-                        <h4 className="font-bold text-sm text-white mb-2 flex items-center gap-2">
-                          <Upload className="w-4 h-4 text-kashmir-gold" /> Upload New File
-                        </h4>
-                        <p className="text-[10px] text-white/45 mb-4">Supported formats: JPG, PNG, PDF (Max 5MB)</p>
-                        
-                        <label className="text-xs font-semibold text-white/50 block mb-2 uppercase">Document Type</label>
-                        <select 
-                          value={selectedDocType}
-                          onChange={(e) => setSelectedDocType(e.target.value as any)}
-                          className="w-full bg-black/40 border border-white/10 rounded-xl h-10 px-3 text-xs text-white outline-none focus:border-kashmir-gold"
-                        >
-                          <option value="Aadhaar Card">Aadhaar Card</option>
-                          <option value="Passport">Passport</option>
-                          <option value="Flight Ticket">Flight Ticket</option>
-                          <option value="Other">Other Document</option>
-                        </select>
-                      </div>
-
-                      <div className="mt-6">
-                        <input 
-                          type="file" 
-                          ref={fileInputRef}
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                        <Button 
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploadingDoc}
-                          variant="gold"
-                          className="w-full rounded-xl text-black font-bold h-11"
-                        >
-                          {isUploadingDoc ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" /> Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-4 h-4 mr-2" /> Select & Upload
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Files List */}
-                    <div className="lg:col-span-2 bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
-                      <div className="space-y-4">
-                        <h4 className="font-bold text-sm text-white border-b border-white/5 pb-2">Stored Documents</h4>
-                        {uploadedDocs.length === 0 ? (
-                          <div className="py-12 text-center text-white/30 text-xs flex flex-col items-center gap-3">
-                            <Lock className="w-8 h-8 opacity-30" />
-                            <span>Your vault is secure and empty. Upload documents to block stays.</span>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/5 pr-1">
-                            {uploadedDocs.map((doc) => (
-                              <div key={doc.id} className="bg-black/30 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-kashmir-gold/30 transition-all group">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-kashmir-gold shrink-0">
-                                    <FileText className="w-5 h-5" />
-                                  </div>
-                                  <div className="min-w-0 text-left">
-                                    <h5 className="text-xs font-bold text-white truncate">{doc.name}</h5>
-                                    <p className="text-[9px] text-white/40 mt-0.5">{doc.type} • {doc.uploadedAt}</p>
-                                  </div>
-                                </div>
-                                <div className="flex gap-1 shrink-0">
-                                  <a 
-                                    href={doc.url} 
-                                    target="_blank" 
-                                    rel="noreferrer"
-                                    className="p-2 text-white/40 hover:text-kashmir-gold hover:bg-white/5 rounded-lg"
-                                  >
-                                    <ExternalLink className="w-4 h-4" />
-                                  </a>
-                                  <button
-                                    onClick={() => handleDocDelete(doc.id, doc.name)}
-                                    className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <DocumentVaultDesk
+                  documents={uploadedDocs}
+                  isUploading={isUploadingDoc}
+                  onUploadFile={handleFileUpload}
+                  onDeleteDocument={handleDocDelete}
+                  fileInputRef={fileInputRef}
+                  selectedDocType={selectedDocType}
+                  onSelectDocType={setSelectedDocType}
+                />
               )}
 
-              {/* 6. LUXURY CONCIERGE TAB */}
+              {/* 6. AI TRAVEL COMPANION & CONCIERGE TAB */}
               {(activeTab === 'support' || activeTab === 'ai-companion') && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="text-left">
-                    <h2 className="font-display text-3xl font-bold mb-2">Luxury Concierge</h2>
-                    <p className="text-white/50 text-sm">Your dedicated 24/7 travel assistant. Reach out to arrange custom details instantly.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <a 
-                      href="tel:+919999900000"
-                      className="bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 p-5 rounded-2xl flex items-center justify-between hover:border-kashmir-gold/40 hover:bg-[#0c1216] transition-all group"
-                    >
-                      <div className="flex items-center gap-4 text-left">
-                        <div className="w-12 h-12 bg-kashmir-gold/10 rounded-xl flex items-center justify-center text-kashmir-gold group-hover:scale-105 transition-transform shadow-inner">
-                          <Phone className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-sm">Direct Curator Hotline</h4>
-                          <p className="text-xs text-white/40">Instant emergency support</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-white/30 group-hover:text-white" />
-                    </a>
-
-                    <a 
-                      href="https://wa.me/919999900000"
-                      target="_blank"
-                      className="bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 p-5 rounded-2xl flex items-center justify-between hover:border-[#25D366]/40 hover:bg-[#0c1216] transition-all group"
-                    >
-                      <div className="flex items-center gap-4 text-left">
-                        <div className="w-12 h-12 bg-[#25D366]/10 rounded-xl flex items-center justify-center text-[#25D366] group-hover:scale-105 transition-transform shadow-inner">
-                          <MessageSquare className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-sm">WhatsApp Concierge</h4>
-                          <p className="text-xs text-white/40">Chat with ground operations</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-white/30 group-hover:text-white" />
-                    </a>
-                  </div>
-
-                  {/* Chat Box Panel */}
-                  <div className="bg-[#0c1216] border border-white/10 rounded-3xl shadow-2xl flex flex-col h-[500px] overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-white/5 border-b border-white/5 px-6 py-4 flex items-center gap-4 text-left">
-                      <div className="w-10 h-10 rounded-full bg-kashmir-gold/20 flex items-center justify-center text-kashmir-gold font-bold relative shrink-0">
-                        <Crown className="w-4 h-4" />
-                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#0a0f12] rounded-full" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-white">Faheem</h4>
-                        <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">Personal Curator • Online</p>
-                      </div>
-                    </div>
-
-                    {/* Messages Body */}
-                    <div className="flex-1 p-6 overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-white/5">
-                      {chatMessages.map((msg, idx) => (
-                        <div 
-                          key={idx} 
-                          className={cn(
-                            "flex flex-col max-w-[75%]",
-                            msg.sender === 'user' ? "ml-auto items-end" : "mr-auto items-start"
-                          )}
-                        >
-                          <div 
-                            className={cn(
-                              "p-4 rounded-2xl text-xs leading-relaxed text-left",
-                              msg.sender === 'user' 
-                                ? "bg-kashmir-gold text-black font-semibold rounded-tr-none" 
-                                : "bg-white/5 border border-white/5 text-white/90 rounded-tl-none"
-                            )}
-                          >
-                            {msg.text}
-                          </div>
-                          <span className="text-[9px] text-white/30 font-medium mt-1">{msg.time}</span>
-                        </div>
-                      ))}
-
-                      {isConciergeTyping && (
-                        <div className="mr-auto flex flex-col items-start max-w-[70%]">
-                          <div className="bg-white/5 border border-white/5 p-3 rounded-2xl rounded-tl-none flex gap-1 items-center">
-                            <span className="w-1.5 h-1.5 bg-kashmir-gold rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-1.5 h-1.5 bg-kashmir-gold rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-1.5 h-1.5 bg-kashmir-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                          </div>
-                        </div>
-                      )}
-                      <div ref={chatEndRef} />
-                    </div>
-
-                    {/* Quick Preset Buttons */}
-                    <div className="px-6 py-2 flex gap-2 overflow-x-auto scrollbar-none border-t border-white/5 bg-black/15">
-                      {[
-                        "Request Late Checkout",
-                        "Arrange Sunset Shikara",
-                        "Assign Private Guide",
-                        "Chauffeur Pickup Status"
-                      ].map((preset, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleSendChatMessage(preset)}
-                          className="px-3.5 py-1.5 bg-white/5 hover:bg-kashmir-gold/15 hover:text-kashmir-gold text-[10px] font-bold uppercase tracking-wider rounded-full border border-white/5 transition-all whitespace-nowrap"
-                        >
-                          {preset}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Chat Form */}
-                    <div className="p-4 bg-[#0a0f12] border-t border-white/5 flex gap-2">
-                      <Input
-                        value={conciergeMsg}
-                        onChange={(e) => setConciergeMsg(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendChatMessage(conciergeMsg)}
-                        placeholder="Write a custom concierge request..."
-                        className="bg-black/40 border-white/10 rounded-xl h-11 focus-visible:ring-kashmir-gold text-white text-xs pl-4"
-                      />
-                      <Button 
-                        onClick={() => handleSendChatMessage(conciergeMsg)}
-                        variant="gold" 
-                        size="icon" 
-                        className="h-11 w-11 rounded-xl shrink-0 text-black shadow-lg"
-                      >
-                        <Send className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <AiTravelCompanion
+                  user={user}
+                  bookings={bookings as any}
+                  chatMessages={chatMessages}
+                  isTyping={isConciergeTyping}
+                  onSendMessage={handleSendChatMessage}
+                />
               )}
 
-              {/* 7. REWARDS TAB */}
+              {/* 7. LOYALTY & REWARDS TAB */}
               {(activeTab === 'rewards' || activeTab === 'loyalty') && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 text-left">
-                    <div>
-                      <h2 className="font-display text-3xl font-bold mb-2 text-kashmir-gold flex items-center gap-3">
-                        <Crown className="w-8 h-8 animate-pulse" /> {membershipLevel} Privileges
-                      </h2>
-                      <p className="text-white/50 text-sm">Your standing: <span className="text-white font-bold">{loyaltyPoints.toLocaleString()} Points</span> accumulated.</p>
-                    </div>
-                    <div className="bg-[#0c1216] border border-white/10 px-6 py-3 rounded-2xl shrink-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-0.5">Lifetime Spend</p>
-                      <p className="text-lg font-black text-white">₹{totalSpend.toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  {/* Redesigned Premium Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Voucher A */}
-                    <div className={cn(
-                      "backdrop-blur-xl border p-8 rounded-3xl relative overflow-hidden transition-all duration-500 text-left",
-                      totalTrips >= 1 
-                        ? "bg-gradient-to-br from-[#0c1216] via-[#0c1216] to-[#0a0f12] border-kashmir-gold/30 hover:border-kashmir-gold/50 shadow-2xl" 
-                        : "bg-white/[0.01] border-white/5 grayscale opacity-50"
-                    )}>
-                      <div className="absolute top-0 right-0 p-6 opacity-5"><Gift className="w-24 h-24 text-kashmir-gold" /></div>
-                      <Badge className={cn("font-bold mb-4 px-2.5 py-0.5 text-[9px] uppercase",
-                        totalTrips >= 1 ? "bg-kashmir-gold text-black shadow-lg" : "bg-white/10 text-white/40"
-                      )}>
-                        {totalTrips >= 1 ? 'Unlocked' : '1 Trip Required'}
-                      </Badge>
-                      <h3 className="text-xl font-display font-extrabold mb-2 text-white">Complimentary Sunset Shikara</h3>
-                      <p className="text-white/50 text-sm mb-6 leading-relaxed">Enjoy a 1-hour complimentary private sunset shikara ride during Dal Lake stay.</p>
-                      
-                      <Button 
-                        disabled={totalTrips < 1}
-                        onClick={() => handleClaimVoucher('shikara', 'Complimentary Sunset Shikara')}
-                        variant={claimedVouchers['shikara'] ? 'outline' : 'gold'} 
-                        className={cn(
-                          "rounded-xl font-bold h-10 w-full text-xs shadow-lg",
-                          claimedVouchers['shikara'] ? "border-kashmir-gold/40 text-kashmir-gold bg-transparent" : "text-black"
-                        )}
-                      >
-                        {claimedVouchers['shikara'] ? 'Show Code' : 'Claim Voucher'}
-                      </Button>
-                    </div>
-
-                    {/* Voucher B */}
-                    <div className={cn(
-                      "backdrop-blur-xl border p-8 rounded-3xl relative overflow-hidden transition-all duration-500 text-left",
-                      totalSpend >= 200000 
-                        ? "bg-gradient-to-br from-[#0c1216] via-[#0c1216] to-[#0a0f12] border-amber-400/30 hover:border-amber-400/50 shadow-2xl" 
-                        : "bg-white/[0.01] border-white/5 grayscale opacity-50"
-                    )}>
-                      <div className="absolute top-0 right-0 p-6 opacity-5"><Star className="w-24 h-24 text-amber-400" /></div>
-                      <Badge className={cn("font-bold mb-4 px-2.5 py-0.5 text-[9px] uppercase", 
-                        totalSpend >= 200000 ? "bg-amber-400 text-black shadow-lg" : "bg-white/10 text-white/40"
-                      )}>
-                        {totalSpend >= 200000 ? 'Unlocked' : '₹2L Spend Required'}
-                      </Badge>
-                      <h3 className="text-xl font-display font-extrabold mb-2 text-white">Luxury Suite Upgrade</h3>
-                      <p className="text-white/50 text-sm mb-6 leading-relaxed">Automatic room tier upgrade on your next hotel reservation slot.</p>
-                      
-                      <Button 
-                        disabled={totalSpend < 200000}
-                        onClick={() => handleClaimVoucher('upgrade', 'Luxury Suite Upgrade')}
-                        variant={claimedVouchers['upgrade'] ? 'outline' : 'gold'} 
-                        className={cn(
-                          "rounded-xl font-bold h-10 w-full text-xs shadow-lg",
-                          claimedVouchers['upgrade'] ? "border-kashmir-gold/40 text-kashmir-gold bg-transparent" : "text-black"
-                        )}
-                      >
-                        {claimedVouchers['upgrade'] ? 'Show Code' : 'Claim Voucher'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <LoyaltyRewardsDesk
+                  user={user}
+                  loyaltyPoints={loyaltyPoints}
+                  walletBalance={walletBalance}
+                  totalSpend={totalSpend}
+                  totalTrips={totalTrips}
+                  claimedVouchers={claimedVouchers}
+                  onClaimVoucher={handleClaimVoucher}
+                />
               )}
 
               {/* 8. ACCOUNT SETTINGS TAB */}
               {activeTab === 'settings' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h2 className="font-display text-3xl font-bold mb-6 text-left">Account Settings</h2>
-                  
-                  <div className="bg-[#0c1216]/65 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-2xl border border-white/10">
-                    <h3 className="font-semibold text-lg mb-6 border-b border-white/5 pb-4 text-white/80 text-left">Profile Information</h3>
-                    
-                    <form onSubmit={handleSaveProfile} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                        <div>
-                          <label className="text-xs font-semibold text-white/45 block mb-2 uppercase tracking-wider">Full Name</label>
-                          <Input 
-                            value={editName} 
-                            onChange={(e) => setEditName(e.target.value)} 
-                            className="bg-black/40 border-white/10 h-12 rounded-xl text-white font-medium focus-visible:ring-kashmir-gold" 
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-white/45 block mb-2 uppercase tracking-wider">Email Address (Read Only)</label>
-                          <Input value={user?.email || ''} readOnly className="bg-black/45 border-white/5 h-12 rounded-xl text-white/40 font-medium" />
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-white/45 block mb-2 uppercase tracking-wider">Phone Number</label>
-                          <Input 
-                            value={editPhone} 
-                            onChange={(e) => setEditPhone(e.target.value)} 
-                            placeholder="Add phone number"
-                            className="bg-black/40 border-white/10 h-12 rounded-xl text-white font-medium focus-visible:ring-kashmir-gold" 
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end pt-4">
-                        <Button 
-                          type="submit" 
-                          variant="gold" 
-                          disabled={isSavingProfile}
-                          className="rounded-xl px-8 h-11 font-bold text-black shadow-lg"
-                        >
-                          {isSavingProfile ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving...
-                            </>
-                          ) : (
-                            'Save Changes'
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-
-                    <h3 className="font-semibold text-lg mt-10 mb-6 border-b border-white/5 pb-4 text-white/80 text-left">Alert Settings</h3>
-                    <div className="space-y-4 text-left">
-                      <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
-                        <div>
-                          <h4 className="text-sm font-bold text-white">WhatsApp Notifications</h4>
-                          <p className="text-[10px] text-white/40">Real-time status updates on vouchers and driver dispatch</p>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={notifyWhatsApp} 
-                          onChange={(e) => setNotifyWhatsApp(e.target.checked)} 
-                          className="w-5 h-5 rounded border-white/10 text-kashmir-gold bg-black/40 accent-kashmir-gold focus:ring-0" 
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
-                        <div>
-                          <h4 className="text-sm font-bold text-white">SMS Backups</h4>
-                          <p className="text-[10px] text-white/40">Emergency contact notification backups</p>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={notifySMS} 
-                          onChange={(e) => setNotifySMS(e.target.checked)} 
-                          className="w-5 h-5 rounded border-white/10 text-kashmir-gold bg-black/40 accent-kashmir-gold focus:ring-0" 
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
-                        <div>
-                          <h4 className="text-sm font-bold text-white">Biometric Login Preferences</h4>
-                          <p className="text-[10px] text-white/40">Save face credentials or fingerprint for quick dashboard entries</p>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={notifyBiometrics} 
-                          onChange={(e) => setNotifyBiometrics(e.target.checked)} 
-                          className="w-5 h-5 rounded border-white/10 text-kashmir-gold bg-black/40 accent-kashmir-gold focus:ring-0" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <AccountSettingsDesk
+                  user={user}
+                  editName={editName}
+                  setEditName={setEditName}
+                  editPhone={editPhone}
+                  setEditPhone={setEditPhone}
+                  isSaving={isSavingProfile}
+                  onSaveProfile={handleSaveProfile}
+                  notifyWhatsApp={notifyWhatsApp}
+                  setNotifyWhatsApp={setNotifyWhatsApp}
+                  notifySMS={notifySMS}
+                  setNotifySMS={setNotifySMS}
+                  notifyBiometrics={notifyBiometrics}
+                  setNotifyBiometrics={setNotifyBiometrics}
+                />
               )}
 
             </div>
