@@ -20,6 +20,12 @@ import { API_BASE_URL } from '@/lib/api';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import TripSafetyCardModal from '@/components/common/TripSafetyCardModal';
+import { ProfileHero } from '@/modules/customer-profile/components/ProfileHero';
+import { ProfileSidebar } from '@/modules/customer-profile/components/ProfileSidebar';
+import { OverviewCockpit } from '@/modules/customer-profile/components/OverviewCockpit';
+import { MyTripsWorkspace } from '@/modules/customer-profile/components/MyTripsWorkspace';
+import { CustomProposalsDesk } from '@/modules/customer-profile/components/CustomProposalsDesk';
+import { ProfileTabId } from '@/modules/customer-profile/types';
 
 const typeIcons = {
   package: Package,
@@ -27,7 +33,7 @@ const typeIcons = {
   cab: Car,
 };
 
-type TabId = 'overview' | 'trips' | 'itineraries' | 'payments' | 'documents' | 'support' | 'rewards' | 'settings';
+type TabId = 'overview' | 'trips' | 'proposals' | 'itineraries' | 'ai-companion' | 'support' | 'payments' | 'documents' | 'loyalty' | 'rewards' | 'clearance' | 'settings';
 
 interface ChatMessage {
   sender: 'user' | 'concierge';
@@ -685,6 +691,24 @@ export default function Profile() {
   const [isPayingInstallment, setIsPayingInstallment] = useState(false);
   const [paymentMilestone, setPaymentMilestone] = useState('');
   const [paidInstallments, setPaidInstallments] = useState<Record<string, boolean>>({});
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/wallet/my`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setWalletBalance(data?.balance || 0);
+        }
+      } catch (e) {
+        // silent fallback
+      }
+    };
+    if (token) fetchWallet();
+  }, [token]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -1094,402 +1118,104 @@ export default function Profile() {
 
       <main className="flex-1 pb-20">
         
-        {/* Cinematic Premium Hero Header */}
-        <div className="relative pt-32 pb-24 lg:pt-40 lg:pb-36 overflow-hidden">
-          <div 
-            className="absolute inset-0 bg-cover bg-center transition-all duration-1000" 
-            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80")' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-[#05080a] via-[#05080a]/85 to-transparent" />
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
-          </div>
-          
-          <div className="container mx-auto px-4 relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 animate-fade-up">
-            <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
-              
-              {/* Pulsing Glowing Avatar */}
-              <div className="relative group shrink-0">
-                <div className="absolute -inset-1.5 bg-gradient-to-r from-kashmir-gold via-amber-400 to-kashmir-gold rounded-full opacity-60 blur-md group-hover:opacity-100 transition-all duration-700 animate-pulse" />
-                <div className="absolute inset-0 rounded-full border border-kashmir-gold/50 animate-rotate-slow hidden md:block" />
-                <div className="w-24 h-24 md:w-28 md:h-28 bg-[#0a0f12]/90 rounded-full flex items-center justify-center text-4xl md:text-5xl font-display font-black text-kashmir-gold border border-kashmir-gold/30 backdrop-blur-md shadow-2xl relative z-10">
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 bg-kashmir-gold/10 text-kashmir-gold px-3.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase backdrop-blur-md border border-kashmir-gold/30 shadow-[0_0_15px_rgba(212,175,55,0.1)]">
-                  <Crown className="w-3.5 h-3.5 animate-pulse" /> {membershipLevel} Tier
-                </div>
-                <h1 className="font-display text-3xl md:text-5xl font-extrabold text-white tracking-tight">
-                  Welcome back, {user?.name?.split(' ')[0]}
-                </h1>
-                <p className="text-white/50 text-sm md:text-base flex flex-wrap items-center justify-center md:justify-start gap-2">
-                  <span>{user?.email}</span>
-                  {user?.phone && (
-                    <>
-                      <span className="text-white/20">•</span>
-                      <span>{user.phone}</span>
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            {/* Loyalty Progression Tracker Card */}
-            <div className="w-full lg:w-[26rem] bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden shrink-0 shadow-2xl">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-kashmir-gold/5 rounded-full blur-2xl pointer-events-none" />
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-[10px] font-black uppercase text-white/40 tracking-wider">Loyalty Tracker</span>
-                {nextTier !== 'Maxed' ? (
-                  <span className="text-[10px] font-extrabold text-kashmir-gold uppercase tracking-widest">
-                    {tierProgress.toFixed(0)}% to {nextTier}
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-extrabold text-kashmir-gold uppercase tracking-widest flex items-center gap-1.5">
-                    <Crown className="w-3.5 h-3.5" /> Max Tier Achieved
-                  </span>
-                )}
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden mb-3.5 border border-white/5 shadow-inner">
-                <div 
-                  className="h-full bg-gradient-to-r from-kashmir-gold via-amber-400 to-amber-600 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(212,175,55,0.4)]"
-                  style={{ width: `${tierProgress}%` }}
-                />
-              </div>
-
-              <div className="flex justify-between text-xs text-white/50">
-                <span>{loyaltyPoints.toLocaleString()} Points</span>
-                {nextTier !== 'Maxed' && (
-                  <span>Spend ₹{spendNeeded.toLocaleString()} to upgrade</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Dynamic Personalized Enterprise Hero */}
+        <ProfileHero
+          user={user}
+          bookings={bookings as any}
+          loyaltyPoints={loyaltyPoints}
+          totalSpent={bookings
+            .filter(b => b.status === 'confirmed' || b.status === 'completed')
+            .reduce((sum, b) => sum + b.totalAmount, 0)}
+          onNavigateTab={(tab) => setActiveTab(tab as TabId)}
+          onOpenSafetyCard={(id) => setSafetyCardToken(id || activeBookings[0]?.id || '')}
+          onShowLatestVoucher={() => {
+            if (activeBookings[0]) {
+              setActiveSlip({
+                type: (activeBookings[0].type === 'package' ? 'hotel' : activeBookings[0].type) as 'hotel' | 'flight' | 'cab',
+                booking: activeBookings[0]
+              });
+            }
+          }}
+        />
 
         {/* Dashboard Grid Container */}
         <div className="container mx-auto px-4 -mt-8 relative z-20">
           <div className="flex flex-col lg:flex-row gap-8">
             
-            {/* Desktop Navigation Sidebar (visible on lg screens) */}
-            <div className="hidden lg:block lg:w-72 shrink-0">
-              <div className="bg-[#0c1216]/80 backdrop-blur-2xl rounded-3xl p-5 shadow-2xl border border-white/10 sticky top-28 space-y-4">
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest pl-3">Workspace</p>
-                <div className="flex flex-col gap-1">
-                  <SidebarButton icon={LayoutDashboard} label="Dashboard Home" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
-                  <SidebarButton icon={Package} label="My Bookings" active={activeTab === 'trips'} onClick={() => setActiveTab('trips')} badge={activeBookings.length} />
-                  <SidebarButton icon={Compass} label="Custom Proposals" active={activeTab === 'itineraries'} onClick={() => setActiveTab('itineraries')} />
-                  <SidebarButton icon={CreditCard} label="Payments & Invoices" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
-                  <SidebarButton icon={FileText} label="Document Vault" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} badge={uploadedDocs.length} />
-                  <SidebarButton icon={MessageSquare} label="Luxury Concierge" active={activeTab === 'support'} onClick={() => setActiveTab('support')} />
-                  <SidebarButton icon={Gift} label="Elite Rewards" active={activeTab === 'rewards'} onClick={() => setActiveTab('rewards')} className="text-kashmir-gold" />
-                  
-                  <div className="border-t border-white/5 my-4 mx-2" />
-                  
-                  <SidebarButton icon={Settings} label="Account Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
-                  <SidebarButton icon={LogOut} label="Sign Out" active={false} onClick={handleLogout} className="text-red-400 hover:bg-red-500/10 hover:text-red-300" />
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Navigation Strip (Visible on mobile/tablet) */}
-            <div className="lg:hidden sticky top-20 z-40 -mx-4 px-4 py-3 bg-[#05080a]/90 backdrop-blur-xl border-b border-white/10 overflow-x-auto flex gap-2 scrollbar-none snap-x">
-              <MobileTabButton icon={LayoutDashboard} label="Home" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
-              <MobileTabButton icon={Package} label="Bookings" active={activeTab === 'trips'} onClick={() => setActiveTab('trips')} badge={activeBookings.length} />
-              <MobileTabButton icon={Compass} label="Proposals" active={activeTab === 'itineraries'} onClick={() => setActiveTab('itineraries')} />
-              <MobileTabButton icon={CreditCard} label="Payments" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
-              <MobileTabButton icon={FileText} label="Vault" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} badge={uploadedDocs.length} />
-              <MobileTabButton icon={MessageSquare} label="Concierge" active={activeTab === 'support'} onClick={() => setActiveTab('support')} />
-              <MobileTabButton icon={Gift} label="Rewards" active={activeTab === 'rewards'} onClick={() => setActiveTab('rewards')} className="text-kashmir-gold" />
-              <MobileTabButton icon={Settings} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
-            </div>
+            {/* Modular Profile Sidebar (Desktop + Mobile Strip) */}
+            <ProfileSidebar
+              activeTab={activeTab as ProfileTabId}
+              onTabChange={(tab) => setActiveTab(tab as TabId)}
+              bookingsCount={activeBookings.length}
+              proposalsCount={inquiries.length}
+              documentsCount={uploadedDocs.length}
+              walletBalance={walletBalance}
+              onLogout={handleLogout}
+            />
 
             {/* Main Content Area */}
             <div className="flex-1 min-w-0">
               
-              {/* 1. OVERVIEW TAB */}
+              {/* 1. OVERVIEW COCKPIT TAB */}
               {activeTab === 'overview' && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  
-                  {/* Weather & Live Advisory Desk */}
-                  <div className="bg-gradient-to-br from-[#0a0f12] via-[#0f171e] to-[#0a0f12] border border-white/10 rounded-3xl p-6 md:p-8 flex flex-col lg:flex-row items-stretch justify-between gap-8 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-kashmir-gold/5 rounded-full blur-3xl pointer-events-none group-hover:bg-kashmir-gold/10 transition-all duration-700" />
-                    
-                    {/* Left: Weather Display & Location Selector */}
-                    <div className="flex flex-col gap-6 lg:border-r border-white/5 lg:pr-8 lg:w-80 shrink-0">
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-kashmir-gold tracking-widest mb-3">Clearance Hub</p>
-                        {/* Selector Tabs */}
-                        <div className="grid grid-cols-4 gap-1.5 p-1 bg-black/40 rounded-xl border border-white/5 mb-4">
-                          {KASHMIR_LOCATIONS.map(loc => (
-                            <button
-                              key={loc.id}
-                              type="button"
-                              onClick={() => setSelectedLoc(loc.id)}
-                              className={cn(
-                                "py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all duration-300",
-                                selectedLoc === loc.id
-                                  ? "bg-kashmir-gold text-black shadow-lg"
-                                  : "text-white/55 hover:text-white hover:bg-white/5"
-                              )}
-                            >
-                              {loc.name.substring(0, 4)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-5 mt-1">
-                        <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center backdrop-blur-md shrink-0 shadow-inner">
-                          <CloudSun className="w-8 h-8 text-yellow-300 animate-pulse" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-0.5">Live from {activeAdvisory.name}</p>
-                          <h3 className="text-3xl font-display font-bold text-white tracking-tight">{activeAdvisory.temp.toFixed(1)}°C</h3>
-                          <p className="text-xs text-white/50 mt-0.5">{activeAdvisory.condition}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Dynamic Advisories Desk */}
-                    <div className="flex-1 flex flex-col justify-between space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-kashmir-gold">
-                          <ShieldCheck className="w-5 h-5 animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-wider">Live Hotspot Clearance Desk</span>
-                        </div>
-                        <Badge className={cn("font-bold text-[9px] uppercase px-2 py-0.5 tracking-wider shadow-sm",
-                          activeAdvisory.status === 'Open' ? 'bg-green-500/20 text-green-400 border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.1)]' :
-                          activeAdvisory.status === 'Caution' ? 'bg-kashmir-gold/20 text-kashmir-gold border-kashmir-gold/20' :
-                          'bg-red-500/20 text-red-400 border-red-500/20'
-                        )}>
-                          {activeAdvisory.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="bg-black/35 border border-white/5 rounded-2xl p-5 text-left flex-1 flex flex-col justify-center">
-                        <h4 className="text-sm font-bold text-white mb-2">{activeAdvisory.name} Operations Advisory</h4>
-                        <p className="text-xs text-white/70 leading-relaxed">{activeAdvisory.message}</p>
-                        <p className="text-[10px] text-white/40 font-medium italic mt-2.5 border-t border-white/5 pt-2">{activeAdvisory.subText}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Explore & Book Grid */}
-                  <div>
-                    <h2 className="font-display text-2xl font-bold mb-6 flex items-center gap-3">
-                      <Sparkles className="w-5 h-5 text-kashmir-gold" /> Explore & Book
-                    </h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      
-                      {/* AI Planner Card */}
-                      <div 
-                        onClick={() => navigate('/planner')}
-                        className="group relative overflow-hidden bg-gradient-to-br from-[#0c1216] via-[#0c1216] to-[#0a0f12] border border-kashmir-gold/30 p-8 rounded-3xl cursor-pointer hover:shadow-[0_0_30px_rgba(212,175,55,0.15)] hover:border-kashmir-gold/60 transition-all duration-500 flex flex-col justify-between min-h-[220px]"
-                      >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-kashmir-gold/5 rounded-full blur-3xl group-hover:bg-kashmir-gold/15 transition-all" />
-                        <div className="bg-gradient-to-br from-amber-400 to-kashmir-gold text-black w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-105 transition-transform duration-500 relative z-10">
-                          <Sparkles className="w-6 h-6 animate-pulse" />
-                        </div>
-                        <div className="relative z-10 text-left">
-                          <h3 className="text-xl font-display font-bold text-white mb-2 group-hover:text-kashmir-gold transition-colors">Bespoke Planner</h3>
-                          <p className="text-white/50 text-sm">Submit your preferences to architect a fully personalized luxury trip.</p>
-                        </div>
-                      </div>
-
-                      {/* Packages Card */}
-                      <div 
-                        onClick={() => navigate('/packages')}
-                        className="group relative overflow-hidden bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 p-8 rounded-3xl cursor-pointer hover:bg-white/5 hover:border-white/20 transition-all duration-500 flex flex-col justify-between min-h-[220px]"
-                      >
-                        <div className="bg-white/5 border border-white/5 text-white/70 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-500 shadow-inner">
-                          <Map className="w-6 h-6 text-kashmir-gold" />
-                        </div>
-                        <div className="text-left">
-                          <h3 className="text-xl font-display font-bold text-white mb-2 group-hover:text-kashmir-gold transition-colors">Curated Retreats</h3>
-                          <p className="text-white/50 text-sm">Browse elite pre-arranged packages tailored for profound exploration.</p>
-                        </div>
-                      </div>
-
-                      {/* Hotels Card */}
-                      <div 
-                        onClick={() => navigate('/hotels')}
-                        className="group relative overflow-hidden bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 p-8 rounded-3xl cursor-pointer hover:bg-white/5 hover:border-white/20 transition-all duration-500 flex flex-col justify-between min-h-[220px]"
-                      >
-                        <div className="bg-white/5 border border-white/5 text-white/70 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-500 shadow-inner">
-                          <Building className="w-6 h-6 text-kashmir-gold" />
-                        </div>
-                        <div className="text-left">
-                          <h3 className="text-xl font-display font-bold text-white mb-2 group-hover:text-kashmir-gold transition-colors">Luxury Estates</h3>
-                          <p className="text-white/50 text-sm">Secure reservations at premium 5-star mountain lodges and houseboats.</p>
-                        </div>
-                      </div>
-
-                      {/* Cabs Card */}
-                      <div 
-                        onClick={() => navigate('/cabs')}
-                        className="group relative overflow-hidden bg-[#0c1216]/65 backdrop-blur-xl border border-white/10 p-8 rounded-3xl cursor-pointer hover:bg-white/5 hover:border-white/20 transition-all duration-500 flex flex-col justify-between min-h-[220px]"
-                      >
-                        <div className="bg-white/5 border border-white/5 text-white/70 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-500 shadow-inner">
-                          <Car className="w-6 h-6 text-kashmir-gold" />
-                        </div>
-                        <div className="text-left">
-                          <h3 className="text-xl font-display font-bold text-white mb-2 group-hover:text-kashmir-gold transition-colors">Elite Fleet</h3>
-                          <p className="text-white/50 text-sm">Rent luxury SUVs with professional local drivers for comfortable transits.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {activeBookings.length > 0 && (
-                    <div className="pt-4">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="font-display text-2xl font-bold">Upcoming Trips</h3>
-                        <Button variant="gold" onClick={() => setActiveTab('trips')} className="bg-kashmir-gold text-black hover:bg-kashmir-gold/80 font-bold h-9 text-xs rounded-xl shadow-lg">View All</Button>
-                      </div>
-                      <div className="grid gap-6">
-                        {activeBookings.slice(0, 2).map((booking) => (
-                          <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} onShowSafetyCard={(id) => setSafetyCardToken(id)} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <OverviewCockpit
+                  bookings={bookings as any}
+                  inquiries={inquiries as any}
+                  walletBalance={walletBalance}
+                  loyaltyPoints={loyaltyPoints}
+                  advisories={KASHMIR_LOCATIONS as any}
+                  onNavigateTab={(tab) => setActiveTab(tab as TabId)}
+                  onOpenSafetyCard={(id) => setSafetyCardToken(id || activeBookings[0]?.id || '')}
+                  onShowSlip={(slip) => setActiveSlip(slip)}
+                />
               )}
 
-              {/* 2. TRIPS TAB */}
+              {/* 2. MY TRIPS WORKSPACE TAB */}
               {activeTab === 'trips' && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-display text-3xl font-bold">My Bookings</h2>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div className="bg-white/[0.02] backdrop-blur-xl p-6 rounded-3xl border border-white/10 flex flex-col items-center justify-center text-center">
-                      <h4 className="text-4xl font-display font-bold text-kashmir-gold mb-1">{activeBookings.length}</h4>
-                      <p className="text-xs font-semibold text-white/45 uppercase tracking-wider">Active</p>
-                    </div>
-                    <div className="bg-white/[0.02] backdrop-blur-xl p-6 rounded-3xl border border-white/10 flex flex-col items-center justify-center text-center">
-                      <h4 className="text-4xl font-display font-bold text-white mb-1">{pastBookings.length}</h4>
-                      <p className="text-xs font-semibold text-white/45 uppercase tracking-wider">Past Trips</p>
-                    </div>
-                  </div>
-
-                  {activeBookings.length === 0 && pastBookings.length === 0 ? (
-                    <div className="bg-[#0c1216]/50 border border-dashed border-white/15 p-12 rounded-3xl text-center backdrop-blur-sm">
-                      <Ticket className="w-16 h-16 text-white/20 mx-auto mb-6" />
-                      <h3 className="text-2xl font-bold mb-2">No bookings yet</h3>
-                      <p className="text-white/50 mb-8 max-w-sm mx-auto">
-                        Your luxury Kashmir experience awaits. Browse our packages or use the AI planner to get started.
-                      </p>
-                      <Button variant="gold" size="lg" onClick={() => navigate('/packages')}>Explore Packages</Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-12">
-                      {activeBookings.length > 0 && (
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-bold text-white/80 text-left pl-1">Active & Upcoming</h3>
-                          <div className="grid gap-6">
-                            {activeBookings.map((booking) => (
-                              <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} onShowSafetyCard={(id) => setSafetyCardToken(id)} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {pastBookings.length > 0 && (
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-bold text-white/55 text-left pl-1">Past History</h3>
-                          <div className="grid gap-6 opacity-60 hover:opacity-100 transition-opacity duration-300">
-                            {pastBookings.map((booking) => (
-                              <BookingTicket key={booking.id} booking={booking} onCancel={handleCancel} cancellingId={cancellingId} onShowSlip={setActiveSlip} onShowSafetyCard={(id) => setSafetyCardToken(id)} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <MyTripsWorkspace
+                  bookings={bookings as any}
+                  onCancelBooking={handleCancel}
+                  cancellingId={cancellingId}
+                  onShowSlip={(slip) => setActiveSlip(slip)}
+                  onShowSafetyCard={(id) => setSafetyCardToken(id || '')}
+                />
               )}
 
-              {/* 3. CUSTOM PROPOSALS TAB (Interactive Itinerary & Feedback loop) */}
-              {activeTab === 'itineraries' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-display text-3xl font-bold">Custom Proposals</h2>
-                    <Button variant="gold" onClick={() => navigate('/planner')} className="font-bold text-black shadow-lg shadow-kashmir-gold/15 rounded-xl h-10">
-                      <Sparkles className="w-4 h-4 mr-2" /> Request New
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                    {inquiries.length === 0 ? (
-                      <div className="col-span-full bg-[#0c1216]/50 border border-dashed border-white/15 p-12 rounded-3xl text-center">
-                        <Compass className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                        <p className="text-white/40">No custom proposals requested yet.</p>
-                        <Button variant="link" onClick={() => navigate('/planner')} className="text-kashmir-gold mt-2 font-bold">Start Planning Now</Button>
-                      </div>
-                    ) : (
-                      inquiries.map((prop) => (
-                        <div key={prop.id} className="bg-[#0c1216]/70 backdrop-blur-xl border border-white/10 p-6 rounded-3xl hover:border-kashmir-gold/30 hover:shadow-2xl transition-all duration-300 relative overflow-hidden group">
-                          
-                          <div className="flex justify-between items-start mb-4 relative z-10">
-                            <Badge variant="outline" className="bg-white/5 text-white/80 border-white/10 font-mono">#{prop.id.slice(-4).toUpperCase()}</Badge>
-                            <Badge className={cn("font-bold uppercase tracking-wider text-[9px] px-2 py-0.5", 
-                              prop.status === 'Ready for Review' || prop.status === 'Quote Sent' ? "bg-green-500/20 text-green-400 border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : 
-                              prop.status === 'New' ? "bg-blue-500/20 text-blue-400 border-blue-500/20" :
-                              "bg-kashmir-gold/20 text-kashmir-gold border-kashmir-gold/20"
-                            )}>
-                              {prop.status === 'Quote Sent' ? 'Ready for Review' : prop.status}
-                            </Badge>
-                          </div>
-                          
-                          <h3 className="text-xl font-display font-bold mb-2 text-left group-hover:text-kashmir-gold transition-colors">{prop.duration} Days in {prop.destination}</h3>
-                          <p className="text-white/60 text-sm mb-6 flex items-center gap-2 text-left">
-                            <MapPin className="w-4 h-4 text-kashmir-gold" /> 
-                            {prop.destination.charAt(0).toUpperCase() + prop.destination.slice(1)}
-                          </p>
+              {/* 3. CUSTOM PROPOSALS DESK TAB */}
+              {(activeTab === 'proposals' || activeTab === 'itineraries') && (
+                <CustomProposalsDesk
+                  inquiries={inquiries as any}
+                  onUpdateInquiryFeedback={async (id, feedback) => {
+                    try {
+                      await updateInquiry(id, { feedback });
+                      toast.success('Your revision request has been transmitted to your dedicated Kashmir Curator.');
+                      return true;
+                    } catch (e) {
+                      toast.error('Failed to submit revision request.');
+                      return false;
+                    }
+                  }}
+                  onNavigateToConcierge={(contextMsg) => {
+                    setActiveTab('support');
+                    if (contextMsg) {
+                      setConciergeMsg(contextMsg);
+                    }
+                  }}
+                />
+              )}
 
-                          {prop.feedback && (
-                            <div className="bg-kashmir-gold/5 border border-kashmir-gold/20 p-3.5 rounded-2xl mb-5 text-left text-xs text-white/80 relative">
-                              <p className="text-[9px] font-black uppercase text-kashmir-gold tracking-widest mb-1.5">Revision Request Sent</p>
-                              <p className="italic">"{prop.feedback}"</p>
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center justify-between pt-4 border-t border-white/5 relative z-10">
-                            <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">Requested {new Date(prop.createdAt).toLocaleDateString()}</span>
-                            
-                            {prop.quoteData ? (
-                              <Button 
-                                variant="gold" 
-                                size="sm" 
-                                onClick={() => {
-                                  setSelectedInquiry(prop);
-                                  try {
-                                    setItineraryDays(JSON.parse(prop.quoteData || '[]'));
-                                  } catch (e) {
-                                    setItineraryDays([]);
-                                  }
-                                  setSelectedItineraryDay(1);
-                                }}
-                                className="rounded-lg shadow-[0_0_15px_rgba(212,175,55,0.2)] text-black font-bold h-9"
-                              >
-                                <Compass className="w-4 h-4 mr-2" /> View Itinerary
-                              </Button>
-                            ) : (
-                              <Button variant="outline" size="sm" disabled className="bg-white/5 border-white/5 text-white/30 rounded-lg h-9">
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> {prop.status === 'New' ? 'Waitlist' : 'Architecting...'}
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+              {/* KASHMIR CLEARANCE HUB TAB */}
+              {activeTab === 'clearance' && (
+                <OverviewCockpit
+                  bookings={bookings as any}
+                  inquiries={inquiries as any}
+                  walletBalance={walletBalance}
+                  loyaltyPoints={loyaltyPoints}
+                  advisories={KASHMIR_LOCATIONS as any}
+                  onNavigateTab={(tab) => setActiveTab(tab as TabId)}
+                  onOpenSafetyCard={(id) => setSafetyCardToken(id || activeBookings[0]?.id || '')}
+                  onShowSlip={(slip) => setActiveSlip(slip)}
+                />
               )}
 
               {/* 4. PAYMENTS & INVOICES TAB */}
@@ -1710,7 +1436,7 @@ export default function Profile() {
               )}
 
               {/* 6. LUXURY CONCIERGE TAB */}
-              {activeTab === 'support' && (
+              {(activeTab === 'support' || activeTab === 'ai-companion') && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="text-left">
                     <h2 className="font-display text-3xl font-bold mb-2">Luxury Concierge</h2>
@@ -1844,7 +1570,7 @@ export default function Profile() {
               )}
 
               {/* 7. REWARDS TAB */}
-              {activeTab === 'rewards' && (
+              {(activeTab === 'rewards' || activeTab === 'loyalty') && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 text-left">
                     <div>
