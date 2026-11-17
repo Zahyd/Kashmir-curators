@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { CustomerBooking } from '../types';
+import { TripWorkspaceModal } from './TripWorkspaceModal';
 
 interface MyTripsWorkspaceProps {
   bookings: CustomerBooking[];
@@ -29,6 +30,7 @@ interface MyTripsWorkspaceProps {
   cancellingId: string | null;
   onShowSlip: (slip: { type: 'hotel' | 'flight' | 'cab'; booking: any }) => void;
   onShowSafetyCard: (bookingId?: string) => void;
+  onOpenDriverTracking?: () => void;
 }
 
 export const MyTripsWorkspace: React.FC<MyTripsWorkspaceProps> = ({
@@ -36,11 +38,13 @@ export const MyTripsWorkspace: React.FC<MyTripsWorkspaceProps> = ({
   onCancelBooking,
   cancellingId,
   onShowSlip,
-  onShowSafetyCard
+  onShowSafetyCard,
+  onOpenDriverTracking
 }) => {
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [cancelModalBooking, setCancelModalBooking] = useState<CustomerBooking | null>(null);
+  const [selectedTripModal, setSelectedTripModal] = useState<CustomerBooking | null>(null);
 
   const filteredBookings = bookings.filter(b => {
     // Status filter
@@ -239,10 +243,20 @@ export const MyTripsWorkspace: React.FC<MyTripsWorkspaceProps> = ({
                   <div className="flex flex-wrap items-center gap-2 pt-2">
                     <Button
                       size="sm"
-                      onClick={() => onShowSlip({ type: 'hotel', booking })}
-                      className="h-8 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5 shadow-sm"
+                      onClick={() => setSelectedTripModal(booking)}
+                      className="h-8 px-3 rounded-xl text-xs font-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 gap-1.5 shadow-md shadow-amber-500/20"
                     >
-                      <Building className="w-3 h-3" />
+                      <Sparkles className="w-3 h-3 text-slate-950 animate-pulse" />
+                      <span>Trip Companion</span>
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onShowSlip({ type: 'hotel', booking })}
+                      className="h-8 px-3 rounded-xl text-xs font-bold border-white/15 hover:bg-white/10 text-white gap-1.5"
+                    >
+                      <Building className="w-3 h-3 text-amber-400" />
                       <span>Stay Voucher</span>
                     </Button>
 
@@ -293,6 +307,16 @@ export const MyTripsWorkspace: React.FC<MyTripsWorkspaceProps> = ({
           })}
         </div>
       )}
+
+      {/* Comprehensive 360 Trip Companion Workspace Modal */}
+      <TripWorkspaceModal
+        booking={selectedTripModal}
+        open={!!selectedTripModal}
+        onOpenChange={(open) => !open && setSelectedTripModal(null)}
+        onShowSlip={onShowSlip}
+        onShowSafetyCard={onShowSafetyCard}
+        onOpenDriverTracking={onOpenDriverTracking}
+      />
 
       {/* Cancel Booking Dialog Guard */}
       <Dialog open={!!cancelModalBooking} onOpenChange={(open) => !open && setCancelModalBooking(null)}>

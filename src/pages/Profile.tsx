@@ -30,6 +30,8 @@ import { PaymentsInvoicesDesk } from '@/modules/customer-profile/components/Paym
 import { DocumentVaultDesk } from '@/modules/customer-profile/components/DocumentVaultDesk';
 import { LoyaltyRewardsDesk } from '@/modules/customer-profile/components/LoyaltyRewardsDesk';
 import { AccountSettingsDesk } from '@/modules/customer-profile/components/AccountSettingsDesk';
+import { ClearanceHubDesk } from '@/modules/customer-profile/components/ClearanceHubDesk';
+import { ProfileCommandPalette } from '@/modules/customer-profile/components/ProfileCommandPalette';
 import { ProfileTabId } from '@/modules/customer-profile/types';
 
 const typeIcons = {
@@ -697,6 +699,7 @@ export default function Profile() {
   const [paymentMilestone, setPaymentMilestone] = useState('');
   const [paidInstallments, setPaidInstallments] = useState<Record<string, boolean>>({});
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -1156,6 +1159,7 @@ export default function Profile() {
               documentsCount={uploadedDocs.length}
               walletBalance={walletBalance}
               onLogout={handleLogout}
+              onOpenCommandPalette={() => setCommandPaletteOpen(true)}
             />
 
             {/* Main Content Area */}
@@ -1183,6 +1187,7 @@ export default function Profile() {
                   cancellingId={cancellingId}
                   onShowSlip={(slip) => setActiveSlip(slip)}
                   onShowSafetyCard={(id) => setSafetyCardToken(id || '')}
+                  onOpenDriverTracking={() => setShowDriverTracking(true)}
                 />
               )}
 
@@ -1211,15 +1216,8 @@ export default function Profile() {
 
               {/* KASHMIR CLEARANCE HUB TAB */}
               {activeTab === 'clearance' && (
-                <OverviewCockpit
-                  bookings={bookings as any}
-                  inquiries={inquiries as any}
-                  walletBalance={walletBalance}
-                  loyaltyPoints={loyaltyPoints}
+                <ClearanceHubDesk
                   advisories={KASHMIR_LOCATIONS as any}
-                  onNavigateTab={(tab) => setActiveTab(tab as TabId)}
-                  onOpenSafetyCard={(id) => setSafetyCardToken(id || activeBookings[0]?.id || '')}
-                  onShowSlip={(slip) => setActiveSlip(slip)}
                 />
               )}
 
@@ -1961,6 +1959,17 @@ export default function Profile() {
           onClose={() => setSafetyCardToken(null)}
         />
       )}
+
+      {/* Global Hotkey Command Palette (Ctrl+K / Cmd+K) */}
+      <ProfileCommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        onSelectTab={(tab) => setActiveTab(tab as TabId)}
+        onOpenSafetyCard={() => setSafetyCardToken(activeBookings[0]?.id || '')}
+        onOpenDriverTracking={() => setShowDriverTracking(true)}
+        onCallCurator={() => window.open('tel:+919999900000')}
+        onOpenWhatsApp={() => window.open('https://wa.me/919999900000', '_blank')}
+      />
 
       <Footer />
     </div>

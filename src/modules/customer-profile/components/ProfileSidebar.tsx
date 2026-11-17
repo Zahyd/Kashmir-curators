@@ -11,7 +11,8 @@ import {
   Settings, 
   LogOut,
   Wallet,
-  ShieldCheck
+  ShieldCheck,
+  Search
 } from 'lucide-react';
 import { ProfileTabId } from '../types';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +25,7 @@ interface ProfileSidebarProps {
   documentsCount: number;
   walletBalance?: number;
   onLogout: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
@@ -33,7 +35,8 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
   proposalsCount,
   documentsCount,
   walletBalance = 0,
-  onLogout
+  onLogout,
+  onOpenCommandPalette
 }) => {
   const navItems = [
     { id: 'overview' as ProfileTabId, label: 'Overview Cockpit', icon: LayoutDashboard },
@@ -51,6 +54,16 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
     <>
       {/* Mobile Sticky Horizontal Touch Swipe Bar */}
       <div className="lg:hidden sticky top-16 z-30 -mx-4 px-4 py-2.5 bg-slate-950/95 backdrop-blur-xl border-b border-white/10 overflow-x-auto flex items-center gap-1.5 scrollbar-none snap-x">
+        {onOpenCommandPalette && (
+          <button
+            type="button"
+            onClick={onOpenCommandPalette}
+            className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 border border-white/10 text-amber-400 shrink-0 hover:bg-slate-800"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>⌘K</span>
+          </button>
+        )}
         {navItems.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -90,6 +103,22 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
               SaaS v2.4
             </span>
           </div>
+
+          {onOpenCommandPalette && (
+            <button
+              type="button"
+              onClick={onOpenCommandPalette}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-black/40 border border-white/5 hover:border-amber-500/30 text-white/40 hover:text-white transition-all text-xs group"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-amber-400 group-hover:scale-105 transition-transform" />
+                <span>Search or action...</span>
+              </div>
+              <kbd className="font-mono text-[10px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-lg text-white/40 group-hover:text-amber-400">
+                ⌘K
+              </kbd>
+            </button>
+          )}
 
           <nav className="space-y-1">
             {navItems.map(item => {
