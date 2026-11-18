@@ -4,6 +4,7 @@ import prisma from '../lib/prisma';
 import { aiGatewayService } from '../services/aiGatewayService';
 import { AICopilotService } from '../services/aiCopilotService';
 import { WeatherService } from '../services/weatherService';
+import { conciergeAgentCrmService } from '../services/conciergeAgentCrmService';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -103,7 +104,7 @@ router.post('/concierge-chat', authenticateToken, async (req: any, res: Response
     const [userRecord, bookings, wallet, advisories, packages, hotels] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, email: true, phone: true }
+        select: { id: true, name: true, email: true, phone: true, uploadedDocuments: true }
       }),
       prisma.booking.findMany({
         where: { userId },
@@ -144,10 +145,18 @@ router.post('/concierge-chat', authenticateToken, async (req: any, res: Response
 
     const weatherAlerts = WeatherService.getPromoAlerts();
 
+    let userDossier: any = {};
+    try {
+      if (userRecord?.uploadedDocuments) {
+        userDossier = JSON.parse(userRecord.uploadedDocuments);
+      }
+    } catch {}
+
     const liveContext = {
       customer: {
         name: userRecord?.name || 'Traveler',
         phoneLinked: Boolean(userRecord?.phone),
+        knownPreferences: userDossier.conciergePreferences || null,
       },
       walletBalanceINR: wallet?.balance || 0,
       bookings: bookings.map((b) => ({
@@ -307,9 +316,27 @@ ${JSON.stringify(liveContext, null, 2)}`;
       }
     }
 
+    // 5. Agentic CRM Memory Sync & Action Trigger Engine
+    let crmSyncResult = { capturedPreferences: [] as string[], loggedAction: null as any };
+    if (userRecord) {
+      try {
+        crmSyncResult = await conciergeAgentCrmService.processConciergeInteraction({
+          user: userRecord,
+          userMessage: trimmedMsg,
+          history,
+          reply: replyText,
+          io: req.app?.get('io'),
+        });
+      } catch (crmErr: any) {
+        console.warn('[AI Concierge Chat] CRM sync warning:', crmErr.message);
+      }
+    }
+
     res.json({
       reply: replyText,
       provider,
+      capturedPreferences: crmSyncResult.capturedPreferences,
+      loggedAction: crmSyncResult.loggedAction,
       contextSummary: {
         activeBookings: bookings.filter((b) => b.status === 'confirmed' || b.status === 'pending').length,
         proposals: inquiries.length,

@@ -13,6 +13,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         employeeCode: true,
         isOnline: true,
         leadCapacity: true,
+        uploadedDocuments: true,
         createdAt: true,
         bookings: {
           select: {

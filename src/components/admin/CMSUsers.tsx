@@ -85,6 +85,7 @@ interface UserAccount {
   employeeCode: string | null;
   isOnline?: boolean;
   leadCapacity?: number;
+  uploadedDocuments?: string | null;
   createdAt: string;
   updatedAt?: string;
   bookings?: BookingRecord[];
@@ -1625,12 +1626,113 @@ export default function CMSUsers() {
               )}
 
               {/* Tab 3: Curator Notes & Tags */}
-              {dossierTab === 'notes' && (
-                <div className="space-y-5">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 block">
-                      Private Curator Notes & Guest Preferences
-                    </label>
+              {dossierTab === 'notes' && (() => {
+                const parsedVault = (() => {
+                  try {
+                    return u.uploadedDocuments ? JSON.parse(u.uploadedDocuments) : null;
+                  } catch {
+                    return null;
+                  }
+                })();
+                const aiPreferences = parsedVault?.conciergePreferences;
+                const aiRequests = Array.isArray(parsedVault?.conciergeRequests) ? parsedVault.conciergeRequests : [];
+
+                return (
+                  <div className="space-y-5">
+                    {/* AI Concierge Autonomous Intelligence & Memory */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/[0.07] via-slate-900/60 to-black/80 border border-amber-500/25 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+                            <Sparkles className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-bold text-white flex items-center gap-1.5">
+                              AI Concierge Memory & Dossier
+                              <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[8px] font-black uppercase px-1.5 py-0">
+                                Neon Live Sync
+                              </Badge>
+                            </h5>
+                            <p className="text-[10px] text-white/40">Autonomous signals captured during guest chat</p>
+                          </div>
+                        </div>
+                        {aiPreferences?.lastUpdated && (
+                          <span className="text-[9px] text-white/30 font-mono">
+                            Last synced: {new Date(aiPreferences.lastUpdated).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {aiPreferences ? (
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {aiPreferences.dietary && (
+                            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                              <span className="text-[9px] font-black uppercase text-amber-400/80 block">Dietary</span>
+                              <span className="text-white font-semibold">{aiPreferences.dietary}</span>
+                            </div>
+                          )}
+                          {aiPreferences.roomPreference && (
+                            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                              <span className="text-[9px] font-black uppercase text-amber-400/80 block">Stay & Rooms</span>
+                              <span className="text-white font-semibold">{aiPreferences.roomPreference}</span>
+                            </div>
+                          )}
+                          {aiPreferences.travelParty && (
+                            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                              <span className="text-[9px] font-black uppercase text-amber-400/80 block">Travel Party</span>
+                              <span className="text-white font-semibold">{aiPreferences.travelParty}</span>
+                            </div>
+                          )}
+                          {aiPreferences.budgetTier && (
+                            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                              <span className="text-[9px] font-black uppercase text-amber-400/80 block">Budget Tier</span>
+                              <span className="text-white font-semibold">{aiPreferences.budgetTier}</span>
+                            </div>
+                          )}
+                          {aiPreferences.destinations && aiPreferences.destinations.length > 0 && (
+                            <div className="col-span-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                              <span className="text-[9px] font-black uppercase text-amber-400/80 block mb-1">Destinations of Interest</span>
+                              <div className="flex flex-wrap gap-1">
+                                {aiPreferences.destinations.map((d: string) => (
+                                  <span key={d} className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 text-[10px] font-medium border border-amber-500/20">
+                                    {d}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="py-4 text-center text-white/30 text-xs border border-dashed border-white/10 rounded-xl">
+                          No concierge chat preferences captured yet. Signals auto-populate when the guest speaks to the AI Concierge.
+                        </div>
+                      )}
+
+                      {/* Recent Concierge Service Requests */}
+                      {aiRequests.length > 0 && (
+                        <div className="pt-2 border-t border-white/10 space-y-1.5">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-white/40 block">
+                            Logged Service Requests ({aiRequests.length})
+                          </span>
+                          {aiRequests.slice(-3).reverse().map((req: any) => (
+                            <div key={req.id} className="p-2 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between text-xs">
+                              <div>
+                                <span className="font-bold text-amber-300 mr-2">#{req.id}</span>
+                                <span className="text-white/80">{req.title}</span>
+                              </div>
+                              <Badge className="bg-amber-500/20 text-amber-300 border-none text-[8px] uppercase">
+                                {req.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 block">
+                        Private Curator Notes & Guest Preferences
+                      </label>
                     <textarea
                       value={editingNoteText}
                       onChange={(e) => setEditingNoteText(e.target.value)}
@@ -1698,8 +1800,9 @@ export default function CMSUsers() {
                   >
                     <Save className="w-4 h-4" /> Save Curator Notes & Tags
                   </Button>
-                </div>
-              )}
+                  </div>
+                );
+              })()}
 
               <DialogFooter className="pt-6 border-t border-white/5">
                 <Button 

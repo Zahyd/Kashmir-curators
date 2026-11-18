@@ -16,12 +16,21 @@ import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { CustomerBooking, CustomerInquiry, KashmirLocationAdvisory } from '../types';
 
+export interface LoggedActionItem {
+  id: string;
+  type: string;
+  title: string;
+  status: string;
+}
+
 export interface AiChatMsg {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
   time: string;
   provider?: string;
+  capturedPreferences?: string[];
+  loggedAction?: LoggedActionItem | null;
 }
 
 interface KashmirAiPopupProps {
@@ -147,6 +156,8 @@ export const KashmirAiPopup: React.FC<KashmirAiPopupProps> = ({
             text: data.reply,
             time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
             provider: providerLabel,
+            capturedPreferences: Array.isArray(data.capturedPreferences) ? data.capturedPreferences : [],
+            loggedAction: data.loggedAction || null,
           },
         ]);
       } else {
@@ -210,6 +221,10 @@ export const KashmirAiPopup: React.FC<KashmirAiPopupProps> = ({
                   <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[8px] font-black uppercase px-1.5 py-0">
                     {activeProvider}
                   </Badge>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[8px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    CRM Sync
+                  </span>
                 </div>
                 <p className="text-[10px] text-white/45 truncate">Real-time synced with your Neon account</p>
               </div>
@@ -278,6 +293,40 @@ export const KashmirAiPopup: React.FC<KashmirAiPopupProps> = ({
                     >
                       {msg.text}
                     </div>
+
+                    {/* Agentic CRM Extracted Preferences Badges */}
+                    {!isUser && msg.capturedPreferences && msg.capturedPreferences.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1 px-0.5">
+                        {msg.capturedPreferences.map((pref, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 text-[9px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 px-2 py-0.5 rounded-full"
+                          >
+                            <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                            <span>Memory: {pref}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Agentic Operational Action Item Card */}
+                    {!isUser && msg.loggedAction && (
+                      <div className="mt-1.5 w-full p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left space-y-0.5">
+                        <div className="flex items-center justify-between text-[10px] font-extrabold text-amber-300">
+                          <span className="flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-amber-400" />
+                            {msg.loggedAction.title}
+                          </span>
+                          <span className="font-mono bg-amber-500/20 px-1.5 py-0.5 rounded text-[8px] text-amber-200">
+                            #{msg.loggedAction.id}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-white/70">
+                          {msg.loggedAction.status}
+                        </p>
+                      </div>
+                    )}
+
                     <span className="text-[9px] text-white/35 font-mono mt-1 px-1">
                       {msg.time}{!isUser && msg.provider ? ` • ${msg.provider}` : ''}
                     </span>
