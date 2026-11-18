@@ -233,7 +233,7 @@ export const CustomProposalsDesk: React.FC<CustomProposalsDeskProps> = ({
                     size="sm"
                     variant="outline"
                     onClick={() => onNavigateToConcierge(`Hello, I'd like to discuss my custom proposal #${inq.id.slice(0, 8)} for ${inq.destination}.`)}
-                    className="h-9 px-3 rounded-xl text-xs font-bold border-white/15 hover:bg-white/10 text-white gap-1.5"
+                    className="h-9 px-3 rounded-xl text-xs font-bold bg-slate-900/80 border-white/15 hover:bg-white/10 text-white hover:text-white gap-1.5"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
                     <span>Chat Curator</span>
@@ -244,7 +244,7 @@ export const CustomProposalsDesk: React.FC<CustomProposalsDeskProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => window.open(inq.proposalUrl, '_blank')}
-                      className="h-9 px-3 rounded-xl text-xs font-bold border-white/15 hover:bg-white/10 text-white"
+                      className="h-9 px-3 rounded-xl text-xs font-bold bg-slate-900/80 border-white/15 hover:bg-white/10 text-white hover:text-white"
                       title="Download PDF"
                     >
                       <Download className="w-3.5 h-3.5 text-emerald-400" />
@@ -366,7 +366,7 @@ export const CustomProposalsDesk: React.FC<CustomProposalsDeskProps> = ({
               <Button
                 variant="outline"
                 onClick={() => setSelectedInquiry(null)}
-                className="w-full rounded-xl border-white/10 text-white"
+                className="w-full rounded-xl bg-slate-900/80 border-white/10 text-white hover:bg-white/10 hover:text-white"
               >
                 Close Itinerary
               </Button>

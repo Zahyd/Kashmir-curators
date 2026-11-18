@@ -254,7 +254,7 @@ export const MyTripsWorkspace: React.FC<MyTripsWorkspaceProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => onShowSlip({ type: 'hotel', booking })}
-                      className="h-8 px-3 rounded-xl text-xs font-bold border-white/15 hover:bg-white/10 text-white gap-1.5"
+                      className="h-8 px-3 rounded-xl text-xs font-bold bg-slate-900/80 border-white/15 hover:bg-white/10 text-white hover:text-white gap-1.5"
                     >
                       <Building className="w-3 h-3 text-amber-400" />
                       <span>Stay Voucher</span>
@@ -264,7 +264,7 @@ export const MyTripsWorkspace: React.FC<MyTripsWorkspaceProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => onShowSlip({ type: 'flight', booking })}
-                      className="h-8 px-3 rounded-xl text-xs font-bold border-white/15 hover:bg-white/10 text-white gap-1.5"
+                      className="h-8 px-3 rounded-xl text-xs font-bold bg-slate-900/80 border-white/15 hover:bg-white/10 text-white hover:text-white gap-1.5"
                     >
                       <Ticket className="w-3 h-3 text-amber-400" />
                       <span>Flight Pass</span>
@@ -274,7 +274,7 @@ export const MyTripsWorkspace: React.FC<MyTripsWorkspaceProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => onShowSlip({ type: 'cab', booking })}
-                      className="h-8 px-3 rounded-xl text-xs font-bold border-white/15 hover:bg-white/10 text-white gap-1.5"
+                      className="h-8 px-3 rounded-xl text-xs font-bold bg-slate-900/80 border-white/15 hover:bg-white/10 text-white hover:text-white gap-1.5"
                     >
                       <Car className="w-3 h-3 text-amber-400" />
                       <span>Chauffeur Details</span>
@@ -345,7 +345,7 @@ export const MyTripsWorkspace: React.FC<MyTripsWorkspaceProps> = ({
               <Button 
                 variant="outline" 
                 onClick={() => setCancelModalBooking(null)}
-                className="rounded-xl border-white/15 text-white"
+                className="rounded-xl bg-slate-900/80 border-white/15 text-white hover:bg-white/10 hover:text-white"
               >
                 Keep Booking
               </Button>

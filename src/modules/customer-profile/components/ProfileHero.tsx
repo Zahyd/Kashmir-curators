@@ -226,7 +226,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                 size="sm"
                 variant="outline"
                 onClick={() => onNavigateTab('ai-companion')}
-                className="h-9 px-3.5 rounded-xl text-xs font-bold border-amber-500/30 text-amber-400 hover:bg-amber-500/10 gap-1.5"
+                className="h-9 px-3.5 rounded-xl text-xs font-bold bg-slate-900/80 border-amber-500/30 text-amber-400 hover:bg-amber-500/15 hover:text-amber-300 gap-1.5"
               >
                 <Bot className="w-3.5 h-3.5" />
                 <span>AI Concierge</span>

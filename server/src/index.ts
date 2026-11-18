@@ -196,6 +196,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/disruptions', disruptionRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/wallets', walletRoutes);
+app.use('/api/wallet', walletRoutes); // Backward-compatible singular alias
 app.use('/api/safety-card', safetyCardRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/vault', vaultRoutes);

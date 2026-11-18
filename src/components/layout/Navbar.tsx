@@ -144,7 +144,7 @@ export default function Navbar() {
 
             {/* Authenticated User Menu or Guest Actions */}
             {isAuthenticated || teamUser ? (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 

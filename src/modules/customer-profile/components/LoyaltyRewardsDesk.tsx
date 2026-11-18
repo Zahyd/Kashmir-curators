@@ -20,10 +20,20 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+interface WalletHistoryItem {
+  id: string;
+  amount: number;
+  type: 'CREDIT' | 'DEBIT' | string;
+  source?: string;
+  description: string;
+  createdAt: string;
+}
+
 interface LoyaltyRewardsDeskProps {
   user: any;
   loyaltyPoints: number;
   walletBalance: number;
+  walletHistory?: WalletHistoryItem[];
   totalSpend: number;
   totalTrips: number;
   claimedVouchers: Record<string, string>;
@@ -34,6 +44,7 @@ export const LoyaltyRewardsDesk: React.FC<LoyaltyRewardsDeskProps> = ({
   user,
   loyaltyPoints,
   walletBalance,
+  walletHistory = [],
   totalSpend,
   totalTrips,
   claimedVouchers,
@@ -269,6 +280,54 @@ export const LoyaltyRewardsDesk: React.FC<LoyaltyRewardsDeskProps> = ({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Verified Travel Wallet Ledger */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm md:text-base font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-emerald-400" />
+            <span>Travel Wallet Ledger</span>
+          </h3>
+          <span className="text-[11px] text-white/40 flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Synced with Database</span>
+          </span>
+        </div>
+
+        <div className="bg-slate-900/70 border border-white/10 rounded-3xl overflow-hidden shadow-xl">
+          {walletHistory.length === 0 ? (
+            <div className="p-8 text-center space-y-1.5">
+              <p className="text-xs font-bold text-white/70">No wallet credit movements yet</p>
+              <p className="text-[11px] text-white/40">
+                Referral credits, promotional bonuses, and instant refund settlements will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {walletHistory.map((tx) => {
+                const isCredit = tx.type === 'CREDIT';
+                return (
+                  <div key={tx.id} className="p-4 md:p-5 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
+                    <div className="min-w-0">
+                      <p className="text-xs md:text-sm font-bold text-white truncate">{tx.description}</p>
+                      <p className="text-[10px] text-white/40 font-mono mt-0.5">
+                        {new Date(tx.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {tx.source ? ` • ${tx.source.replace(/_/g, ' ')}` : ''}
+                      </p>
+                    </div>
+                    <span className={cn(
+                      "text-xs md:text-sm font-black font-mono shrink-0",
+                      isCredit ? "text-emerald-400" : "text-rose-400"
+                    )}>
+                      {isCredit ? '+' : '-'}₹{Number(tx.amount).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -443,7 +443,7 @@ export const TripWorkspaceModal: React.FC<TripWorkspaceModalProps> = ({
                     size="sm"
                     variant="outline"
                     onClick={() => onShowSafetyCard(booking.id)}
-                    className="mt-4 h-8 rounded-xl text-xs font-bold border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                    className="mt-4 h-8 rounded-xl text-xs font-bold bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300"
                   >
                     Launch Pass
                   </Button>
@@ -461,7 +461,7 @@ export const TripWorkspaceModal: React.FC<TripWorkspaceModalProps> = ({
                     size="sm"
                     variant="outline"
                     onClick={() => onShowSlip({ type: 'cab', booking })}
-                    className="mt-4 h-8 rounded-xl text-xs font-bold border-white/10 text-white hover:bg-white/5"
+                    className="mt-4 h-8 rounded-xl text-xs font-bold bg-slate-900/80 border-white/10 text-white hover:bg-white/10 hover:text-white"
                   >
                     View Dispatch
                   </Button>

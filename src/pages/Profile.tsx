@@ -699,17 +699,19 @@ export default function Profile() {
   const [paymentMilestone, setPaymentMilestone] = useState('');
   const [paidInstallments, setPaidInstallments] = useState<Record<string, boolean>>({});
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [walletHistory, setWalletHistory] = useState<any[]>([]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   useEffect(() => {
     const fetchWallet = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/wallet/my`, {
+        const res = await fetch(`${API_BASE_URL}/wallets/my`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
           const data = await res.json();
-          setWalletBalance(data?.balance || 0);
+          setWalletBalance(Number(data?.balance || 0));
+          setWalletHistory(Array.isArray(data?.history) ? data.history : []);
         }
       } catch (e) {
         // silent fallback
@@ -1263,6 +1265,7 @@ export default function Profile() {
                   user={user}
                   loyaltyPoints={loyaltyPoints}
                   walletBalance={walletBalance}
+                  walletHistory={walletHistory}
                   totalSpend={totalSpend}
                   totalTrips={totalTrips}
                   claimedVouchers={claimedVouchers}
