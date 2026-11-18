@@ -89,7 +89,7 @@ export const OverviewCockpit: React.FC<OverviewCockpitProps> = ({
 
               <p className="text-xs md:text-sm text-white/60 flex items-center gap-2">
                 <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>Valley of Kashmir • Dedicated Operations Coordinator: Faheem</span>
+                <span>Valley of Kashmir • Kashmir Curators Ground Operations Desk</span>
               </p>
             </div>
 
@@ -151,13 +151,13 @@ export const OverviewCockpit: React.FC<OverviewCockpitProps> = ({
             </div>
 
             <div className="bg-black/30 border border-white/5 p-4 rounded-2xl">
-              <span className="text-[10px] font-black uppercase text-white/40 block mb-1">Concierge Lead</span>
-              <p className="font-bold text-white truncate">Faheem • Online</p>
+              <span className="text-[10px] font-black uppercase text-white/40 block mb-1">Concierge Desk</span>
+              <p className="font-bold text-white truncate">Kashmir AI & Ops</p>
               <button 
                 onClick={() => onNavigateTab('ai-companion')}
                 className="text-[10px] text-sky-400 hover:underline mt-0.5 flex items-center gap-1"
               >
-                <span>Live Chat &rarr;</span>
+                <span>Open AI Box &rarr;</span>
               </button>
             </div>
           </div>

@@ -32,6 +32,7 @@ import { LoyaltyRewardsDesk } from '@/modules/customer-profile/components/Loyalt
 import { AccountSettingsDesk } from '@/modules/customer-profile/components/AccountSettingsDesk';
 import { ClearanceHubDesk } from '@/modules/customer-profile/components/ClearanceHubDesk';
 import { ProfileCommandPalette } from '@/modules/customer-profile/components/ProfileCommandPalette';
+import { KashmirAiPopup } from '@/modules/customer-profile/components/KashmirAiPopup';
 import { ProfileTabId } from '@/modules/customer-profile/types';
 
 const typeIcons = {
@@ -700,24 +701,27 @@ export default function Profile() {
     }
   }, [searchParams]);
 
-  const [conciergeMsg, setConciergeMsg] = useState('');
+  // Floating Kashmir Curators AI Popup state (real-time backend powered)
+  const [aiPopupOpen, setAiPopupOpen] = useState(false);
+  const [aiPrefillPrompt, setAiPrefillPrompt] = useState('');
   const [selectedLoc, setSelectedLoc] = useState('srinagar');
+
+  const openAiPopup = useCallback((prompt?: string) => {
+    if (prompt) setAiPrefillPrompt(prompt);
+    setAiPopupOpen(true);
+  }, []);
+
+  // Auto-open floating AI popup if navigated directly to ?tab=ai-companion
+  useEffect(() => {
+    if (activeTab === 'ai-companion') {
+      setAiPopupOpen(true);
+    }
+  }, [activeTab]);
   
   // Profile editing
   const [editName, setEditName] = useState(user?.name || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-
-  // Chat simulator state
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      sender: 'concierge',
-      text: 'Greetings from Kashmir Curators Concierge. I am Faheem, your dedicated Travel Curator. How can I assist you with your upcoming journey today?',
-      time: '10:00 AM'
-    }
-  ]);
-  const [isConciergeTyping, setIsConciergeTyping] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Slips/Vouchers display
   const [activeSlip, setActiveSlip] = useState<{ type: 'hotel' | 'flight' | 'cab', booking: any } | null>(null);
@@ -866,11 +870,6 @@ export default function Profile() {
       setClaimedVouchers(vault.claimedVouchers);
     }
   }, [user]);
-
-  // Scroll chat to bottom
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, isConciergeTyping]);
 
   // Handle Driver Tracking animation loop
   useEffect(() => {
@@ -1099,45 +1098,6 @@ export default function Profile() {
     }
   };
 
-  // Concierge Chat Submit
-  const handleSendChatMessage = (textToSend: string) => {
-    if (!textToSend.trim()) return;
-    
-    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const userMsg: ChatMessage = {
-      sender: 'user',
-      text: textToSend,
-      time: now
-    };
-
-    setChatMessages(prev => [...prev, userMsg]);
-    setConciergeMsg('');
-    sendSupportRequest(textToSend); // Real-time notification socket trigger
-
-    setIsConciergeTyping(true);
-    setTimeout(() => {
-      setIsConciergeTyping(false);
-      
-      let replyText = "Thank you for sharing this request. I am looking into this right away with our local ground operations team and will update you shortly via SMS and WhatsApp. Rest assured, we've got you covered!";
-      const q = textToSend.toLowerCase();
-      if (q.includes('shikara') || q.includes('dinner')) {
-        replyText = "Excellent choice! I am coordinating a private sunset shikara dinner for you on Dal Lake. We will arrange a candle-lit layout with premium Kashmiri wazwan. I will confirm the time and boat details shortly.";
-      } else if (q.includes('checkout') || q.includes('late')) {
-        replyText = "Certainly! I have contacted the hotel manager regarding your request for a late checkout. I will try to extend it to 2 PM free of charge and update you in a few minutes.";
-      } else if (q.includes('guide') || q.includes('private')) {
-        replyText = "Understood. I will assign a certified private local guide fluent in English and Hindi who specializes in Kashmir's history, local folklore, and photography hotspots. Let me fetch their profile for you.";
-      } else if (q.includes('cab') || q.includes('driver')) {
-        replyText = "Your chauffeur vehicle is already mapped. I've sent a ping to Toyota Innova Crysta driver Hilal Ahmad (+91 91037 98448) to confirm his exact arrival time at your pickup location.";
-      }
-
-      setChatMessages(prev => [...prev, {
-        sender: 'concierge',
-        text: replyText,
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      }]);
-    }, 2000);
-  };
-
   // Claim loyalty voucher (persisted to Neon DB)
   const handleClaimVoucher = async (voucherId: string, voucherName: string) => {
     if (claimedVouchers[voucherId]) {
@@ -1319,6 +1279,7 @@ export default function Profile() {
             }
           }}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+          onOpenAiPopup={() => openAiPopup()}
         />
 
         {/* Dashboard Grid Container */}
@@ -1381,10 +1342,7 @@ export default function Profile() {
                     }
                   }}
                   onNavigateToConcierge={(contextMsg) => {
-                    setActiveTab('support');
-                    if (contextMsg) {
-                      setConciergeMsg(contextMsg);
-                    }
+                    openAiPopup(contextMsg);
                   }}
                 />
               )}
@@ -1427,9 +1385,7 @@ export default function Profile() {
                 <AiTravelCompanion
                   user={user}
                   bookings={bookings as any}
-                  chatMessages={chatMessages}
-                  isTyping={isConciergeTyping}
-                  onSendMessage={handleSendChatMessage}
+                  onOpenAiPopup={openAiPopup}
                 />
               )}
 
@@ -2148,11 +2104,32 @@ export default function Profile() {
       <ProfileCommandPalette
         open={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
-        onSelectTab={(tab) => setActiveTab(tab as TabId)}
+        onSelectTab={(tab) => {
+          if (tab === 'ai-companion') {
+            openAiPopup();
+          } else {
+            setActiveTab(tab as TabId);
+          }
+        }}
         onOpenSafetyCard={() => setSafetyCardToken(activeBookings[0]?.id || '')}
         onOpenDriverTracking={() => setShowDriverTracking(true)}
         onCallCurator={() => window.open('tel:+919999900000')}
         onOpenWhatsApp={() => window.open('https://wa.me/919999900000', '_blank')}
+      />
+
+      {/* Compact Floating Real-Time Kashmir Curators AI Popup */}
+      <KashmirAiPopup
+        open={aiPopupOpen}
+        onOpenChange={setAiPopupOpen}
+        user={user}
+        token={token}
+        bookings={bookings as any}
+        inquiries={inquiries as any}
+        walletBalance={walletBalance}
+        advisories={liveAdvisories as any}
+        prefillPrompt={aiPrefillPrompt}
+        onPrefillConsumed={() => setAiPrefillPrompt('')}
+        onEscalateToOps={(msg) => sendSupportRequest(msg)}
       />
 
       <Footer />

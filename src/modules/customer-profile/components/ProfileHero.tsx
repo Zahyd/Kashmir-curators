@@ -36,6 +36,7 @@ interface ProfileHeroProps {
   onOpenSafetyCard?: (bookingId?: string) => void;
   onShowLatestVoucher?: () => void;
   onOpenCommandPalette?: () => void;
+  onOpenAiPopup?: () => void;
 }
 
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
@@ -48,7 +49,8 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   onNavigateTab,
   onOpenSafetyCard,
   onShowLatestVoucher,
-  onOpenCommandPalette
+  onOpenCommandPalette,
+  onOpenAiPopup
 }) => {
   const [tierModalOpen, setTierModalOpen] = useState(false);
   const [completenessModalOpen, setCompletenessModalOpen] = useState(false);
@@ -227,11 +229,11 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onNavigateTab('ai-companion')}
+                onClick={() => (onOpenAiPopup ? onOpenAiPopup() : onNavigateTab('ai-companion'))}
                 className="h-9 px-3.5 rounded-xl text-xs font-bold bg-slate-900/80 border-amber-500/30 text-amber-400 hover:bg-amber-500/15 hover:text-amber-300 gap-1.5"
               >
                 <Bot className="w-3.5 h-3.5" />
-                <span>AI Concierge</span>
+                <span>Kashmir AI</span>
               </Button>
 
               {onOpenSafetyCard && (

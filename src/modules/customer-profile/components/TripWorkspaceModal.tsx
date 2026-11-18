@@ -121,7 +121,7 @@ export const TripWorkspaceModal: React.FC<TripWorkspaceModalProps> = ({
 
               <p className="text-white/60 text-xs md:text-sm mt-1 flex items-center gap-2">
                 <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                <span>Valley of Kashmir • Dedicated Curator: Faheem (Ground Lead)</span>
+                <span>Valley of Kashmir • Kashmir Curators Srinagar Operations Desk</span>
               </p>
             </div>
 
