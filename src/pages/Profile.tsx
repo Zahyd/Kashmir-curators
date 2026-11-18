@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   User as UserIcon, Package, Building, Car, Calendar, Clock, MapPin, AlertCircle, 
   Loader2, Compass, LayoutDashboard, CreditCard, Settings, LogOut, 
@@ -637,11 +637,69 @@ function HotelPartnerDashboard({ user, token, handleLogout }: { user: any; token
   );
 }
 
+const VALID_TABS: TabId[] = [
+  'overview', 'trips', 'proposals', 'itineraries', 'ai-companion',
+  'support', 'payments', 'documents', 'loyalty', 'rewards', 'clearance', 'settings'
+];
+
+// Backward-compatible parser for User.uploadedDocuments JSON column in Neon DB
+const parseProfileVault = (raw?: string) => {
+  const defaults = {
+    docs: [] as UploadedDoc[],
+    preferences: {
+      notifyWhatsApp: true,
+      notifySMS: true,
+      notifyBiometrics: false,
+      preferredPace: 'balanced' as 'relaxed' | 'balanced' | 'active',
+      dietary: 'Standard / Wazwan',
+    },
+    claimedVouchers: {} as Record<string, string>,
+  };
+  if (!raw) return defaults;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return { ...defaults, docs: parsed as UploadedDoc[] };
+    }
+    return {
+      docs: Array.isArray(parsed?.docs) ? (parsed.docs as UploadedDoc[]) : [],
+      preferences: { ...defaults.preferences, ...(parsed?.preferences || {}) },
+      claimedVouchers: parsed?.claimedVouchers && typeof parsed.claimedVouchers === 'object' ? parsed.claimedVouchers : {},
+    };
+  } catch {
+    return defaults;
+  }
+};
+
 export default function Profile() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, token, isAuthenticated, isLoading, bookings, inquiries, cancelBooking, logout, sendSupportRequest, updateProfile, updateInquiry } = useAuth();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const initialTabParam = searchParams.get('tab') as TabId | null;
+  const [activeTab, setActiveTabState] = useState<TabId>(
+    initialTabParam && VALID_TABS.includes(initialTabParam) ? initialTabParam : 'overview'
+  );
+
+  const setActiveTab = useCallback((tab: TabId) => {
+    setActiveTabState(tab);
+    if (tab === 'overview') {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab }, { replace: true });
+    }
+  }, [setSearchParams]);
+
+  // Keep activeTab in sync when user navigates via Navbar profile dropdown (?tab=...)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') as TabId | null;
+    if (tabParam && VALID_TABS.includes(tabParam) && tabParam !== activeTab) {
+      setActiveTabState(tabParam);
+    } else if (!tabParam && activeTab !== 'overview') {
+      setActiveTabState('overview');
+    }
+  }, [searchParams]);
+
   const [conciergeMsg, setConciergeMsg] = useState('');
   const [selectedLoc, setSelectedLoc] = useState('srinagar');
   
@@ -668,14 +726,21 @@ export default function Profile() {
   const [showDriverTracking, setShowDriverTracking] = useState(false);
   const [trackingProgress, setTrackingProgress] = useState(0);
 
-  // Rewards claiming
+  // Rewards claiming (hydrated from Neon User profile vault)
   const [claimedVouchers, setClaimedVouchers] = useState<Record<string, string>>({});
   const [viewingVoucher, setViewingVoucher] = useState<{ id: string, name: string, code: string } | null>(null);
 
-  // Settings
+  // Settings & Travel Preferences (hydrated & persisted to Neon User profile)
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
   const [notifySMS, setNotifySMS] = useState(true);
   const [notifyBiometrics, setNotifyBiometrics] = useState(false);
+  const [preferredPace, setPreferredPace] = useState<'relaxed' | 'balanced' | 'active'>('balanced');
+  const [dietary, setDietary] = useState<string>('Standard / Wazwan');
+
+  // Live Neon Travel Advisories & Weather Telemetry
+  const [liveAdvisories, setLiveAdvisories] = useState(KASHMIR_LOCATIONS);
+  const [liveDbBulletins, setLiveDbBulletins] = useState<any[]>([]);
+  const [lastAdvisorySync, setLastAdvisorySync] = useState<string>('');
 
   // Interactive Itinerary State
   const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
@@ -726,10 +791,79 @@ export default function Profile() {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
+  const fetchLiveIntelligence = useCallback(async () => {
+    try {
+      const [advRes, weatherRes] = await Promise.allSettled([
+        fetch(`${API_BASE_URL}/advisories`),
+        fetch(`${API_BASE_URL}/weather/alerts`),
+      ]);
+
+      let dbAdvisories: any[] = [];
+      if (advRes.status === 'fulfilled' && advRes.value.ok) {
+        const parsed = await advRes.value.json();
+        if (Array.isArray(parsed)) {
+          dbAdvisories = parsed;
+          setLiveDbBulletins(parsed);
+        }
+      }
+
+      let weatherAlerts: any[] = [];
+      if (weatherRes.status === 'fulfilled' && weatherRes.value.ok) {
+        const parsed = await weatherRes.value.json();
+        if (Array.isArray(parsed)) {
+          weatherAlerts = parsed;
+        }
+      }
+
+      // Merge live weather + DB advisories into the 4 primary Kashmir destination hubs
+      const merged = KASHMIR_LOCATIONS.map((loc) => {
+        const wMatch = weatherAlerts.find(
+          (w) => w.destination?.toLowerCase() === loc.name.toLowerCase()
+        );
+        const aMatch = dbAdvisories.find(
+          (a) => a.location?.toLowerCase().includes(loc.name.toLowerCase())
+        );
+
+        const derivedStatus = aMatch?.status
+          ? aMatch.status.toLowerCase().includes('closed')
+            ? 'Closed'
+            : aMatch.status.toLowerCase().includes('caution') || aMatch.status.toLowerCase().includes('delay')
+              ? 'Caution'
+              : 'Open'
+          : loc.status;
+
+        return {
+          ...loc,
+          temp: typeof wMatch?.temperature === 'number' ? wMatch.temperature : loc.temp,
+          condition: wMatch?.condition || loc.condition,
+          status: derivedStatus,
+          message: aMatch?.message || loc.message,
+          subText: aMatch?.recommendedAction || wMatch?.marketingHook || loc.subText,
+        };
+      });
+
+      setLiveAdvisories(merged);
+      setLastAdvisorySync(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
+    } catch {
+      // silent fallback to baseline advisories
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLiveIntelligence();
+  }, [fetchLiveIntelligence]);
+
   useEffect(() => {
     if (user) {
       setEditName(user.name);
       setEditPhone(user.phone || '');
+      const vault = parseProfileVault(user.uploadedDocuments);
+      setNotifyWhatsApp(vault.preferences.notifyWhatsApp);
+      setNotifySMS(vault.preferences.notifySMS);
+      setNotifyBiometrics(vault.preferences.notifyBiometrics);
+      setPreferredPace(vault.preferences.preferredPace);
+      setDietary(vault.preferences.dietary);
+      setClaimedVouchers(vault.claimedVouchers);
     }
   }, [user]);
 
@@ -782,8 +916,26 @@ export default function Profile() {
     nextTier = 'Maxed';
   }
 
-  // Parse uploaded documents
-  const uploadedDocs: UploadedDoc[] = user?.uploadedDocuments ? JSON.parse(user.uploadedDocuments) : [];
+  // Parse uploaded documents, preferences & claimed vouchers from Neon User vault
+  const profileVault = parseProfileVault(user?.uploadedDocuments);
+  const uploadedDocs: UploadedDoc[] = profileVault.docs;
+
+  const buildVaultPayload = (overrides?: {
+    docs?: UploadedDoc[];
+    preferences?: Partial<typeof profileVault.preferences>;
+    claimedVouchers?: Record<string, string>;
+  }) => JSON.stringify({
+    docs: overrides?.docs ?? uploadedDocs,
+    preferences: {
+      notifyWhatsApp,
+      notifySMS,
+      notifyBiometrics,
+      preferredPace,
+      dietary,
+      ...(overrides?.preferences || {}),
+    },
+    claimedVouchers: overrides?.claimedVouchers ?? claimedVouchers,
+  });
 
   if (isLoading || !isAuthenticated) {
     return null;
@@ -809,19 +961,32 @@ export default function Profile() {
     return <HotelPartnerDashboard user={user} token={token} handleLogout={handleLogout} />;
   }
 
-  // Profile Save
+  // Profile Save (persists identity + travel preferences & alert toggles to Neon DB)
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingProfile(true);
     const res = await updateProfile({
       name: editName,
-      phone: editPhone
+      phone: editPhone,
+      uploadedDocuments: buildVaultPayload(),
     });
     setIsSavingProfile(false);
     if (res.success) {
-      toast.success('Profile details updated successfully!');
+      toast.success('Profile & travel preferences synced to database!');
     } else {
       toast.error(res.error || 'Failed to save changes.');
+    }
+  };
+
+  // Auto-persist preference/toggle changes directly to Neon DB
+  const handleSavePreferences = async (overrides?: Record<string, any>) => {
+    const res = await updateProfile({
+      uploadedDocuments: buildVaultPayload({ preferences: overrides }),
+    });
+    if (res.success) {
+      toast.success('Preference saved');
+    } else {
+      toast.error('Failed to sync preference');
     }
   };
 
@@ -857,7 +1022,7 @@ export default function Profile() {
         const updatedDocs = [...uploadedDocs, newDoc];
         
         const updateRes = await updateProfile({
-          uploadedDocuments: JSON.stringify(updatedDocs)
+          uploadedDocuments: buildVaultPayload({ docs: updatedDocs })
         });
 
         if (updateRes.success) {
@@ -888,7 +1053,7 @@ export default function Profile() {
       });
 
       const updateRes = await updateProfile({
-        uploadedDocuments: JSON.stringify(updatedDocs)
+        uploadedDocuments: buildVaultPayload({ docs: updatedDocs })
       });
 
       toast.dismiss();
@@ -973,8 +1138,8 @@ export default function Profile() {
     }, 2000);
   };
 
-  // Claim loyalty voucher
-  const handleClaimVoucher = (voucherId: string, voucherName: string) => {
+  // Claim loyalty voucher (persisted to Neon DB)
+  const handleClaimVoucher = async (voucherId: string, voucherName: string) => {
     if (claimedVouchers[voucherId]) {
       setViewingVoucher({
         id: voucherId,
@@ -985,17 +1150,22 @@ export default function Profile() {
     }
 
     const uniqueCode = `${voucherId.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    setClaimedVouchers(prev => ({
-      ...prev,
+    const nextClaimed = {
+      ...claimedVouchers,
       [voucherId]: uniqueCode
-    }));
+    };
+    setClaimedVouchers(nextClaimed);
 
     setViewingVoucher({
       id: voucherId,
       name: voucherName,
       code: uniqueCode
     });
-    toast.success(`${voucherName} claimed successfully!`);
+
+    await updateProfile({
+      uploadedDocuments: buildVaultPayload({ claimedVouchers: nextClaimed })
+    });
+    toast.success(`${voucherName} claimed and saved to your account!`);
   };
 
   // Installment pay simulator
@@ -1137,6 +1307,7 @@ export default function Profile() {
             .filter(b => b.status === 'confirmed' || b.status === 'completed')
             .reduce((sum, b) => sum + b.totalAmount, 0)}
           walletBalance={walletBalance}
+          documentsCount={uploadedDocs.length}
           onNavigateTab={(tab) => setActiveTab(tab as TabId)}
           onOpenSafetyCard={(id) => setSafetyCardToken(id || activeBookings[0]?.id || '')}
           onShowLatestVoucher={() => {
@@ -1176,7 +1347,7 @@ export default function Profile() {
                   inquiries={inquiries as any}
                   walletBalance={walletBalance}
                   loyaltyPoints={loyaltyPoints}
-                  advisories={KASHMIR_LOCATIONS as any}
+                  advisories={liveAdvisories as any}
                   onNavigateTab={(tab) => setActiveTab(tab as TabId)}
                   onOpenSafetyCard={(id) => setSafetyCardToken(id || activeBookings[0]?.id || '')}
                   onShowSlip={(slip) => setActiveSlip(slip)}
@@ -1221,7 +1392,10 @@ export default function Profile() {
               {/* KASHMIR CLEARANCE HUB TAB */}
               {activeTab === 'clearance' && (
                 <ClearanceHubDesk
-                  advisories={KASHMIR_LOCATIONS as any}
+                  advisories={liveAdvisories as any}
+                  liveBulletins={liveDbBulletins}
+                  lastSyncedAt={lastAdvisorySync}
+                  onSyncBulletins={fetchLiveIntelligence}
                 />
               )}
 
@@ -1289,6 +1463,11 @@ export default function Profile() {
                   setNotifySMS={setNotifySMS}
                   notifyBiometrics={notifyBiometrics}
                   setNotifyBiometrics={setNotifyBiometrics}
+                  preferredPace={preferredPace}
+                  setPreferredPace={setPreferredPace}
+                  dietary={dietary}
+                  setDietary={setDietary}
+                  onSavePreferences={handleSavePreferences}
                 />
               )}
 

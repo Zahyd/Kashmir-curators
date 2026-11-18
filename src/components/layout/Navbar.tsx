@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Menu, X, User, LogOut, ChevronDown, Sparkles, LayoutDashboard, 
-  Building, Building2, Car, Compass, Map, Phone, Headphones, Sun, Moon 
+  Building, Building2, Car, Compass, Map, Phone, Headphones, Sun, Moon,
+  Package, Gift, Settings, Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/ui/Logo';
@@ -158,47 +159,105 @@ export default function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 bg-white/95 dark:bg-[#0c1216]/95 backdrop-blur-3xl border-slate-200 dark:border-white/10 text-[#111439] dark:text-white rounded-2xl p-2 mt-4 shadow-2xl">
+                  {/* Compact Traveler / Account Identity Header */}
+                  <div className="px-3 py-2.5 mb-1 border-b border-slate-200/80 dark:border-white/10">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-black text-[#111439] dark:text-white truncate">
+                        {user?.name || teamUser?.name || 'Traveler'}
+                      </p>
+                      <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 shrink-0">
+                        {teamUser ? teamUser.role : user?.role && user.role !== 'user' ? user.role : 'Explorer'}
+                      </span>
+                    </div>
+                    {(user?.email || teamUser?.code) && (
+                      <p className="text-[10px] text-slate-500 dark:text-white/45 truncate mt-0.5">
+                        {user?.email || `Staff ID: ${teamUser?.code}`}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Traveler-First Quick Shortcuts (B2C Sanctuary) */}
                   {isAuthenticated && (
+                    <div className="space-y-0.5">
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/profile" className="flex items-center gap-3">
+                          <Sparkles className="w-4 h-4 text-amber-500" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">My Travel Hub</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/profile?tab=trips" className="flex items-center gap-3">
+                          <Package className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">My Trips & Vouchers</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/profile?tab=proposals" className="flex items-center gap-3">
+                          <Compass className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">Custom Proposals</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/profile?tab=ai-companion" className="flex items-center gap-3">
+                          <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">AI Travel Concierge</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/profile?tab=loyalty" className="flex items-center gap-3">
+                          <Gift className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">Wallet & Rewards</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                        <Link to="/profile?tab=settings" className="flex items-center gap-3">
+                          <Settings className="w-4 h-4 text-slate-500 dark:text-white/60" />
+                          <span className="text-xs font-bold text-[#111439] dark:text-white">Account Settings</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </div>
+                  )}
+
+                  {/* Strictly Role-Gated Partner & Ops Portals (Hidden from regular customers) */}
+                  {((isAuthenticated && ['agent', 'supplier', 'hotel', 'driver', 'admin'].includes(user?.role || '')) || !!teamUser) && (
                     <>
-                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
-                        <Link to="/agent" className="flex items-center gap-3">
-                          <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          <span className="text-xs font-bold text-[#111439] dark:text-white">Agent CRM & Licensing</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
-                        <Link to="/hospitality" className="flex items-center gap-3">
-                          <Building className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                          <span className="text-xs font-bold text-[#111439] dark:text-white">Hotels & Houseboats</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
-                        <Link to="/driver" className="flex items-center gap-3">
-                          <Car className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                          <span className="text-xs font-bold text-[#111439] dark:text-white">Driver Cockpit</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  {isAuthenticated && (
-                    <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
-                      <Link to="/profile" className="flex items-center gap-3">
-                        <Sparkles className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs font-bold text-[#111439] dark:text-white">Guest Sanctuary</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {isAuthenticated && (user?.role === 'supplier' || user?.role === 'admin') && (
-                    <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
-                      <Link to="/vendor" className="flex items-center gap-3">
-                        <Building className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                        <span className="text-xs font-bold text-[#111439] dark:text-white">Vendor Hub</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {teamUser && (
-                    <>
-                      {['admin', 'operations', 'marketing'].includes(teamUser.role) && (
+                      <DropdownMenuSeparator className="bg-slate-200 dark:bg-white/10 mx-2 my-2" />
+                      <p className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/35">
+                        Partner & Ops Portals
+                      </p>
+                      {(user?.role === 'agent' || user?.role === 'admin' || !!teamUser) && (
+                        <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                          <Link to="/agent" className="flex items-center gap-3">
+                            <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span className="text-xs font-bold text-[#111439] dark:text-white">Agent CRM & Licensing</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {(user?.role === 'supplier' || user?.role === 'hotel' || user?.role === 'admin' || !!teamUser) && (
+                        <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                          <Link to="/hospitality" className="flex items-center gap-3">
+                            <Building className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                            <span className="text-xs font-bold text-[#111439] dark:text-white">Hospitality OS</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {(user?.role === 'driver' || user?.role === 'admin' || !!teamUser) && (
+                        <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                          <Link to="/driver" className="flex items-center gap-3">
+                            <Car className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-xs font-bold text-[#111439] dark:text-white">Driver Cockpit</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {isAuthenticated && (user?.role === 'supplier' || user?.role === 'admin') && (
+                        <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
+                          <Link to="/vendor" className="flex items-center gap-3">
+                            <Building className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                            <span className="text-xs font-bold text-[#111439] dark:text-white">Vendor Hub</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {teamUser && ['admin', 'operations', 'marketing'].includes(teamUser.role) && (
                         <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
                           <Link to="/admin" className="flex items-center gap-3">
                             <LayoutDashboard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -206,7 +265,7 @@ export default function Navbar() {
                           </Link>
                         </DropdownMenuItem>
                       )}
-                      {(teamUser.role === 'sales' || teamUser.role === 'admin') && (
+                      {teamUser && (teamUser.role === 'sales' || teamUser.role === 'admin') && (
                         <DropdownMenuItem asChild className="rounded-xl py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
                           <Link to="/sales/portal" className="flex items-center gap-3">
                             <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -291,34 +350,39 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {/* B2B Partner Hub Links in Mobile */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-1">
-                <Link
-                  to="/agent"
-                  onClick={() => setIsOpen(false)}
-                  className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-2"
-                >
-                  <Building2 className="w-4 h-4" />
-                  <span>Agent CRM</span>
-                </Link>
+              {/* B2B Partner Hub Links in Mobile (Clearly separated from B2C nav) */}
+              <div className="pt-2 mt-1 border-t border-slate-200/70 dark:border-white/10 space-y-1.5">
+                <p className="px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/35">
+                  B2B & Partner Portals
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                  <Link
+                    to="/agent"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-2"
+                  >
+                    <Building2 className="w-4 h-4" />
+                    <span>Agent CRM</span>
+                  </Link>
 
-                <Link
-                  to="/hospitality"
-                  onClick={() => setIsOpen(false)}
-                  className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 flex items-center gap-2"
-                >
-                  <Building className="w-4 h-4" />
-                  <span>Hotels & Houseboats</span>
-                </Link>
+                  <Link
+                    to="/hospitality"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 flex items-center gap-2"
+                  >
+                    <Building className="w-4 h-4" />
+                    <span>Hospitality OS</span>
+                  </Link>
 
-                <Link
-                  to="/driver"
-                  onClick={() => setIsOpen(false)}
-                  className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 flex items-center gap-2"
-                >
-                  <Car className="w-4 h-4" />
-                  <span>Driver Cockpit</span>
-                </Link>
+                  <Link
+                    to="/driver"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 flex items-center gap-2"
+                  >
+                    <Car className="w-4 h-4" />
+                    <span>Driver Cockpit</span>
+                  </Link>
+                </div>
               </div>
 
               {/* Theme & Concierge Quick Actions */}

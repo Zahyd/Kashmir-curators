@@ -32,24 +32,49 @@ interface MountainPassStatus {
   lastUpdated: string;
 }
 
+interface LiveDbAdvisory {
+  id: string;
+  location: string;
+  status: string;
+  message: string;
+  severity?: string;
+  category?: string;
+  source?: string;
+  recommendedAction?: string;
+  emergencyModeActive?: boolean;
+  lastUpdated?: string;
+}
+
 interface ClearanceHubDeskProps {
   advisories: KashmirLocationAdvisory[];
+  liveBulletins?: LiveDbAdvisory[];
+  lastSyncedAt?: string;
+  onSyncBulletins?: () => Promise<void>;
 }
 
 export const ClearanceHubDesk: React.FC<ClearanceHubDeskProps> = ({
-  advisories
+  advisories,
+  liveBulletins = [],
+  lastSyncedAt,
+  onSyncBulletins
 }) => {
   const [selectedLocId, setSelectedLocId] = useState<string>(advisories[0]?.id || 'srinagar');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const activeAdvisory = advisories.find(l => l.id === selectedLocId) || advisories[0];
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    try {
+      if (onSyncBulletins) {
+        await onSyncBulletins();
+      }
+      toast.success('Clearance intelligence synchronized with live Neon database & weather desk.');
+    } catch {
+      toast.error('Could not reach live advisory server. Showing latest cached bulletins.');
+    } finally {
       setIsRefreshing(false);
-      toast.success('Clearance intelligence synchronized with regional traffic & meteorological bulletins.');
-    }, 800);
+    }
   };
 
   const mountainPasses: MountainPassStatus[] = [
@@ -229,11 +254,72 @@ export const ClearanceHubDesk: React.FC<ClearanceHubDeskProps> = ({
             </p>
             <div className="flex items-center gap-1.5 text-[10px] text-white/40 pt-1">
               <Clock className="w-3 h-3 text-amber-400" />
-              <span>Updated Today at 06:00 IST (Scheduled Daily)</span>
+              <span>{lastSyncedAt ? `Live synced at ${lastSyncedAt}` : 'Synced with Kashmir Curators Advisory Desk'}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Live Database Travel Advisories (from Neon TravelAdvisory table) */}
+      {liveBulletins.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm md:text-base font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <span>Verified Live Operations Bulletins</span>
+            </h3>
+            <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] font-bold">
+              {liveBulletins.length} Live from DB
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {liveBulletins.map((item) => {
+              const isCritical = item.emergencyModeActive || item.severity === 'CRITICAL_EMERGENCY' || item.status?.toLowerCase().includes('closed');
+              const isCaution = item.severity === 'HIGH' || item.status?.toLowerCase().includes('caution') || item.status?.toLowerCase().includes('delay');
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "border rounded-2xl p-5 shadow-md transition-all",
+                    isCritical
+                      ? "bg-rose-950/30 border-rose-500/40"
+                      : isCaution
+                        ? "bg-amber-950/20 border-amber-500/30"
+                        : "bg-slate-900/75 border-white/10"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h4 className="text-sm font-extrabold text-white">{item.location}</h4>
+                    <Badge className={cn(
+                      "text-[9px] font-black uppercase px-2 py-0.5",
+                      isCritical ? "bg-rose-500/20 text-rose-300 border-rose-500/40" :
+                      isCaution ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
+                      "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                    )}>
+                      {item.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-white/75 leading-relaxed mb-2">{item.message}</p>
+                  {item.recommendedAction && (
+                    <p className="text-[11px] text-amber-300/90 bg-black/30 rounded-xl px-3 py-2 border border-white/5 mb-3">
+                      <span className="font-bold">Guidance:</span> {item.recommendedAction}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between pt-2.5 border-t border-white/5 text-[10px] text-white/40">
+                    <span>Source: {item.source || 'J&K Tourism & Ops'}</span>
+                    <span>
+                      {item.lastUpdated
+                        ? new Date(item.lastUpdated).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                        : 'Verified'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Mountain Pass & Highway Advisory Matrix */}
       <div className="space-y-4">

@@ -31,6 +31,7 @@ interface ProfileHeroProps {
   loyaltyPoints?: number;
   totalSpent?: number;
   walletBalance?: number;
+  documentsCount?: number;
   onNavigateTab: (tab: ProfileTabId) => void;
   onOpenSafetyCard?: (bookingId?: string) => void;
   onShowLatestVoucher?: () => void;
@@ -43,6 +44,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   loyaltyPoints = 0,
   totalSpent = 0,
   walletBalance = 0,
+  documentsCount = 0,
   onNavigateTab,
   onOpenSafetyCard,
   onShowLatestVoucher,
@@ -100,7 +102,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     { label: 'Full Legal Name', completed: !!user?.name },
     { label: 'Verified Email ID', completed: !!user?.email },
     { label: 'Mobile / WhatsApp Phone', completed: !!user?.phone },
-    { label: 'Uploaded Travel Passes', completed: !!user?.uploadedDocuments && user.uploadedDocuments !== '[]' },
+    { label: 'Uploaded Travel Passes', completed: documentsCount > 0 },
   ];
   const completedCount = completenessItems.filter(i => i.completed).length;
   const completenessPercent = Math.round((completedCount / completenessItems.length) * 100);

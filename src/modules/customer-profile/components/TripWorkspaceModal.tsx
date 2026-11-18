@@ -221,164 +221,191 @@ export const TripWorkspaceModal: React.FC<TripWorkspaceModalProps> = ({
           )}
 
           {/* 2. STAYS & ACCOMMODATIONS SUB-TAB */}
-          {activeSubTab === 'stays' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-extrabold uppercase text-white tracking-wider flex items-center gap-2">
-                  <Building className="w-4 h-4 text-amber-400" />
-                  <span>Reserved Accommodations & Stays</span>
-                </h3>
-                <span className="text-xs text-emerald-400 font-bold">✓ Hotel CRS Confirmed</span>
-              </div>
+          {activeSubTab === 'stays' && (() => {
+            const d = booking.details || {};
+            const stayName = d.hotelName || d.propertyName || (booking.type === 'hotel' ? booking.itemName : '');
+            const roomCat = d.roomType || d.roomCategory || 'Assigned by Hospitality Desk';
+            const mealPlan = d.mealPlan || 'Per Package Inclusions';
+            const location = d.location || d.destination || 'Kashmir Valley';
+            const crsCode = d.confirmationCode || d.crsCode || `#KC-${booking.id.slice(-6).toUpperCase()}`;
+            const nights = d.nights || d.duration || 'Scheduled Stay';
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 shadow-lg relative overflow-hidden group">
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px] font-black uppercase">
-                      Heritage Houseboat
-                    </Badge>
-                    <span className="text-xs font-mono text-white/40">2 Nights</span>
-                  </div>
-
-                  <h4 className="font-extrabold text-base text-white group-hover:text-amber-400 transition-colors">
-                    Sukoon Luxury Houseboat
-                  </h4>
-                  <p className="text-xs text-white/50 mt-1">Nigeen Lake, West Bank, Srinagar</p>
-
-                  <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-[10px] text-white/40 block">Room Category</span>
-                      <span className="font-bold text-white">Cedar Wood Suite</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-white/40 block">Meal Plan</span>
-                      <span className="font-bold text-amber-400">MAP (Breakfast & Dinner)</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 flex items-center justify-between border-t border-white/5">
-                    <span className="text-[10px] text-white/40">CRS Code: #SUK-8921</span>
-                    <Button
-                      size="sm"
-                      onClick={() => onShowSlip({ type: 'hotel', booking })}
-                      className="h-8 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5"
-                    >
-                      <Ticket className="w-3.5 h-3.5" />
-                      <span>View Voucher</span>
-                    </Button>
-                  </div>
+            return (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold uppercase text-white tracking-wider flex items-center gap-2">
+                    <Building className="w-4 h-4 text-amber-400" />
+                    <span>Reserved Accommodations & Stays</span>
+                  </h3>
+                  <span className={cn("text-xs font-bold", stayName ? "text-emerald-400" : "text-amber-400")}>
+                    {stayName ? '✓ Linked to Booking Record' : 'Curator Assigning Property'}
+                  </span>
                 </div>
 
-                <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 shadow-lg relative overflow-hidden group">
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px] font-black uppercase">
-                      Mountain Luxury Resort
-                    </Badge>
-                    <span className="text-xs font-mono text-white/40">2 Nights</span>
-                  </div>
-
-                  <h4 className="font-extrabold text-base text-white group-hover:text-amber-400 transition-colors">
-                    The Khyber Himalayan Resort & Spa
-                  </h4>
-                  <p className="text-xs text-white/50 mt-1">Gulmarg Highlands, Near Gondola Terminal</p>
-
-                  <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-[10px] text-white/40 block">Room Category</span>
-                      <span className="font-bold text-white">Premier Pine View Room</span>
+                {stayName ? (
+                  <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-3">
+                      <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px] font-black uppercase">
+                        Verified Reservation
+                      </Badge>
+                      <span className="text-xs font-mono text-white/40">{nights}</span>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-white/40 block">Meal Plan</span>
-                      <span className="font-bold text-amber-400">CP (Royal Breakfast)</span>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 pt-3 flex items-center justify-between border-t border-white/5">
-                    <span className="text-[10px] text-white/40">CRS Code: #KHY-4410</span>
-                    <Button
-                      size="sm"
-                      onClick={() => onShowSlip({ type: 'hotel', booking })}
-                      className="h-8 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5"
-                    >
-                      <Ticket className="w-3.5 h-3.5" />
-                      <span>View Voucher</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                    <h4 className="font-extrabold text-base text-white group-hover:text-amber-400 transition-colors">
+                      {stayName}
+                    </h4>
+                    <p className="text-xs text-white/50 mt-1">{location}</p>
 
-          {/* 3. CHAUFFEUR & FLEET SUB-TAB */}
-          {activeSubTab === 'chauffeur' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-extrabold uppercase text-white tracking-wider flex items-center gap-2">
-                  <Car className="w-4 h-4 text-amber-400" />
-                  <span>Dedicated Chauffeur & Vehicle Allocation</span>
-                </h3>
-                <span className="text-xs text-emerald-400 font-bold">✓ Driver Assigned</span>
-              </div>
-
-              <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-5">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg">
-                      TA
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-base font-extrabold text-white">Tariq Ahmed</h4>
-                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] uppercase font-black">Verified Chauffeur</Badge>
+                    <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-[10px] text-white/40 block">Room Category</span>
+                        <span className="font-bold text-white">{roomCat}</span>
                       </div>
-                      <p className="text-xs text-white/50 mt-0.5">12+ Years High-Altitude Mountain Driving Experience</p>
+                      <div>
+                        <span className="text-[10px] text-white/40 block">Meal Plan</span>
+                        <span className="font-bold text-amber-400">{mealPlan}</span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <a
-                      href="tel:+919876543210"
-                      className="inline-flex items-center justify-center h-10 px-4 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5 shadow-md shadow-amber-500/20"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>Call Driver</span>
-                    </a>
-
-                    {onOpenDriverTracking && (
+                    <div className="mt-4 pt-3 flex items-center justify-between border-t border-white/5">
+                      <span className="text-[10px] text-white/40 font-mono">Ref: {crsCode}</span>
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={onOpenDriverTracking}
-                        className="h-10 px-4 rounded-xl text-xs font-bold border-white/10 hover:border-amber-500/40 text-white bg-white/5 gap-1.5"
+                        onClick={() => onShowSlip({ type: 'hotel', booking })}
+                        className="h-8 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5"
                       >
-                        <Navigation className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Live GPS Tracking</span>
+                        <Ticket className="w-3.5 h-3.5" />
+                        <span>View Voucher</span>
                       </Button>
-                    )}
+                    </div>
                   </div>
+                ) : (
+                  <div className="bg-slate-900/60 border border-dashed border-white/15 rounded-2xl p-6 text-center space-y-3">
+                    <Building className="w-8 h-8 text-amber-400/60 mx-auto" />
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Hotel Allocation In Progress</h4>
+                      <p className="text-xs text-white/50 max-w-md mx-auto mt-1">
+                        Your stay block for <span className="text-white font-semibold">{booking.itemName}</span> is being finalized by our Hospitality Operations Desk. Once confirmed, your CRS code and room details will sync here automatically.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => onShowSlip({ type: 'hotel', booking })}
+                      className="h-8 px-4 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5"
+                    >
+                      <Ticket className="w-3.5 h-3.5" />
+                      <span>Open Booking Voucher</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* 3. CHAUFFEUR & FLEET SUB-TAB */}
+          {activeSubTab === 'chauffeur' && (() => {
+            const d = booking.details || {};
+            const driverName = d.driverName || d.chauffeurName || '';
+            const driverPhone = d.driverPhone || d.chauffeurPhone || '';
+            const vehicleModel = d.vehicleModel || d.cabType || (booking.type === 'cab' ? booking.itemName : '');
+            const vehicleNumber = d.vehicleNumber || d.registrationNo || 'Assigned 24h Prior';
+            const initials = driverName ? driverName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'KC';
+
+            return (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold uppercase text-white tracking-wider flex items-center gap-2">
+                    <Car className="w-4 h-4 text-amber-400" />
+                    <span>Dedicated Chauffeur & Vehicle Allocation</span>
+                  </h3>
+                  <span className={cn("text-xs font-bold", driverName ? "text-emerald-400" : "text-amber-400")}>
+                    {driverName ? '✓ Driver Assigned' : 'Dispatch Scheduled'}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5 text-xs">
-                  <div>
-                    <span className="text-[10px] text-white/40 block">Allocated Fleet</span>
-                    <span className="font-bold text-white">Toyota Innova Crysta ZX</span>
+                {driverName || vehicleModel ? (
+                  <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg">
+                          {initials}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-base font-extrabold text-white">{driverName || 'Fleet Operations Assigning'}</h4>
+                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] uppercase font-black">
+                              {driverName ? 'Verified Chauffeur' : 'Confirmed Vehicle'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-white/50 mt-0.5">
+                            {driverPhone ? `Direct Contact: ${driverPhone}` : 'Chauffeur contact shared 24 hours prior to pickup'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {driverPhone && (
+                          <a
+                            href={`tel:${driverPhone}`}
+                            className="inline-flex items-center justify-center h-10 px-4 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 gap-1.5 shadow-md shadow-amber-500/20"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>Call Driver</span>
+                          </a>
+                        )}
+
+                        {onOpenDriverTracking && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={onOpenDriverTracking}
+                            className="h-10 px-4 rounded-xl text-xs font-bold border-white/10 hover:border-amber-500/40 text-white bg-slate-900/80 gap-1.5"
+                          >
+                            <Navigation className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Live GPS Tracking</span>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-5 text-xs">
+                      <div>
+                        <span className="text-[10px] text-white/40 block">Allocated Fleet</span>
+                        <span className="font-bold text-white">{vehicleModel || 'Private Tour Vehicle'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-white/40 block">Vehicle Reg. No.</span>
+                        <span className="font-mono font-bold text-amber-400">{vehicleNumber}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-white/40 block">Pickup Location</span>
+                        <span className="font-bold text-white">{d.pickupLocation || 'Srinagar Airport / Stay'}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-white/40 block">Vehicle Reg. No.</span>
-                    <span className="font-mono font-bold text-amber-400">JK01-BD-8921</span>
+                ) : (
+                  <div className="bg-slate-900/60 border border-dashed border-white/15 rounded-2xl p-6 text-center space-y-3">
+                    <Car className="w-8 h-8 text-amber-400/60 mx-auto" />
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Chauffeur Dispatch Pending</h4>
+                      <p className="text-xs text-white/50 max-w-md mx-auto mt-1">
+                        Your dedicated mountain-trained chauffeur and vehicle registration number are mapped automatically 24 hours before arrival and transmitted via WhatsApp.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onShowSlip({ type: 'cab', booking })}
+                      className="h-8 px-4 rounded-xl text-xs font-bold bg-slate-900/80 border-white/15 text-white hover:bg-white/10 gap-1.5"
+                    >
+                      <Car className="w-3.5 h-3.5 text-amber-400" />
+                      <span>View Dispatch Slip</span>
+                    </Button>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-white/40 block">Winter Readiness</span>
-                    <span className="font-bold text-emerald-400">Snow Chains Equipped</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-white/40 block">Comfort Tier</span>
-                    <span className="font-bold text-white">Heated Seats / Wi-Fi</span>
-                  </div>
-                </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* 4. DAY-BY-DAY ROUTE SUB-TAB */}
           {activeSubTab === 'itinerary' && (

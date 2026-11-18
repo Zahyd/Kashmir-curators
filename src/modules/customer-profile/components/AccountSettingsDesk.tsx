@@ -35,6 +35,11 @@ interface AccountSettingsDeskProps {
   setNotifySMS: (v: boolean) => void;
   notifyBiometrics: boolean;
   setNotifyBiometrics: (v: boolean) => void;
+  preferredPace: 'relaxed' | 'balanced' | 'active';
+  setPreferredPace: (v: 'relaxed' | 'balanced' | 'active') => void;
+  dietary: string;
+  setDietary: (v: string) => void;
+  onSavePreferences?: (overrides?: Record<string, any>) => void;
 }
 
 export const AccountSettingsDesk: React.FC<AccountSettingsDeskProps> = ({
@@ -50,11 +55,13 @@ export const AccountSettingsDesk: React.FC<AccountSettingsDeskProps> = ({
   notifySMS,
   setNotifySMS,
   notifyBiometrics,
-  setNotifyBiometrics
+  setNotifyBiometrics,
+  preferredPace,
+  setPreferredPace,
+  dietary,
+  setDietary,
+  onSavePreferences
 }) => {
-  const [preferredPace, setPreferredPace] = useState<'relaxed' | 'balanced' | 'active'>('balanced');
-  const [dietary, setDietary] = useState<string>('Standard / Wazwan');
-  const [emergencyContact, setEmergencyContact] = useState({ name: '', phone: '', relationship: 'Family' });
 
   const handleExportData = () => {
     const data = {
@@ -200,7 +207,11 @@ export const AccountSettingsDesk: React.FC<AccountSettingsDeskProps> = ({
                   <button
                     key={pace.id}
                     type="button"
-                    onClick={() => setPreferredPace(pace.id as any)}
+                    onClick={() => {
+                      const nextPace = pace.id as 'relaxed' | 'balanced' | 'active';
+                      setPreferredPace(nextPace);
+                      onSavePreferences?.({ preferredPace: nextPace });
+                    }}
                     className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border ${
                       preferredPace === pace.id
                         ? 'bg-amber-500 text-slate-950 border-amber-500 font-extrabold shadow-md'
@@ -219,7 +230,10 @@ export const AccountSettingsDesk: React.FC<AccountSettingsDeskProps> = ({
               </label>
               <select 
                 value={dietary}
-                onChange={(e) => setDietary(e.target.value)}
+                onChange={(e) => {
+                  setDietary(e.target.value);
+                  onSavePreferences?.({ dietary: e.target.value });
+                }}
                 className="w-full bg-black/40 border border-white/10 rounded-2xl h-11 px-3 text-xs text-white outline-none focus:border-amber-400 transition-colors"
               >
                 <option value="Standard / Wazwan">Authentic Kashmiri (Halal / Wazwan)</option>
@@ -255,7 +269,10 @@ export const AccountSettingsDesk: React.FC<AccountSettingsDeskProps> = ({
               <input 
                 type="checkbox" 
                 checked={notifyWhatsApp} 
-                onChange={(e) => setNotifyWhatsApp(e.target.checked)} 
+                onChange={(e) => {
+                  setNotifyWhatsApp(e.target.checked);
+                  onSavePreferences?.({ notifyWhatsApp: e.target.checked });
+                }} 
                 className="w-5 h-5 rounded border-white/10 text-amber-500 bg-black/40 accent-amber-500 focus:ring-0 cursor-pointer" 
               />
             </div>
@@ -273,7 +290,10 @@ export const AccountSettingsDesk: React.FC<AccountSettingsDeskProps> = ({
               <input 
                 type="checkbox" 
                 checked={notifySMS} 
-                onChange={(e) => setNotifySMS(e.target.checked)} 
+                onChange={(e) => {
+                  setNotifySMS(e.target.checked);
+                  onSavePreferences?.({ notifySMS: e.target.checked });
+                }} 
                 className="w-5 h-5 rounded border-white/10 text-amber-500 bg-black/40 accent-amber-500 focus:ring-0 cursor-pointer" 
               />
             </div>
@@ -291,7 +311,10 @@ export const AccountSettingsDesk: React.FC<AccountSettingsDeskProps> = ({
               <input 
                 type="checkbox" 
                 checked={notifyBiometrics} 
-                onChange={(e) => setNotifyBiometrics(e.target.checked)} 
+                onChange={(e) => {
+                  setNotifyBiometrics(e.target.checked);
+                  onSavePreferences?.({ notifyBiometrics: e.target.checked });
+                }} 
                 className="w-5 h-5 rounded border-white/10 text-amber-500 bg-black/40 accent-amber-500 focus:ring-0 cursor-pointer" 
               />
             </div>
