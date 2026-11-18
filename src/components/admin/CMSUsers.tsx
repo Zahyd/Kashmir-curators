@@ -54,6 +54,7 @@ import {
 
 interface BookingRecord {
   id: string;
+  userId?: string;
   type: string;
   itemName: string;
   bookingDate: string;

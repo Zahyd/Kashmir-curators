@@ -52,6 +52,7 @@ interface AdminSidebarProps {
   onSectionChange: (section: string) => void;
   isOpen?: boolean;
   onClose?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 interface MenuItem {
@@ -99,7 +100,7 @@ const allMenuItems: MenuItem[] = [
   { id: 'settings', label: 'Platform Settings', icon: Settings, category: 'SYSTEM & SETTINGS' },
 ];
 
-export default function AdminSidebar({ activeSection, onSectionChange, isOpen, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ activeSection, onSectionChange, isOpen, onClose, onOpenCommandPalette }: AdminSidebarProps) {
   const { teamUser, teamLogout, systemEvents } = useTeamAuth();
   const [newInquiries, setNewInquiries] = useState(0);
   const [newReviews, setNewReviews] = useState(0);
@@ -187,29 +188,38 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
             </span>
           </Link>
 
-          {/* Quick Module Filter Input */}
+          {/* Quick Module Filter Input + Command Palette Trigger */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               type="text"
-              placeholder="Search modules..."
+              placeholder="Filter modules..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 pl-9 pr-7 bg-white/[0.04] border-white/10 text-xs text-white placeholder:text-white/30 rounded-xl focus:border-amber-400/50 focus:ring-amber-400/20"
+              className="h-9 pl-9 pr-14 bg-white/[0.04] border-white/10 text-xs text-white placeholder:text-white/30 rounded-xl focus:border-amber-400/50 focus:ring-amber-400/20"
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button 
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
               >
                 <X className="w-3 h-3" />
               </button>
-            )}
+            ) : onOpenCommandPalette ? (
+              <button
+                type="button"
+                onClick={onOpenCommandPalette}
+                title="Open Command Palette (Ctrl+K)"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-[9px] font-mono text-white/50 hover:text-amber-300 hover:border-amber-400/40 transition-colors"
+              >
+                ⌘K
+              </button>
+            ) : null}
           </div>
 
           {/* Fast Action Dropdown */}
           {role === 'admin' && (
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="outline" 
@@ -320,8 +330,30 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
           )}
         </nav>
 
-        {/* User Profile & Footer Actions */}
-        <div className="p-3.5 border-t border-white/10 mt-auto bg-black/40 relative z-10 space-y-2">
+        {/* User Profile & Multi-OS Quick Switch Footer */}
+        <div className="p-3.5 border-t border-white/10 mt-auto bg-black/40 relative z-10 space-y-2.5">
+          {/* Multi-OS Control Tower Switcher */}
+          <div className="grid grid-cols-3 gap-1">
+            <Link
+              to="/hospitality"
+              className="px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-300 text-[9px] font-black uppercase tracking-wider text-center truncate transition-colors"
+            >
+              Hotel OS
+            </Link>
+            <Link
+              to="/sales/portal"
+              className="px-2 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 text-purple-300 text-[9px] font-black uppercase tracking-wider text-center truncate transition-colors"
+            >
+              Sales CRM
+            </Link>
+            <Link
+              to="/agent"
+              className="px-2 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase tracking-wider text-center truncate transition-colors"
+            >
+              Agent B2B
+            </Link>
+          </div>
+
           <div 
             onClick={() => {
               onSectionChange('profile');

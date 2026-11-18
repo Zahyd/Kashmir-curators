@@ -11,6 +11,9 @@ export interface TeamUser {
   name: string;
   role: TeamRole;
   loginTime: string;
+  email?: string;
+  phone?: string;
+  image?: string;
 }
 
 export interface SystemEvent {

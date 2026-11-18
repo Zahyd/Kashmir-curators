@@ -324,6 +324,138 @@ ${JSON.stringify(liveContext, null, 2)}`;
   }
 });
 
+// Real-Time Superadmin / Director Executive AI Copilot (Grounded in Live Neon Ops DB)
+router.post('/director-copilot', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const role = String(req.user?.role || '').toLowerCase();
+    if (!['admin', 'operations', 'finance', 'marketing', 'sales', 'hospitality'].includes(role)) {
+      return res.status(403).json({ error: 'Director / Operations authorization required' });
+    }
+
+    const { message, history = [] } = req.body;
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const trimmedMsg = message.trim();
+    const p = prisma as any;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const [
+      totalBookings,
+      confirmedRevenue,
+      unassignedLeads,
+      pendingReservations,
+      todayCheckIns,
+      todayCheckOuts,
+      hotelDuesAgg,
+      profitAgg,
+      totalCabs,
+      activeCabs,
+      pendingAgents,
+      walletsAgg,
+      advisories
+    ] = await Promise.all([
+      p.booking.count().catch(() => 0),
+      p.booking.aggregate({ _sum: { totalAmount: true }, where: { status: { in: ['confirmed', 'completed'] } } }).catch(() => ({ _sum: { totalAmount: 0 } })),
+      p.inquiry.findMany({
+        where: { OR: [{ assignedTo: null }, { assignedTo: '' }], status: { not: 'Lost' } },
+        take: 6,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, customerName: true, destination: true, duration: true, budget: true, createdAt: true }
+      }).catch(() => []),
+      p.hotelReservation.count({ where: { status: { in: ['Pending', 'Sent'] } } }).catch(() => 0),
+      p.hotelReservation.count({ where: { checkIn: { gte: todayStart, lte: todayEnd } } }).catch(() => 0),
+      p.hotelReservation.count({ where: { checkOut: { gte: todayStart, lte: todayEnd } } }).catch(() => 0),
+      p.hotelReservation.aggregate({ _sum: { hotelDues: true } }).catch(() => ({ _sum: { hotelDues: 0 } })),
+      p.hotelReservation.aggregate({ _sum: { profitMargin: true } }).catch(() => ({ _sum: { profitMargin: 0 } })),
+      p.cab.count().catch(() => 0),
+      p.cab.count({ where: { isActive: true } }).catch(() => 0),
+      p.agentProfile.count({ where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } } }).catch(() => 0),
+      p.wallet.aggregate({ _sum: { balance: true } }).catch(() => ({ _sum: { balance: 0 } })),
+      p.travelAdvisory.findMany({
+        take: 5,
+        orderBy: [{ emergencyModeActive: 'desc' }, { lastUpdated: 'desc' }],
+        select: { location: true, status: true, severity: true, emergencyModeActive: true, message: true }
+      }).catch(() => [])
+    ]);
+
+    const opsSnapshot = {
+      totalBookings,
+      confirmedRevenueINR: Number(confirmedRevenue?._sum?.totalAmount || 0),
+      profitMarginINR: Number(profitAgg?._sum?.profitMargin || 0),
+      unpaidHotelDuesINR: Number(hotelDuesAgg?._sum?.hotelDues || 0),
+      todayCheckIns,
+      todayCheckOuts,
+      pendingHotelReservations: pendingReservations,
+      fleet: { activeCabs, totalCabs },
+      pendingB2BAgentApprovals: pendingAgents,
+      customerWalletLiabilityINR: Number(walletsAgg?._sum?.balance || 0),
+      unassignedLeadsCount: unassignedLeads.length,
+      unassignedLeads,
+      liveTravelAdvisories: advisories,
+    };
+
+    const sysPrompt = `You are "Kashmir Ops AI", the Superadmin Executive Copilot for Kashmir Curators Command HQ.
+RULES:
+1. Answer strictly using the LIVE NEON DATABASE SNAPSHOT below.
+2. Be crisp, analytical, executive-ready, with clear INR figures and bullet points (max 160 words).
+3. Never invent numbers or records not present in the snapshot.
+
+LIVE NEON OPS SNAPSHOT:
+${JSON.stringify(opsSnapshot, null, 2)}`;
+
+    let replyText = '';
+    let provider = 'NEON_OPS_ENGINE';
+
+    if (geminiClient) {
+      try {
+        const recentHistory = Array.isArray(history)
+          ? history.slice(-6).map((h: any) => `${h.sender === 'user' ? 'Director' : 'Kashmir Ops AI'}: ${h.text}`).join('\n')
+          : '';
+        const response = await geminiClient.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: `${sysPrompt}\n\n${recentHistory ? `HISTORY:\n${recentHistory}\n\n` : ''}Director: ${trimmedMsg}\nKashmir Ops AI:`,
+        });
+        const text = response.text?.trim();
+        if (text) {
+          replyText = text;
+          provider = 'GEMINI_2_5_FLASH';
+        }
+      } catch (err: any) {
+        console.warn('[Director AI Copilot] Gemini fallback:', err.message);
+      }
+    }
+
+    if (!replyText) {
+      const q = trimmedMsg.toLowerCase();
+      if (q.includes('lead') || q.includes('unassigned') || q.includes('inquir')) {
+        replyText = unassignedLeads.length > 0
+          ? `Unassigned Leads Requiring Dispatch (${unassignedLeads.length}):\n` +
+            unassignedLeads.map((l: any) => `• ${l.customerName} — ${l.destination} (${l.duration}d, ${l.budget})`).join('\n')
+          : 'All active trip inquiries are currently assigned. Zero unassigned leads in the queue.';
+      } else if (q.includes('due') || q.includes('hotel') || q.includes('check') || q.includes('revenue') || q.includes('finance') || q.includes('wallet')) {
+        replyText = `Live Fiscal & Hospitality Snapshot:\n• Confirmed Revenue: ₹${opsSnapshot.confirmedRevenueINR.toLocaleString('en-IN')}\n• Net Profit Margin: ₹${opsSnapshot.profitMarginINR.toLocaleString('en-IN')}\n• Unpaid Hotel Dues: ₹${opsSnapshot.unpaidHotelDuesINR.toLocaleString('en-IN')}\n• Today's Movement: ${todayCheckIns} Check-ins / ${todayCheckOuts} Check-outs (${pendingReservations} pending CRS)\n• Customer Wallet Liability: ₹${opsSnapshot.customerWalletLiabilityINR.toLocaleString('en-IN')}`;
+      } else if (q.includes('disruption') || q.includes('road') || q.includes('advisory') || q.includes('safety')) {
+        replyText = advisories.length > 0
+          ? `Active Neon Travel Advisories (${advisories.length}):\n` +
+            advisories.map((a: any) => `• ${a.location} [${a.status}${a.emergencyModeActive ? ' • EMERGENCY' : ''}]: ${a.message}`).join('\n')
+          : 'No active road disruptions or emergency alerts logged in Neon DB.';
+      } else {
+        replyText = `Executive Ops Pulse:\n• Bookings: ${totalBookings} | Confirmed Rev: ₹${opsSnapshot.confirmedRevenueINR.toLocaleString('en-IN')}\n• Unassigned Leads: ${unassignedLeads.length} | Pending Hotel CRS: ${pendingReservations}\n• Fleet: ${activeCabs}/${totalCabs} active | Pending B2B Agents: ${pendingAgents}\n• Unpaid Hotel Dues: ₹${opsSnapshot.unpaidHotelDuesINR.toLocaleString('en-IN')}\n• Active Advisories: ${advisories.length}`;
+      }
+    }
+
+    res.json({ reply: replyText, provider, snapshot: opsSnapshot, timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    console.error('[Director AI Copilot] Error:', error.message);
+    res.status(500).json({ error: 'Failed to run Director AI Copilot' });
+  }
+});
+
 router.get('/status', (req: Request, res: Response) => {
   const isGeminiConfigured = Boolean(geminiClient);
   const isNeonConfigured = Boolean(process.env.NEON_AI_GATEWAY_URL && process.env.NEON_AI_KEY);

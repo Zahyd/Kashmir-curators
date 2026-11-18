@@ -42,6 +42,7 @@ interface Cab {
   image: string | null;
   features: string[];
   isActive: boolean;
+  registrationNo?: string;
 }
 
 interface CabMetadata {

@@ -64,6 +64,7 @@ interface Inquiry {
   budget: string;
   accommodation: string;
   status: string;
+  quoteData?: string;
 }
 
 interface HotelReservation {

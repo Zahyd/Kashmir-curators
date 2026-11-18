@@ -16,12 +16,34 @@ interface MediaItem {
 }
 
 interface MediaPickerProps {
-  value: string;
-  onChange: (url: string) => void;
+  value?: string;
+  onChange?: (url: string) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSelect?: (url: string) => void;
 }
 
-export default function MediaPicker({ value, onChange }: MediaPickerProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
+export default function MediaPicker({
+  value = '',
+  onChange,
+  open,
+  onOpenChange,
+  onSelect
+}: MediaPickerProps) {
+  const isControlledModal = open !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const dialogOpen = isControlledModal ? Boolean(open) : internalOpen;
+  const setDialogOpen = (next: boolean) => {
+    if (isControlledModal) {
+      onOpenChange?.(next);
+    } else {
+      setInternalOpen(next);
+    }
+  };
+  const emitSelect = (url: string) => {
+    onChange?.(url);
+    onSelect?.(url);
+  };
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -29,6 +51,12 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
   const [urlInput, setUrlInput] = useState('');
   const [urlError, setUrlError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (dialogOpen) {
+      fetchMedia();
+    }
+  }, [dialogOpen]);
 
   useEffect(() => {
     setUrlError(false);
@@ -96,7 +124,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
       const uploadedMedia = await response.json();
       console.log('[MediaPicker] Upload successful:', uploadedMedia);
       
-      onChange(uploadedMedia.url);
+      emitSelect(uploadedMedia.url);
       setDialogOpen(false);
       toast.success('Asset uploaded successfully');
     } catch (error: any) {
@@ -126,7 +154,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
         if (transformed.endsWith('.jpg') || transformed.endsWith('.jpeg')) {
           transformed = transformed.replace(/\.(jpg|jpeg)$/, '.png');
         }
-        onChange(transformed);
+        emitSelect(transformed);
         toast.success('Applied clean transparent PNG transformation!', { id: 'trans-convert' });
         return;
       }
@@ -144,7 +172,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
 
       if (response.ok) {
         const uploaded = await response.json();
-        onChange(uploaded.url);
+        emitSelect(uploaded.url);
         toast.success('Converted to transparent PNG!', { id: 'trans-convert' });
       } else {
         throw new Error('Upload failed');
@@ -154,7 +182,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
       if (value.includes('cloudinary.com') && value.includes('/upload/')) {
         let transformed = value.replace('/upload/', '/upload/e_make_transparent:20,f_png/');
         transformed = transformed.replace(/\.(jpg|jpeg)$/, '.png');
-        onChange(transformed);
+        emitSelect(transformed);
         toast.success('Applied clean transparent PNG transformation!', { id: 'trans-convert' });
       } else {
         toast.error(`Conversion failed: ${err.message}`, { id: 'trans-convert' });
@@ -165,13 +193,13 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
   };
 
   const selectFromLibrary = (url: string) => {
-    onChange(url);
+    emitSelect(url);
     setDialogOpen(false);
   };
 
   const handleUrlSubmit = () => {
     if (urlInput.trim()) {
-      onChange(urlInput.trim());
+      emitSelect(urlInput.trim());
       setDialogOpen(false);
       setUrlInput('');
     }
@@ -179,6 +207,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
 
   return (
     <div>
+      {!isControlledModal && (
       <div className="flex gap-2 w-full">
         {value ? (
           <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-white/[0.02] aspect-video w-full max-h-48 flex items-center justify-center">
@@ -221,7 +250,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
                 variant="destructive" 
                 size="icon" 
                 className="rounded-xl h-9 w-9"
-                onClick={() => onChange('')}
+                onClick={() => emitSelect('')}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -246,6 +275,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
           </Button>
         )}
       </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
