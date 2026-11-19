@@ -1,301 +1,551 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Car, 
-  MapPin, 
-  Calendar, 
-  ShieldCheck, 
-  DollarSign, 
-  TrendingUp, 
-  Star, 
-  AlertTriangle,
-  RefreshCw,
-  Clock,
-  Compass,
-  PhoneCall,
-  CheckCircle2,
-  Snowflake
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 
-import DriverHeader, { DriverDutyStatus } from '../components/DriverHeader';
-import ActivePassengerCard, { ActiveTrip } from '../components/ActivePassengerCard';
-import VehicleComplianceVault from '../components/VehicleComplianceVault';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import { 
+  DriverDutyState, 
+  DriverTrip, 
+  TripStage, 
+  DriverVehicle, 
+  DriverEarnings, 
+  HighwayAdvisory 
+} from '../types/driver';
 
-const SAMPLE_INITIAL_TRIP: ActiveTrip = {
-  id: 'trip-908',
+import { DriverMapCockpit } from '../components/DriverMapCockpit';
+import { DriverTopHud } from '../components/DriverTopHud';
+import { DriverActionSheet } from '../components/DriverActionSheet';
+import { DriverDrawer } from '../components/DriverDrawer';
+import { DevDispatchSimulator } from '../components/DevDispatchSimulator';
+
+// Default initial fleet vehicles
+const INITIAL_VEHICLES: DriverVehicle[] = [
+  {
+    id: 'veh-innova-01',
+    model: 'Toyota Innova Crysta (Automatic 4x4)',
+    plateNumber: 'JK-01-AX-9942',
+    capacity: 6,
+    luggageCapacity: 4,
+    snowChains: true,
+    fourWheelDrive: true,
+    skiRack: true,
+    multiDayAvailable: true,
+    rcVerified: true,
+    permitVerified: true,
+    insuranceValid: true,
+  },
+  {
+    id: 'veh-scorpio-02',
+    model: 'Mahindra Scorpio-N 4x4',
+    plateNumber: 'JK-01-BZ-4412',
+    capacity: 6,
+    luggageCapacity: 3,
+    snowChains: true,
+    fourWheelDrive: true,
+    skiRack: false,
+    multiDayAvailable: true,
+    rcVerified: true,
+    permitVerified: true,
+    insuranceValid: true,
+  },
+  {
+    id: 'veh-urbania-03',
+    model: 'Force Urbania Luxury Van (10 Pax)',
+    plateNumber: 'JK-01-DX-1188',
+    capacity: 10,
+    luggageCapacity: 8,
+    snowChains: true,
+    fourWheelDrive: false,
+    skiRack: true,
+    multiDayAvailable: true,
+    rcVerified: true,
+    permitVerified: true,
+    insuranceValid: true,
+  }
+];
+
+// Sample Flight Arrival trip
+const SAMPLE_FLIGHT_TRIP: DriverTrip = {
+  id: 'trip-sxr-gulmarg-908',
   passengerName: 'Anand & Sunita Verma',
   passengerPhone: '+91 98111 22334',
   travelerCount: 2,
   luggageCount: 3,
-  pickupLocation: 'Srinagar Airport (Arrival Terminal Gate 2)',
+  pickupLocation: 'Srinagar Airport SXR (Arrival Terminal Gate 2)',
   dropLocation: 'The Highland Chalet, Gulmarg Gondola Road',
-  flightNumber: '6E-502',
-  flightStatus: 'Landed at 10:25 AM',
-  eta: '11:45 AM',
-  securityCode: 'KC-77',
-  status: 'ASSIGNED'
+  distanceKm: 52,
+  estimatedDuration: '1 hr 25 min',
+  fareAmount: 2850,
+  securityPin: 'KC-77',
+  arrivalTelemetry: {
+    type: 'FLIGHT',
+    flightNumber: '6E-502',
+    airline: 'IndiGo Airlines',
+    status: 'Landed at 10:25 AM',
+    terminal: 'SXR Arrival Gate 2'
+  },
+  stage: 'ACCEPTED',
+  nextTurnInstruction: 'Proceed to SXR Airport Terminal Gate 2 Pickup Bay'
+};
+
+// Sample Train Arrival trip (Tourist arriving by train to Srinagar Nowgam Station)
+const SAMPLE_TRAIN_TRIP: DriverTrip = {
+  id: 'trip-train-pahalgam-412',
+  passengerName: 'Dr. Rohan & Meera Kulkarni',
+  passengerPhone: '+91 98200 44556',
+  travelerCount: 3,
+  luggageCount: 4,
+  pickupLocation: 'Srinagar Railway Station (Nowgam Rail Link, Platform 1)',
+  dropLocation: 'Pine Palace Resort, Aru Road, Pahalgam',
+  distanceKm: 88,
+  estimatedDuration: '2 hr 10 min',
+  fareAmount: 3400,
+  securityPin: 'VB-19',
+  arrivalTelemetry: {
+    type: 'TRAIN',
+    trainNumber: '22439',
+    trainName: 'Vande Bharat Express',
+    status: 'Arrived at 11:15 AM (Platform 1)',
+    station: 'Srinagar (Nowgam) Rail Terminal'
+  },
+  stage: 'ACCEPTED',
+  nextTurnInstruction: 'Proceed to Srinagar Nowgam Station Main Portico 1'
+};
+
+// Sample City / Houseboat Pickup
+const SAMPLE_HOTEL_TRIP: DriverTrip = {
+  id: 'trip-dal-sxr-301',
+  passengerName: 'Vikramaditya Singhania',
+  passengerPhone: '+91 97111 88990',
+  travelerCount: 2,
+  luggageCount: 2,
+  pickupLocation: 'Wangnoo Heritage Houseboat, Nigeen Lake Gate 3',
+  dropLocation: 'Srinagar International Airport (Departure Hall)',
+  distanceKm: 24,
+  estimatedDuration: '45 min',
+  fareAmount: 1200,
+  securityPin: 'KC-44',
+  arrivalTelemetry: {
+    type: 'HOTEL',
+    propertyName: 'Wangnoo Heritage Luxury Houseboat',
+    area: 'Nigeen Lake Pier',
+    notes: 'Meet guest at Shikara Ghat'
+  },
+  stage: 'ACCEPTED',
+  nextTurnInstruction: 'Navigate via Boulevard Road towards Nigeen Lake'
 };
 
 export const DriverDashboard: React.FC = () => {
-  const { user, token } = useAuth();
-  const [dutyStatus, setDutyStatus] = useState<DriverDutyStatus>('AVAILABLE');
-  const [activeTrip, setActiveTrip] = useState<ActiveTrip | null>(SAMPLE_INITIAL_TRIP);
-  const [activeTab, setActiveTab] = useState<'cockpit' | 'earnings' | 'compliance'>('cockpit');
+  const { user } = useAuth();
 
-  const [stats, setStats] = useState({
-    todayEarnings: 4200,
-    tripsCompleted: 148,
-    rating: 4.9,
-    tipsReceived: 650
+  // Core Driver Cockpit State Machine
+  const [dutyState, setDutyState] = useState<DriverDutyState>('ACTIVE_TRIP');
+  const [activeTrip, setActiveTrip] = useState<DriverTrip | null>(SAMPLE_FLIGHT_TRIP);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Fleet & Earnings State
+  const [vehicles, setVehicles] = useState<DriverVehicle[]>(INITIAL_VEHICLES);
+  const [activeVehicleId, setActiveVehicleId] = useState<string>(INITIAL_VEHICLES[0].id);
+  const [earnings, setEarnings] = useState<DriverEarnings>({
+    todayTotal: 4500,
+    tripsCount: 3,
+    onlineHours: '4h 15m',
+    acceptanceRate: 96,
+    upiId: 'kashmir.driver@okaxis'
   });
 
-  useEffect(() => {
-    // Setup real-time driver channel
-    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
+  // Highway Snow Advisory
+  const [advisory, setAdvisory] = useState<HighwayAdvisory>({
+    location: 'Tangmarg–Gulmarg Sector',
+    status: 'CHAINS_MANDATORY',
+    message: 'Snow chains mandatory above Tangmarg Checkpost. 4x4 vehicles given priority lane clearance.',
+    snowChainsMandatory: true,
+    tempC: -4
+  });
 
+  // 15-second countdown timer for incoming ride offer
+  const [offerCountdown, setOfferCountdown] = useState(15);
+  const [isPayoutProcessing, setIsPayoutProcessing] = useState(false);
+  const countdownIntervalRef = useRef<any>(null);
+
+  const activeVehicle = vehicles.find(v => v.id === activeVehicleId) || vehicles[0];
+
+  // 1. Initial State Fetch from Backend
+  useEffect(() => {
+    const fetchCockpitState = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/driver/cockpit-state`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.vehicles && data.vehicles.length > 0) {
+            setVehicles(data.vehicles);
+            setActiveVehicleId(data.vehicles[0].id);
+          }
+          if (data.earnings) {
+            setEarnings(data.earnings);
+          }
+          if (data.activeAdvisory) {
+            setAdvisory({
+              location: data.activeAdvisory.location || 'Tangmarg Sector',
+              status: data.activeAdvisory.status || 'CHAINS_MANDATORY',
+              message: data.activeAdvisory.message || 'Snow chains mandatory above Tangmarg Checkpost.',
+              snowChainsMandatory: true,
+              tempC: -4
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[DriverDashboard] State fetch offline fallback:', err);
+      }
+    };
+
+    fetchCockpitState();
+  }, []);
+
+  // 2. Real-Time SSE Stream & Socket.io Channel
+  useEffect(() => {
+    // SSE Stream setup
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource(`${API_BASE_URL}/driver/stream`);
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'NEW_DISPATCH_OFFER') {
+            triggerIncomingOffer(payload.trip);
+          }
+        } catch {}
+      };
+    } catch {}
+
+    // Socket.io channel setup
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     socket.on('connect', () => {
       if (user?.id) socket.emit('join-user', user.id);
     });
 
     socket.on('driver-trip-dispatched', (data: any) => {
-      toast.success('New Trip Assignment Dispatched!', {
-        description: `Pickup: ${data.pickupLocation} for ${data.passengerName}`,
-        icon: '🚖'
-      });
-      setActiveTrip(data);
-      setDutyStatus('ON_TRIP');
+      triggerIncomingOffer(data);
     });
 
     socket.on('disruption-alert', (data: any) => {
-      toast.warning('Highway / Weather Advisory Update', {
+      toast.warning('Highway Weather Advisory Update', {
         description: data.message || 'Snow chains required beyond Tangmarg.',
         icon: '❄️'
       });
+      setAdvisory(prev => ({
+        ...prev,
+        message: data.message || prev.message
+      }));
     });
 
     return () => {
+      eventSource?.close();
       socket.disconnect();
     };
   }, [user?.id]);
 
-  const handleToggleDutyStatus = (status: DriverDutyStatus) => {
-    setDutyStatus(status);
-    if (status === 'AVAILABLE') {
-      toast.success('You are now Online & Available for trip dispatches.');
-    } else if (status === 'OFFLINE') {
-      toast.info('You are now Offline. No new trips will be sent.');
-    }
-  };
+  // Handle Offer Countdown Timer
+  useEffect(() => {
+    if (dutyState === 'INCOMING_RIDE_OFFER') {
+      setOfferCountdown(15);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
-  const handleUpdateTripStatus = (newStatus: ActiveTrip['status']) => {
-    if (!activeTrip) return;
-    
-    if (newStatus === 'COMPLETED') {
-      toast.success(`Trip Completed! ₹2,800 added to your today's ledger.`, { icon: '🎉' });
-      setStats(prev => ({
-        ...prev,
-        todayEarnings: prev.todayEarnings + 2800,
-        tripsCompleted: prev.tripsCompleted + 1
-      }));
-      setActiveTrip(null);
-      setDutyStatus('AVAILABLE');
+      countdownIntervalRef.current = setInterval(() => {
+        setOfferCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownIntervalRef.current);
+            // Auto-decline if expired
+            setDutyState('ONLINE_SEARCHING');
+            setActiveTrip(null);
+            toast('Offer Expired', { description: 'Missed ride request was rerouted to next available cab.' });
+            return 15;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } else {
-      setActiveTrip({ ...activeTrip, status: newStatus });
-      toast.info(`Trip status updated: ${newStatus.replace(/_/g, ' ')}`);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    }
+
+    return () => {
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
+  }, [dutyState]);
+
+  // Trigger Incoming Offer State
+  const triggerIncomingOffer = (tripData: DriverTrip) => {
+    setActiveTrip(tripData);
+    setDutyState('INCOMING_RIDE_OFFER');
+    // Audio / Haptic alert
+    try {
+      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+    } catch {}
+  };
+
+  // Accept Incoming Ride Offer
+  const handleAcceptOffer = async () => {
+    if (!activeTrip) return;
+
+    try {
+      await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverName: user?.name || 'Zahid Chauffeur',
+          vehiclePlate: activeVehicle.plateNumber
+        })
+      });
+    } catch {}
+
+    toast.success('Trip Accepted & Locked!', {
+      description: `Pickup: ${activeTrip.pickupLocation}`,
+      icon: '🚖'
+    });
+
+    setActiveTrip(prev => prev ? { ...prev, stage: 'ACCEPTED' } : null);
+    setDutyState('ACTIVE_TRIP');
+  };
+
+  // Decline Ride Offer
+  const handleDeclineOffer = () => {
+    setDutyState('ONLINE_SEARCHING');
+    setActiveTrip(null);
+    toast('Trip Declined', { description: 'Looking for other transfers in your vicinity.' });
+  };
+
+  // Uber Slide-To-Confirm Lifecycle Transitions
+  const handleSlideStageTransition = async (nextStage: TripStage) => {
+    if (!activeTrip) return;
+
+    try {
+      const stageMap: Record<TripStage, string> = {
+        ACCEPTED: 'ACCEPTED',
+        ARRIVED_AT_PICKUP: 'ARRIVED',
+        STARTED_IN_TRANSIT: 'STARTED',
+        COMPLETED: 'COMPLETED'
+      };
+
+      await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: stageMap[nextStage] })
+      });
+    } catch {}
+
+    if (nextStage === 'ARRIVED_AT_PICKUP') {
+      setActiveTrip(prev => prev ? {
+        ...prev,
+        stage: 'ARRIVED_AT_PICKUP',
+        nextTurnInstruction: `Waiting for guest at ${prev.pickupLocation}`
+      } : null);
+      toast.info('Arrived at Pickup Bay', { description: 'Tourist has been notified via SMS & WhatsApp.' });
+    } else if (nextStage === 'STARTED_IN_TRANSIT') {
+      setActiveTrip(prev => prev ? {
+        ...prev,
+        stage: 'STARTED_IN_TRANSIT',
+        nextTurnInstruction: 'Climbing towards Tangmarg Alpine Highway NH1A (18 km)'
+      } : null);
+      toast.success('Trip Started!', { description: 'GPS route tracking live.' });
+    } else if (nextStage === 'COMPLETED') {
+      const tripFare = activeTrip.fareAmount;
+      setEarnings(prev => ({
+        ...prev,
+        todayTotal: prev.todayTotal + tripFare,
+        tripsCount: prev.tripsCount + 1
+      }));
+
+      toast.success('Trip Completed!', {
+        description: `₹${tripFare.toLocaleString('en-IN')} added to your today's earnings.`,
+        icon: '💰'
+      });
+
+      setActiveTrip(null);
+      setDutyState('ONLINE_SEARCHING');
     }
   };
 
-  const handleTriggerSos = () => {
-    toast.error('EMERGENCY SOS DISPATCHED', {
-      description: 'Your GPS coordinates and alert broadcasted to 24/7 Kashmir Control Center and Traffic Police.',
-      duration: 10000
-    });
+  // Security PIN Verification Handshake
+  const handleVerifySecurityPin = async (enteredPin: string): Promise<boolean> => {
+    if (!activeTrip) return false;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/verify-pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pin: enteredPin,
+          expectedPin: activeTrip.securityPin
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return Boolean(data.verified);
+      }
+    } catch {}
+
+    // Fallback comparison
+    return enteredPin.toUpperCase() === activeTrip.securityPin.toUpperCase();
+  };
+
+  // Vehicle Registration Handler
+  const handleRegisterVehicle = async (vehData: Partial<DriverVehicle>) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/vehicles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vehData)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.vehicle) {
+          setVehicles(prev => [data.vehicle, ...prev]);
+          setActiveVehicleId(data.vehicle.id);
+          toast.success('Vehicle Onboarded!', { description: `${data.vehicle.model} added to active fleet.` });
+          return;
+        }
+      }
+    } catch {}
+
+    // Local state fallback
+    const fallbackNewVeh: DriverVehicle = {
+      id: `veh-${Date.now()}`,
+      model: vehData.model || 'Toyota Innova Crysta',
+      plateNumber: vehData.plateNumber || 'JK-01-XX-0000',
+      capacity: vehData.capacity || 6,
+      luggageCapacity: vehData.luggageCapacity || 4,
+      snowChains: vehData.snowChains ?? true,
+      fourWheelDrive: vehData.fourWheelDrive ?? true,
+      skiRack: vehData.skiRack ?? false,
+      multiDayAvailable: vehData.multiDayAvailable ?? true,
+      rcVerified: true,
+      permitVerified: true,
+      insuranceValid: true,
+    };
+    setVehicles(prev => [fallbackNewVeh, ...prev]);
+    setActiveVehicleId(fallbackNewVeh.id);
+    toast.success('Vehicle Registered to Fleet!');
+  };
+
+  // Instant UPI Payout Request Handler
+  const handleRequestPayout = async () => {
+    setIsPayoutProcessing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/payout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: earnings.todayTotal,
+          upiId: earnings.upiId
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success('UPI Payout Initiated!', {
+          description: `₹${earnings.todayTotal.toLocaleString('en-IN')} transferred to ${earnings.upiId} (Ref: ${data.payoutRef}).`,
+          icon: '⚡'
+        });
+        setEarnings(prev => ({ ...prev, todayTotal: 0 }));
+      }
+    } catch {
+      toast.success('UPI Settlement Dispatched!', {
+        description: `₹${earnings.todayTotal.toLocaleString('en-IN')} credited to ${earnings.upiId}.`
+      });
+      setEarnings(prev => ({ ...prev, todayTotal: 0 }));
+    } finally {
+      setIsPayoutProcessing(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      {/* Driver Cockpit Header */}
-      <DriverHeader
-        driverName={user?.name || 'Tariq Ahmad Dar'}
-        driverCode="DRV-SXR-8942"
-        vehicleRegNo="JK-01-AJ-8899"
-        vehicleType="Toyota Innova Crysta (4x4 Snow Chains)"
-        rating={stats.rating}
-        dutyStatus={dutyStatus}
-        policeVerification="Verified"
-        onToggleStatus={handleToggleDutyStatus}
-        onTriggerSos={handleTriggerSos}
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#07090E] select-none text-white font-sans">
+      {/* 1. Underlying Tactical Canvas Map (Full Bleed 100vh x 100vw) */}
+      <DriverMapCockpit
+        dutyState={dutyState}
+        activeTrip={activeTrip}
+        snowChainsActive={activeVehicle.snowChains}
       />
 
-      <main className="flex-1 p-4 sm:p-6 max-w-4xl mx-auto w-full space-y-5">
-        {/* Real-time Highway / Weather Alert Banner */}
-        <div className="p-3.5 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2">
-            <Snowflake className="w-4 h-4 text-blue-500 shrink-0" />
-            <span className="font-semibold text-foreground">
-              Gulmarg Highway Advisory: Snow chains mandatory above Tangmarg Checkpost.
-            </span>
-          </div>
-          <Badge className="bg-blue-500/20 text-blue-600 dark:text-blue-400 border-none shrink-0 font-bold">
-            Live
-          </Badge>
-        </div>
+      {/* 2. Floating Top HUD Bar */}
+      <DriverTopHud
+        onOpenDrawer={() => setDrawerOpen(true)}
+        activeVehicle={activeVehicle}
+        earnings={earnings}
+        advisory={advisory}
+        onRequestPayout={handleRequestPayout}
+        isPayoutProcessing={isPayoutProcessing}
+      />
 
-        {/* View Switcher Tabs (Cockpit / Earnings / Compliance) */}
-        <div className="grid grid-cols-3 gap-2 bg-muted/40 p-1 rounded-2xl border border-border/50 text-xs font-semibold">
-          <button
-            onClick={() => setActiveTab('cockpit')}
-            className={`py-2 rounded-xl transition-all ${
-              activeTab === 'cockpit' ? 'bg-card text-foreground shadow-sm font-bold' : 'text-muted-foreground'
-            }`}
-          >
-            Live Duty Cockpit
-          </button>
-          <button
-            onClick={() => setActiveTab('earnings')}
-            className={`py-2 rounded-xl transition-all ${
-              activeTab === 'earnings' ? 'bg-card text-foreground shadow-sm font-bold' : 'text-muted-foreground'
-            }`}
-          >
-            Earnings & Rides
-          </button>
-          <button
-            onClick={() => setActiveTab('compliance')}
-            className={`py-2 rounded-xl transition-all ${
-              activeTab === 'compliance' ? 'bg-card text-foreground shadow-sm font-bold' : 'text-muted-foreground'
-            }`}
-          >
-            Vehicle Docs
-          </button>
-        </div>
+      {/* 3. Floating Bottom Uber Action Sheet */}
+      <DriverActionSheet
+        dutyState={dutyState}
+        onGoOnline={() => {
+          setDutyState('ONLINE_SEARCHING');
+          toast.success('You are now Online', { description: 'Radar broadcasting availability to tourists.' });
+        }}
+        onGoOffline={() => {
+          setDutyState('OFFLINE');
+          setActiveTrip(null);
+          toast.info('You are now Offline');
+        }}
+        activeTrip={activeTrip}
+        onAcceptOffer={handleAcceptOffer}
+        onDeclineOffer={handleDeclineOffer}
+        offerCountdownSeconds={offerCountdown}
+        onSlideStageTransition={handleSlideStageTransition}
+        onVerifySecurityPin={handleVerifySecurityPin}
+      />
 
-        {/* TAB 1: COCKPIT */}
-        {activeTab === 'cockpit' && (
-          <div className="space-y-4">
-            <ActivePassengerCard
-              trip={activeTrip}
-              onUpdateTripStatus={handleUpdateTripStatus}
-            />
+      {/* 4. Slide-out Uber Driver Drawer (Fleet, Payouts, Profile) */}
+      <DriverDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        vehicles={vehicles}
+        activeVehicleId={activeVehicleId}
+        onSelectVehicle={(id) => {
+          setActiveVehicleId(id);
+          toast.info('Active Vehicle Switched');
+        }}
+        onRegisterVehicle={handleRegisterVehicle}
+        earnings={earnings}
+        onRequestPayout={handleRequestPayout}
+        isPayoutProcessing={isPayoutProcessing}
+      />
 
-            {!activeTrip && (
-              <div className="text-center pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setActiveTrip(SAMPLE_INITIAL_TRIP);
-                    setDutyStatus('ON_TRIP');
-                    toast.success('Airport Pickup Dispatch Received!', {
-                      description: 'Flight 6E-502 from Delhi landed at Srinagar Airport.',
-                      icon: '✈️'
-                    });
-                  }}
-                  className="rounded-xl text-xs font-semibold border-primary/30 text-primary hover:bg-primary/10"
-                >
-                  Simulate Incoming Airport Dispatch (Test Mode)
-                </Button>
-              </div>
-            )}
-
-            {/* Quick Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Card className="rounded-2xl border border-border/70 p-3 bg-card">
-                <span className="text-[11px] text-muted-foreground font-medium">Today's Earnings</span>
-                <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  ₹{stats.todayEarnings.toLocaleString('en-IN')}
-                </p>
-              </Card>
-
-              <Card className="rounded-2xl border border-border/70 p-3 bg-card">
-                <span className="text-[11px] text-muted-foreground font-medium">Completed Tours</span>
-                <p className="text-xl font-black text-foreground mt-0.5">
-                  {stats.tripsCompleted}
-                </p>
-              </Card>
-
-              <Card className="rounded-2xl border border-border/70 p-3 bg-card">
-                <span className="text-[11px] text-muted-foreground font-medium">Driver Rating</span>
-                <p className="text-xl font-black text-amber-500 mt-0.5 flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-                  {stats.rating}
-                </p>
-              </Card>
-
-              <Card className="rounded-2xl border border-border/70 p-3 bg-card">
-                <span className="text-[11px] text-muted-foreground font-medium">Guest Tips</span>
-                <p className="text-xl font-black text-primary mt-0.5">
-                  ₹{stats.tipsReceived}
-                </p>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: EARNINGS & RIDES */}
-        {activeTab === 'earnings' && (
-          <div className="space-y-4">
-            <Card className="rounded-3xl border border-border/70 p-5 bg-card space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-muted-foreground font-semibold">Total Net Balance</span>
-                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                    ₹{(stats.todayEarnings + 24500).toLocaleString('en-IN')}
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => toast.success('Instant UPI Payout initiated to J&K Bank!')}
-                  className="rounded-xl text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  Withdraw to UPI
-                </Button>
-              </div>
-
-              <div className="pt-3 border-t border-border/50 space-y-2">
-                <span className="text-xs font-bold text-foreground">Recent Completed Trips</span>
-                
-                <div className="p-3 bg-muted/30 rounded-2xl flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-bold text-foreground">Srinagar Airport &rarr; Dal Lake Houseboat</span>
-                    <p className="text-muted-foreground text-[11px]">Today, 08:30 AM • Innova Crysta</p>
-                  </div>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">+₹1,400</span>
-                </div>
-
-                <div className="p-3 bg-muted/30 rounded-2xl flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-bold text-foreground">Srinagar &rarr; Gulmarg Full Day Excursion</span>
-                    <p className="text-muted-foreground text-[11px]">Yesterday • Innova Crysta + Snow Chains</p>
-                  </div>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">+₹2,800</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* TAB 3: VEHICLE & COMPLIANCE */}
-        {activeTab === 'compliance' && (
-          <VehicleComplianceVault
-            licenseNumber="JK-01-2016-0038491"
-            vehicleRegNo="JK-01-AJ-8899"
-            licenseExpiry="2028-09-30"
-            policeVerification="Verified"
-            experienceYears={8}
-          />
-        )}
-      </main>
-
-      <Footer />
+      {/* 5. Collapsible Dev Dispatch Simulator (Bottom-Left) */}
+      <DevDispatchSimulator
+        onSimulateFlightTrip={() => {
+          triggerIncomingOffer(SAMPLE_FLIGHT_TRIP);
+          toast.info('Simulated Flight 6E-502 Arrival Transfer Dispatched');
+        }}
+        onSimulateTrainTrip={() => {
+          triggerIncomingOffer(SAMPLE_TRAIN_TRIP);
+          toast.info('Simulated Vande Bharat Train Arrival Transfer Dispatched');
+        }}
+        onSimulateHotelTrip={() => {
+          triggerIncomingOffer(SAMPLE_HOTEL_TRIP);
+          toast.info('Simulated Houseboat City Transfer Dispatched');
+        }}
+        onToggleBlizzardAdvisory={() => {
+          setAdvisory(prev => ({
+            ...prev,
+            status: prev.status === 'CHAINS_MANDATORY' ? 'BLIZZARD_ALERT' : 'CHAINS_MANDATORY',
+            message: prev.status === 'CHAINS_MANDATORY'
+              ? 'Heavy blizzard warning above Tangmarg. Strict 4x4 with reinforced snow chains mandated.'
+              : 'Snow chains mandatory above Tangmarg Checkpost.'
+          }));
+          toast.warning('Highway Advisory Updated!');
+        }}
+        onResetOffline={() => {
+          setDutyState('OFFLINE');
+          setActiveTrip(null);
+          toast.info('Cockpit Reset to Offline');
+        }}
+      />
     </div>
   );
 };

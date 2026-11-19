@@ -51,6 +51,7 @@ import aiRoutes from './routes/aiRoutes';
 import vaultRoutes from './routes/vaultRoutes';
 import portalAccessRoutes from './routes/portalAccessRoutes';
 import attendanceRoutes from './routes/attendanceRoutes';
+import driverRoutes from './routes/driverRoutes';
 import { handleStripeWebhook } from './controllers/paymentController';
 import prisma from './lib/prisma';
 
@@ -202,6 +203,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/vault', vaultRoutes);
 app.use('/api/portal-keys', portalAccessRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/driver', driverRoutes);
 app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers
