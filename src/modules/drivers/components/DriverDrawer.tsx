@@ -29,7 +29,10 @@ import {
   UploadCloud,
   FileCheck2,
   Clock,
-  Lock
+  Lock,
+  Mountain,
+  Trees,
+  Waves
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -218,8 +221,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
     try {
       await onSaveRateCard(activeVehicleId, rateCard);
       toast.success('Rate Card Updated', {
-        description: 'Aapke customized rates aur mausam surcharges save ho gaye hain.',
-        icon: '💰'
+        description: 'Your custom fares and seasonal surcharges have been saved.'
       });
     } finally {
       setIsSavingRates(false);
@@ -229,25 +231,25 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newVehicle.plateNumber.trim()) {
-      setFormError('Barah-e-karam Gaadi ka Registration Number Plate darj karein (e.g. JK-01-AX-9942).');
-      toast.warning('Number Plate Required', {
-        description: 'Yellow commercial number plate likhna lazmi hai.'
+      setFormError('Please enter the vehicle registration number plate (e.g. JK-01-AX-9942).');
+      toast.warning('Registration Plate Required', {
+        description: 'A commercial yellow registration plate number is required.'
       });
       setPipelineStep(1);
       return;
     }
     if (!newVehicle.unionBadgeNumber.trim()) {
-      setFormError('Tourist Taxi Union Badge / Card Number likhna lazmi hai (e.g. SXR-STAND-092).');
+      setFormError('Tourist Taxi Union Badge / ID is required (e.g. SXR-STAND-092).');
       toast.warning('Union Badge Required', {
-        description: 'Affiliated Tourist Taxi Union badge number likhein.'
+        description: 'Please enter your affiliated Taxi Union badge number.'
       });
       setPipelineStep(2);
       return;
     }
     if (!newVehicle.declarationAccepted) {
-      setFormError('Barah-e-karam Union & RTO compliance declaration accept karein.');
+      setFormError('Please accept the Union & RTO compliance declaration.');
       toast.warning('Declaration Required', {
-        description: 'Neeche diye gaye compliance checkbox ko tick karein.'
+        description: 'Please review and accept the compliance declaration.'
       });
       return;
     }
@@ -281,9 +283,8 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
           permitDocUrl: newVehicle.permitDocName
         }
       });
-      toast.success('Union Verification Pipeline me Submit Ho Gaya!', {
-        description: 'Admin team tasdeeq karke aapki gaadi radar pe live karegi.',
-        icon: '🛡️'
+      toast.success('Submitted for Union Verification', {
+        description: 'Transport Admin and Taxi Union Desk will review and authorize your vehicle.'
       });
       setShowRegisterModal(false);
       setPipelineStep(1);
@@ -356,40 +357,43 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
           </button>
         </div>
 
-        {/* 3 Simple Tabs (Fleet | Mera Kiraya | Kamai) */}
+        {/* 3 Simple Tabs (Fleet | Rate Card | Earnings) */}
         <div className="flex p-2 bg-[#0F141C] border-b border-white/10 gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('fleet')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'fleet'
                 ? 'bg-amber-500 text-slate-950 shadow-md'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            🚗 Meri Gaadi
+            <Car className="w-4 h-4 stroke-[2.2]" />
+            <span>My Fleet</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('rateCard')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'rateCard'
                 ? 'bg-amber-500 text-slate-950 shadow-md'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            🏷️ Mera Kiraya
+            <Tag className="w-4 h-4 stroke-[2.2]" />
+            <span>Rate Card</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('earnings')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'earnings'
                 ? 'bg-amber-500 text-slate-950 shadow-md'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            💰 Kamai & Bank
+            <CreditCard className="w-4 h-4 stroke-[2.2]" />
+            <span>Earnings & Payout</span>
           </button>
         </div>
 
@@ -409,10 +413,10 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={() => setShowRegisterModal(true)}
-                  className="h-8 rounded-xl bg-white/5 hover:bg-amber-500/15 border-white/10 hover:border-amber-500/30 text-amber-300 text-[10px] font-bold gap-1"
+                  className="h-8 rounded-xl bg-white/5 hover:bg-amber-500/15 border-white/10 hover:border-amber-500/30 text-amber-300 text-[10px] font-bold gap-1.5"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  Nayi Gaadi Add Karein
+                  Register Vehicle
                 </Button>
               </div>
 
@@ -454,7 +458,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                         </div>
 
                         <div className="shrink-0 text-right">
-                          <span className="text-[11px] font-mono text-white/70 block">{v.capacity} Sawari</span>
+                          <span className="text-[11px] font-mono text-white/70 block">{v.capacity} Seats</span>
                           <span className="text-[10px] text-white/40 block">{v.luggageCapacity} Bags</span>
                         </div>
                       </div>
@@ -497,31 +501,39 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
               </div>
 
               {/* Verified Kashmir Transport Guidelines */}
-              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2 text-xs text-white/70">
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2.5 text-xs text-white/70">
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
                   Tourist Pickup Stands
                 </span>
-                <p className="text-[11px] leading-relaxed">
-                  ✈️ <strong>Hawai Adda (SXR Airport):</strong> Stage vehicle in Commercial Taxi Lane B at Terminal Gate 2.
-                </p>
-                <p className="text-[11px] leading-relaxed">
-                  🚆 <strong>Railway Station (Nowgam):</strong> Stage at Main Parking Port 1 near Platform 1 exit.
-                </p>
+                <div className="space-y-2 text-[11px] leading-relaxed">
+                  <div className="flex items-start gap-2">
+                    <Plane className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-white">Srinagar International Airport (SXR):</strong> Stage vehicle in Commercial Taxi Lane B at Terminal Gate 2.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Train className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-white">Srinagar Railway Station (Nowgam):</strong> Stage at Main Parking Port 1 near Platform 1 exit.
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {/* ================================================================ */}
-          {/* TAB 2: MERA KIRAYA / RATE CARD (Custom Driver Tariffs)            */}
+          {/* TAB 2: RATE CARD & SURCHARGES (Custom Driver Tariffs)             */}
           {/* ================================================================ */}
           {activeTab === 'rateCard' && (
             <div className="space-y-4">
               <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1">
                 <h4 className="font-extrabold text-amber-300 flex items-center gap-1.5">
-                  <Tag className="w-4 h-4" /> Apna Kiraya Set Karein (Rate Card)
+                  <Tag className="w-4 h-4" /> Driver Fare Matrix & Surcharges
                 </h4>
                 <p className="text-[11px] text-white/70 leading-relaxed">
-                  Yahan aap apne sector rates set kar sakte hain. Tourists ko yahi rates dikhenge aur aapko fair kamai milegi.
+                  Configure your standard sector fares and seasonal surcharges. Tourists booking your vehicle pay these rates directly.
                 </p>
               </div>
 
@@ -530,8 +542,11 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 {/* 1. Airport SXR */}
                 <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-3">
                   <div>
-                    <span className="font-bold text-xs text-white block">✈️ Srinagar Airport (SXR)</span>
-                    <span className="text-[10px] text-white/40">Hawai Adda Transfer</span>
+                    <div className="flex items-center gap-2">
+                      <Plane className="w-4 h-4 text-sky-400 shrink-0" />
+                      <span className="font-bold text-xs text-white">Srinagar Airport (SXR)</span>
+                    </div>
+                    <span className="text-[10px] text-white/40 block">Airport Terminal Transfer</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -557,8 +572,11 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 {/* 2. Railway Station Nowgam */}
                 <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-3">
                   <div>
-                    <span className="font-bold text-xs text-white block">🚆 Railway Station (Nowgam)</span>
-                    <span className="text-[10px] text-white/40">Train Terminal Transfer</span>
+                    <div className="flex items-center gap-2">
+                      <Train className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="font-bold text-xs text-white">Railway Station (Nowgam)</span>
+                    </div>
+                    <span className="text-[10px] text-white/40 block">Kashmir Rail Terminal Transfer</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -584,8 +602,11 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 {/* 3. Gulmarg Trip */}
                 <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-3">
                   <div>
-                    <span className="font-bold text-xs text-white block">🏔️ Gulmarg Gondola / Highlands</span>
-                    <span className="text-[10px] text-white/40">52 km Alpine Ascent</span>
+                    <div className="flex items-center gap-2">
+                      <Mountain className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="font-bold text-xs text-white">Gulmarg Gondola & Highlands</span>
+                    </div>
+                    <span className="text-[10px] text-white/40 block">52 km Alpine Ascent Route</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -611,8 +632,11 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 {/* 4. Pahalgam Valley */}
                 <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-3">
                   <div>
-                    <span className="font-bold text-xs text-white block">🌲 Pahalgam Valley (Betaab/Aru)</span>
-                    <span className="text-[10px] text-white/40">88 km Scenic Route</span>
+                    <div className="flex items-center gap-2">
+                      <Trees className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="font-bold text-xs text-white">Pahalgam Valley (Betaab / Aru)</span>
+                    </div>
+                    <span className="text-[10px] text-white/40 block">88 km South Kashmir Route</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -638,8 +662,11 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 {/* 5. Sonamarg Glacier */}
                 <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-3">
                   <div>
-                    <span className="font-bold text-xs text-white block">🌊 Sonamarg (Thajiwas Glacier)</span>
-                    <span className="text-[10px] text-white/40">85 km Valley Route</span>
+                    <div className="flex items-center gap-2">
+                      <Waves className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span className="font-bold text-xs text-white">Sonamarg (Thajiwas Glacier)</span>
+                    </div>
+                    <span className="text-[10px] text-white/40 block">85 km Sindh River Valley Route</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -666,7 +693,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
               {/* Special Winter & Night Surcharges */}
               <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
                 <span className="text-[10px] font-black uppercase text-amber-400 block tracking-wider">
-                  Mausam & Night Extra Charges
+                  Weather & Night Surcharges
                 </span>
 
                 <div 
@@ -676,8 +703,11 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   }`}
                 >
                   <div>
-                    <span className="text-white font-bold block">❄️ Tangmarg Snow Chain Extra</span>
-                    <span className="text-[10px] text-white/50">+₹{rateCard.snowChainSurcharge} when snow advisory active</span>
+                    <div className="flex items-center gap-1.5">
+                      <Snowflake className="w-3.5 h-3.5 text-sky-400" />
+                      <span className="text-white font-bold block">Tangmarg Snow Chain Surcharge</span>
+                    </div>
+                    <span className="text-[10px] text-white/50 block">+₹{rateCard.snowChainSurcharge} when snow advisory is active</span>
                   </div>
                   <LuxuryToggleSwitch
                     checked={rateCard.snowChainActive}
@@ -693,8 +723,11 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   }`}
                 >
                   <div>
-                    <span className="text-white font-bold block">🔥 Vehicle Heater / Bukhari</span>
-                    <span className="text-[10px] text-white/50">+₹{rateCard.heaterSurcharge} for warm cabin</span>
+                    <div className="flex items-center gap-1.5">
+                      <Flame className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-white font-bold block">Cabin Climate Heater</span>
+                    </div>
+                    <span className="text-[10px] text-white/50 block">+₹{rateCard.heaterSurcharge} for warm cabin comfort</span>
                   </div>
                   <LuxuryToggleSwitch
                     checked={rateCard.heaterActive}
@@ -710,8 +743,11 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   }`}
                 >
                   <div>
-                    <span className="text-white font-bold block">🌙 Raat Ka Safar (After 8 PM)</span>
-                    <span className="text-[10px] text-white/50">+₹{rateCard.nightSurcharge || 500} for late night trains/flights</span>
+                    <div className="flex items-center gap-1.5">
+                      <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-white font-bold block">Late Night Departure (After 8 PM)</span>
+                    </div>
+                    <span className="text-[10px] text-white/50 block">+₹{rateCard.nightSurcharge || 500} for late night arrivals</span>
                   </div>
                   <LuxuryToggleSwitch
                     checked={Boolean(rateCard.nightSurcharge > 0)}
@@ -729,22 +765,22 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 gap-2"
               >
                 <Save className="w-4 h-4 stroke-[2.5]" />
-                {isSavingRates ? 'Rates Save Ho Rahe Hain...' : 'Mera Rate Card Save Karein'}
+                {isSavingRates ? 'Saving Rates...' : 'Save Rate Card'}
               </Button>
             </div>
           )}
 
           {/* ================================================================ */}
-          {/* TAB 3: EARNINGS & BANK PAYOUT (Kamai)                            */}
+          {/* TAB 3: EARNINGS & BANK PAYOUT                                   */}
           {/* ================================================================ */}
           {activeTab === 'earnings' && (
             <div className="space-y-4">
               <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-[#0F141C] to-black/90 border border-amber-500/30 text-center space-y-1.5">
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">Aaj Ki Total Kamai</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">Today's Gross Earnings</span>
                 <div className="text-3xl font-black font-mono text-white">
                   ₹{earnings.todayTotal.toLocaleString('en-IN')}.00
                 </div>
-                <span className="text-[11px] text-white/60 block">Registered UPI: {earnings.upiId}</span>
+                <span className="text-[11px] text-white/60 block">Registered Payout UPI: {earnings.upiId}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-center text-xs">
@@ -764,7 +800,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-emerald-500/20"
               >
                 <ArrowUpRight className="w-4 h-4 stroke-[3]" />
-                {isPayoutProcessing ? 'Bank Me Bhej Rahe Hain...' : 'Apne Bank / UPI Me Paisa Bhejein'}
+                {isPayoutProcessing ? 'Processing Transfer...' : 'Withdraw to Bank / UPI'}
               </Button>
             </div>
           )}
@@ -807,9 +843,9 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
             {/* 3-Step Pipeline Visual Progress Bar */}
             <div className="grid grid-cols-3 gap-2 py-1">
               {[
-                { step: 1, label: '1. Gaadi Details', desc: 'Car & Specs' },
-                { step: 2, label: '2. Union & Permit', desc: 'Badge & RTO' },
-                { step: 3, label: '3. Verification', desc: 'KYC & Admin' }
+                { step: 1, label: '1. Vehicle Specs', desc: 'Model & Capacity' },
+                { step: 2, label: '2. Union & Permits', desc: 'Badge & RTO' },
+                { step: 3, label: '3. Verification', desc: 'KYC & Review' }
               ].map(s => {
                 const isCurrent = pipelineStep === s.step;
                 const isDone = pipelineStep > s.step;
@@ -842,7 +878,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
               <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <span className="font-bold block text-rose-300">Zaroori Ittila (Verification Notice)</span>
+                  <span className="font-bold block text-rose-300">Verification Notice</span>
                   <p className="text-[11px] text-rose-100/90 mt-0.5">{formError}</p>
                 </div>
                 <button
@@ -860,7 +896,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/60 uppercase">Gaadi Ka Model</label>
+                    <label className="text-[10px] font-bold text-white/60 uppercase">Vehicle Model</label>
                     <select
                       value={newVehicle.model}
                       onChange={(e) => setNewVehicle(prev => ({ ...prev, model: e.target.value }))}
@@ -877,7 +913,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/60 uppercase">Number Plate (Yellow Plate)</label>
+                    <label className="text-[10px] font-bold text-white/60 uppercase">Yellow Commercial Number Plate</label>
                     <Input
                       placeholder="e.g. JK-01-AX-9942"
                       value={newVehicle.plateNumber}
@@ -887,10 +923,10 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     />
                   </div>
 
-                  {/* Non-Sticky Numeric Stepper: Kitne Mehman */}
+                  {/* Non-Sticky Numeric Stepper: Passenger Capacity */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-white/60 uppercase flex items-center justify-between">
-                      <span>Kitne Mehman (Seats / Pax)</span>
+                      <span>Passenger Capacity (Seats)</span>
                       <span className="text-[10px] text-amber-400 font-mono font-bold">{newVehicle.capacity || 6} Seats</span>
                     </label>
                     <div className="flex items-center gap-1.5 h-11 rounded-xl bg-black/60 border border-white/10 px-1.5 focus-within:border-amber-500/60 transition-colors">
@@ -929,10 +965,10 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     </div>
                   </div>
 
-                  {/* Non-Sticky Numeric Stepper: Kitne Bags */}
+                  {/* Non-Sticky Numeric Stepper: Luggage Capacity */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-white/60 uppercase flex items-center justify-between">
-                      <span>Kitne Bags (Luggage)</span>
+                      <span>Luggage Capacity (Bags)</span>
                       <span className="text-[10px] text-amber-400 font-mono font-bold">{newVehicle.luggageCapacity || 4} Bags</span>
                     </label>
                     <div className="flex items-center gap-1.5 h-11 rounded-xl bg-black/60 border border-white/10 px-1.5 focus-within:border-amber-500/60 transition-colors">
@@ -1088,9 +1124,9 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   type="button"
                   onClick={() => {
                     if (!newVehicle.plateNumber.trim()) {
-                      setFormError('Barah-e-karam Gaadi ka Registration Number Plate darj karein (e.g. JK-01-AX-9942).');
-                      toast.warning('Number Plate Required', {
-                        description: 'Yellow commercial number plate likhna zaroori hai.'
+                      setFormError('Please enter the vehicle registration number plate (e.g. JK-01-AX-9942).');
+                      toast.warning('Registration Plate Required', {
+                        description: 'A commercial yellow registration plate number is required.'
                       });
                       return;
                     }
@@ -1099,7 +1135,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   }}
                   className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-amber-500/20"
                 >
-                  <span>Agla Qadam: Tourist Union & RTO Details</span>
+                  <span>Next: Union & RTO Compliance</span>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -1113,34 +1149,34 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     <Building2 className="w-4 h-4" /> Kashmir Tourist Taxi Union Authentication
                   </div>
                   <p className="text-[11px] text-white/70">
-                    Kashmir Curators sirf registered Tourist Taxi Union stands se affiliated cabs allow karta hai.
+                    Kashmir Curators only authorizes commercial tourist vehicles registered with an affiliated Tourist Taxi Union.
                   </p>
                 </div>
 
                 <div className="space-y-3 text-xs">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-white/60 uppercase">
-                      Tourist Taxi Union Stand (यूनियन स्टैंड)
+                      Affiliated Tourist Taxi Union Stand
                     </label>
                     <select
                       value={newVehicle.unionName}
                       onChange={(e) => setNewVehicle(prev => ({ ...prev, unionName: e.target.value }))}
                       className="w-full h-11 rounded-xl bg-black/60 border border-white/10 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
                     >
-                      <option value="Srinagar Airport Tourist Taxi Union">✈️ Srinagar Airport Taxi Union (Sheikh-ul-Alam SXR)</option>
-                      <option value="TRC Tourist Taxi Stand Union (Srinagar)">🏢 TRC Tourist Taxi Stand Union (Tourist Reception Centre)</option>
-                      <option value="Tangmarg–Gulmarg Taxi Operators Union">❄️ Tangmarg / Gulmarg Taxi Operators Union</option>
-                      <option value="Pahalgam Tourist Taxi Stand Union">🌲 Pahalgam Tourist Taxi Stand Union</option>
-                      <option value="Sonamarg Taxi Operators Union">🏔️ Sonamarg Taxi Operators Union</option>
-                      <option value="Nowgam Railway Station Tourist Taxi Stand">🚆 Nowgam Railway Station Tourist Taxi Stand</option>
-                      <option value="Dal Lake Ghat Taxi Stand Union">⛵ Dal Lake / Boulevard Tourist Taxi Union</option>
+                      <option value="Srinagar Airport Tourist Taxi Union" className="bg-[#0F141C] text-white py-2">Srinagar Airport Taxi Union (Sheikh-ul-Alam SXR)</option>
+                      <option value="TRC Tourist Taxi Stand Union (Srinagar)" className="bg-[#0F141C] text-white py-2">TRC Tourist Taxi Stand Union (Tourist Reception Centre)</option>
+                      <option value="Tangmarg–Gulmarg Taxi Operators Union" className="bg-[#0F141C] text-white py-2">Tangmarg / Gulmarg Taxi Operators Union</option>
+                      <option value="Pahalgam Tourist Taxi Stand Union" className="bg-[#0F141C] text-white py-2">Pahalgam Tourist Taxi Stand Union</option>
+                      <option value="Sonamarg Taxi Operators Union" className="bg-[#0F141C] text-white py-2">Sonamarg Taxi Operators Union</option>
+                      <option value="Nowgam Railway Station Tourist Taxi Stand" className="bg-[#0F141C] text-white py-2">Nowgam Railway Station Tourist Taxi Stand</option>
+                      <option value="Dal Lake Ghat Taxi Stand Union" className="bg-[#0F141C] text-white py-2">Dal Lake / Boulevard Tourist Taxi Union</option>
                     </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-white/60 uppercase">
-                        Union Card / Badge No. (बैज नंबर) *
+                        Union Card / Badge ID *
                       </label>
                       <Input
                         placeholder="e.g. KT-UNION-4921"
@@ -1153,7 +1189,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-white/60 uppercase">
-                        All Valley Permit No. (परमिट)
+                        J&K All-Valley Tourist Permit No.
                       </label>
                       <Input
                         placeholder="e.g. JK-TP-2026-901"
@@ -1167,7 +1203,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-white/60 uppercase">
-                        Commercial RC Number (आरसी)
+                        Commercial RC Number
                       </label>
                       <Input
                         placeholder="e.g. JK01AX9942"
@@ -1179,7 +1215,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-white/60 uppercase">
-                        Driver PSV Badge No. (लाइसेंस बैज)
+                        Commercial Driver PSV Badge ID
                       </label>
                       <Input
                         placeholder="e.g. PSV-JK-4412"
@@ -1202,15 +1238,15 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     className="flex-1 h-12 rounded-xl bg-white/5 border-white/10 text-white text-xs gap-1"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    <span>Peeche</span>
+                    <span>Back</span>
                   </Button>
                   <Button
                     type="button"
                     onClick={() => {
                       if (!newVehicle.unionBadgeNumber.trim()) {
-                        setFormError('Tourist Taxi Union Badge / Card Number likhna zaroori hai (e.g. SXR-STAND-092).');
+                        setFormError('Tourist Taxi Union Badge / ID is required (e.g. SXR-STAND-092).');
                         toast.warning('Union Badge Required', {
-                          description: 'Affiliated Taxi Union badge number darj karein.'
+                          description: 'Please enter your affiliated Taxi Union badge number.'
                         });
                         return;
                       }
@@ -1219,7 +1255,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     }}
                     className="flex-[2] h-12 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-amber-500/20"
                   >
-                    <span>Agla: Dastavezaat & Pipeline</span>
+                    <span>Next: KYC Documents & Review</span>
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
@@ -1231,7 +1267,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
               <form onSubmit={handleRegisterSubmit} className="space-y-4">
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-2.5 text-xs">
                   <span className="text-[10px] font-black uppercase text-amber-400 block tracking-wider">
-                    Attached Verification Documents (दस्तावेज़)
+                    Attached Verification Documents
                   </span>
 
                   <div className="space-y-2">
@@ -1282,7 +1318,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     <ShieldCheck className="w-4 h-4" /> Admin & Union Authentication Pipeline
                   </div>
                   <p className="text-[11px] text-white/70 leading-relaxed">
-                    Gaadi submit karne ke baad yeh seedhe hamare Transport Admin Desk aur Tourist Taxi Union verification pipeline me jayegi. Admin ke tasdeeq (approval) ke baad hi yeh gaadi live radar pe tourist bookings ke liye active hogi.
+                    Upon submission, your vehicle dossier is transmitted directly to our Transport Desk and Tourist Taxi Union verification pipeline. Once verified, this vehicle is immediately authorized to receive live radar dispatches.
                   </p>
                 </div>
 
@@ -1304,7 +1340,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     <div>
                       <span className="text-white font-bold text-xs block">Union & RTO Legal Declaration</span>
                       <span className="text-[10px] text-white/60 leading-snug block">
-                        Main tasdeeq karta hoon ki meri gaadi valid Commercial Tourist Permit aur Kashmir Tourist Taxi Union se registered hai.
+                        I certify that this vehicle holds a valid Commercial Yellow Plate, J&K Tourist Permit, and is registered with the designated Tourist Taxi Union.
                       </span>
                     </div>
                   </div>
@@ -1326,14 +1362,14 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     className="flex-1 h-12 rounded-xl bg-white/5 border-white/10 text-white text-xs gap-1"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    <span>Peeche</span>
+                    <span>Back</span>
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmittingVehicle || !newVehicle.declarationAccepted}
                     className="flex-[2] h-12 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider shadow-xl shadow-amber-500/30"
                   >
-                    {isSubmittingVehicle ? 'Pipeline Me Submit Ho Rahi Hai...' : 'Verification Pipeline Me Bhejein ➔'}
+                    {isSubmittingVehicle ? 'Submitting Application...' : 'Submit for Union Verification ➔'}
                   </Button>
                 </div>
               </form>

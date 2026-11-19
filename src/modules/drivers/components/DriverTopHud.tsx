@@ -242,8 +242,7 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
                 onClick={() => {
                   navigator.clipboard?.writeText('https://kashmir-curators.vercel.app/driver?track=LIVE-GPS-JK01AX9942');
                   toast.success('Live GPS Link Copied!', { 
-                    description: 'Tourist GPS tracking link clipboard me copy ho gaya hai.',
-                    icon: '📍'
+                    description: 'Live GPS tracking link copied to clipboard.'
                   });
                 }}
                 className="w-full h-10 rounded-xl bg-white/5 border-white/10 text-white text-xs gap-1.5"

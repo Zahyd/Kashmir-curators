@@ -213,7 +213,7 @@ export const DriverMapCockpit: React.FC<DriverMapCockpitProps> = ({
             <g transform="translate(640, 520)">
               <rect width="80" height="20" rx="10" fill="#0F141C" stroke="#F59E0B" strokeWidth="1" />
               <text x="40" y="14" fill="#F59E0B" fontSize="9" fontWeight="900" textAnchor="middle">
-                ⚡ 1.8x SURGE
+                1.8x SURGE
               </text>
             </g>
 
@@ -222,7 +222,7 @@ export const DriverMapCockpit: React.FC<DriverMapCockpitProps> = ({
             <g transform="translate(705, 590)">
               <rect width="76" height="18" rx="9" fill="#0F141C" stroke="#10B981" strokeWidth="1" />
               <text x="38" y="13" fill="#10B981" fontSize="9" fontWeight="900" textAnchor="middle">
-                🚆 1.5x SURGE
+                1.5x SURGE
               </text>
             </g>
 
@@ -231,7 +231,7 @@ export const DriverMapCockpit: React.FC<DriverMapCockpitProps> = ({
             <g transform="translate(730, 365)">
               <rect width="70" height="18" rx="9" fill="#0F141C" stroke="#38BDF8" strokeWidth="1" />
               <text x="35" y="13" fill="#38BDF8" fontSize="9" fontWeight="900" textAnchor="middle">
-                🌊 1.4x SURGE
+                1.4x SURGE
               </text>
             </g>
           </g>

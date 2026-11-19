@@ -24,7 +24,9 @@ import {
   IndianRupee,
   Plus,
   Minus,
-  Tag
+  Tag,
+  Mountain,
+  Moon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -263,7 +265,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
               {/* Fare & Countdown Header */}
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-400 block">Aapko Milega (Offered Fare)</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-400 block">Offered Fare (Net Earning)</span>
                   <div className="text-3xl font-black font-mono text-white tracking-tight">
                     ₹{activeTrip.fareAmount.toLocaleString('en-IN')}.00
                   </div>
@@ -308,7 +310,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                 <div className="flex items-start gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
                   <div className="min-w-0">
-                    <span className="text-[10px] text-white/40 uppercase block">Sawari Kahan Se Leni Hai (Pickup)</span>
+                    <span className="text-[10px] text-white/40 uppercase block">Pickup Location</span>
                     <p className="font-bold text-white truncate">{activeTrip.pickupLocation}</p>
                   </div>
                 </div>
@@ -316,7 +318,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                 <div className="flex items-start gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-amber-400 mt-1 shrink-0" />
                   <div className="min-w-0">
-                    <span className="text-[10px] text-white/40 uppercase block">Kahan Chhodni Hai (Drop)</span>
+                    <span className="text-[10px] text-white/40 uppercase block">Drop Destination</span>
                     <p className="font-bold text-white truncate">{activeTrip.dropLocation}</p>
                   </div>
                 </div>
@@ -341,10 +343,10 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
               {counterSent ? (
                 <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
                   <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-bold text-xs">
-                    <CheckCircle2 className="w-4 h-4" /> Boli / Counter-Offer Tourist Ko Bhej Diya! (₹{counterAmount.toLocaleString('en-IN')})
+                    <CheckCircle2 className="w-4 h-4" /> Counter-Offer Sent to Guest (₹{counterAmount.toLocaleString('en-IN')})
                   </div>
                   <p className="text-[11px] text-white/60">
-                    Reason: {counterReason} • Tourist ki manzoori ka intezar hai...
+                    Reason: {counterReason} • Awaiting guest confirmation...
                   </p>
                 </div>
               ) : (
@@ -363,7 +365,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                     className="h-12 rounded-2xl bg-[#1A2230] hover:bg-[#232E40] border border-amber-500/40 text-amber-300 font-bold text-xs uppercase flex items-center justify-center gap-1"
                   >
                     <Tag className="w-3.5 h-3.5" />
-                    <span>Apna Rate</span>
+                    <span>Counter Offer</span>
                   </Button>
                   <Button
                     type="button"
@@ -545,7 +547,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* Driver Counter-Offer / Boli Modal (InDrive Style Fair Bidding)     */}
+      {/* Driver Counter-Offer Modal (InDrive Style Fair Bidding)            */}
       {/* ------------------------------------------------------------------ */}
       {showCounterModal && activeTrip && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -553,10 +555,10 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">Mera Kiraya / Counter-Offer</span>
-                <h3 className="font-extrabold text-lg text-white">Apna Rate Bhejein (Counter-Offer)</h3>
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">Driver Fare / Counter-Offer</span>
+                <h3 className="font-extrabold text-lg text-white">Propose Fair Rate (Counter-Offer)</h3>
                 <p className="text-xs text-white/50 mt-0.5">
-                  Tourist ka offer: <strong className="text-white font-mono">₹{activeTrip.fareAmount.toLocaleString('en-IN')}</strong>. Barfbari ya raste ke mutabiq munasib rate set karein.
+                  Guest offer: <strong className="text-white font-mono">₹{activeTrip.fareAmount.toLocaleString('en-IN')}</strong>. Adjust fair rate according to mountain terrain, snow, or waiting conditions.
                 </p>
               </div>
               <button
@@ -581,7 +583,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                 </Button>
 
                 <div className="text-center">
-                  <span className="text-[10px] font-bold text-white/40 uppercase block">Aapka Proposed Kiraya</span>
+                  <span className="text-[10px] font-bold text-white/40 uppercase block">Your Proposed Fare</span>
                   <div className="text-3xl font-black font-mono text-amber-400">
                     ₹{counterAmount.toLocaleString('en-IN')}
                   </div>
@@ -630,28 +632,34 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
 
               {/* Reason Selection */}
               <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-white/40 uppercase block">Wajah Chunein (Select Reason)</span>
+                <span className="text-[10px] font-bold text-white/40 uppercase block">Select Surcharge Reason</span>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {[
-                    { id: 'chains', label: '❄️ Tangmarg Snow Chains', desc: 'बर्फ की जंजीरें' },
-                    { id: 'upper_slopes', label: '🏔️ Gulmarg Upper Frost', desc: 'ऊपरी खतरनाक मोड़' },
-                    { id: 'night_ride', label: '🌙 Raat Ka Safar / Late', desc: 'रात का अतिरिक्त शुल्क' },
-                    { id: 'delay_wait', label: '⏳ Airport/Train Delay', desc: 'इंतजार का समय' }
-                  ].map(reason => (
-                    <button
-                      key={reason.id}
-                      type="button"
-                      onClick={() => setCounterReason(reason.label)}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        counterReason === reason.label
-                          ? 'bg-amber-500/15 border-amber-500 text-amber-200'
-                          : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70'
-                      }`}
-                    >
-                      <span className="font-bold text-[11px] block">{reason.label}</span>
-                      <span className="text-[10px] text-white/40 block mt-0.5">{reason.desc}</span>
-                    </button>
-                  ))}
+                    { id: 'chains', label: 'Tangmarg Snow Chains', desc: 'Snow chain checkpoint requirement', icon: Snowflake },
+                    { id: 'upper_slopes', label: 'Gulmarg Upper Frost', desc: 'High-altitude sub-zero terrain', icon: Mountain },
+                    { id: 'night_ride', label: 'Late Night Departure', desc: 'Night shift departure after 8 PM', icon: Moon },
+                    { id: 'delay_wait', label: 'Airport / Train Standby', desc: 'Flight or train delay waiting time', icon: Clock }
+                  ].map(reason => {
+                    const IconComponent = reason.icon;
+                    return (
+                      <button
+                        key={reason.id}
+                        type="button"
+                        onClick={() => setCounterReason(reason.label)}
+                        className={`p-2.5 rounded-xl border text-left transition-all ${
+                          counterReason === reason.label
+                            ? 'bg-amber-500/15 border-amber-500 text-amber-200'
+                            : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70'
+                        }`}
+                      >
+                        <span className="font-bold text-[11px] flex items-center gap-1.5">
+                          <IconComponent className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span>{reason.label}</span>
+                        </span>
+                        <span className="text-[10px] text-white/40 block mt-1">{reason.desc}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -663,14 +671,14 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                   onClick={() => setShowCounterModal(false)}
                   className="flex-1 h-12 rounded-xl bg-white/5 border-white/10 text-white text-xs"
                 >
-                  Wapas (Cancel)
+                  Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmittingCounter}
                   className="flex-[2] h-12 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30"
                 >
-                  {isSubmittingCounter ? 'Bheja Jaa Raha Hai...' : `Bhejein (₹${counterAmount.toLocaleString('en-IN')})`}
+                  {isSubmittingCounter ? 'Transmitting...' : `Submit Counter (₹${counterAmount.toLocaleString('en-IN')})`}
                 </Button>
               </div>
             </form>
