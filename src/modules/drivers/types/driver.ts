@@ -40,6 +40,8 @@ export interface DriverTrip {
   distanceKm: number;
   estimatedDuration: string;
   fareAmount: number;
+  counterOfferAmount?: number;
+  counterOfferReason?: string;
   securityPin: string; // 4-char security PIN e.g. "KC-77"
   arrivalTelemetry: ArrivalTelemetry;
   stage: TripStage;
@@ -59,6 +61,22 @@ export interface DriverVehicle {
   rcVerified: boolean;
   permitVerified: boolean;
   insuranceValid: boolean;
+  rateCard?: DriverRateCard;
+}
+
+export interface DriverRateCard {
+  airportTransfer: number; // e.g. 1200
+  railwayTransfer: number; // e.g. 1400
+  gulmargTransfer: number; // e.g. 2800
+  pahalgamTransfer: number; // e.g. 3400
+  sonamargTransfer: number; // e.g. 3800
+  doodhpathriTransfer: number; // e.g. 2400
+  localSightseeing: number; // e.g. 2200
+  snowChainSurcharge: number; // e.g. 1000
+  snowChainActive: boolean;
+  heaterSurcharge: number; // e.g. 300
+  heaterActive: boolean;
+  nightSurcharge: number; // e.g. 500
 }
 
 export interface DriverEarnings {

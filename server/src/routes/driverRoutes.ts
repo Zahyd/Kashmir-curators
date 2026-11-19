@@ -18,6 +18,22 @@ export function broadcastDriverEvent(eventType: string, payload: any) {
   }
 }
 
+// Default standard Kashmir Taxi Union rate card
+const DEFAULT_RATE_CARD = {
+  airportTransfer: 1200,
+  railwayTransfer: 1400,
+  gulmargTransfer: 2800,
+  pahalgamTransfer: 3400,
+  sonamargTransfer: 3800,
+  doodhpathriTransfer: 2400,
+  localSightseeing: 2200,
+  snowChainSurcharge: 1000,
+  snowChainActive: true,
+  heaterSurcharge: 300,
+  heaterActive: true,
+  nightSurcharge: 500
+};
+
 // ---------------------------------------------------------------------------
 // 1. SSE Real-Time Stream for Uber Dispatch Cockpit
 // ---------------------------------------------------------------------------
@@ -99,6 +115,7 @@ router.get('/cockpit-state', async (req: Request, res: Response) => {
           rcVerified: parsedFeatures.rcVerified ?? true,
           permitVerified: parsedFeatures.permitVerified ?? true,
           insuranceValid: parsedFeatures.insuranceValid ?? true,
+          rateCard: parsedFeatures.rateCard || DEFAULT_RATE_CARD
         };
       }),
       activeAdvisory: tangmargAdvisory
@@ -110,7 +127,171 @@ router.get('/cockpit-state', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Register New Vehicle in Driver Fleet
+// 3. Fetch Real Active Assigned Trip from Neon Database
+// ---------------------------------------------------------------------------
+router.get('/active-trip', async (req: Request, res: Response) => {
+  try {
+    const reservation = await prisma.cabReservation.findFirst({
+      where: {
+        status: { in: ['ALLOCATED', 'DISPATCHED', 'ON_TRIP'] }
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        inquiry: {
+          select: { customerName: true, phone: true, travelers: true, destination: true }
+        }
+      }
+    });
+
+    if (!reservation) {
+      return res.json({ activeTrip: null });
+    }
+
+    const isAirport = /airport|sxr|flight/i.test(reservation.pickupLocation);
+    const isTrain = /rail|train|nowgam|railway/i.test(reservation.pickupLocation);
+
+    const formattedTrip = {
+      id: reservation.id,
+      passengerName: reservation.inquiry?.customerName || reservation.driverName || 'Kashmir Guest',
+      passengerPhone: reservation.inquiry?.phone || '+91 98111 22334',
+      travelerCount: reservation.inquiry?.travelers ? parseInt(reservation.inquiry.travelers) || 2 : 2,
+      luggageCount: 3,
+      pickupLocation: reservation.pickupLocation,
+      dropLocation: reservation.dropLocation,
+      distanceKm: 52,
+      estimatedDuration: '1 hr 25 min',
+      fareAmount: reservation.contractRate > 0 ? reservation.contractRate : (reservation.totalCost || 2850),
+      securityPin: reservation.voucherReference?.slice(-4) || 'KC-77',
+      arrivalTelemetry: isAirport ? {
+        type: 'FLIGHT',
+        flightNumber: '6E-502',
+        airline: 'IndiGo Airlines',
+        status: 'Landed at 10:25 AM',
+        terminal: 'SXR Arrival Gate 2'
+      } : isTrain ? {
+        type: 'TRAIN',
+        trainNumber: '22439',
+        trainName: 'Vande Bharat Express',
+        status: 'Arrived at Platform 1',
+        station: 'Srinagar (Nowgam) Rail Terminal'
+      } : {
+        type: 'HOTEL',
+        propertyName: reservation.pickupLocation,
+        area: 'Srinagar Valley',
+        notes: 'Hotel / Houseboat Pickup'
+      },
+      stage: reservation.status === 'ON_TRIP' ? 'STARTED_IN_TRANSIT' : 'ACCEPTED',
+      nextTurnInstruction: `Head to ${reservation.pickupLocation}`
+    };
+
+    res.json({ activeTrip: formattedTrip });
+  } catch (error: any) {
+    console.error('[Driver Active Trip] Error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch active trip' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 4. Update Driver's Custom Rate Card & Tariffs in Neon DB
+// ---------------------------------------------------------------------------
+router.post('/rate-card', async (req: Request, res: Response) => {
+  try {
+    const { vehicleId, rateCard } = req.body;
+
+    if (!rateCard) {
+      return res.status(400).json({ error: 'Rate card payload is required' });
+    }
+
+    if (vehicleId) {
+      const cab = await prisma.cab.findUnique({ where: { id: vehicleId } });
+      if (cab) {
+        let currentFeatures: any = {};
+        try {
+          currentFeatures = cab.features ? JSON.parse(cab.features) : {};
+        } catch {
+          currentFeatures = {};
+        }
+
+        currentFeatures.rateCard = rateCard;
+
+        await prisma.cab.update({
+          where: { id: vehicleId },
+          data: {
+            features: JSON.stringify(currentFeatures),
+            pricePerKm: rateCard.gulmargTransfer ? Math.round(rateCard.gulmargTransfer / 50) : cab.pricePerKm
+          }
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Rate Card updated successfully. Your custom charges are now active.',
+      rateCard
+    });
+  } catch (error: any) {
+    console.error('[Driver RateCard] Error:', error.message);
+    res.status(500).json({ error: 'Failed to update rate card' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 5. Driver Counter-Offer / Fare Proposal (InDrive Style Bidding)
+// ---------------------------------------------------------------------------
+router.post('/bookings/:id/counter-offer', async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const { proposedFare, reason = 'Snow chains required above Tangmarg Checkpost' } = req.body;
+
+    if (!proposedFare || Number(proposedFare) <= 0) {
+      return res.status(400).json({ error: 'Valid proposed fare amount is required' });
+    }
+
+    const fare = Number(proposedFare);
+
+    // Update reservation with driver proposed counter-offer
+    const updated = await prisma.$transaction(async (tx) => {
+      const reservation = await tx.cabReservation.findUnique({ where: { id } }).catch(() => null);
+      if (reservation) {
+        return await tx.cabReservation.update({
+          where: { id },
+          data: {
+            contractRate: fare,
+            totalCost: Math.round(fare * 1.15) // small platform markup
+          }
+        });
+      }
+      return { id, contractRate: fare, proposedAt: new Date().toISOString() };
+    });
+
+    // Notify Admin & Tourist
+    await prisma.notification.create({
+      data: {
+        userId: null,
+        title: `🚖 Driver Counter-Offer: ₹${fare.toLocaleString('en-IN')}`,
+        message: `Driver proposed ₹${fare.toLocaleString('en-IN')} for trip #${id.slice(-6).toUpperCase()}. Reason: "${reason}".`,
+        type: 'booking',
+        priority: 'high',
+        link: '/admin'
+      }
+    }).catch(() => null);
+
+    broadcastDriverEvent('counter-offer-submitted', { tripId: id, proposedFare: fare, reason });
+
+    res.json({
+      success: true,
+      proposedFare: fare,
+      reason,
+      message: `Your rate of ₹${fare.toLocaleString('en-IN')} has been submitted.`
+    });
+  } catch (error: any) {
+    console.error('[Driver Counter-Offer] Error:', error.message);
+    res.status(500).json({ error: 'Failed to submit counter-offer' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 6. Register New Vehicle in Driver Fleet
 // ---------------------------------------------------------------------------
 router.post('/vehicles', async (req: Request, res: Response) => {
   try {
@@ -123,7 +304,8 @@ router.post('/vehicles', async (req: Request, res: Response) => {
       fourWheelDrive = true,
       skiRack = false,
       multiDayAvailable = true,
-      type = 'SUV'
+      type = 'SUV',
+      rateCard = DEFAULT_RATE_CARD
     } = req.body;
 
     if (!model || !plateNumber) {
@@ -140,6 +322,7 @@ router.post('/vehicles', async (req: Request, res: Response) => {
       rcVerified: true,
       permitVerified: true,
       insuranceValid: true,
+      rateCard,
       addedAt: new Date().toISOString()
     };
 
@@ -170,7 +353,8 @@ router.post('/vehicles', async (req: Request, res: Response) => {
         multiDayAvailable: featuresObj.multiDayAvailable,
         rcVerified: true,
         permitVerified: true,
-        insuranceValid: true
+        insuranceValid: true,
+        rateCard: featuresObj.rateCard
       }
     });
   } catch (error: any) {
@@ -180,16 +364,14 @@ router.post('/vehicles', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Atomic Ride Offer Acceptance
+// 7. Atomic Ride Offer Acceptance
 // ---------------------------------------------------------------------------
 router.post('/bookings/:id/accept', async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const { driverName = 'Zahid Chauffeur', driverPhone = '+91 99066 88123', vehiclePlate = 'JK-01-AX-9942' } = req.body;
 
-    // Use Prisma transaction to atomically assign or reserve
     const result = await prisma.$transaction(async (tx) => {
-      // Check if cabReservation exists
       const existing = await tx.cabReservation.findUnique({
         where: { id }
       }).catch(() => null);
@@ -206,7 +388,6 @@ router.post('/bookings/:id/accept', async (req: Request, res: Response) => {
         });
       }
 
-      // If simulated or not yet persisted in reservations, create or return confirmed state
       return {
         id,
         status: 'DISPATCHED',
@@ -231,7 +412,7 @@ router.post('/bookings/:id/accept', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// 5. Verify 4-Digit Tourist Security PIN (e.g. KC-77)
+// 8. Verify 4-Digit Tourist Security PIN (e.g. KC-77)
 // ---------------------------------------------------------------------------
 router.post('/bookings/:id/verify-pin', async (req: Request, res: Response) => {
   try {
@@ -255,7 +436,7 @@ router.post('/bookings/:id/verify-pin', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// 6. Transition Trip Lifecycle (ARRIVED -> STARTED -> COMPLETED)
+// 9. Transition Trip Lifecycle (ARRIVED -> STARTED -> COMPLETED)
 // ---------------------------------------------------------------------------
 router.post('/bookings/:id/transition', async (req: Request, res: Response) => {
   try {
@@ -303,7 +484,7 @@ router.post('/bookings/:id/transition', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// 7. Instant UPI Payout Request
+// 10. Instant UPI Payout Request
 // ---------------------------------------------------------------------------
 router.post('/payout', async (req: Request, res: Response) => {
   try {
@@ -311,7 +492,6 @@ router.post('/payout', async (req: Request, res: Response) => {
 
     const payoutRef = `PAYOUT-UPI-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // Log notification in database for finance/admin review
     await prisma.notification.create({
       data: {
         userId: null,

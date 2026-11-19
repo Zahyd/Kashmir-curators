@@ -20,7 +20,11 @@ import {
   KeyRound,
   Snowflake,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  IndianRupee,
+  Plus,
+  Minus,
+  Tag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +38,7 @@ interface DriverActionSheetProps {
   activeTrip: DriverTrip | null;
   onAcceptOffer: () => void;
   onDeclineOffer: () => void;
+  onCounterOffer?: (tripId: string, proposedFare: number, reason: string) => Promise<void>;
   offerCountdownSeconds: number;
   onSlideStageTransition: (stage: TripStage) => void;
   onVerifySecurityPin: (enteredPin: string) => Promise<boolean>;
@@ -46,6 +51,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
   activeTrip,
   onAcceptOffer,
   onDeclineOffer,
+  onCounterOffer,
   offerCountdownSeconds,
   onSlideStageTransition,
   onVerifySecurityPin,
@@ -60,6 +66,22 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinError, setPinError] = useState('');
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+
+  // Counter Offer / InDrive Bidding State
+  const [showCounterModal, setShowCounterModal] = useState(false);
+  const [counterAmount, setCounterAmount] = useState<number>(activeTrip?.fareAmount ? activeTrip.fareAmount + 400 : 3200);
+  const [counterReason, setCounterReason] = useState<string>('Tangmarg Snow Chains Required');
+  const [isSubmittingCounter, setIsSubmittingCounter] = useState(false);
+  const [counterSent, setCounterSent] = useState(false);
+
+  // Sync counterAmount when activeTrip changes
+  useEffect(() => {
+    if (activeTrip?.fareAmount) {
+      setCounterAmount(activeTrip.fareAmount + 400);
+      setCounterSent(false);
+      setShowCounterModal(false);
+    }
+  }, [activeTrip?.id, activeTrip?.fareAmount]);
 
   // Reset slider progress when trip stage changes
   useEffect(() => {
@@ -132,6 +154,20 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
       }
     } finally {
       setIsVerifyingPin(false);
+    }
+  };
+
+  const handleCounterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeTrip || !onCounterOffer || counterAmount <= 0) return;
+
+    setIsSubmittingCounter(true);
+    try {
+      await onCounterOffer(activeTrip.id, counterAmount, counterReason);
+      setCounterSent(true);
+      setShowCounterModal(false);
+    } finally {
+      setIsSubmittingCounter(false);
     }
   };
 
@@ -227,7 +263,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
               {/* Fare & Countdown Header */}
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-400 block">Upfront Guaranteed Fare</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-400 block">Aapko Milega (Offered Fare)</span>
                   <div className="text-3xl font-black font-mono text-white tracking-tight">
                     ₹{activeTrip.fareAmount.toLocaleString('en-IN')}.00
                   </div>
@@ -237,7 +273,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                   <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-mono font-black text-amber-300 text-base shadow-inner">
                     {offerCountdownSeconds}s
                   </div>
-                  <span className="text-[9px] text-white/40 block mt-1">Expires Soon</span>
+                  <span className="text-[9px] text-white/40 block mt-1">Countdown</span>
                 </div>
               </div>
 
@@ -272,7 +308,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                 <div className="flex items-start gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
                   <div className="min-w-0">
-                    <span className="text-[10px] text-white/40 uppercase block">Pickup Location</span>
+                    <span className="text-[10px] text-white/40 uppercase block">Sawari Kahan Se Leni Hai (Pickup)</span>
                     <p className="font-bold text-white truncate">{activeTrip.pickupLocation}</p>
                   </div>
                 </div>
@@ -280,7 +316,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                 <div className="flex items-start gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-amber-400 mt-1 shrink-0" />
                   <div className="min-w-0">
-                    <span className="text-[10px] text-white/40 uppercase block">Dropoff Destination</span>
+                    <span className="text-[10px] text-white/40 uppercase block">Kahan Chhodni Hai (Drop)</span>
                     <p className="font-bold text-white truncate">{activeTrip.dropLocation}</p>
                   </div>
                 </div>
@@ -301,24 +337,43 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                 </span>
               </div>
 
-              {/* Accept / Decline Action Buttons */}
-              <div className="flex gap-2.5 pt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onDeclineOffer}
-                  className="w-28 h-12 rounded-2xl bg-white/5 hover:bg-white/10 border-white/10 text-white/60 hover:text-white font-bold text-xs uppercase"
-                >
-                  Decline
-                </Button>
-                <Button
-                  type="button"
-                  onClick={onAcceptOffer}
-                  className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/30"
-                >
-                  Accept Trip
-                </Button>
-              </div>
+              {/* Accept / Counter / Decline Action Buttons */}
+              {counterSent ? (
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
+                  <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-bold text-xs">
+                    <CheckCircle2 className="w-4 h-4" /> Boli / Counter-Offer Tourist Ko Bhej Diya! (₹{counterAmount.toLocaleString('en-IN')})
+                  </div>
+                  <p className="text-[11px] text-white/60">
+                    Reason: {counterReason} • Tourist ki manzoori ka intezar hai...
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onDeclineOffer}
+                    className="h-12 rounded-2xl bg-white/5 hover:bg-white/10 border-white/10 text-white/60 hover:text-white font-bold text-xs uppercase"
+                  >
+                    Decline
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setShowCounterModal(true)}
+                    className="h-12 rounded-2xl bg-[#1A2230] hover:bg-[#232E40] border border-amber-500/40 text-amber-300 font-bold text-xs uppercase flex items-center justify-center gap-1"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>Apna Rate</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={onAcceptOffer}
+                    className="h-12 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 font-black text-xs uppercase tracking-wider shadow-xl shadow-emerald-500/20"
+                  >
+                    Accept Trip
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -482,6 +537,140 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                   className="flex-1 h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider"
                 >
                   {isVerifyingPin ? 'Verifying...' : 'Verify & Start'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Driver Counter-Offer / Boli Modal (InDrive Style Fair Bidding)     */}
+      {/* ------------------------------------------------------------------ */}
+      {showCounterModal && activeTrip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-[#0F141C] border border-amber-500/40 p-6 shadow-2xl text-white space-y-5">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">Mera Kiraya / Counter-Offer</span>
+                <h3 className="font-extrabold text-lg text-white">Apna Rate Bhejein (Counter-Offer)</h3>
+                <p className="text-xs text-white/50 mt-0.5">
+                  Tourist ka offer: <strong className="text-white font-mono">₹{activeTrip.fareAmount.toLocaleString('en-IN')}</strong>. Barfbari ya raste ke mutabiq munasib rate set karein.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCounterModal(false)}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCounterSubmit} className="space-y-4">
+              {/* Stepper Display */}
+              <div className="p-4 rounded-2xl bg-black/60 border border-amber-500/30 flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCounterAmount(prev => Math.max(activeTrip.fareAmount, prev - 100))}
+                  className="w-12 h-12 rounded-xl bg-white/5 hover:bg-white/10 border-white/10 text-white font-black text-xl"
+                >
+                  <Minus className="w-5 h-5" />
+                </Button>
+
+                <div className="text-center">
+                  <span className="text-[10px] font-bold text-white/40 uppercase block">Aapka Proposed Kiraya</span>
+                  <div className="text-3xl font-black font-mono text-amber-400">
+                    ₹{counterAmount.toLocaleString('en-IN')}
+                  </div>
+                  {counterAmount > activeTrip.fareAmount && (
+                    <span className="text-[11px] text-emerald-400 font-bold">
+                      +₹{(counterAmount - activeTrip.fareAmount).toLocaleString('en-IN')} Extra
+                    </span>
+                  )}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCounterAmount(prev => prev + 100)}
+                  className="w-12 h-12 rounded-xl bg-white/5 hover:bg-white/10 border-white/10 text-white font-black text-xl"
+                >
+                  <Plus className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Quick Add Increment Pills */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-white/40 uppercase block">Quick Fare Additions</span>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { label: '+₹200', amount: 200 },
+                    { label: '+₹400', amount: 400 },
+                    { label: '+₹600', amount: 600 },
+                    { label: '+₹1000', amount: 1000 }
+                  ].map(chip => (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => setCounterAmount(activeTrip.fareAmount + chip.amount)}
+                      className={`h-9 rounded-xl border text-xs font-mono font-bold transition-all ${
+                        counterAmount === activeTrip.fareAmount + chip.amount
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                          : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/80'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reason Selection */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-white/40 uppercase block">Wajah Chunein (Select Reason)</span>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {[
+                    { id: 'chains', label: '❄️ Tangmarg Snow Chains', desc: 'बर्फ की जंजीरें' },
+                    { id: 'upper_slopes', label: '🏔️ Gulmarg Upper Frost', desc: 'ऊपरी खतरनाक मोड़' },
+                    { id: 'night_ride', label: '🌙 Raat Ka Safar / Late', desc: 'रात का अतिरिक्त शुल्क' },
+                    { id: 'delay_wait', label: '⏳ Airport/Train Delay', desc: 'इंतजार का समय' }
+                  ].map(reason => (
+                    <button
+                      key={reason.id}
+                      type="button"
+                      onClick={() => setCounterReason(reason.label)}
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
+                        counterReason === reason.label
+                          ? 'bg-amber-500/15 border-amber-500 text-amber-200'
+                          : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70'
+                      }`}
+                    >
+                      <span className="font-bold text-[11px] block">{reason.label}</span>
+                      <span className="text-[10px] text-white/40 block mt-0.5">{reason.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCounterModal(false)}
+                  className="flex-1 h-12 rounded-xl bg-white/5 border-white/10 text-white text-xs"
+                >
+                  Wapas (Cancel)
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingCounter}
+                  className="flex-[2] h-12 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30"
+                >
+                  {isSubmittingCounter ? 'Bheja Jaa Raha Hai...' : `Bhejein (₹${counterAmount.toLocaleString('en-IN')})`}
                 </Button>
               </div>
             </form>

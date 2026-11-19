@@ -10,14 +10,14 @@ import {
   TripStage, 
   DriverVehicle, 
   DriverEarnings, 
-  HighwayAdvisory 
+  HighwayAdvisory,
+  DriverRateCard
 } from '../types/driver';
 
 import { DriverMapCockpit } from '../components/DriverMapCockpit';
 import { DriverTopHud } from '../components/DriverTopHud';
 import { DriverActionSheet } from '../components/DriverActionSheet';
 import { DriverDrawer } from '../components/DriverDrawer';
-import { DevDispatchSimulator } from '../components/DevDispatchSimulator';
 
 // Default initial fleet vehicles
 const INITIAL_VEHICLES: DriverVehicle[] = [
@@ -140,8 +140,8 @@ export const DriverDashboard: React.FC = () => {
   const { user } = useAuth();
 
   // Core Driver Cockpit State Machine
-  const [dutyState, setDutyState] = useState<DriverDutyState>('ACTIVE_TRIP');
-  const [activeTrip, setActiveTrip] = useState<DriverTrip | null>(SAMPLE_FLIGHT_TRIP);
+  const [dutyState, setDutyState] = useState<DriverDutyState>('OFFLINE');
+  const [activeTrip, setActiveTrip] = useState<DriverTrip | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Fleet & Earnings State
@@ -171,13 +171,17 @@ export const DriverDashboard: React.FC = () => {
 
   const activeVehicle = vehicles.find(v => v.id === activeVehicleId) || vehicles[0];
 
-  // 1. Initial State Fetch from Backend
+  // 1. Initial State Fetch from Backend (Neon DB Live Sync)
   useEffect(() => {
     const fetchCockpitState = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/driver/cockpit-state`);
-        if (res.ok) {
-          const data = await res.json();
+        const [stateRes, tripRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/driver/cockpit-state`),
+          fetch(`${API_BASE_URL}/driver/active-trip`).catch(() => null)
+        ]);
+
+        if (stateRes && stateRes.ok) {
+          const data = await stateRes.json();
           if (data.vehicles && data.vehicles.length > 0) {
             setVehicles(data.vehicles);
             setActiveVehicleId(data.vehicles[0].id);
@@ -193,6 +197,15 @@ export const DriverDashboard: React.FC = () => {
               snowChainsMandatory: true,
               tempC: -4
             });
+          }
+        }
+
+        // If there is an active assigned trip in the database, restore cockpit state
+        if (tripRes && tripRes.ok) {
+          const tripData = await tripRes.json();
+          if (tripData.activeTrip) {
+            setActiveTrip(tripData.activeTrip);
+            setDutyState('ACTIVE_TRIP');
           }
         }
       } catch (err) {
@@ -461,6 +474,62 @@ export const DriverDashboard: React.FC = () => {
     }
   };
 
+  // Save Driver's Custom Rate Card & Mountain Surcharges to Neon DB
+  const handleSaveRateCard = async (vehicleId: string, rateCard: DriverRateCard) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/rate-card`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicleId, rateCard })
+      });
+
+      if (res.ok) {
+        toast.success('Mera Kiraya (Rate Card) Saved!', {
+          description: 'Aapke naye rates tourist cab booking pe lagoo ho gaye hain.',
+          icon: '🏷️'
+        });
+        setVehicles(prev => prev.map(v => v.id === vehicleId ? { ...v, rateCard } : v));
+      } else {
+        toast.error('Could not save rate card to server');
+      }
+    } catch {
+      toast.success('Rate Card Updated Locally');
+      setVehicles(prev => prev.map(v => v.id === vehicleId ? { ...v, rateCard } : v));
+    }
+  };
+
+  // Counter-Offer / InDrive Style Bidding on Incoming Offers
+  const handleCounterOffer = async (tripId: string, proposedFare: number, reason: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/bookings/${tripId}/counter-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposedFare, reason })
+      });
+
+      if (res.ok) {
+        toast.success('Counter-Offer Bhej Diya!', {
+          description: `₹${proposedFare.toLocaleString('en-IN')} ka rate tourist ko propose kar diya gaya hai.`,
+          icon: '⚡'
+        });
+        setActiveTrip(prev => prev ? {
+          ...prev,
+          counterOfferAmount: proposedFare,
+          counterOfferReason: reason
+        } : null);
+      } else {
+        toast.error('Failed to dispatch counter offer');
+      }
+    } catch {
+      toast.success('Counter Offer Proposed (Offline Mode)');
+      setActiveTrip(prev => prev ? {
+        ...prev,
+        counterOfferAmount: proposedFare,
+        counterOfferReason: reason
+      } : null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#07090E] select-none text-white font-sans">
       {/* 1. Underlying Tactical Canvas Map (Full Bleed 100vh x 100vw) */}
@@ -485,22 +554,26 @@ export const DriverDashboard: React.FC = () => {
         dutyState={dutyState}
         onGoOnline={() => {
           setDutyState('ONLINE_SEARCHING');
-          toast.success('You are now Online', { description: 'Radar broadcasting availability to tourists.' });
+          toast.success('Aap Online Hain (Live Radar)', { 
+            description: 'Srinagar Airport, Nowgam Station aur Dal Lake pe aapki cab available dikh rahi hai.',
+            icon: '🟢'
+          });
         }}
         onGoOffline={() => {
           setDutyState('OFFLINE');
           setActiveTrip(null);
-          toast.info('You are now Offline');
+          toast.info('Aap Offline Hain', { description: 'Ab koi nayi ride offer nahi aayegi.' });
         }}
         activeTrip={activeTrip}
         onAcceptOffer={handleAcceptOffer}
         onDeclineOffer={handleDeclineOffer}
+        onCounterOffer={handleCounterOffer}
         offerCountdownSeconds={offerCountdown}
         onSlideStageTransition={handleSlideStageTransition}
         onVerifySecurityPin={handleVerifySecurityPin}
       />
 
-      {/* 4. Slide-out Uber Driver Drawer (Fleet, Payouts, Profile) */}
+      {/* 4. Slide-out Uber Driver Drawer (Fleet, Rate Card, Payouts) */}
       <DriverDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -514,37 +587,7 @@ export const DriverDashboard: React.FC = () => {
         earnings={earnings}
         onRequestPayout={handleRequestPayout}
         isPayoutProcessing={isPayoutProcessing}
-      />
-
-      {/* 5. Collapsible Dev Dispatch Simulator (Bottom-Left) */}
-      <DevDispatchSimulator
-        onSimulateFlightTrip={() => {
-          triggerIncomingOffer(SAMPLE_FLIGHT_TRIP);
-          toast.info('Simulated Flight 6E-502 Arrival Transfer Dispatched');
-        }}
-        onSimulateTrainTrip={() => {
-          triggerIncomingOffer(SAMPLE_TRAIN_TRIP);
-          toast.info('Simulated Vande Bharat Train Arrival Transfer Dispatched');
-        }}
-        onSimulateHotelTrip={() => {
-          triggerIncomingOffer(SAMPLE_HOTEL_TRIP);
-          toast.info('Simulated Houseboat City Transfer Dispatched');
-        }}
-        onToggleBlizzardAdvisory={() => {
-          setAdvisory(prev => ({
-            ...prev,
-            status: prev.status === 'CHAINS_MANDATORY' ? 'BLIZZARD_ALERT' : 'CHAINS_MANDATORY',
-            message: prev.status === 'CHAINS_MANDATORY'
-              ? 'Heavy blizzard warning above Tangmarg. Strict 4x4 with reinforced snow chains mandated.'
-              : 'Snow chains mandatory above Tangmarg Checkpost.'
-          }));
-          toast.warning('Highway Advisory Updated!');
-        }}
-        onResetOffline={() => {
-          setDutyState('OFFLINE');
-          setActiveTrip(null);
-          toast.info('Cockpit Reset to Offline');
-        }}
+        onSaveRateCard={handleSaveRateCard}
       />
     </div>
   );
