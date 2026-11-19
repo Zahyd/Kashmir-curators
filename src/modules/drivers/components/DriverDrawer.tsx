@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { 
   X, 
@@ -12,6 +12,7 @@ import {
   CheckCircle2, 
   ExternalLink,
   ChevronRight,
+  ChevronDown,
   Plane,
   Train,
   FileText,
@@ -38,6 +39,152 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DriverVehicle, DriverEarnings, DriverRateCard } from '../types/driver';
+
+// Vehicle Model Options for Luxury Dropdown
+interface VehicleModelOption {
+  value: string;
+  label: string;
+  shortName: string;
+  subtitle: string;
+  capacity: number;
+  luggage: number;
+  fourWheelDrive: boolean;
+  badge: string;
+  badgeColor: 'emerald' | 'amber' | 'purple' | 'sky';
+}
+
+const VEHICLE_MODEL_OPTIONS: VehicleModelOption[] = [
+  {
+    value: 'Toyota Innova Crysta',
+    label: 'Toyota Innova Crysta (Commercial)',
+    shortName: 'Toyota Innova Crysta',
+    subtitle: '6 Seats • 4 Luggage Bags • Commercial MUV',
+    capacity: 6,
+    luggage: 4,
+    fourWheelDrive: false,
+    badge: 'Most Popular',
+    badgeColor: 'amber'
+  },
+  {
+    value: 'Toyota Fortuner 4x4',
+    label: 'Toyota Fortuner 4x4 Mountain',
+    shortName: 'Toyota Fortuner 4x4',
+    subtitle: '6 Seats • 4 Luggage Bags • High Altitude SUV',
+    capacity: 6,
+    luggage: 4,
+    fourWheelDrive: true,
+    badge: '4x4 Snow King',
+    badgeColor: 'emerald'
+  },
+  {
+    value: 'Mahindra Scorpio-N 4x4',
+    label: 'Mahindra Scorpio-N 4x4',
+    shortName: 'Mahindra Scorpio-N 4x4',
+    subtitle: '6 Seats • 3 Luggage Bags • Alpine 4WD',
+    capacity: 6,
+    luggage: 3,
+    fourWheelDrive: true,
+    badge: '4x4 Mountain',
+    badgeColor: 'emerald'
+  },
+  {
+    value: 'Force Urbania Luxury (10 Pax)',
+    label: 'Force Urbania Luxury Van (10 Pax)',
+    shortName: 'Force Urbania Luxury Van',
+    subtitle: '10 Seats • 8 Luggage Bags • VIP Recliner Van',
+    capacity: 10,
+    luggage: 8,
+    fourWheelDrive: false,
+    badge: 'Luxury VIP',
+    badgeColor: 'purple'
+  },
+  {
+    value: 'Toyota Etios Sedan',
+    label: 'Toyota Etios Sedan (Tourist)',
+    shortName: 'Toyota Etios Sedan',
+    subtitle: '4 Seats • 2 Luggage Bags • Tourist Sedan',
+    capacity: 4,
+    luggage: 2,
+    fourWheelDrive: false,
+    badge: 'Tourist Sedan',
+    badgeColor: 'sky'
+  },
+  {
+    value: 'Maruti Dzire Tour',
+    label: 'Maruti Dzire Tour (Commercial)',
+    shortName: 'Maruti Dzire Tour',
+    subtitle: '4 Seats • 2 Luggage Bags • City & Airport Express',
+    capacity: 4,
+    luggage: 2,
+    fourWheelDrive: false,
+    badge: 'Commercial',
+    badgeColor: 'sky'
+  },
+  {
+    value: 'Tempo Traveller 13 Seater',
+    label: 'Force Tempo Traveller (13 Pax)',
+    shortName: 'Force Tempo Traveller',
+    subtitle: '13 Seats • 10 Luggage Bags • Large Group Coach',
+    capacity: 13,
+    luggage: 10,
+    fourWheelDrive: false,
+    badge: 'Group Coach',
+    badgeColor: 'amber'
+  }
+];
+
+// Tourist Taxi Union Stand Options for Luxury Dropdown
+interface TaxiUnionOption {
+  value: string;
+  label: string;
+  standLocation: string;
+  badge: string;
+}
+
+const TAXI_UNION_OPTIONS: TaxiUnionOption[] = [
+  {
+    value: 'Srinagar Airport Tourist Taxi Union',
+    label: 'Srinagar Airport Taxi Union',
+    standLocation: 'Sheikh-ul-Alam SXR Terminal Gate 2',
+    badge: 'Airport Hub'
+  },
+  {
+    value: 'TRC Tourist Taxi Stand Union (Srinagar)',
+    label: 'TRC Tourist Taxi Stand Union',
+    standLocation: 'Tourist Reception Centre, Residency Road',
+    badge: 'Central Srinagar'
+  },
+  {
+    value: 'Tangmarg–Gulmarg Taxi Operators Union',
+    label: 'Tangmarg / Gulmarg Taxi Operators Union',
+    standLocation: 'Tangmarg Snow Chain Checkpoint & Gulmarg Base',
+    badge: 'Gulmarg Sector'
+  },
+  {
+    value: 'Pahalgam Tourist Taxi Stand Union',
+    label: 'Pahalgam Tourist Taxi Stand Union',
+    standLocation: 'Lidder Valley Main Stand & Aru Road',
+    badge: 'Pahalgam Sector'
+  },
+  {
+    value: 'Sonamarg Taxi Operators Union',
+    label: 'Sonamarg Taxi Operators Union',
+    standLocation: 'Sonamarg Main Market & Baltal Route',
+    badge: 'Sonamarg Sector'
+  },
+  {
+    value: 'Nowgam Railway Station Tourist Taxi Stand',
+    label: 'Nowgam Railway Station Tourist Taxi Stand',
+    standLocation: 'Srinagar Rail Link Main Portico Gate 1',
+    badge: 'Railway Hub'
+  },
+  {
+    value: 'Dal Lake Ghat Taxi Stand Union',
+    label: 'Dal Lake / Boulevard Tourist Taxi Union',
+    standLocation: 'Boulevard Road Ghats 1-12 & Nigeen Pier',
+    badge: 'Lakefront Hub'
+  }
+];
 
 // Luxury Obsidian Dark-Themed Checkbox Component
 interface LuxuryCheckboxProps {
@@ -207,6 +354,43 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
     declarationAccepted: true
   });
 
+  // Modern Luxury Dropdown States
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isUnionDropdownOpen, setIsUnionDropdownOpen] = useState(false);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const unionDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside listener for luxury dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) {
+        setIsModelDropdownOpen(false);
+      }
+      if (unionDropdownRef.current && !unionDropdownRef.current.contains(event.target as Node)) {
+        setIsUnionDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsModelDropdownOpen(false);
+        setIsUnionDropdownOpen(false);
+      }
+    };
+
+    if (isModelDropdownOpen || isUnionDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isModelDropdownOpen, isUnionDropdownOpen]);
+
+  const selectedModelOpt = VEHICLE_MODEL_OPTIONS.find(o => o.value === newVehicle.model) || VEHICLE_MODEL_OPTIONS[0];
+  const selectedUnionOpt = TAXI_UNION_OPTIONS.find(u => u.value === newVehicle.unionName) || TAXI_UNION_OPTIONS[0];
+
   if (!open) return null;
 
   const handleStepPrice = (key: keyof DriverRateCard, delta: number) => {
@@ -288,6 +472,8 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
       });
       setShowRegisterModal(false);
       setPipelineStep(1);
+      setIsModelDropdownOpen(false);
+      setIsUnionDropdownOpen(false);
       setFormError(null);
       setNewVehicle({
         model: 'Toyota Innova Crysta',
@@ -833,6 +1019,9 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 onClick={() => {
                   setShowRegisterModal(false);
                   setPipelineStep(1);
+                  setIsModelDropdownOpen(false);
+                  setIsUnionDropdownOpen(false);
+                  setFormError(null);
                 }}
                 className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5"
               >
@@ -895,21 +1084,98 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
             {pipelineStep === 1 && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="space-y-1">
+                  <div className="space-y-1 relative" ref={modelDropdownRef}>
                     <label className="text-[10px] font-bold text-white/60 uppercase">Vehicle Model</label>
-                    <select
-                      value={newVehicle.model}
-                      onChange={(e) => setNewVehicle(prev => ({ ...prev, model: e.target.value }))}
-                      className="w-full h-11 rounded-xl bg-black/60 border border-white/10 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                    <button
+                      type="button"
+                      onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                      className={`w-full h-11 rounded-xl bg-black/60 border px-3 text-xs text-white flex items-center justify-between transition-all select-none cursor-pointer ${
+                        isModelDropdownOpen
+                          ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
+                          : 'border-white/10 hover:border-amber-400/50 hover:bg-black/70'
+                      }`}
                     >
-                      <option value="Toyota Innova Crysta" className="bg-[#0F141C] text-white py-2">Toyota Innova Crysta (Commercial)</option>
-                      <option value="Toyota Fortuner 4x4" className="bg-[#0F141C] text-white py-2">Toyota Fortuner 4x4 Mountain</option>
-                      <option value="Mahindra Scorpio-N 4x4" className="bg-[#0F141C] text-white py-2">Mahindra Scorpio-N 4x4</option>
-                      <option value="Force Urbania Luxury (10 Pax)" className="bg-[#0F141C] text-white py-2">Force Urbania Luxury Van (10 Pax)</option>
-                      <option value="Toyota Etios Sedan" className="bg-[#0F141C] text-white py-2">Toyota Etios Sedan (Tourist)</option>
-                      <option value="Maruti Dzire Tour" className="bg-[#0F141C] text-white py-2">Maruti Dzire Tour (Commercial)</option>
-                      <option value="Tempo Traveller 13 Seater" className="bg-[#0F141C] text-white py-2">Force Tempo Traveller (13 Pax)</option>
-                    </select>
+                      <div className="flex items-center gap-2 min-w-0 pr-1">
+                        <div className="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                          <Car className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-bold text-white truncate text-xs">
+                          {selectedModelOpt?.shortName || newVehicle.model}
+                        </span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-amber-400 shrink-0 transition-transform duration-200 ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isModelDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1.5 w-[190%] sm:w-[460px] max-w-[460px] rounded-2xl bg-[#0B0F17]/98 backdrop-blur-2xl border border-amber-500/40 p-2 shadow-[0_20px_60px_rgba(0,0,0,0.95)] z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-72 overflow-y-auto">
+                        <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-400/80 border-b border-white/5 pb-1.5 flex items-center justify-between">
+                          <span>Select Commercial Vehicle Model</span>
+                          <span className="text-white/40">7 Fleet Options</span>
+                        </div>
+
+                        {VEHICLE_MODEL_OPTIONS.map((opt) => {
+                          const isSelected = newVehicle.model === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                setNewVehicle(prev => ({
+                                  ...prev,
+                                  model: opt.value,
+                                  capacity: opt.capacity,
+                                  luggageCapacity: opt.luggage,
+                                  fourWheelDrive: opt.fourWheelDrive ? true : prev.fourWheelDrive
+                                }));
+                                setIsModelDropdownOpen(false);
+                              }}
+                              className={`w-full p-2.5 rounded-xl flex items-center justify-between gap-3 text-left transition-all duration-150 cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-500/15 border border-amber-500/40 text-white shadow-sm'
+                                  : 'bg-white/[0.02] hover:bg-amber-500/10 hover:border-amber-500/25 border border-transparent text-white/80 hover:text-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                  isSelected ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/5 border border-white/10 text-amber-400'
+                                }`}>
+                                  <Car className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-xs text-white truncate block">
+                                      {opt.label}
+                                    </span>
+                                    <span className={`text-[8px] font-black uppercase px-1.5 py-0.2 rounded border ${
+                                      opt.badgeColor === 'emerald'
+                                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                        : opt.badgeColor === 'purple'
+                                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                                        : opt.badgeColor === 'sky'
+                                        ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                    }`}>
+                                      {opt.badge}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-white/50 block mt-0.5 font-mono">
+                                    {opt.subtitle}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 flex items-center gap-1.5 pl-2">
+                                {isSelected && (
+                                  <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-300 shadow-sm">
+                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -1154,23 +1420,86 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 </div>
 
                 <div className="space-y-3 text-xs">
-                  <div className="space-y-1">
+                  <div className="space-y-1 relative" ref={unionDropdownRef}>
                     <label className="text-[10px] font-bold text-white/60 uppercase">
                       Affiliated Tourist Taxi Union Stand
                     </label>
-                    <select
-                      value={newVehicle.unionName}
-                      onChange={(e) => setNewVehicle(prev => ({ ...prev, unionName: e.target.value }))}
-                      className="w-full h-11 rounded-xl bg-black/60 border border-white/10 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                    <button
+                      type="button"
+                      onClick={() => setIsUnionDropdownOpen(!isUnionDropdownOpen)}
+                      className={`w-full h-11 rounded-xl bg-black/60 border px-3 text-xs text-white flex items-center justify-between transition-all select-none cursor-pointer ${
+                        isUnionDropdownOpen
+                          ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
+                          : 'border-white/10 hover:border-amber-400/50 hover:bg-black/70'
+                      }`}
                     >
-                      <option value="Srinagar Airport Tourist Taxi Union" className="bg-[#0F141C] text-white py-2">Srinagar Airport Taxi Union (Sheikh-ul-Alam SXR)</option>
-                      <option value="TRC Tourist Taxi Stand Union (Srinagar)" className="bg-[#0F141C] text-white py-2">TRC Tourist Taxi Stand Union (Tourist Reception Centre)</option>
-                      <option value="Tangmarg–Gulmarg Taxi Operators Union" className="bg-[#0F141C] text-white py-2">Tangmarg / Gulmarg Taxi Operators Union</option>
-                      <option value="Pahalgam Tourist Taxi Stand Union" className="bg-[#0F141C] text-white py-2">Pahalgam Tourist Taxi Stand Union</option>
-                      <option value="Sonamarg Taxi Operators Union" className="bg-[#0F141C] text-white py-2">Sonamarg Taxi Operators Union</option>
-                      <option value="Nowgam Railway Station Tourist Taxi Stand" className="bg-[#0F141C] text-white py-2">Nowgam Railway Station Tourist Taxi Stand</option>
-                      <option value="Dal Lake Ghat Taxi Stand Union" className="bg-[#0F141C] text-white py-2">Dal Lake / Boulevard Tourist Taxi Union</option>
-                    </select>
+                      <div className="flex items-center gap-2 min-w-0 pr-1">
+                        <div className="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                          <Building2 className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-bold text-white truncate text-xs">
+                          {selectedUnionOpt?.label || newVehicle.unionName}
+                        </span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-amber-400 shrink-0 transition-transform duration-200 ${isUnionDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isUnionDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1.5 rounded-2xl bg-[#0B0F17]/98 backdrop-blur-2xl border border-amber-500/40 p-2 shadow-[0_20px_60px_rgba(0,0,0,0.95)] z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-64 overflow-y-auto">
+                        <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-400/80 border-b border-white/5 pb-1.5 flex items-center justify-between">
+                          <span>Authorized Kashmir Taxi Unions</span>
+                          <span className="text-white/40">7 Recognized Stands</span>
+                        </div>
+
+                        {TAXI_UNION_OPTIONS.map((u) => {
+                          const isSelected = newVehicle.unionName === u.value;
+                          return (
+                            <button
+                              key={u.value}
+                              type="button"
+                              onClick={() => {
+                                setNewVehicle(prev => ({ ...prev, unionName: u.value }));
+                                setIsUnionDropdownOpen(false);
+                              }}
+                              className={`w-full p-2.5 rounded-xl flex items-center justify-between gap-3 text-left transition-all duration-150 cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-500/15 border border-amber-500/40 text-white shadow-sm'
+                                  : 'bg-white/[0.02] hover:bg-amber-500/10 hover:border-amber-500/25 border border-transparent text-white/80 hover:text-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                  isSelected ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/5 border border-white/10 text-amber-400'
+                                }`}>
+                                  <Building2 className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-xs text-white truncate block">
+                                      {u.label}
+                                    </span>
+                                    <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                      {u.badge}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-white/50 block mt-0.5">
+                                    {u.standLocation}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 flex items-center gap-1.5 pl-2">
+                                {isSelected && (
+                                  <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-300 shadow-sm">
+                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
