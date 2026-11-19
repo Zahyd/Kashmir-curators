@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { 
   Menu, 
   Car, 
@@ -240,7 +241,10 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
                 variant="outline"
                 onClick={() => {
                   navigator.clipboard?.writeText('https://kashmir-curators.vercel.app/driver?track=LIVE-GPS-JK01AX9942');
-                  alert('Live Driver GPS tracking link copied to clipboard.');
+                  toast.success('Live GPS Link Copied!', { 
+                    description: 'Tourist GPS tracking link clipboard me copy ho gaya hai.',
+                    icon: '📍'
+                  });
                 }}
                 className="w-full h-10 rounded-xl bg-white/5 border-white/10 text-white text-xs gap-1.5"
               >

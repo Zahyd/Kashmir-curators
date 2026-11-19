@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { 
   X, 
   Car, 
@@ -34,6 +35,48 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DriverVehicle, DriverEarnings, DriverRateCard } from '../types/driver';
+
+// Luxury Obsidian Dark-Themed Checkbox Component
+interface LuxuryCheckboxProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  id?: string;
+  className?: string;
+  ariaLabel?: string;
+}
+
+const LuxuryCheckbox: React.FC<LuxuryCheckboxProps> = ({ 
+  checked, 
+  onChange, 
+  id, 
+  className = '',
+  ariaLabel
+}) => {
+  return (
+    <button
+      type="button"
+      id={id}
+      role="checkbox"
+      aria-label={ariaLabel}
+      aria-checked={checked}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange(!checked);
+      }}
+      className={`relative w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 shrink-0 select-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${
+        checked
+          ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 border border-amber-300 text-slate-950 shadow-[0_0_10px_rgba(245,158,11,0.4)]'
+          : 'bg-black/60 border border-white/20 hover:border-amber-400/50 hover:bg-white/[0.04] text-transparent'
+      } ${className}`}
+    >
+      <Check 
+        className={`w-3.5 h-3.5 stroke-[3.5] transition-all duration-150 ${
+          checked ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+        }`} 
+      />
+    </button>
+  );
+};
 
 interface DriverDrawerProps {
   open: boolean;
@@ -89,6 +132,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
 
   // Pipeline Step State (1: Specs, 2: Union Details, 3: Documents & Submit)
   const [pipelineStep, setPipelineStep] = useState<1 | 2 | 3>(1);
+  const [formError, setFormError] = useState<string | null>(null);
   const [newVehicle, setNewVehicle] = useState({
     model: 'Toyota Innova Crysta',
     plateNumber: '',
@@ -125,6 +169,10 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
     setIsSavingRates(true);
     try {
       await onSaveRateCard(activeVehicleId, rateCard);
+      toast.success('Rate Card Updated', {
+        description: 'Aapke customized rates aur mausam surcharges save ho gaye hain.',
+        icon: '💰'
+      });
     } finally {
       setIsSavingRates(false);
     }
@@ -133,20 +181,30 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newVehicle.plateNumber.trim()) {
-      alert('Barah-e-karam Gaadi ka Registration Number Plate darj karein.');
+      setFormError('Barah-e-karam Gaadi ka Registration Number Plate darj karein (e.g. JK-01-AX-9942).');
+      toast.warning('Number Plate Required', {
+        description: 'Yellow commercial number plate likhna lazmi hai.'
+      });
       setPipelineStep(1);
       return;
     }
     if (!newVehicle.unionBadgeNumber.trim()) {
-      alert('Tourist Taxi Union Badge / Card Number likhna lazmi hai.');
+      setFormError('Tourist Taxi Union Badge / Card Number likhna lazmi hai (e.g. SXR-STAND-092).');
+      toast.warning('Union Badge Required', {
+        description: 'Affiliated Tourist Taxi Union badge number likhein.'
+      });
       setPipelineStep(2);
       return;
     }
     if (!newVehicle.declarationAccepted) {
-      alert('Barah-e-karam Union & RTO compliance declaration accept karein.');
+      setFormError('Barah-e-karam Union & RTO compliance declaration accept karein.');
+      toast.warning('Declaration Required', {
+        description: 'Neeche diye gaye compliance checkbox ko tick karein.'
+      });
       return;
     }
 
+    setFormError(null);
     setIsSubmittingVehicle(true);
     try {
       await onRegisterVehicle({
@@ -175,8 +233,13 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
           permitDocUrl: newVehicle.permitDocName
         }
       });
+      toast.success('Union Verification Pipeline me Submit Ho Gaya!', {
+        description: 'Admin team tasdeeq karke aapki gaadi radar pe live karegi.',
+        icon: '🛡️'
+      });
       setShowRegisterModal(false);
       setPipelineStep(1);
+      setFormError(null);
       setNewVehicle({
         model: 'Toyota Innova Crysta',
         plateNumber: '',
@@ -558,42 +621,48 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   Mausam & Night Extra Charges
                 </span>
 
-                <div className="flex items-center justify-between text-xs">
+                <div 
+                  onClick={() => setRateCard(prev => ({ ...prev, snowChainActive: !prev.snowChainActive }))}
+                  className="flex items-center justify-between text-xs p-2 rounded-xl hover:bg-white/[0.04] cursor-pointer transition-all select-none"
+                >
                   <div>
                     <span className="text-white font-bold block">❄️ Tangmarg Snow Chain Extra</span>
                     <span className="text-[10px] text-white/40">+₹{rateCard.snowChainSurcharge} when snow advisory active</span>
                   </div>
-                  <input
-                    type="checkbox"
+                  <LuxuryCheckbox
                     checked={rateCard.snowChainActive}
-                    onChange={(e) => setRateCard(prev => ({ ...prev, snowChainActive: e.target.checked }))}
-                    className="w-5 h-5 rounded accent-amber-500 cursor-pointer"
+                    onChange={(checked) => setRateCard(prev => ({ ...prev, snowChainActive: checked }))}
+                    ariaLabel="Toggle snow chain surcharge"
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-xs">
+                <div 
+                  onClick={() => setRateCard(prev => ({ ...prev, heaterActive: !prev.heaterActive }))}
+                  className="flex items-center justify-between text-xs p-2 rounded-xl hover:bg-white/[0.04] cursor-pointer transition-all select-none"
+                >
                   <div>
                     <span className="text-white font-bold block">🔥 Vehicle Heater / Bukhari</span>
                     <span className="text-[10px] text-white/40">+₹{rateCard.heaterSurcharge} for warm cabin</span>
                   </div>
-                  <input
-                    type="checkbox"
+                  <LuxuryCheckbox
                     checked={rateCard.heaterActive}
-                    onChange={(e) => setRateCard(prev => ({ ...prev, heaterActive: e.target.checked }))}
-                    className="w-5 h-5 rounded accent-amber-500 cursor-pointer"
+                    onChange={(checked) => setRateCard(prev => ({ ...prev, heaterActive: checked }))}
+                    ariaLabel="Toggle vehicle heater surcharge"
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-xs">
+                <div 
+                  onClick={() => setRateCard(prev => ({ ...prev, nightSurcharge: prev.nightSurcharge > 0 ? 0 : 500 }))}
+                  className="flex items-center justify-between text-xs p-2 rounded-xl hover:bg-white/[0.04] cursor-pointer transition-all select-none"
+                >
                   <div>
                     <span className="text-white font-bold block">🌙 Raat Ka Safar (After 8 PM)</span>
-                    <span className="text-[10px] text-white/40">+₹{rateCard.nightSurcharge} for late night trains/flights</span>
+                    <span className="text-[10px] text-white/40">+₹{rateCard.nightSurcharge || 500} for late night trains/flights</span>
                   </div>
-                  <input
-                    type="checkbox"
+                  <LuxuryCheckbox
                     checked={Boolean(rateCard.nightSurcharge > 0)}
-                    onChange={(e) => setRateCard(prev => ({ ...prev, nightSurcharge: e.target.checked ? 500 : 0 }))}
-                    className="w-5 h-5 rounded accent-amber-500 cursor-pointer"
+                    onChange={(checked) => setRateCard(prev => ({ ...prev, nightSurcharge: checked ? 500 : 0 }))}
+                    ariaLabel="Toggle night surcharge"
                   />
                 </div>
               </div>
@@ -694,7 +763,10 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   <div
                     key={s.step}
                     onClick={() => {
-                      if (s.step < pipelineStep) setPipelineStep(s.step as 1 | 2 | 3);
+                      if (s.step < pipelineStep) {
+                        setPipelineStep(s.step as 1 | 2 | 3);
+                        setFormError(null);
+                      }
                     }}
                     className={`p-2 rounded-xl border text-center transition-all ${
                       isCurrent
@@ -710,6 +782,24 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 );
               })}
             </div>
+
+            {/* Internal Alert / Validation Banner */}
+            {formError && (
+              <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-bold block text-rose-300">Zaroori Ittila (Verification Notice)</span>
+                  <p className="text-[11px] text-rose-100/90 mt-0.5">{formError}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormError(null)}
+                  className="text-rose-400 hover:text-white p-0.5 rounded transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* STEP 1: VEHICLE SPECIFICATIONS */}
             {pipelineStep === 1 && (
@@ -774,53 +864,63 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     Kashmir Mountain Winter Equipment
                   </span>
 
-                  <label className="flex items-center justify-between cursor-pointer p-1.5 rounded-xl hover:bg-white/5">
-                    <div className="flex items-center gap-2">
+                  <div 
+                    onClick={() => setNewVehicle(prev => ({ ...prev, snowChains: !prev.snowChains }))}
+                    className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-white/[0.04] border border-transparent hover:border-white/5 transition-all select-none"
+                  >
+                    <div className="flex items-center gap-2.5">
                       <Snowflake className="w-4 h-4 text-sky-400" />
-                      <span className="text-white/80 font-medium">Snow Chains Available (Tangmarg Checkpost)</span>
+                      <span className="text-white/85 font-medium">Snow Chains Available (Tangmarg Checkpost)</span>
                     </div>
-                    <input
-                      type="checkbox"
+                    <LuxuryCheckbox
                       checked={newVehicle.snowChains}
-                      onChange={(e) => setNewVehicle(prev => ({ ...prev, snowChains: e.target.checked }))}
-                      className="rounded accent-amber-500 w-4 h-4 cursor-pointer"
+                      onChange={(checked) => setNewVehicle(prev => ({ ...prev, snowChains: checked }))}
+                      ariaLabel="Snow Chains Available"
                     />
-                  </label>
+                  </div>
 
-                  <label className="flex items-center justify-between cursor-pointer p-1.5 rounded-xl hover:bg-white/5">
-                    <div className="flex items-center gap-2">
+                  <div 
+                    onClick={() => setNewVehicle(prev => ({ ...prev, fourWheelDrive: !prev.fourWheelDrive }))}
+                    className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-white/[0.04] border border-transparent hover:border-white/5 transition-all select-none"
+                  >
+                    <div className="flex items-center gap-2.5">
                       <Compass className="w-4 h-4 text-emerald-400" />
-                      <span className="text-white/80 font-medium">4x4 / AWD Mountain Low-Gear System</span>
+                      <span className="text-white/85 font-medium">4x4 / AWD Mountain Low-Gear System</span>
                     </div>
-                    <input
-                      type="checkbox"
+                    <LuxuryCheckbox
                       checked={newVehicle.fourWheelDrive}
-                      onChange={(e) => setNewVehicle(prev => ({ ...prev, fourWheelDrive: e.target.checked }))}
-                      className="rounded accent-amber-500 w-4 h-4 cursor-pointer"
+                      onChange={(checked) => setNewVehicle(prev => ({ ...prev, fourWheelDrive: checked }))}
+                      ariaLabel="4x4 AWD System"
                     />
-                  </label>
+                  </div>
 
-                  <label className="flex items-center justify-between cursor-pointer p-1.5 rounded-xl hover:bg-white/5">
-                    <div className="flex items-center gap-2">
+                  <div 
+                    onClick={() => setNewVehicle(prev => ({ ...prev, skiRack: !prev.skiRack }))}
+                    className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-white/[0.04] border border-transparent hover:border-white/5 transition-all select-none"
+                  >
+                    <div className="flex items-center gap-2.5">
                       <Car className="w-4 h-4 text-amber-400" />
-                      <span className="text-white/80 font-medium">Roof Ski / Luggage Rack Installed</span>
+                      <span className="text-white/85 font-medium">Roof Ski / Luggage Rack Installed</span>
                     </div>
-                    <input
-                      type="checkbox"
+                    <LuxuryCheckbox
                       checked={newVehicle.skiRack}
-                      onChange={(e) => setNewVehicle(prev => ({ ...prev, skiRack: e.target.checked }))}
-                      className="rounded accent-amber-500 w-4 h-4 cursor-pointer"
+                      onChange={(checked) => setNewVehicle(prev => ({ ...prev, skiRack: checked }))}
+                      ariaLabel="Roof Ski Rack"
                     />
-                  </label>
+                  </div>
                 </div>
 
                 <Button
                   type="button"
                   onClick={() => {
                     if (!newVehicle.plateNumber.trim()) {
-                      alert('Barah-e-karam Gaadi ka Registration Number Plate darj karein.');
+                      setFormError('Barah-e-karam Gaadi ka Registration Number Plate darj karein (e.g. JK-01-AX-9942).');
+                      toast.warning('Number Plate Required', {
+                        description: 'Yellow commercial number plate likhna zaroori hai.'
+                      });
                       return;
                     }
+                    setFormError(null);
                     setPipelineStep(2);
                   }}
                   className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-amber-500/20"
@@ -921,7 +1021,10 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setPipelineStep(1)}
+                    onClick={() => {
+                      setPipelineStep(1);
+                      setFormError(null);
+                    }}
                     className="flex-1 h-12 rounded-xl bg-white/5 border-white/10 text-white text-xs gap-1"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -931,9 +1034,13 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     type="button"
                     onClick={() => {
                       if (!newVehicle.unionBadgeNumber.trim()) {
-                        alert('Tourist Taxi Union Badge / Card Number likhna zaroori hai.');
+                        setFormError('Tourist Taxi Union Badge / Card Number likhna zaroori hai (e.g. SXR-STAND-092).');
+                        toast.warning('Union Badge Required', {
+                          description: 'Affiliated Taxi Union badge number darj karein.'
+                        });
                         return;
                       }
+                      setFormError(null);
                       setPipelineStep(3);
                     }}
                     className="flex-[2] h-12 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-amber-500/20"
@@ -1006,23 +1113,29 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                 </div>
 
                 {/* Declaration Checkbox */}
-                <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer">
-                  <input
-                    type="checkbox"
+                <div 
+                  onClick={() => setNewVehicle(prev => ({ ...prev, declarationAccepted: !prev.declarationAccepted }))}
+                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-amber-500/30 cursor-pointer transition-all select-none"
+                >
+                  <LuxuryCheckbox
                     checked={newVehicle.declarationAccepted}
-                    onChange={(e) => setNewVehicle(prev => ({ ...prev, declarationAccepted: e.target.checked }))}
-                    className="rounded accent-amber-500 w-4 h-4 mt-0.5 cursor-pointer shrink-0"
+                    onChange={(checked) => setNewVehicle(prev => ({ ...prev, declarationAccepted: checked }))}
+                    className="mt-0.5"
+                    ariaLabel="Accept union and RTO declaration"
                   />
-                  <span className="text-[11px] text-white/80 leading-snug">
+                  <span className="text-[11px] text-white/90 leading-snug">
                     Main tasdeeq karta hoon ki meri gaadi valid Commercial Tourist Permit aur Kashmir Tourist Taxi Union se registered hai.
                   </span>
-                </label>
+                </div>
 
                 <div className="flex gap-2.5 pt-1">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setPipelineStep(2)}
+                    onClick={() => {
+                      setPipelineStep(2);
+                      setFormError(null);
+                    }}
                     className="flex-1 h-12 rounded-xl bg-white/5 border-white/10 text-white text-xs gap-1"
                   >
                     <ChevronLeft className="w-4 h-4" />

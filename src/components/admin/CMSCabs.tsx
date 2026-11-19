@@ -174,6 +174,9 @@ export default function CMSCabs() {
   const [pendingUnionCabs, setPendingUnionCabs] = useState<any[]>([]);
   const [isLoadingPendingUnion, setIsLoadingPendingUnion] = useState(false);
   const [authenticatingCabId, setAuthenticatingCabId] = useState<string | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingVehicle, setRejectingVehicle] = useState<{ id: string; plateNumber: string; model: string; unionName: string } | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('Tourist union badge not matching RTO record');
 
   const fetchPendingUnionCabs = async () => {
     setIsLoadingPendingUnion(true);
@@ -2557,10 +2560,14 @@ export default function CMSCabs() {
                         variant="outline"
                         disabled={authenticatingCabId === cab.id}
                         onClick={() => {
-                          const reason = prompt('Enter rejection reason for driver:', 'Tourist union badge not matching RTO record');
-                          if (reason !== null) {
-                            handleAuthenticateVehicle(cab.id, 'REJECT', reason);
-                          }
+                          setRejectingVehicle({
+                            id: cab.id,
+                            plateNumber: cab.plateNumber,
+                            model: cab.model,
+                            unionName: cab.unionName || 'Tourist Taxi Union'
+                          });
+                          setRejectionReason('Tourist union badge not matching RTO record');
+                          setRejectDialogOpen(true);
                         }}
                         className="flex-1 sm:flex-none h-11 px-5 rounded-xl bg-white/5 hover:bg-rose-500/20 border-white/10 hover:border-rose-500/30 text-rose-300 font-bold text-xs"
                       >
@@ -2584,6 +2591,79 @@ export default function CMSCabs() {
           )}
         </div>
       )}
+
+      {/* Tourist Union Pipeline Rejection Modal Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="max-w-md bg-[#0F141C] border border-rose-500/30 text-white rounded-[2rem] p-6 shadow-2xl">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-base font-extrabold text-white flex items-center gap-2">
+              <AlertOctagon className="w-5 h-5 text-rose-400" />
+              Reject Union Verification
+            </DialogTitle>
+            <p className="text-xs text-white/60">
+              Vehicle: <span className="font-mono text-amber-300 font-bold">{rejectingVehicle?.plateNumber}</span> ({rejectingVehicle?.model})
+            </p>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <label className="text-[10px] font-bold text-white/60 uppercase">
+              Select or Enter Rejection Reason
+            </label>
+
+            {/* Quick Chips */}
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                'Tourist union badge not matching RTO record',
+                'Invalid or Expired All-Valley Permit',
+                'Yellow commercial taxi plate required',
+                'Missing commercial fitness / RC documents'
+              ].map(preset => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setRejectionReason(preset)}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all text-left ${
+                    rejectionReason === preset
+                      ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 font-bold'
+                      : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+
+            <Textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter specific reason for rejecting this vehicle..."
+              className="h-20 rounded-xl bg-black/60 border-white/10 text-xs text-white resize-none"
+            />
+          </div>
+
+          <DialogFooter className="flex items-center gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+              className="flex-1 h-11 rounded-xl bg-white/5 border-white/10 text-white text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!rejectingVehicle) return;
+                handleAuthenticateVehicle(rejectingVehicle.id, 'REJECT', rejectionReason);
+                setRejectDialogOpen(false);
+              }}
+              className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs"
+            >
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Allocation / Dispatch Costings Config Dialog */}
       <Dialog open={allocationDialogOpen} onOpenChange={setAllocationDialogOpen}>
