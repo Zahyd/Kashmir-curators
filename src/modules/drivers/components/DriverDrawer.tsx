@@ -33,7 +33,9 @@ import {
   Lock,
   Mountain,
   Trees,
-  Waves
+  Waves,
+  LogOut,
+  Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -287,6 +289,9 @@ interface DriverDrawerProps {
   onRequestPayout: () => void;
   isPayoutProcessing?: boolean;
   onSaveRateCard: (vehicleId: string, rateCard: DriverRateCard) => Promise<void>;
+  driverName?: string;
+  onLogout?: () => void;
+  onExitToHome?: () => void;
 }
 
 const DEFAULT_RATES: DriverRateCard = {
@@ -315,6 +320,9 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
   onRequestPayout,
   isPayoutProcessing = false,
   onSaveRateCard,
+  driverName = 'Zahid Ahmad',
+  onLogout,
+  onExitToHome,
 }) => {
   const [activeTab, setActiveTab] = useState<'fleet' | 'rateCard' | 'earnings'>('fleet');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -516,13 +524,13 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-lg shadow-lg">
-                Z
+                {driverName.charAt(0).toUpperCase()}
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-[#07090E] rounded-full" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-extrabold text-sm text-white">Zahid Ahmad (Chauffeur)</h3>
+                <h3 className="font-extrabold text-sm text-white">{driverName} (Chauffeur)</h3>
                 <BadgeCheck className="w-4 h-4 text-emerald-400 shrink-0" />
               </div>
               <div className="flex items-center gap-2 text-[11px] text-white/50">
@@ -535,12 +543,27 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onLogout && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onLogout();
+                }}
+                title="End Shift & Log Out"
+                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/25 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* 3 Simple Tabs (Fleet | Rate Card | Earnings) */}
@@ -992,9 +1015,38 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
           )}
         </div>
 
-        {/* Drawer Footer */}
-        <div className="p-4 border-t border-white/10 bg-[#0F141C] text-center text-[10px] text-white/40">
-          Kashmir Curators Chauffeur OS • Connected to Neon DB
+        {/* Drawer Footer Actions: Exit to Home & Logout */}
+        <div className="p-4 border-t border-white/10 bg-[#0B0F17] space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onExitToHome?.();
+              }}
+              className="h-11 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/80 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              <Home className="w-4 h-4 text-amber-400" />
+              <span>Tourist Portal</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onLogout?.();
+              }}
+              className="h-11 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 hover:border-rose-500/50 text-rose-300 text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              <LogOut className="w-4 h-4 text-rose-400" />
+              <span>End Shift</span>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between text-[10px] text-white/40 px-1 pt-1">
+            <span>Kashmir Curators Chauffeur OS</span>
+            <span className="font-mono text-emerald-400/80">Neon DB Live</span>
+          </div>
         </div>
       </div>
 

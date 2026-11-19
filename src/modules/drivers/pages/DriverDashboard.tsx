@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -137,7 +138,8 @@ const SAMPLE_HOTEL_TRIP: DriverTrip = {
 };
 
 export const DriverDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   // Core Driver Cockpit State Machine
   const [dutyState, setDutyState] = useState<DriverDutyState>('OFFLINE');
@@ -570,6 +572,21 @@ export const DriverDashboard: React.FC = () => {
     }
   };
 
+  // End Duty Shift & Logout (Safe session clear & redirect to landing page)
+  const handleLogout = () => {
+    setDutyState('OFFLINE');
+    setActiveTrip(null);
+    logout();
+    toast.success('Shift Ended', {
+      description: 'You have been safely signed out. Returning to home portal...'
+    });
+    navigate('/');
+  };
+
+  const handleExitToHome = () => {
+    navigate('/');
+  };
+
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#07090E] select-none text-white font-sans">
       {/* 1. Underlying Tactical Canvas Map (Full Bleed 100vh x 100vw) */}
@@ -639,6 +656,9 @@ export const DriverDashboard: React.FC = () => {
         onRequestPayout={handleRequestPayout}
         isPayoutProcessing={isPayoutProcessing}
         onSaveRateCard={handleSaveRateCard}
+        driverName={user?.name || 'Zahid Ahmad'}
+        onLogout={handleLogout}
+        onExitToHome={handleExitToHome}
       />
     </div>
   );
