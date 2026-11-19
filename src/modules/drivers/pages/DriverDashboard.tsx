@@ -227,6 +227,20 @@ export const DriverDashboard: React.FC = () => {
           const payload = JSON.parse(event.data);
           if (payload.type === 'NEW_DISPATCH_OFFER') {
             triggerIncomingOffer(payload.trip);
+          } else if (payload.type === 'VEHICLE_VERIFIED') {
+            if (payload.status === 'APPROVED') {
+              toast.success('Tourist Union Gaadi Approved!', {
+                description: `${payload.model} (${payload.plateNumber}) Admin tasdeeq ke baad ab live hai.`,
+                icon: '🛡️'
+              });
+              setVehicles(prev => prev.map(v => v.id === payload.vehicleId ? {
+                ...v,
+                verificationStatus: 'APPROVED',
+                unionVerified: true,
+                rcVerified: true,
+                permitVerified: true
+              } : v));
+            }
           }
         } catch {}
       };
@@ -240,6 +254,32 @@ export const DriverDashboard: React.FC = () => {
 
     socket.on('driver-trip-dispatched', (data: any) => {
       triggerIncomingOffer(data);
+    });
+
+    socket.on('vehicle-verified', (data: any) => {
+      if (data.status === 'APPROVED') {
+        toast.success('Tourist Union Gaadi Approved!', {
+          description: `${data.model} (${data.plateNumber}) Admin tasdeeq ke baad ab live hai.`,
+          icon: '🛡️'
+        });
+        setVehicles(prev => prev.map(v => v.id === data.vehicleId ? {
+          ...v,
+          verificationStatus: 'APPROVED',
+          unionVerified: true,
+          rcVerified: true,
+          permitVerified: true
+        } : v));
+      } else {
+        toast.error('Gaadi Verification Rejected', {
+          description: data.reason || 'Tourist taxi union verification reject ho gayi hai.',
+          icon: '❌'
+        });
+        setVehicles(prev => prev.map(v => v.id === data.vehicleId ? {
+          ...v,
+          verificationStatus: 'REJECTED',
+          rejectionReason: data.reason
+        } : v));
+      }
     });
 
     socket.on('disruption-alert', (data: any) => {
@@ -403,7 +443,7 @@ export const DriverDashboard: React.FC = () => {
     return enteredPin.toUpperCase() === activeTrip.securityPin.toUpperCase();
   };
 
-  // Vehicle Registration Handler
+  // Vehicle Registration Handler (Tourist Union Pipeline)
   const handleRegisterVehicle = async (vehData: Partial<DriverVehicle>) => {
     try {
       const res = await fetch(`${API_BASE_URL}/driver/vehicles`, {
@@ -417,7 +457,10 @@ export const DriverDashboard: React.FC = () => {
         if (data.vehicle) {
           setVehicles(prev => [data.vehicle, ...prev]);
           setActiveVehicleId(data.vehicle.id);
-          toast.success('Vehicle Onboarded!', { description: `${data.vehicle.model} added to active fleet.` });
+          toast.success('Verification Pipeline Me Submit Ho Gayi!', { 
+            description: `${data.vehicle.model} (${data.vehicle.plateNumber}) Admin aur Union tasdeeq ke liye bhej di gayi hai.`,
+            icon: '🛡️'
+          });
           return;
         }
       }
@@ -434,13 +477,21 @@ export const DriverDashboard: React.FC = () => {
       fourWheelDrive: vehData.fourWheelDrive ?? true,
       skiRack: vehData.skiRack ?? false,
       multiDayAvailable: vehData.multiDayAvailable ?? true,
-      rcVerified: true,
-      permitVerified: true,
+      rcVerified: false,
+      permitVerified: false,
       insuranceValid: true,
+      unionVerified: false,
+      verificationStatus: 'PENDING_APPROVAL',
+      unionName: vehData.unionName || 'Srinagar Airport Tourist Taxi Union',
+      unionBadgeNumber: vehData.unionBadgeNumber || 'KT-UNION-NEW',
+      touristPermitNo: vehData.touristPermitNo || 'JK-TP-PENDING',
     };
     setVehicles(prev => [fallbackNewVeh, ...prev]);
     setActiveVehicleId(fallbackNewVeh.id);
-    toast.success('Vehicle Registered to Fleet!');
+    toast.info('Gaadi Verification Pipeline Me Darj Hai (Offline)', {
+      description: 'Admin aur Tourist Taxi Union approval ke baad activate hogi.',
+      icon: '⏳'
+    });
   };
 
   // Instant UPI Payout Request Handler
@@ -553,6 +604,20 @@ export const DriverDashboard: React.FC = () => {
       <DriverActionSheet
         dutyState={dutyState}
         onGoOnline={() => {
+          if (activeVehicle.verificationStatus === 'PENDING_APPROVAL') {
+            toast.warning('Gaadi Ki Tasdeeq Baki Hai (Pending Approval)', {
+              description: 'Yeh gaadi abhi Tourist Taxi Union & Admin verification pipeline me hai. Approval milne par hi online jaa sakte hain.',
+              icon: '⏳'
+            });
+            return;
+          }
+          if (activeVehicle.verificationStatus === 'REJECTED') {
+            toast.error('Gaadi Verification Rejected', {
+              description: activeVehicle.rejectionReason || 'Gaadi verification reject ho chuki hai. Naye documents submit karein.',
+              icon: '❌'
+            });
+            return;
+          }
           setDutyState('ONLINE_SEARCHING');
           toast.success('Aap Online Hain (Live Radar)', { 
             description: 'Srinagar Airport, Nowgam Station aur Dal Lake pe aapki cab available dikh rahi hai.',

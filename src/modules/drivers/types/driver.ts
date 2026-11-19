@@ -48,6 +48,8 @@ export interface DriverTrip {
   nextTurnInstruction?: string;
 }
 
+export type VehicleVerificationStatus = 'APPROVED' | 'PENDING_APPROVAL' | 'REJECTED';
+
 export interface DriverVehicle {
   id: string;
   model: string;
@@ -61,6 +63,22 @@ export interface DriverVehicle {
   rcVerified: boolean;
   permitVerified: boolean;
   insuranceValid: boolean;
+  unionVerified?: boolean;
+  verificationStatus?: VehicleVerificationStatus;
+  rejectionReason?: string;
+  unionName?: string;
+  unionBadgeNumber?: string;
+  touristPermitNo?: string;
+  permitExpiry?: string;
+  commercialRcNumber?: string;
+  psvBadgeNo?: string;
+  fitnessExpiry?: string;
+  submittedAt?: string;
+  documents?: {
+    rcDocUrl?: string;
+    unionCardUrl?: string;
+    permitDocUrl?: string;
+  };
   rateCard?: DriverRateCard;
 }
 

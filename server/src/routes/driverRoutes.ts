@@ -62,8 +62,7 @@ router.get('/cockpit-state', async (req: Request, res: Response) => {
 
     const [cabs, driverProfiles, advisories] = await Promise.all([
       prisma.cab.findMany({
-        where: { isActive: true },
-        take: 10,
+        take: 15,
         orderBy: { createdAt: 'desc' }
       }),
       p.driverProfile.findMany({
@@ -101,6 +100,10 @@ router.get('/cockpit-state', async (req: Request, res: Response) => {
         } catch {
           parsedFeatures = {};
         }
+
+        const verificationStatus = parsedFeatures.verificationStatus || (c.isActive ? 'APPROVED' : 'PENDING_APPROVAL');
+        const isApproved = verificationStatus === 'APPROVED' && c.isActive;
+
         return {
           id: c.id,
           model: c.name,
@@ -112,9 +115,20 @@ router.get('/cockpit-state', async (req: Request, res: Response) => {
           fourWheelDrive: parsedFeatures.fourWheelDrive ?? true,
           skiRack: parsedFeatures.skiRack ?? true,
           multiDayAvailable: parsedFeatures.multiDayAvailable ?? true,
-          rcVerified: parsedFeatures.rcVerified ?? true,
-          permitVerified: parsedFeatures.permitVerified ?? true,
+          rcVerified: parsedFeatures.rcVerified ?? isApproved,
+          permitVerified: parsedFeatures.permitVerified ?? isApproved,
           insuranceValid: parsedFeatures.insuranceValid ?? true,
+          unionVerified: parsedFeatures.unionVerified ?? isApproved,
+          verificationStatus,
+          rejectionReason: parsedFeatures.rejectionReason,
+          unionName: parsedFeatures.unionName || 'Srinagar Airport Tourist Taxi Union',
+          unionBadgeNumber: parsedFeatures.unionBadgeNumber || 'KT-UNION-1024',
+          touristPermitNo: parsedFeatures.touristPermitNo || 'JK-TP-2026-900',
+          permitExpiry: parsedFeatures.permitExpiry || '31-12-2026',
+          commercialRcNumber: parsedFeatures.commercialRcNumber || parsedFeatures.plateNumber || 'JK-01-AX-9942',
+          psvBadgeNo: parsedFeatures.psvBadgeNo || 'PSV-JK-4412',
+          documents: parsedFeatures.documents,
+          submittedAt: parsedFeatures.submittedAt || c.createdAt,
           rateCard: parsedFeatures.rateCard || DEFAULT_RATE_CARD
         };
       }),
@@ -291,7 +305,7 @@ router.post('/bookings/:id/counter-offer', async (req: Request, res: Response) =
 });
 
 // ---------------------------------------------------------------------------
-// 6. Register New Vehicle in Driver Fleet
+// 6. Register New Vehicle in Driver Fleet (Tourist Union Verification Pipeline)
 // ---------------------------------------------------------------------------
 router.post('/vehicles', async (req: Request, res: Response) => {
   try {
@@ -305,6 +319,16 @@ router.post('/vehicles', async (req: Request, res: Response) => {
       skiRack = false,
       multiDayAvailable = true,
       type = 'SUV',
+      unionName = 'Srinagar Airport Tourist Taxi Union',
+      unionBadgeNumber,
+      touristPermitNo,
+      permitExpiry,
+      commercialRcNumber,
+      psvBadgeNo,
+      fitnessExpiry,
+      rcDocName,
+      unionCardName,
+      permitDocName,
       rateCard = DEFAULT_RATE_CARD
     } = req.body;
 
@@ -312,20 +336,42 @@ router.post('/vehicles', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Vehicle model and registration plate number are required' });
     }
 
+    if (!unionName || !unionBadgeNumber) {
+      return res.status(400).json({ error: 'Tourist Taxi Union details and Union Badge ID are mandatory for verification' });
+    }
+
+    const cleanPlate = String(plateNumber).toUpperCase().trim();
+
     const featuresObj = {
-      plateNumber: String(plateNumber).toUpperCase().trim(),
+      plateNumber: cleanPlate,
       luggageCapacity: Number(luggageCapacity),
       snowChains: Boolean(snowChains),
       fourWheelDrive: Boolean(fourWheelDrive),
       skiRack: Boolean(skiRack),
       multiDayAvailable: Boolean(multiDayAvailable),
-      rcVerified: true,
-      permitVerified: true,
+      // Pipeline Compliance Checks
+      rcVerified: false,
+      permitVerified: false,
       insuranceValid: true,
+      unionVerified: false,
+      verificationStatus: 'PENDING_APPROVAL', // Mandatory: Awaiting Admin Authentication!
+      unionName: String(unionName).trim(),
+      unionBadgeNumber: String(unionBadgeNumber).toUpperCase().trim(),
+      touristPermitNo: touristPermitNo ? String(touristPermitNo).toUpperCase().trim() : `JK-TP-${Date.now().toString().slice(-4)}`,
+      permitExpiry: permitExpiry ? String(permitExpiry).trim() : '31-12-2026',
+      commercialRcNumber: commercialRcNumber ? String(commercialRcNumber).toUpperCase().trim() : cleanPlate,
+      psvBadgeNo: psvBadgeNo ? String(psvBadgeNo).toUpperCase().trim() : 'JK-PSV-PENDING',
+      fitnessExpiry: fitnessExpiry ? String(fitnessExpiry).trim() : '31-10-2026',
+      documents: {
+        rcDocUrl: rcDocName || 'RC_Commercial_JK_Document.pdf',
+        unionCardUrl: unionCardName || 'Tourist_Union_Card.jpg',
+        permitDocUrl: permitDocName || 'All_Valley_Tourist_Permit.pdf'
+      },
       rateCard,
-      addedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString()
     };
 
+    // Created with isActive: false because Admin must authenticate first!
     const newCab = await prisma.cab.create({
       data: {
         name: String(model).trim(),
@@ -335,12 +381,22 @@ router.post('/vehicles', async (req: Request, res: Response) => {
         basePrice: 1200,
         image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
         features: JSON.stringify(featuresObj),
-        isActive: true
+        isActive: false
       }
+    });
+
+    broadcastDriverEvent('NEW_VEHICLE_PENDING_VERIFICATION', {
+      vehicleId: newCab.id,
+      model: newCab.name,
+      plateNumber: featuresObj.plateNumber,
+      unionName: featuresObj.unionName,
+      unionBadgeNumber: featuresObj.unionBadgeNumber,
+      submittedAt: featuresObj.submittedAt
     });
 
     res.status(201).json({
       success: true,
+      message: 'Vehicle registration submitted successfully. It is currently under Admin & Tourist Union Verification.',
       vehicle: {
         id: newCab.id,
         model: newCab.name,
@@ -351,15 +407,162 @@ router.post('/vehicles', async (req: Request, res: Response) => {
         fourWheelDrive: featuresObj.fourWheelDrive,
         skiRack: featuresObj.skiRack,
         multiDayAvailable: featuresObj.multiDayAvailable,
-        rcVerified: true,
-        permitVerified: true,
+        rcVerified: false,
+        permitVerified: false,
         insuranceValid: true,
+        unionVerified: false,
+        verificationStatus: 'PENDING_APPROVAL',
+        unionName: featuresObj.unionName,
+        unionBadgeNumber: featuresObj.unionBadgeNumber,
+        touristPermitNo: featuresObj.touristPermitNo,
+        permitExpiry: featuresObj.permitExpiry,
+        commercialRcNumber: featuresObj.commercialRcNumber,
+        psvBadgeNo: featuresObj.psvBadgeNo,
+        documents: featuresObj.documents,
+        submittedAt: featuresObj.submittedAt,
         rateCard: featuresObj.rateCard
       }
     });
   } catch (error: any) {
     console.error('[Driver Vehicles] Failed to create vehicle:', error.message);
     res.status(500).json({ error: 'Failed to register fleet vehicle' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 7. Admin Authentication & Approval Endpoint for Tourist Union Vehicles
+// ---------------------------------------------------------------------------
+router.post('/vehicles/:id/authenticate', async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const { action, remarks } = req.body; // 'APPROVE' or 'REJECT'
+
+    const cab = await prisma.cab.findUnique({ where: { id } });
+    if (!cab) {
+      return res.status(404).json({ error: 'Vehicle not found' });
+    }
+
+    let features: any = {};
+    try {
+      features = cab.features ? JSON.parse(cab.features) : {};
+    } catch {
+      features = {};
+    }
+
+    if (action === 'APPROVE') {
+      features.verificationStatus = 'APPROVED';
+      features.unionVerified = true;
+      features.rcVerified = true;
+      features.permitVerified = true;
+      features.approvedAt = new Date().toISOString();
+      delete features.rejectionReason;
+
+      const updated = await prisma.cab.update({
+        where: { id },
+        data: {
+          isActive: true,
+          features: JSON.stringify(features)
+        }
+      });
+
+      broadcastDriverEvent('VEHICLE_VERIFIED', {
+        vehicleId: id,
+        model: updated.name,
+        plateNumber: features.plateNumber,
+        status: 'APPROVED'
+      });
+
+      return res.json({
+        success: true,
+        message: `${updated.name} (${features.plateNumber}) has been authenticated & approved for Tourist Service!`,
+        vehicle: {
+          id: updated.id,
+          model: updated.name,
+          plateNumber: features.plateNumber,
+          verificationStatus: 'APPROVED',
+          isActive: true
+        }
+      });
+    } else {
+      features.verificationStatus = 'REJECTED';
+      features.unionVerified = false;
+      features.rejectionReason = remarks || 'Tourist Taxi Union badge or commercial permit verification failed. Please check RTO records.';
+
+      const updated = await prisma.cab.update({
+        where: { id },
+        data: {
+          isActive: false,
+          features: JSON.stringify(features)
+        }
+      });
+
+      broadcastDriverEvent('VEHICLE_VERIFIED', {
+        vehicleId: id,
+        model: updated.name,
+        plateNumber: features.plateNumber,
+        status: 'REJECTED',
+        reason: features.rejectionReason
+      });
+
+      return res.json({
+        success: true,
+        message: 'Vehicle verification rejected',
+        vehicle: {
+          id: updated.id,
+          model: updated.name,
+          plateNumber: features.plateNumber,
+          verificationStatus: 'REJECTED',
+          isActive: false,
+          rejectionReason: features.rejectionReason
+        }
+      });
+    }
+  } catch (error: any) {
+    console.error('[Driver Vehicles] Failed to authenticate vehicle:', error.message);
+    res.status(500).json({ error: 'Failed to authenticate vehicle' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 8. Fetch Pending Vehicles in Verification Pipeline (for Admin & Pipeline HUD)
+// ---------------------------------------------------------------------------
+router.get('/vehicles/pending-verification', async (req: Request, res: Response) => {
+  try {
+    const cabs = await prisma.cab.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+
+    const pending = cabs.filter(c => {
+      try {
+        const feat = c.features ? JSON.parse(c.features) : {};
+        return feat.verificationStatus === 'PENDING_APPROVAL' || (!c.isActive && feat.unionBadgeNumber);
+      } catch {
+        return false;
+      }
+    }).map(c => {
+      const feat = JSON.parse(c.features || '{}');
+      return {
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        capacity: c.capacity,
+        plateNumber: feat.plateNumber,
+        unionName: feat.unionName,
+        unionBadgeNumber: feat.unionBadgeNumber,
+        touristPermitNo: feat.touristPermitNo,
+        permitExpiry: feat.permitExpiry,
+        commercialRcNumber: feat.commercialRcNumber,
+        psvBadgeNo: feat.psvBadgeNo,
+        documents: feat.documents,
+        submittedAt: feat.submittedAt || c.createdAt,
+        verificationStatus: feat.verificationStatus || 'PENDING_APPROVAL'
+      };
+    });
+
+    res.json({ pending });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch pending vehicles' });
   }
 });
 

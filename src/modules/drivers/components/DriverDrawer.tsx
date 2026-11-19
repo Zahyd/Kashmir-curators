@@ -21,7 +21,14 @@ import {
   Flame,
   Moon,
   Save,
-  Check
+  Check,
+  ChevronLeft,
+  AlertCircle,
+  Building2,
+  UploadCloud,
+  FileCheck2,
+  Clock,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,7 +87,8 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
     activeVehicle?.rateCard || DEFAULT_RATES
   );
 
-  // New vehicle registration form state
+  // Pipeline Step State (1: Specs, 2: Union Details, 3: Documents & Submit)
+  const [pipelineStep, setPipelineStep] = useState<1 | 2 | 3>(1);
   const [newVehicle, setNewVehicle] = useState({
     model: 'Toyota Innova Crysta',
     plateNumber: '',
@@ -90,6 +98,18 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
     fourWheelDrive: true,
     skiRack: false,
     multiDayAvailable: true,
+    // Tourist Taxi Union & RTO compliance
+    unionName: 'Srinagar Airport Tourist Taxi Union',
+    unionBadgeNumber: '',
+    touristPermitNo: '',
+    permitExpiry: '31-12-2026',
+    commercialRcNumber: '',
+    psvBadgeNo: '',
+    fitnessExpiry: '31-10-2026',
+    rcDocName: 'RC_Commercial_JK_Front.pdf',
+    unionCardName: 'Tourist_Union_Badge_Card.jpg',
+    permitDocName: 'All_Valley_Tourist_Permit_2026.pdf',
+    declarationAccepted: true
   });
 
   if (!open) return null;
@@ -113,14 +133,50 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newVehicle.plateNumber.trim()) {
-      alert('Please enter vehicle registration plate number.');
+      alert('Barah-e-karam Gaadi ka Registration Number Plate darj karein.');
+      setPipelineStep(1);
+      return;
+    }
+    if (!newVehicle.unionBadgeNumber.trim()) {
+      alert('Tourist Taxi Union Badge / Card Number likhna lazmi hai.');
+      setPipelineStep(2);
+      return;
+    }
+    if (!newVehicle.declarationAccepted) {
+      alert('Barah-e-karam Union & RTO compliance declaration accept karein.');
       return;
     }
 
     setIsSubmittingVehicle(true);
     try {
-      await onRegisterVehicle(newVehicle);
+      await onRegisterVehicle({
+        model: newVehicle.model,
+        plateNumber: newVehicle.plateNumber.toUpperCase().trim(),
+        capacity: newVehicle.capacity,
+        luggageCapacity: newVehicle.luggageCapacity,
+        snowChains: newVehicle.snowChains,
+        fourWheelDrive: newVehicle.fourWheelDrive,
+        skiRack: newVehicle.skiRack,
+        multiDayAvailable: newVehicle.multiDayAvailable,
+        unionName: newVehicle.unionName,
+        unionBadgeNumber: newVehicle.unionBadgeNumber.toUpperCase().trim(),
+        touristPermitNo: newVehicle.touristPermitNo || `JK-TP-${Date.now().toString().slice(-4)}`,
+        permitExpiry: newVehicle.permitExpiry,
+        commercialRcNumber: newVehicle.commercialRcNumber || newVehicle.plateNumber,
+        psvBadgeNo: newVehicle.psvBadgeNo || 'PSV-JK-4412',
+        fitnessExpiry: newVehicle.fitnessExpiry,
+        verificationStatus: 'PENDING_APPROVAL',
+        unionVerified: false,
+        rcVerified: false,
+        permitVerified: false,
+        documents: {
+          rcDocUrl: newVehicle.rcDocName,
+          unionCardUrl: newVehicle.unionCardName,
+          permitDocUrl: newVehicle.permitDocName
+        }
+      });
       setShowRegisterModal(false);
+      setPipelineStep(1);
       setNewVehicle({
         model: 'Toyota Innova Crysta',
         plateNumber: '',
@@ -130,6 +186,17 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
         fourWheelDrive: true,
         skiRack: false,
         multiDayAvailable: true,
+        unionName: 'Srinagar Airport Tourist Taxi Union',
+        unionBadgeNumber: '',
+        touristPermitNo: '',
+        permitExpiry: '31-12-2026',
+        commercialRcNumber: '',
+        psvBadgeNo: '',
+        fitnessExpiry: '31-10-2026',
+        rcDocName: 'RC_Commercial_JK_Front.pdf',
+        unionCardName: 'Tourist_Union_Badge_Card.jpg',
+        permitDocName: 'All_Valley_Tourist_Permit_2026.pdf',
+        declarationAccepted: true
       });
     } finally {
       setIsSubmittingVehicle(false);
@@ -241,50 +308,77 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
               <div className="space-y-2.5">
                 {vehicles.map((v) => {
                   const isSelected = v.id === activeVehicleId;
+                  const isApproved = v.verificationStatus === 'APPROVED';
+                  const isPending = v.verificationStatus === 'PENDING_APPROVAL';
+                  const isRejected = v.verificationStatus === 'REJECTED';
+
                   return (
                     <div
                       key={v.id}
                       onClick={() => onSelectVehicle(v.id)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer space-y-2.5 ${
                         isSelected
                           ? 'bg-[#0F141C] border-amber-500/80 shadow-lg shadow-amber-500/15'
                           : 'bg-white/[0.02] hover:bg-white/[0.05] border-white/5'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          isSelected ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-white/40'
-                        }`}>
-                          <Car className="w-5 h-5" />
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                            isApproved ? 'bg-emerald-500/15 text-emerald-400' : isPending ? 'bg-amber-500/15 text-amber-400' : 'bg-rose-500/15 text-rose-400'
+                          }`}>
+                            <Car className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-extrabold text-xs text-white truncate">{v.model}</span>
+                              {isSelected && (
+                                <Badge className="bg-amber-500 text-slate-950 font-black text-[8px] px-1 py-0">
+                                  SELECTED
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="font-mono text-[11px] font-bold text-amber-300 block">{v.plateNumber}</span>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-extrabold text-xs text-white truncate">{v.model}</span>
-                            {isSelected && (
-                              <Badge className="bg-emerald-500 text-slate-950 font-black text-[8px] px-1 py-0">
-                                ACTIVE
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="font-mono text-[11px] font-bold text-amber-300 block">{v.plateNumber}</span>
-                          <div className="flex items-center gap-1 mt-1">
-                            {v.fourWheelDrive && (
-                              <span className="text-[8px] font-black uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 px-1 py-0 rounded">
-                                4x4
-                              </span>
-                            )}
-                            {v.snowChains && (
-                              <span className="text-[8px] font-black uppercase bg-sky-500/15 text-sky-300 border border-sky-500/20 px-1 py-0 rounded">
-                                Chains
-                              </span>
-                            )}
-                          </div>
+
+                        <div className="shrink-0 text-right">
+                          <span className="text-[11px] font-mono text-white/70 block">{v.capacity} Sawari</span>
+                          <span className="text-[10px] text-white/40 block">{v.luggageCapacity} Bags</span>
                         </div>
                       </div>
 
-                      <div className="shrink-0 text-right">
-                        <span className="text-[11px] font-mono text-white/70 block">{v.capacity} Sawari</span>
-                        <span className="text-[10px] text-white/40 block">{v.luggageCapacity} Bags</span>
+                      {/* Verification Status Pill Bar */}
+                      <div className="flex items-center justify-between text-[10px] pt-1.5 border-t border-white/5">
+                        {isApproved ? (
+                          <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>Union Verified • {v.unionName ? v.unionName.split(' ')[0] : 'Airport'}</span>
+                          </span>
+                        ) : isPending ? (
+                          <span className="flex items-center gap-1 text-amber-400 font-bold animate-pulse">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Pipeline Active: Admin Review Pending</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-rose-400 font-bold">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            <span>Verification Rejected: Check Documents</span>
+                          </span>
+                        )}
+
+                        <div className="flex items-center gap-1">
+                          {v.fourWheelDrive && (
+                            <span className="text-[8px] font-black uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 px-1 py-0 rounded">
+                              4x4
+                            </span>
+                          )}
+                          {v.snowChains && (
+                            <span className="text-[8px] font-black uppercase bg-sky-500/15 text-sky-300 border border-sky-500/20 px-1 py-0 rounded">
+                              Chains
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -560,115 +654,390 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
       </div>
 
       {/* ---------------------------------------------------------------------- */}
-      {/* Register New Cab Modal */}
+      {/* 3-Step Tourist Union Verification Pipeline Modal                       */}
       {/* ---------------------------------------------------------------------- */}
       {showRegisterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-3xl bg-[#0F141C] border border-amber-500/30 p-6 shadow-2xl text-white space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400">
-                  <Car className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl bg-[#0F141C] border border-amber-500/40 p-6 shadow-2xl text-white space-y-4 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm text-white">Nayi Gaadi Add Karein</h3>
-                  <p className="text-[10px] text-white/50">Apni cab registered karein</p>
+                  <h3 className="font-extrabold text-sm text-white">Tourist Union Cab Verification Pipeline</h3>
+                  <p className="text-[10px] text-white/50">Kashmir Tourist Taxi Union & RTO Authentication</p>
                 </div>
               </div>
               <button 
-                onClick={() => setShowRegisterModal(false)}
-                className="p-1 rounded-lg text-white/40 hover:text-white"
+                onClick={() => {
+                  setShowRegisterModal(false);
+                  setPipelineStep(1);
+                }}
+                className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleRegisterSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-white/50 uppercase">Gaadi Ka Model</label>
-                  <select
-                    value={newVehicle.model}
-                    onChange={(e) => setNewVehicle(prev => ({ ...prev, model: e.target.value }))}
-                    className="w-full h-10 rounded-xl bg-black/50 border border-white/10 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+            {/* 3-Step Pipeline Visual Progress Bar */}
+            <div className="grid grid-cols-3 gap-2 py-1">
+              {[
+                { step: 1, label: '1. Gaadi Details', desc: 'Car & Specs' },
+                { step: 2, label: '2. Union & Permit', desc: 'Badge & RTO' },
+                { step: 3, label: '3. Verification', desc: 'KYC & Admin' }
+              ].map(s => {
+                const isCurrent = pipelineStep === s.step;
+                const isDone = pipelineStep > s.step;
+                return (
+                  <div
+                    key={s.step}
+                    onClick={() => {
+                      if (s.step < pipelineStep) setPipelineStep(s.step as 1 | 2 | 3);
+                    }}
+                    className={`p-2 rounded-xl border text-center transition-all ${
+                      isCurrent
+                        ? 'bg-amber-500/15 border-amber-500 text-amber-300'
+                        : isDone
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-pointer'
+                        : 'bg-white/[0.02] border-white/5 text-white/30'
+                    }`}
                   >
-                    <option value="Toyota Innova Crysta">Toyota Innova Crysta</option>
-                    <option value="Toyota Fortuner 4x4">Toyota Fortuner 4x4</option>
-                    <option value="Mahindra Scorpio-N 4x4">Mahindra Scorpio-N 4x4</option>
-                    <option value="Force Urbania Luxury (10 Pax)">Force Urbania Luxury (10 Pax)</option>
-                    <option value="Toyota Etios Sedan">Toyota Etios Sedan</option>
-                  </select>
+                    <span className="text-[10px] font-black uppercase tracking-wider block">{s.label}</span>
+                    <span className="text-[9px] text-white/50 block">{s.desc}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* STEP 1: VEHICLE SPECIFICATIONS */}
+            {pipelineStep === 1 && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-white/60 uppercase">Gaadi Ka Model</label>
+                    <select
+                      value={newVehicle.model}
+                      onChange={(e) => setNewVehicle(prev => ({ ...prev, model: e.target.value }))}
+                      className="w-full h-11 rounded-xl bg-black/60 border border-white/10 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="Toyota Innova Crysta">Toyota Innova Crysta (Commercial)</option>
+                      <option value="Toyota Fortuner 4x4">Toyota Fortuner 4x4 Mountain</option>
+                      <option value="Mahindra Scorpio-N 4x4">Mahindra Scorpio-N 4x4</option>
+                      <option value="Force Urbania Luxury (10 Pax)">Force Urbania Luxury Van (10 Pax)</option>
+                      <option value="Toyota Etios Sedan">Toyota Etios Sedan (Tourist)</option>
+                      <option value="Maruti Dzire Tour">Maruti Dzire Tour (Commercial)</option>
+                      <option value="Tempo Traveller 13 Seater">Force Tempo Traveller (13 Pax)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-white/60 uppercase">Number Plate (Yellow Plate)</label>
+                    <Input
+                      placeholder="e.g. JK-01-AX-9942"
+                      value={newVehicle.plateNumber}
+                      onChange={(e) => setNewVehicle(prev => ({ ...prev, plateNumber: e.target.value.toUpperCase() }))}
+                      className="h-11 rounded-xl bg-black/60 border-white/10 text-xs font-mono tracking-wider font-bold text-amber-300 uppercase"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-white/60 uppercase">Kitne Mehman (Seats / Pax)</label>
+                    <Input
+                      type="number"
+                      min="2"
+                      max="17"
+                      value={newVehicle.capacity}
+                      onChange={(e) => setNewVehicle(prev => ({ ...prev, capacity: Number(e.target.value) }))}
+                      className="h-11 rounded-xl bg-black/60 border-white/10 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-white/60 uppercase">Kitne Bags (Luggage Capacity)</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="14"
+                      value={newVehicle.luggageCapacity}
+                      onChange={(e) => setNewVehicle(prev => ({ ...prev, luggageCapacity: Number(e.target.value) }))}
+                      className="h-11 rounded-xl bg-black/60 border-white/10 text-xs"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-white/50 uppercase">Number Plate</label>
-                  <Input
-                    placeholder="e.g. JK-01-AX-9942"
-                    value={newVehicle.plateNumber}
-                    onChange={(e) => setNewVehicle(prev => ({ ...prev, plateNumber: e.target.value.toUpperCase() }))}
-                    className="h-10 rounded-xl bg-black/50 border-white/10 text-xs font-mono"
-                    required
-                  />
+                {/* Kashmir Mountain Equipment */}
+                <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-2 text-xs">
+                  <span className="text-[10px] font-black uppercase text-amber-400 block tracking-wider">
+                    Kashmir Mountain Winter Equipment
+                  </span>
+
+                  <label className="flex items-center justify-between cursor-pointer p-1.5 rounded-xl hover:bg-white/5">
+                    <div className="flex items-center gap-2">
+                      <Snowflake className="w-4 h-4 text-sky-400" />
+                      <span className="text-white/80 font-medium">Snow Chains Available (Tangmarg Checkpost)</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={newVehicle.snowChains}
+                      onChange={(e) => setNewVehicle(prev => ({ ...prev, snowChains: e.target.checked }))}
+                      className="rounded accent-amber-500 w-4 h-4 cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between cursor-pointer p-1.5 rounded-xl hover:bg-white/5">
+                    <div className="flex items-center gap-2">
+                      <Compass className="w-4 h-4 text-emerald-400" />
+                      <span className="text-white/80 font-medium">4x4 / AWD Mountain Low-Gear System</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={newVehicle.fourWheelDrive}
+                      onChange={(e) => setNewVehicle(prev => ({ ...prev, fourWheelDrive: e.target.checked }))}
+                      className="rounded accent-amber-500 w-4 h-4 cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between cursor-pointer p-1.5 rounded-xl hover:bg-white/5">
+                    <div className="flex items-center gap-2">
+                      <Car className="w-4 h-4 text-amber-400" />
+                      <span className="text-white/80 font-medium">Roof Ski / Luggage Rack Installed</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={newVehicle.skiRack}
+                      onChange={(e) => setNewVehicle(prev => ({ ...prev, skiRack: e.target.checked }))}
+                      className="rounded accent-amber-500 w-4 h-4 cursor-pointer"
+                    />
+                  </label>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-white/50 uppercase">Kitne Mehman (Pax)</label>
-                  <Input
-                    type="number"
-                    min="2"
-                    max="14"
-                    value={newVehicle.capacity}
-                    onChange={(e) => setNewVehicle(prev => ({ ...prev, capacity: Number(e.target.value) }))}
-                    className="h-10 rounded-xl bg-black/50 border-white/10 text-xs"
-                  />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (!newVehicle.plateNumber.trim()) {
+                      alert('Barah-e-karam Gaadi ka Registration Number Plate darj karein.');
+                      return;
+                    }
+                    setPipelineStep(2);
+                  }}
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-amber-500/20"
+                >
+                  <span>Agla Qadam: Tourist Union & RTO Details</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* STEP 2: TOURIST TAXI UNION & RTO DETAILS */}
+            {pipelineStep === 2 && (
+              <div className="space-y-4">
+                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                    <Building2 className="w-4 h-4" /> Kashmir Tourist Taxi Union Authentication
+                  </div>
+                  <p className="text-[11px] text-white/70">
+                    Kashmir Curators sirf registered Tourist Taxi Union stands se affiliated cabs allow karta hai.
+                  </p>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-white/50 uppercase">Kitne Bags (Luggage)</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={newVehicle.luggageCapacity}
-                    onChange={(e) => setNewVehicle(prev => ({ ...prev, luggageCapacity: Number(e.target.value) }))}
-                    className="h-10 rounded-xl bg-black/50 border-white/10 text-xs"
-                  />
+                <div className="space-y-3 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-white/60 uppercase">
+                      Tourist Taxi Union Stand (यूनियन स्टैंड)
+                    </label>
+                    <select
+                      value={newVehicle.unionName}
+                      onChange={(e) => setNewVehicle(prev => ({ ...prev, unionName: e.target.value }))}
+                      className="w-full h-11 rounded-xl bg-black/60 border border-white/10 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="Srinagar Airport Tourist Taxi Union">✈️ Srinagar Airport Taxi Union (Sheikh-ul-Alam SXR)</option>
+                      <option value="TRC Tourist Taxi Stand Union (Srinagar)">🏢 TRC Tourist Taxi Stand Union (Tourist Reception Centre)</option>
+                      <option value="Tangmarg–Gulmarg Taxi Operators Union">❄️ Tangmarg / Gulmarg Taxi Operators Union</option>
+                      <option value="Pahalgam Tourist Taxi Stand Union">🌲 Pahalgam Tourist Taxi Stand Union</option>
+                      <option value="Sonamarg Taxi Operators Union">🏔️ Sonamarg Taxi Operators Union</option>
+                      <option value="Nowgam Railway Station Tourist Taxi Stand">🚆 Nowgam Railway Station Tourist Taxi Stand</option>
+                      <option value="Dal Lake Ghat Taxi Stand Union">⛵ Dal Lake / Boulevard Tourist Taxi Union</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-white/60 uppercase">
+                        Union Card / Badge No. (बैज नंबर) *
+                      </label>
+                      <Input
+                        placeholder="e.g. KT-UNION-4921"
+                        value={newVehicle.unionBadgeNumber}
+                        onChange={(e) => setNewVehicle(prev => ({ ...prev, unionBadgeNumber: e.target.value.toUpperCase() }))}
+                        className="h-11 rounded-xl bg-black/60 border-white/10 text-xs font-mono font-bold text-amber-300 uppercase"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-white/60 uppercase">
+                        All Valley Permit No. (परमिट)
+                      </label>
+                      <Input
+                        placeholder="e.g. JK-TP-2026-901"
+                        value={newVehicle.touristPermitNo}
+                        onChange={(e) => setNewVehicle(prev => ({ ...prev, touristPermitNo: e.target.value.toUpperCase() }))}
+                        className="h-11 rounded-xl bg-black/60 border-white/10 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-white/60 uppercase">
+                        Commercial RC Number (आरसी)
+                      </label>
+                      <Input
+                        placeholder="e.g. JK01AX9942"
+                        value={newVehicle.commercialRcNumber || newVehicle.plateNumber}
+                        onChange={(e) => setNewVehicle(prev => ({ ...prev, commercialRcNumber: e.target.value.toUpperCase() }))}
+                        className="h-11 rounded-xl bg-black/60 border-white/10 text-xs font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-white/60 uppercase">
+                        Driver PSV Badge No. (लाइसेंस बैज)
+                      </label>
+                      <Input
+                        placeholder="e.g. PSV-JK-4412"
+                        value={newVehicle.psvBadgeNo}
+                        onChange={(e) => setNewVehicle(prev => ({ ...prev, psvBadgeNo: e.target.value.toUpperCase() }))}
+                        className="h-11 rounded-xl bg-black/60 border-white/10 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setPipelineStep(1)}
+                    className="flex-1 h-12 rounded-xl bg-white/5 border-white/10 text-white text-xs gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Peeche</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (!newVehicle.unionBadgeNumber.trim()) {
+                        alert('Tourist Taxi Union Badge / Card Number likhna zaroori hai.');
+                        return;
+                      }
+                      setPipelineStep(3);
+                    }}
+                    className="flex-[2] h-12 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-amber-500/20"
+                  >
+                    <span>Agla: Dastavezaat & Pipeline</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
+            )}
 
-              {/* Alpine Feature Switches */}
-              <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 space-y-2 text-xs">
-                <span className="text-[10px] font-black uppercase text-amber-400 block">Kashmir Winter Toggles</span>
-                
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-white/80">Snow Chains Available</span>
+            {/* STEP 3: DOCUMENTS ATTACHMENT & ADMIN PIPELINE SUBMIT */}
+            {pipelineStep === 3 && (
+              <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-2.5 text-xs">
+                  <span className="text-[10px] font-black uppercase text-amber-400 block tracking-wider">
+                    Attached Verification Documents (दस्तावेज़)
+                  </span>
+
+                  <div className="space-y-2">
+                    <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileCheck2 className="w-4 h-4 text-emerald-400" />
+                        <div>
+                          <p className="text-[11px] font-bold text-white">Commercial RC (Front & Back)</p>
+                          <span className="text-[9px] text-white/40 font-mono">{newVehicle.rcDocName}</span>
+                        </div>
+                      </div>
+                      <Badge className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-[9px]">
+                        Attached
+                      </Badge>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileCheck2 className="w-4 h-4 text-amber-400" />
+                        <div>
+                          <p className="text-[11px] font-bold text-white">Tourist Taxi Union Card</p>
+                          <span className="text-[9px] text-white/40 font-mono">{newVehicle.unionCardName} • Badge: {newVehicle.unionBadgeNumber}</span>
+                        </div>
+                      </div>
+                      <Badge className="bg-amber-500/15 text-amber-300 border border-amber-500/25 text-[9px]">
+                        Attached
+                      </Badge>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileCheck2 className="w-4 h-4 text-sky-400" />
+                        <div>
+                          <p className="text-[11px] font-bold text-white">J&K All Valley Tourist Permit</p>
+                          <span className="text-[9px] text-white/40 font-mono">{newVehicle.permitDocName}</span>
+                        </div>
+                      </div>
+                      <Badge className="bg-sky-500/15 text-sky-300 border border-sky-500/25 text-[9px]">
+                        Attached
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Admin Pipeline Notice */}
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                    <ShieldCheck className="w-4 h-4" /> Admin & Union Authentication Pipeline
+                  </div>
+                  <p className="text-[11px] text-white/70 leading-relaxed">
+                    Gaadi submit karne ke baad yeh seedhe hamare Transport Admin Desk aur Tourist Taxi Union verification pipeline me jayegi. Admin ke tasdeeq (approval) ke baad hi yeh gaadi live radar pe tourist bookings ke liye active hogi.
+                  </p>
+                </div>
+
+                {/* Declaration Checkbox */}
+                <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={newVehicle.snowChains}
-                    onChange={(e) => setNewVehicle(prev => ({ ...prev, snowChains: e.target.checked }))}
-                    className="rounded accent-amber-500 w-4 h-4"
+                    checked={newVehicle.declarationAccepted}
+                    onChange={(e) => setNewVehicle(prev => ({ ...prev, declarationAccepted: e.target.checked }))}
+                    className="rounded accent-amber-500 w-4 h-4 mt-0.5 cursor-pointer shrink-0"
                   />
+                  <span className="text-[11px] text-white/80 leading-snug">
+                    Main tasdeeq karta hoon ki meri gaadi valid Commercial Tourist Permit aur Kashmir Tourist Taxi Union se registered hai.
+                  </span>
                 </label>
 
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-white/80">4x4 / AWD System</span>
-                  <input
-                    type="checkbox"
-                    checked={newVehicle.fourWheelDrive}
-                    onChange={(e) => setNewVehicle(prev => ({ ...prev, fourWheelDrive: e.target.checked }))}
-                    className="rounded accent-amber-500 w-4 h-4"
-                  />
-                </label>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmittingVehicle}
-                className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider"
-              >
-                {isSubmittingVehicle ? 'Gaadi Add Ho Rahi Hai...' : 'Gaadi Fleet Me Add Karein'}
-              </Button>
-            </form>
+                <div className="flex gap-2.5 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setPipelineStep(2)}
+                    className="flex-1 h-12 rounded-xl bg-white/5 border-white/10 text-white text-xs gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Peeche</span>
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmittingVehicle || !newVehicle.declarationAccepted}
+                    className="flex-[2] h-12 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider shadow-xl shadow-amber-500/30"
+                  >
+                    {isSubmittingVehicle ? 'Pipeline Me Submit Ho Rahi Hai...' : 'Verification Pipeline Me Bhejein ➔'}
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

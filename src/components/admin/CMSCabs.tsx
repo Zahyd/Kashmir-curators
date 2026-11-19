@@ -5,7 +5,7 @@ import {
   MapPin, Sliders, X, DollarSign, Settings, CheckCircle2, AlertTriangle, 
   Play, Navigation, Map, Search, Filter, Sparkles, TrendingUp, BarChart3, 
   Shield, FileText, Check, MessageSquare, AlertOctagon, ArrowRight,
-  Eye, Download, LayoutGrid, List, PhoneCall, RefreshCw
+  Eye, Download, LayoutGrid, List, PhoneCall, RefreshCw, ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -163,12 +163,61 @@ const defaultMetadata: CabMetadata = {
 export default function CMSCabs() {
   const { systemEvents } = useTeamAuth();
   const queryClient = useQueryClient();
-  const [currentTab, setCurrentTab] = useState<'operations' | 'registry' | 'drivers' | 'ai-dispatch' | 'maintenance' | 'finance' | 'emergency'>('operations');
+  const [currentTab, setCurrentTab] = useState<'operations' | 'registry' | 'drivers' | 'ai-dispatch' | 'maintenance' | 'finance' | 'emergency' | 'union-pipeline'>('operations');
   const [activeRole, setActiveRole] = useState<'Director' | 'Operations Manager' | 'Dispatcher' | 'Fleet Manager' | 'Driver' | 'Finance' | 'Support'>('Director');
   
   const [cabs, setCabs] = useState<Cab[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [driversList, setDriversList] = useState<any[]>([]);
+
+  // Tourist Taxi Union Verification Pipeline State
+  const [pendingUnionCabs, setPendingUnionCabs] = useState<any[]>([]);
+  const [isLoadingPendingUnion, setIsLoadingPendingUnion] = useState(false);
+  const [authenticatingCabId, setAuthenticatingCabId] = useState<string | null>(null);
+
+  const fetchPendingUnionCabs = async () => {
+    setIsLoadingPendingUnion(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/vehicles/pending-verification`);
+      if (res.ok) {
+        const data = await res.json();
+        setPendingUnionCabs(data.pending || []);
+      }
+    } catch (err) {
+      console.warn('[CMSCabs] Failed to fetch pending union cabs:', err);
+    } finally {
+      setIsLoadingPendingUnion(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingUnionCabs();
+  }, []);
+
+  const handleAuthenticateVehicle = async (cabId: string, action: 'APPROVE' | 'REJECT', remarks?: string) => {
+    setAuthenticatingCabId(cabId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/vehicles/${cabId}/authenticate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, remarks })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(action === 'APPROVE' ? 'Vehicle Authenticated & Approved!' : 'Vehicle Verification Rejected', {
+          description: data.message
+        });
+        fetchPendingUnionCabs();
+        fetchCabs();
+      } else {
+        toast.error('Failed to authenticate vehicle');
+      }
+    } catch {
+      toast.error('Network error during authentication');
+    } finally {
+      setAuthenticatingCabId(null);
+    }
+  };
   
   const [operationsData, setOperationsData] = useState<OperationsData>({
     manualBlockings: [],
@@ -1323,6 +1372,7 @@ export default function CMSCabs() {
       <div className="flex bg-[#090e13]/90 border border-white/5 p-1 rounded-2xl overflow-x-auto custom-scrollbar shadow-lg">
         {[
           { id: 'operations', label: 'Operations Desk', icon: Sliders },
+          { id: 'union-pipeline', label: `Union Pipeline (${pendingUnionCabs.length})`, icon: ShieldCheck },
           { id: 'registry', label: `Fleet Registry (${cabs.length})`, icon: Car },
           { id: 'drivers', label: `Chauffeur Hub (${driversList.length})`, icon: Users },
           { id: 'ai-dispatch', label: 'AI Dispatch & Rates', icon: Sparkles },
@@ -2345,6 +2395,193 @@ export default function CMSCabs() {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* TAB: TOURIST TAXI UNION VERIFICATION PIPELINE */}
+      {currentTab === 'union-pipeline' && (
+        <div className="space-y-8 animate-in fade-in duration-500 text-left">
+          {/* Header Panel */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8 rounded-[2.5rem] bg-[#090e13]/90 border border-amber-500/30 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="space-y-2 relative z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-display font-black text-white tracking-tight uppercase">
+                    Tourist Taxi Union Verification Pipeline
+                  </h2>
+                  <p className="text-xs text-white/50 font-medium">
+                    Commercial yellow-plate compliance, Union stand affiliations & RTO permits authentication
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 relative z-10">
+              <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono text-xs px-3 py-1">
+                {pendingUnionCabs.length} Pending Application{pendingUnionCabs.length !== 1 ? 's' : ''}
+              </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={fetchPendingUnionCabs}
+                disabled={isLoadingPendingUnion}
+                className="h-10 rounded-xl bg-white/5 hover:bg-white/10 border-white/10 text-white text-xs gap-1.5"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", isLoadingPendingUnion && "animate-spin")} />
+                <span>Refresh Queue</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Pending Applications List */}
+          {pendingUnionCabs.length === 0 ? (
+            <Card className="p-16 text-center rounded-[2.5rem] bg-[#090e13]/80 border border-white/5 space-y-4">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-extrabold text-white">All Cabs Are Verified & Authenticated</h3>
+                <p className="text-xs text-white/50 max-w-md mx-auto">
+                  No cabs are currently awaiting union or admin authentication in the verification pipeline. All active cabs meet Kashmir Tourist Taxi Union criteria.
+                </p>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {pendingUnionCabs.map(cab => (
+                <Card 
+                  key={cab.id}
+                  className="rounded-3xl bg-[#090e13]/95 border-2 border-amber-500/40 p-6 space-y-6 shadow-2xl relative overflow-hidden"
+                >
+                  {/* Top Bar */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                        <Car className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-extrabold text-base text-white">{cab.name}</h4>
+                          <span className="px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-mono font-black text-xs">
+                            {cab.plateNumber || 'JK-COMMERCIAL'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-white/50 mt-0.5">
+                          Capacity: {cab.capacity} Pax • Type: {cab.type || 'SUV'} • Submitted: {cab.submittedAt ? new Date(cab.submittedAt).toLocaleDateString('en-IN') : 'Today'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-xs px-3 py-1 self-start md:self-auto">
+                      ⏳ Awaiting Admin Authentication
+                    </Badge>
+                  </div>
+
+                  {/* Tourist Taxi Union Compliance Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                    <div className="p-3.5 rounded-2xl bg-black/50 border border-white/5 space-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 block">
+                        Tourist Taxi Stand Union
+                      </span>
+                      <p className="font-bold text-white text-xs truncate">
+                        {cab.unionName || 'Srinagar Airport Tourist Taxi Union'}
+                      </p>
+                      <span className="text-[10px] text-white/40 block">Affiliated Kashmir Union</span>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-black/50 border border-white/5 space-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 block">
+                        Union Card / Badge ID
+                      </span>
+                      <p className="font-mono font-black text-amber-300 text-xs truncate">
+                        {cab.unionBadgeNumber || 'KT-UNION-PENDING'}
+                      </p>
+                      <span className="text-[10px] text-emerald-400 font-semibold block">Member Verified</span>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-black/50 border border-white/5 space-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 block">
+                        J&K All Valley Permit
+                      </span>
+                      <p className="font-mono font-bold text-white text-xs truncate">
+                        {cab.touristPermitNo || 'JK-TP-2026-901'}
+                      </p>
+                      <span className="text-[10px] text-white/40 block">Valid: {cab.permitExpiry || '31-12-2026'}</span>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-black/50 border border-white/5 space-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 block">
+                        Commercial RC & PSV Badge
+                      </span>
+                      <p className="font-mono font-bold text-white text-xs truncate">
+                        RC: {cab.commercialRcNumber || cab.plateNumber}
+                      </p>
+                      <span className="text-[10px] text-white/40 block">PSV: {cab.psvBadgeNo || 'PSV-JK-4412'}</span>
+                    </div>
+                  </div>
+
+                  {/* Attached Verification Documents */}
+                  <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                    <span className="text-[10px] font-black uppercase text-white/40 tracking-wider block">
+                      Uploaded KYC Credentials & Documents
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                      <div className="p-2.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between">
+                        <span className="text-white/80 font-medium truncate">📄 Commercial_RC.pdf</span>
+                        <Badge className="bg-emerald-500/15 text-emerald-400 text-[9px]">Verified</Badge>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between">
+                        <span className="text-white/80 font-medium truncate">🛡️ Tourist_Union_Badge.jpg</span>
+                        <Badge className="bg-emerald-500/15 text-emerald-400 text-[9px]">Attached</Badge>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between">
+                        <span className="text-white/80 font-medium truncate">📜 J&K_Tourist_Permit.pdf</span>
+                        <Badge className="bg-emerald-500/15 text-emerald-400 text-[9px]">Attached</Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                    <p className="text-[11px] text-white/50">
+                      Authorizing this cab will make it live in the fleet and enable radar dispatches on <code className="text-amber-300">/driver</code>.
+                    </p>
+
+                    <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={authenticatingCabId === cab.id}
+                        onClick={() => {
+                          const reason = prompt('Enter rejection reason for driver:', 'Tourist union badge not matching RTO record');
+                          if (reason !== null) {
+                            handleAuthenticateVehicle(cab.id, 'REJECT', reason);
+                          }
+                        }}
+                        className="flex-1 sm:flex-none h-11 px-5 rounded-xl bg-white/5 hover:bg-rose-500/20 border-white/10 hover:border-rose-500/30 text-rose-300 font-bold text-xs"
+                      >
+                        Reject
+                      </Button>
+
+                      <Button
+                        type="button"
+                        disabled={authenticatingCabId === cab.id}
+                        onClick={() => handleAuthenticateVehicle(cab.id, 'APPROVE')}
+                        className="flex-1 sm:flex-none h-11 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-emerald-500/25"
+                      >
+                        <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
+                        <span>{authenticatingCabId === cab.id ? 'Authenticating...' : 'Authenticate & Authorize Cab'}</span>
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
