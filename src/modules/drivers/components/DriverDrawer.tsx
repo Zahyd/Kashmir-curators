@@ -78,6 +78,54 @@ const LuxuryCheckbox: React.FC<LuxuryCheckboxProps> = ({
   );
 };
 
+// Luxury Animated iOS / Uber Driver-Style Toggle Switch
+interface LuxuryToggleSwitchProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  id?: string;
+  ariaLabel?: string;
+}
+
+const LuxuryToggleSwitch: React.FC<LuxuryToggleSwitchProps> = ({ 
+  checked, 
+  onChange, 
+  id, 
+  ariaLabel 
+}) => {
+  return (
+    <button
+      type="button"
+      id={id}
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange(!checked);
+      }}
+      className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${
+        checked 
+          ? 'bg-gradient-to-r from-amber-400 to-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]' 
+          : 'bg-white/10 border border-white/15'
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-flex h-6 w-6 transform rounded-full shadow-md transition duration-200 ease-in-out items-center justify-center ${
+          checked 
+            ? 'translate-x-5 bg-slate-950 text-amber-400' 
+            : 'translate-x-0 bg-white/85 text-black/30'
+        }`}
+      >
+        {checked ? (
+          <Check className="w-3.5 h-3.5 stroke-[3.5]" />
+        ) : (
+          <span className="w-1.5 h-1.5 rounded-full bg-black/40" />
+        )}
+      </span>
+    </button>
+  );
+};
+
 interface DriverDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -623,13 +671,15 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
 
                 <div 
                   onClick={() => setRateCard(prev => ({ ...prev, snowChainActive: !prev.snowChainActive }))}
-                  className="flex items-center justify-between text-xs p-2 rounded-xl hover:bg-white/[0.04] cursor-pointer transition-all select-none"
+                  className={`flex items-center justify-between text-xs p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                    rateCard.snowChainActive ? 'bg-amber-500/[0.08] border-amber-500/40' : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                  }`}
                 >
                   <div>
                     <span className="text-white font-bold block">❄️ Tangmarg Snow Chain Extra</span>
-                    <span className="text-[10px] text-white/40">+₹{rateCard.snowChainSurcharge} when snow advisory active</span>
+                    <span className="text-[10px] text-white/50">+₹{rateCard.snowChainSurcharge} when snow advisory active</span>
                   </div>
-                  <LuxuryCheckbox
+                  <LuxuryToggleSwitch
                     checked={rateCard.snowChainActive}
                     onChange={(checked) => setRateCard(prev => ({ ...prev, snowChainActive: checked }))}
                     ariaLabel="Toggle snow chain surcharge"
@@ -638,13 +688,15 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
 
                 <div 
                   onClick={() => setRateCard(prev => ({ ...prev, heaterActive: !prev.heaterActive }))}
-                  className="flex items-center justify-between text-xs p-2 rounded-xl hover:bg-white/[0.04] cursor-pointer transition-all select-none"
+                  className={`flex items-center justify-between text-xs p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                    rateCard.heaterActive ? 'bg-amber-500/[0.08] border-amber-500/40' : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                  }`}
                 >
                   <div>
                     <span className="text-white font-bold block">🔥 Vehicle Heater / Bukhari</span>
-                    <span className="text-[10px] text-white/40">+₹{rateCard.heaterSurcharge} for warm cabin</span>
+                    <span className="text-[10px] text-white/50">+₹{rateCard.heaterSurcharge} for warm cabin</span>
                   </div>
-                  <LuxuryCheckbox
+                  <LuxuryToggleSwitch
                     checked={rateCard.heaterActive}
                     onChange={(checked) => setRateCard(prev => ({ ...prev, heaterActive: checked }))}
                     ariaLabel="Toggle vehicle heater surcharge"
@@ -653,13 +705,15 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
 
                 <div 
                   onClick={() => setRateCard(prev => ({ ...prev, nightSurcharge: prev.nightSurcharge > 0 ? 0 : 500 }))}
-                  className="flex items-center justify-between text-xs p-2 rounded-xl hover:bg-white/[0.04] cursor-pointer transition-all select-none"
+                  className={`flex items-center justify-between text-xs p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                    rateCard.nightSurcharge > 0 ? 'bg-amber-500/[0.08] border-amber-500/40' : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                  }`}
                 >
                   <div>
                     <span className="text-white font-bold block">🌙 Raat Ka Safar (After 8 PM)</span>
-                    <span className="text-[10px] text-white/40">+₹{rateCard.nightSurcharge || 500} for late night trains/flights</span>
+                    <span className="text-[10px] text-white/50">+₹{rateCard.nightSurcharge || 500} for late night trains/flights</span>
                   </div>
-                  <LuxuryCheckbox
+                  <LuxuryToggleSwitch
                     checked={Boolean(rateCard.nightSurcharge > 0)}
                     onChange={(checked) => setRateCard(prev => ({ ...prev, nightSurcharge: checked ? 500 : 0 }))}
                     ariaLabel="Toggle night surcharge"
@@ -812,13 +866,13 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                       onChange={(e) => setNewVehicle(prev => ({ ...prev, model: e.target.value }))}
                       className="w-full h-11 rounded-xl bg-black/60 border border-white/10 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
                     >
-                      <option value="Toyota Innova Crysta">Toyota Innova Crysta (Commercial)</option>
-                      <option value="Toyota Fortuner 4x4">Toyota Fortuner 4x4 Mountain</option>
-                      <option value="Mahindra Scorpio-N 4x4">Mahindra Scorpio-N 4x4</option>
-                      <option value="Force Urbania Luxury (10 Pax)">Force Urbania Luxury Van (10 Pax)</option>
-                      <option value="Toyota Etios Sedan">Toyota Etios Sedan (Tourist)</option>
-                      <option value="Maruti Dzire Tour">Maruti Dzire Tour (Commercial)</option>
-                      <option value="Tempo Traveller 13 Seater">Force Tempo Traveller (13 Pax)</option>
+                      <option value="Toyota Innova Crysta" className="bg-[#0F141C] text-white py-2">Toyota Innova Crysta (Commercial)</option>
+                      <option value="Toyota Fortuner 4x4" className="bg-[#0F141C] text-white py-2">Toyota Fortuner 4x4 Mountain</option>
+                      <option value="Mahindra Scorpio-N 4x4" className="bg-[#0F141C] text-white py-2">Mahindra Scorpio-N 4x4</option>
+                      <option value="Force Urbania Luxury (10 Pax)" className="bg-[#0F141C] text-white py-2">Force Urbania Luxury Van (10 Pax)</option>
+                      <option value="Toyota Etios Sedan" className="bg-[#0F141C] text-white py-2">Toyota Etios Sedan (Tourist)</option>
+                      <option value="Maruti Dzire Tour" className="bg-[#0F141C] text-white py-2">Maruti Dzire Tour (Commercial)</option>
+                      <option value="Tempo Traveller 13 Seater" className="bg-[#0F141C] text-white py-2">Force Tempo Traveller (13 Pax)</option>
                     </select>
                   </div>
 
@@ -833,76 +887,196 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     />
                   </div>
 
+                  {/* Non-Sticky Numeric Stepper: Kitne Mehman */}
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/60 uppercase">Kitne Mehman (Seats / Pax)</label>
-                    <Input
-                      type="number"
-                      min="2"
-                      max="17"
-                      value={newVehicle.capacity}
-                      onChange={(e) => setNewVehicle(prev => ({ ...prev, capacity: Number(e.target.value) }))}
-                      className="h-11 rounded-xl bg-black/60 border-white/10 text-xs"
-                    />
+                    <label className="text-[10px] font-bold text-white/60 uppercase flex items-center justify-between">
+                      <span>Kitne Mehman (Seats / Pax)</span>
+                      <span className="text-[10px] text-amber-400 font-mono font-bold">{newVehicle.capacity || 6} Seats</span>
+                    </label>
+                    <div className="flex items-center gap-1.5 h-11 rounded-xl bg-black/60 border border-white/10 px-1.5 focus-within:border-amber-500/60 transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => setNewVehicle(prev => ({ ...prev, capacity: Math.max(1, (prev.capacity || 6) - 1) }))}
+                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white font-bold flex items-center justify-center transition-all active:scale-95 text-sm select-none"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={newVehicle.capacity === 0 ? '' : newVehicle.capacity}
+                        placeholder="6"
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/[^0-9]/g, '');
+                          setNewVehicle(prev => ({ ...prev, capacity: clean === '' ? 0 : Math.min(26, parseInt(clean, 10)) }));
+                        }}
+                        onBlur={() => {
+                          if (!newVehicle.capacity || newVehicle.capacity < 1) {
+                            setNewVehicle(prev => ({ ...prev, capacity: 6 }));
+                          }
+                        }}
+                        className="w-full text-center bg-transparent font-bold text-amber-300 text-xs focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNewVehicle(prev => ({ ...prev, capacity: Math.min(26, (prev.capacity || 6) + 1) }))}
+                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white font-bold flex items-center justify-center transition-all active:scale-95 text-sm select-none"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
+                  {/* Non-Sticky Numeric Stepper: Kitne Bags */}
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/60 uppercase">Kitne Bags (Luggage Capacity)</label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="14"
-                      value={newVehicle.luggageCapacity}
-                      onChange={(e) => setNewVehicle(prev => ({ ...prev, luggageCapacity: Number(e.target.value) }))}
-                      className="h-11 rounded-xl bg-black/60 border-white/10 text-xs"
-                    />
+                    <label className="text-[10px] font-bold text-white/60 uppercase flex items-center justify-between">
+                      <span>Kitne Bags (Luggage)</span>
+                      <span className="text-[10px] text-amber-400 font-mono font-bold">{newVehicle.luggageCapacity || 4} Bags</span>
+                    </label>
+                    <div className="flex items-center gap-1.5 h-11 rounded-xl bg-black/60 border border-white/10 px-1.5 focus-within:border-amber-500/60 transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => setNewVehicle(prev => ({ ...prev, luggageCapacity: Math.max(0, (prev.luggageCapacity ?? 4) - 1) }))}
+                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white font-bold flex items-center justify-center transition-all active:scale-95 text-sm select-none"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={newVehicle.luggageCapacity === 0 ? '' : newVehicle.luggageCapacity}
+                        placeholder="4"
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/[^0-9]/g, '');
+                          setNewVehicle(prev => ({ ...prev, luggageCapacity: clean === '' ? 0 : Math.min(20, parseInt(clean, 10)) }));
+                        }}
+                        onBlur={() => {
+                          if (newVehicle.luggageCapacity === undefined || newVehicle.luggageCapacity === null || newVehicle.luggageCapacity === 0) {
+                            setNewVehicle(prev => ({ ...prev, luggageCapacity: 4 }));
+                          }
+                        }}
+                        className="w-full text-center bg-transparent font-bold text-amber-300 text-xs focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNewVehicle(prev => ({ ...prev, luggageCapacity: Math.min(20, (prev.luggageCapacity || 0) + 1) }))}
+                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white font-bold flex items-center justify-center transition-all active:scale-95 text-sm select-none"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Kashmir Mountain Equipment */}
-                <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-2 text-xs">
-                  <span className="text-[10px] font-black uppercase text-amber-400 block tracking-wider">
-                    Kashmir Mountain Winter Equipment
-                  </span>
+                {/* Kashmir Mountain Equipment (Interactive Luxury Toggle Switches) */}
+                <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between pb-0.5">
+                    <span className="text-[10px] font-black uppercase text-amber-400 block tracking-wider">
+                      Kashmir Mountain Winter Equipment
+                    </span>
+                    <span className="text-[10px] text-white/40 font-mono">Uber Driver Spec</span>
+                  </div>
 
+                  {/* Snow Chains */}
                   <div 
                     onClick={() => setNewVehicle(prev => ({ ...prev, snowChains: !prev.snowChains }))}
-                    className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-white/[0.04] border border-transparent hover:border-white/5 transition-all select-none"
+                    className={`flex items-center justify-between cursor-pointer p-3 rounded-2xl border transition-all duration-200 select-none ${
+                      newVehicle.snowChains 
+                        ? 'bg-amber-500/[0.08] border-amber-500/40 shadow-sm' 
+                        : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                    }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Snowflake className="w-4 h-4 text-sky-400" />
-                      <span className="text-white/85 font-medium">Snow Chains Available (Tangmarg Checkpost)</span>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        newVehicle.snowChains ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-white/5 text-white/40'
+                      }`}>
+                        <Snowflake className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-bold text-xs">Snow Chains Available</span>
+                          {newVehicle.snowChains && (
+                            <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-white/50 block">Tangmarg Checkpost Gulmarg pass</span>
+                      </div>
                     </div>
-                    <LuxuryCheckbox
+                    <LuxuryToggleSwitch
                       checked={newVehicle.snowChains}
                       onChange={(checked) => setNewVehicle(prev => ({ ...prev, snowChains: checked }))}
                       ariaLabel="Snow Chains Available"
                     />
                   </div>
 
+                  {/* 4x4 / AWD */}
                   <div 
                     onClick={() => setNewVehicle(prev => ({ ...prev, fourWheelDrive: !prev.fourWheelDrive }))}
-                    className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-white/[0.04] border border-transparent hover:border-white/5 transition-all select-none"
+                    className={`flex items-center justify-between cursor-pointer p-3 rounded-2xl border transition-all duration-200 select-none ${
+                      newVehicle.fourWheelDrive 
+                        ? 'bg-amber-500/[0.08] border-amber-500/40 shadow-sm' 
+                        : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                    }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Compass className="w-4 h-4 text-emerald-400" />
-                      <span className="text-white/85 font-medium">4x4 / AWD Mountain Low-Gear System</span>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        newVehicle.fourWheelDrive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-white/40'
+                      }`}>
+                        <Compass className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-bold text-xs">4x4 / AWD Mountain Low-Gear</span>
+                          {newVehicle.fourWheelDrive && (
+                            <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-white/50 block">High-traction drivetrain for snow</span>
+                      </div>
                     </div>
-                    <LuxuryCheckbox
+                    <LuxuryToggleSwitch
                       checked={newVehicle.fourWheelDrive}
                       onChange={(checked) => setNewVehicle(prev => ({ ...prev, fourWheelDrive: checked }))}
                       ariaLabel="4x4 AWD System"
                     />
                   </div>
 
+                  {/* Roof Ski Rack */}
                   <div 
                     onClick={() => setNewVehicle(prev => ({ ...prev, skiRack: !prev.skiRack }))}
-                    className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-white/[0.04] border border-transparent hover:border-white/5 transition-all select-none"
+                    className={`flex items-center justify-between cursor-pointer p-3 rounded-2xl border transition-all duration-200 select-none ${
+                      newVehicle.skiRack 
+                        ? 'bg-amber-500/[0.08] border-amber-500/40 shadow-sm' 
+                        : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                    }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Car className="w-4 h-4 text-amber-400" />
-                      <span className="text-white/85 font-medium">Roof Ski / Luggage Rack Installed</span>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        newVehicle.skiRack ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/5 text-white/40'
+                      }`}>
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-bold text-xs">Roof Ski / Luggage Rack</span>
+                          {newVehicle.skiRack && (
+                            <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-white/50 block">Rooftop carrier for skis & tourist luggage</span>
+                      </div>
                     </div>
-                    <LuxuryCheckbox
+                    <LuxuryToggleSwitch
                       checked={newVehicle.skiRack}
                       onChange={(checked) => setNewVehicle(prev => ({ ...prev, skiRack: checked }))}
                       ariaLabel="Roof Ski Rack"
@@ -1112,20 +1286,33 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                   </p>
                 </div>
 
-                {/* Declaration Checkbox */}
+                {/* Declaration Toggle Card */}
                 <div 
                   onClick={() => setNewVehicle(prev => ({ ...prev, declarationAccepted: !prev.declarationAccepted }))}
-                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-amber-500/30 cursor-pointer transition-all select-none"
+                  className={`flex items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer select-none ${
+                    newVehicle.declarationAccepted
+                      ? 'bg-amber-500/[0.08] border-amber-500/40 shadow-sm'
+                      : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                  }`}
                 >
-                  <LuxuryCheckbox
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      newVehicle.declarationAccepted ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/5 text-white/40'
+                    }`}>
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-white font-bold text-xs block">Union & RTO Legal Declaration</span>
+                      <span className="text-[10px] text-white/60 leading-snug block">
+                        Main tasdeeq karta hoon ki meri gaadi valid Commercial Tourist Permit aur Kashmir Tourist Taxi Union se registered hai.
+                      </span>
+                    </div>
+                  </div>
+                  <LuxuryToggleSwitch
                     checked={newVehicle.declarationAccepted}
                     onChange={(checked) => setNewVehicle(prev => ({ ...prev, declarationAccepted: checked }))}
-                    className="mt-0.5"
                     ariaLabel="Accept union and RTO declaration"
                   />
-                  <span className="text-[11px] text-white/90 leading-snug">
-                    Main tasdeeq karta hoon ki meri gaadi valid Commercial Tourist Permit aur Kashmir Tourist Taxi Union se registered hai.
-                  </span>
                 </div>
 
                 <div className="flex gap-2.5 pt-1">
