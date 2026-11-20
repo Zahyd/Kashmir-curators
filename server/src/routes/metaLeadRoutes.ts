@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { MetaLeadAutomationService } from '../services/metaLeadService';
+import { authenticateToken } from '../middleware/authMiddleware';
 import prisma from '../lib/prisma';
 
 const router = Router();
@@ -89,7 +90,7 @@ router.post('/', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 3. Test & Simulation Endpoint (POST /api/webhooks/meta-leads/simulate)
 // ---------------------------------------------------------------------------
-router.post('/simulate', async (req: Request, res: Response) => {
+router.post('/simulate', authenticateToken, async (req: Request, res: Response) => {
   try {
     const {
       fullName = 'Rohit Sharma (Meta Test)',
@@ -125,7 +126,7 @@ router.post('/simulate', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 4. Live Telemetry & Meta Leads Analytics (GET /api/webhooks/meta-leads/telemetry)
 // ---------------------------------------------------------------------------
-router.get('/telemetry', async (req: Request, res: Response) => {
+router.get('/telemetry', authenticateToken, async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
     const [totalMetaLeads, autoQuotedLeads, recentLeads] = await Promise.all([

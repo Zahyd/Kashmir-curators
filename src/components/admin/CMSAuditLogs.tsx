@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Shield, Search, Filter, Clock, User, 
-  Activity, CheckCircle2, AlertTriangle, RefreshCw 
+  Activity, CheckCircle2, AlertTriangle, RefreshCw, Loader2 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,63 +14,78 @@ interface LogItem {
   id: string;
   userId: string;
   action: string;
-  module: string;
+  module?: string;
   details: string;
   createdAt: string;
-  status: 'SUCCESS' | 'WARNING' | 'CRITICAL';
+  status?: 'SUCCESS' | 'WARNING' | 'CRITICAL';
 }
 
-const DEFAULT_LOGS: LogItem[] = [
-  {
-    id: 'log-1',
-    userId: 'ADMIN001 (Director)',
-    action: 'UPDATE_SECTION',
-    module: 'Landing Page CMS',
-    details: 'Synchronized live hero badges and seasonal promotions',
-    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    status: 'SUCCESS'
-  },
-  {
-    id: 'log-2',
-    userId: 'OPS002 (Ops Manager)',
-    action: 'ASSIGN_LEAD',
-    module: 'Inquiries Pipeline',
-    details: 'Dispatched VIP inquiry #KC-8942 to Sales Executive 001',
-    createdAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
-    status: 'SUCCESS'
-  },
-  {
-    id: 'log-3',
-    userId: 'ADMIN001 (Director)',
-    action: 'HOTEL_CONFIRMATION',
-    module: 'Reservations Hub',
-    details: 'Confirmed 2 Luxury Houseboat suites with Wangnoo Heritage',
-    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    status: 'SUCCESS'
-  },
-  {
-    id: 'log-4',
-    userId: 'SYSTEM_RADAR',
-    action: 'WEATHER_SYNC',
-    module: 'Disruptions & Safety',
-    details: 'Verified NH44 Highway corridor clearance and zero roadblock warnings',
-    createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-    status: 'SUCCESS'
-  }
-];
-
 export default function CMSAuditLogs() {
-  const [logs, setLogs] = useState<LogItem[]>(DEFAULT_LOGS);
+  const [logs, setLogs] = useState<LogItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAction, setFilterAction] = useState('ALL');
+  const [totalLogs, setTotalLogs] = useState(0);
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.details.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          log.module.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          log.userId.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesAction = filterAction === 'ALL' || log.action.includes(filterAction);
-    return matchesSearch && matchesAction;
-  });
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (filterAction !== 'ALL') params.append('action', filterAction);
+      if (searchQuery.trim()) params.append('search', searchQuery.trim());
+
+      const res = await fetch(`${API_BASE_URL}/audit-logs?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const parsedLogs = (data.logs || []).map((l: any) => {
+          let module = 'System';
+          let detailsText = l.details;
+          let status: 'SUCCESS' | 'WARNING' | 'CRITICAL' = 'SUCCESS';
+
+          try {
+            if (typeof l.details === 'string' && (l.details.startsWith('{') || l.details.startsWith('['))) {
+              const parsed = JSON.parse(l.details);
+              module = parsed.module || module;
+              detailsText = parsed.event || parsed.message || JSON.stringify(parsed);
+              status = parsed.status || status;
+            }
+          } catch {
+            // Keep raw details
+          }
+
+          return {
+            id: l.id,
+            userId: l.userId,
+            action: l.action,
+            module,
+            details: detailsText,
+            createdAt: l.createdAt,
+            status
+          };
+        });
+
+        setLogs(parsedLogs);
+        setTotalLogs(data.total || parsedLogs.length);
+      } else {
+        toast.error('Failed to load audit trail');
+      }
+    } catch (err) {
+      console.warn('[CMSAuditLogs] Error:', err);
+      toast.error('Network error loading audit trail');
+    } finally {
+      setLoading(false);
+    }
+  }, [filterAction, searchQuery]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -83,13 +98,24 @@ export default function CMSAuditLogs() {
           </div>
           <h2 className="text-3xl font-display font-black text-white">Platform Audit Trail</h2>
           <p className="text-white/60 text-xs sm:text-sm mt-1 max-w-xl">
-            Real-time chronological log of administrative modifications, content releases, lead reassignments, and booking confirmations.
+            Real-time chronological log of administrative modifications, content releases, lead reassignments, and booking confirmations from Neon DB.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-xs px-3 py-1 rounded-xl border-white/20 text-white">
-            <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> Tamper-Proof Trail Active
+          <Button
+            type="button"
+            variant="outline"
+            onClick={fetchLogs}
+            disabled={loading}
+            className="h-10 px-4 rounded-xl border-white/20 bg-white/5 hover:bg-white/10 text-white text-xs font-bold flex items-center gap-2"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Sync Trail</span>
+          </Button>
+
+          <Badge variant="outline" className="text-xs px-3 py-1.5 rounded-xl border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> Tamper-Proof ({totalLogs})
           </Badge>
         </div>
       </div>
@@ -107,9 +133,10 @@ export default function CMSAuditLogs() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-          {['ALL', 'UPDATE', 'ASSIGN', 'CONFIRMATION', 'WEATHER'].map(act => (
+          {['ALL', 'SECURITY', 'WEATHER', 'INVENTORY', 'ASSIGN', 'UPDATE'].map(act => (
             <button
               key={act}
+              type="button"
               onClick={() => setFilterAction(act)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
                 filterAction === act ? 'bg-blue-500 text-white shadow-md' : 'text-white/50 hover:text-white bg-white/5'
@@ -123,48 +150,59 @@ export default function CMSAuditLogs() {
 
       {/* Audit Log Table */}
       <Card className="bg-[#0a0f14]/85 border border-white/10 p-6 rounded-3xl backdrop-blur-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-white/10 text-white/40 uppercase tracking-widest text-[9px] font-black">
-                <th className="pb-3">Timestamp</th>
-                <th className="pb-3">Operator / User</th>
-                <th className="pb-3">Module</th>
-                <th className="pb-3">Action Type</th>
-                <th className="pb-3">Operation Details</th>
-                <th className="pb-3 text-right">Verification</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5 text-white/80">
-              {filteredLogs.map(log => (
-                <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-3 font-mono text-white/50 whitespace-nowrap">
-                    {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(log.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="py-3 font-bold text-white whitespace-nowrap">
-                    {log.userId}
-                  </td>
-                  <td className="py-3 text-amber-300 font-medium">
-                    {log.module}
-                  </td>
-                  <td className="py-3">
-                    <Badge variant="outline" className="border-blue-500/30 text-blue-400 font-mono text-[9px]">
-                      {log.action}
-                    </Badge>
-                  </td>
-                  <td className="py-3 text-white/70 max-w-md">
-                    {log.details}
-                  </td>
-                  <td className="py-3 text-right">
-                    <Badge className="bg-emerald-500/20 text-emerald-400 text-[9px]">
-                      AUDITED
-                    </Badge>
-                  </td>
+        {loading ? (
+          <div className="py-16 flex flex-col items-center justify-center gap-3 text-white/40">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+            <p className="text-xs font-mono uppercase tracking-wider">Loading Live Audit Records...</p>
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="py-16 text-center text-white/40 text-xs">
+            No audit records matching your filter.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-white/40 uppercase tracking-widest text-[9px] font-black">
+                  <th className="pb-3">Timestamp</th>
+                  <th className="pb-3">Operator / User</th>
+                  <th className="pb-3">Module</th>
+                  <th className="pb-3">Action Type</th>
+                  <th className="pb-3">Operation Details</th>
+                  <th className="pb-3 text-right">Verification</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-white/80">
+                {logs.map(log => (
+                  <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3 font-mono text-white/50 whitespace-nowrap">
+                      {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(log.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 font-bold text-white whitespace-nowrap">
+                      {log.userId}
+                    </td>
+                    <td className="py-3 text-amber-300 font-medium">
+                      {log.module}
+                    </td>
+                    <td className="py-3">
+                      <Badge variant="outline" className="border-blue-500/30 text-blue-400 font-mono text-[9px]">
+                        {log.action}
+                      </Badge>
+                    </td>
+                    <td className="py-3 text-white/70 max-w-md">
+                      {log.details}
+                    </td>
+                    <td className="py-3 text-right">
+                      <Badge className="bg-emerald-500/20 text-emerald-400 text-[9px]">
+                        AUDITED
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   );

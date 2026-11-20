@@ -153,7 +153,7 @@ export default function CMSPortalKeys() {
 
   // Helper for auth headers
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('teamToken') || localStorage.getItem('token') || localStorage.getItem('adminToken') || 'dev_admin_token';
+    const token = localStorage.getItem('teamToken') || localStorage.getItem('token') || localStorage.getItem('adminToken') || '';
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`

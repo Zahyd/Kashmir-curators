@@ -23,8 +23,8 @@ router.post('/quick-capture', captureQuickLead);
 router.patch('/:id/enrich', enrichLeadProfile);
 router.post('/callback-request', requestInstantCallback);
 router.post('/track-search', trackCustomerSearchIntent);
-router.get('/search-intents', getCustomerSearchIntents);
-router.post('/search-intents/:id/nudge-now', triggerDirectSearchNudge);
+router.get('/search-intents', authenticateToken, getCustomerSearchIntents);
+router.post('/search-intents/:id/nudge-now', authenticateToken, triggerDirectSearchNudge);
 
 router.get('/public/:id', getPublicInquiryItinerary);
 router.get('/', authenticateToken, getInquiries);

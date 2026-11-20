@@ -2,13 +2,19 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 
-const JWT_SECRETS = [
-  process.env.JWT_SECRET,
-  process.env.BETTER_AUTH_SECRET,
-  'kashmir_curators_secret_2026',
-  'kashmir_curators_secret_2026_super_secure_key',
-  'your_super_secret_key'
-].filter(Boolean) as string[];
+const isProduction = process.env.NODE_ENV === 'production';
+
+// In production, only cryptographically certified secrets from the environment are permitted
+const JWT_SECRETS = (isProduction
+  ? [process.env.JWT_SECRET, process.env.BETTER_AUTH_SECRET]
+  : [
+      process.env.JWT_SECRET,
+      process.env.BETTER_AUTH_SECRET,
+      'kashmir_curators_secret_2026',
+      'kashmir_curators_secret_2026_super_secure_key',
+      'your_super_secret_key'
+    ]
+).filter(Boolean) as string[];
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -85,11 +91,13 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
   }
 
-  // 2. Dev environment bypass tokens
-  const devToken = candidates.find(c => c === 'dev_admin_token' || c === 'dev_token' || c.startsWith('dev_'));
-  if (devToken) {
-    req.user = { id: 'dev-admin-id', email: 'admin@thekashmircurators.com', role: 'admin', code: 'ADMIN001', name: 'SuperAdmin' };
-    return next();
+  // 2. Dev environment bypass tokens (strictly disabled in production)
+  if (!isProduction) {
+    const devToken = candidates.find(c => c === 'dev_admin_token' || c === 'dev_token' || c.startsWith('dev_'));
+    if (devToken) {
+      req.user = { id: 'dev-admin-id', email: 'admin@thekashmircurators.com', role: 'admin', code: 'ADMIN001', name: 'SuperAdmin' };
+      return next();
+    }
   }
 
   // 3. Better-Auth Database Session Token check

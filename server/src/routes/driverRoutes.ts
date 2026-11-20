@@ -432,7 +432,7 @@ router.post('/vehicles', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 7. Admin Authentication & Approval Endpoint for Tourist Union Vehicles
 // ---------------------------------------------------------------------------
-router.post('/vehicles/:id/authenticate', async (req: Request, res: Response) => {
+router.post('/vehicles/:id/authenticate', authenticateToken, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const { action, remarks } = req.body; // 'APPROVE' or 'REJECT'
@@ -526,7 +526,7 @@ router.post('/vehicles/:id/authenticate', async (req: Request, res: Response) =>
 // ---------------------------------------------------------------------------
 // 8. Fetch Pending Vehicles in Verification Pipeline (for Admin & Pipeline HUD)
 // ---------------------------------------------------------------------------
-router.get('/vehicles/pending-verification', async (req: Request, res: Response) => {
+router.get('/vehicles/pending-verification', authenticateToken, async (req: Request, res: Response) => {
   try {
     const cabs = await prisma.cab.findMany({
       orderBy: { createdAt: 'desc' },

@@ -181,7 +181,12 @@ export default function CMSCabs() {
   const fetchPendingUnionCabs = async () => {
     setIsLoadingPendingUnion(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/driver/vehicles/pending-verification`);
+      const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/driver/vehicles/pending-verification`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setPendingUnionCabs(data.pending || []);
@@ -200,9 +205,13 @@ export default function CMSCabs() {
   const handleAuthenticateVehicle = async (cabId: string, action: 'APPROVE' | 'REJECT', remarks?: string) => {
     setAuthenticatingCabId(cabId);
     try {
+      const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/driver/vehicles/${cabId}/authenticate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ action, remarks })
       });
       if (res.ok) {

@@ -54,6 +54,7 @@ import attendanceRoutes from './routes/attendanceRoutes';
 import driverRoutes from './routes/driverRoutes';
 import salesRoutes from './routes/salesRoutes';
 import metaLeadRoutes from './routes/metaLeadRoutes';
+import auditRoutes from './routes/auditRoutes';
 import { handleStripeWebhook } from './controllers/paymentController';
 import prisma from './lib/prisma';
 
@@ -208,6 +209,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/webhooks/meta-leads', metaLeadRoutes);
+app.use('/api/audit-logs', auditRoutes);
 app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers

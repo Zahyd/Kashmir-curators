@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, ShieldAlert, Phone, Mail, DollarSign, 
-  Save, Bell, CheckCircle2, RefreshCw, Key 
+  Save, Bell, CheckCircle2, RefreshCw, Key, Loader2 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function CMSSettings() {
   const [emergencyMode, setEmergencyMode] = useState(false);
@@ -19,12 +20,115 @@ export default function CMSSettings() {
   const [gstPercentage, setGstPercentage] = useState('5');
   const [autoAssignLeads, setAutoAssignLeads] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load live settings from database on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+        
+        // 1. Fetch site-content systemSettings
+        const contentRes = await fetch(`${API_BASE_URL}/site-content`);
+        if (contentRes.ok) {
+          const contentData = await contentRes.json();
+          if (contentData.systemSettings?.content) {
+            const s = contentData.systemSettings.content;
+            if (s.supportPhone) setSupportPhone(s.supportPhone);
+            if (s.supportEmail) setSupportEmail(s.supportEmail);
+            if (s.currencySymbol) setCurrencySymbol(s.currencySymbol);
+            if (s.gstPercentage) setGstPercentage(String(s.gstPercentage));
+            if (typeof s.autoAssignLeads === 'boolean') setAutoAssignLeads(s.autoAssignLeads);
+          }
+        }
+
+        // 2. Fetch active advisory for emergency status
+        const advRes = await fetch(`${API_BASE_URL}/advisories`);
+        if (advRes.ok) {
+          const advData = await advRes.json();
+          const activeEmergency = advData.find((a: any) => a.emergencyModeActive || a.severity === 'CRITICAL_EMERGENCY');
+          if (activeEmergency) {
+            setEmergencyMode(true);
+            if (activeEmergency.message) setEmergencyMessage(activeEmergency.message);
+          }
+        }
+      } catch (err) {
+        console.warn('[CMSSettings] Error loading initial settings:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
+    const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      toast.success('Platform operational settings saved successfully!');
+      // 1. Save systemSettings to site-content
+      const contentRes = await fetch(`${API_BASE_URL}/site-content/systemSettings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: 'System Operational Protocols',
+          content: {
+            supportPhone,
+            supportEmail,
+            currencySymbol,
+            gstPercentage: Number(gstPercentage) || 5,
+            autoAssignLeads,
+            emergencyMode,
+            emergencyMessage
+          }
+        })
+      });
+
+      // 2. Sync Emergency Crisis Mode to travel advisories
+      const advRes = await fetch(`${API_BASE_URL}/advisories/emergency-mode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          active: emergencyMode,
+          alertMessage: emergencyMessage,
+          affectedLocation: 'Kashmir Valley Corridor'
+        })
+      });
+
+      // 3. Log audit event
+      await fetch(`${API_BASE_URL}/audit-logs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'UPDATE_SYSTEM_SETTINGS',
+          module: 'HQ Operations Control',
+          details: {
+            emergencyMode,
+            emergencyMessage,
+            gstPercentage,
+            supportPhone
+          }
+        })
+      }).catch(() => {});
+
+      if (contentRes.ok && advRes.ok) {
+        toast.success('Platform operational settings saved & broadcast live to database!');
+      } else {
+        toast.success('Configuration saved with operational sync notices.');
+      }
+    } catch (err) {
+      console.error('[CMSSettings] Save error:', err);
+      toast.error('Network error saving platform settings');
     } finally {
       setIsSaving(false);
     }
@@ -48,10 +152,10 @@ export default function CMSSettings() {
         <div className="flex items-center gap-3">
           <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isLoading}
             className="h-11 px-6 rounded-2xl bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-400/20 flex items-center gap-2"
           >
-            <Save className="w-4 h-4" />
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{isSaving ? 'Saving...' : 'Save Configuration'}</span>
           </Button>
         </div>
