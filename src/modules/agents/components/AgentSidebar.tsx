@@ -10,13 +10,30 @@ import {
   PhoneCall,
   Menu,
   X,
-  ExternalLink
+  ExternalLink,
+  Code2,
+  Globe,
+  CreditCard,
+  Crown,
+  UserPlus
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
-export type AgentTab = 'overview' | 'crm' | 'licensing' | 'quotes' | 'branding' | 'subscription' | 'b2b-supply' | 'commission';
+export type AgentTab = 
+  | 'overview' 
+  | 'crm' 
+  | 'quotes' 
+  | 'branding' 
+  | 'team' 
+  | 'enterprise-api' 
+  | 'custom-domain' 
+  | 'credit' 
+  | 'subscription' 
+  | 'licensing' 
+  | 'b2b-supply' 
+  | 'commission';
 
 interface AgentSidebarProps {
   activeTab: AgentTab;
@@ -36,12 +53,18 @@ export const AgentSidebar: React.FC<AgentSidebarProps> = ({
   companyName
 }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const isEnterprise = plan === 'ENTERPRISE';
+  const isPro = plan === 'PRO_DMC' || plan === 'PROFESSIONAL' || isEnterprise;
 
   const navItems = [
     { id: 'overview' as AgentTab, label: 'Control Desk', icon: LayoutDashboard },
     { id: 'crm' as AgentTab, label: 'Travel CRM Leads', icon: Users, badge: 'Live' },
     { id: 'quotes' as AgentTab, label: 'Quote & Itinerary Gen', icon: FileSpreadsheet },
-    { id: 'branding' as AgentTab, label: 'White-Label Branding', icon: Sparkles, badge: plan === 'STARTER' ? 'Pro' : undefined },
+    { id: 'branding' as AgentTab, label: 'White-Label Branding', icon: Sparkles, badge: !isPro ? 'Pro' : undefined },
+    { id: 'team' as AgentTab, label: 'Agency Team Seats', icon: UserPlus, badge: isEnterprise ? 'Unlimited' : isPro ? '3 Seats' : 'Pro' },
+    { id: 'enterprise-api' as AgentTab, label: 'XML/REST API Feed', icon: Code2, badge: 'Enterprise' },
+    { id: 'custom-domain' as AgentTab, label: 'Custom Domain Portal', icon: Globe, badge: 'Enterprise' },
+    { id: 'credit' as AgentTab, label: 'Net-15 Supplier Credit', icon: CreditCard, badge: 'Enterprise' },
     { id: 'subscription' as AgentTab, label: 'SaaS Plan & Billing', icon: Receipt },
     { id: 'licensing' as AgentTab, label: 'J&K Tourism License', icon: ShieldCheck, alert: verificationStatus !== 'APPROVED' },
     { id: 'b2b-supply' as AgentTab, label: 'B2B Wholesale Supply', icon: Building2 },

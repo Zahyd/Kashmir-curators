@@ -34,6 +34,10 @@ import Footer from '@/components/layout/Footer';
 import AgentLandingPage from './AgentLandingPage';
 import LeadDetailDrawer from '../components/LeadDetailDrawer';
 import CRMBIDashboard from '../components/CRMBIDashboard';
+import { AgencyTeamManager } from '../components/AgencyTeamManager';
+import { EnterpriseApiGateway } from '../components/EnterpriseApiGateway';
+import { CustomDomainCard } from '../components/CustomDomainCard';
+import { SupplierCreditCard } from '../components/SupplierCreditCard';
 
 export const AgentDashboard: React.FC = () => {
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -380,6 +384,43 @@ export const AgentDashboard: React.FC = () => {
               onOpenUpgradeModal={() => setSubscriptionModalOpen(true)}
               initialBranding={agencyBranding}
               onSaveBranding={handleSaveBranding}
+            />
+          )}
+
+          {/* TAB: AGENCY TEAM SEATS */}
+          {activeTab === 'team' && (
+            <AgencyTeamManager
+              plan={currentPlan}
+              onOpenUpgradeModal={() => setSubscriptionModalOpen(true)}
+              agencyName={agencyBranding?.agencyName || displayCompanyName}
+            />
+          )}
+
+          {/* TAB: ENTERPRISE XML/REST API FEED */}
+          {activeTab === 'enterprise-api' && (
+            <EnterpriseApiGateway
+              isEnterprise={currentPlan === 'ENTERPRISE'}
+              onOpenUpgradeModal={() => setSubscriptionModalOpen(true)}
+              agencyCode={displayAgentCode}
+            />
+          )}
+
+          {/* TAB: CUSTOM DOMAIN PORTAL */}
+          {activeTab === 'custom-domain' && (
+            <CustomDomainCard
+              isEnterprise={currentPlan === 'ENTERPRISE'}
+              onOpenUpgradeModal={() => setSubscriptionModalOpen(true)}
+              agencyName={agencyBranding?.agencyName || displayCompanyName}
+            />
+          )}
+
+          {/* TAB: NET-15 SUPPLIER CREDIT & ESCROW */}
+          {activeTab === 'credit' && (
+            <SupplierCreditCard
+              isEnterprise={currentPlan === 'ENTERPRISE'}
+              onOpenUpgradeModal={() => setSubscriptionModalOpen(true)}
+              agencyName={agencyBranding?.agencyName || displayCompanyName}
+              agencyCode={displayAgentCode}
             />
           )}
 
