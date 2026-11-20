@@ -31,6 +31,7 @@ const navLinks = [
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { teamUser } = useTeamAuth();
@@ -39,17 +40,51 @@ export default function Navbar() {
   const [aiCuratorOpen, setAiCuratorOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 30);
-    window.addEventListener('scroll', handleScroll);
+    let lastY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      
+      // Determine if scrolled past initial threshold
+      setScrolled(currentY > 30);
+
+      // If mobile drawer is open, keep navbar visible
+      if (isOpen) {
+        setIsVisible(true);
+        lastY = currentY;
+        return;
+      }
+
+      // If near the very top of the page, always keep visible
+      if (currentY <= 50) {
+        setIsVisible(true);
+      } else if (currentY > lastY + 10) {
+        // Scrolling DOWN -> smoothly hide
+        setIsVisible(false);
+      } else if (currentY < lastY - 8) {
+        // Scrolling UP -> smoothly reveal
+        setIsVisible(true);
+      }
+
+      lastY = currentY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isOpen]);
+
+  // Ensure navbar is immediately visible on route navigation
+  useEffect(() => {
+    setIsVisible(true);
+  }, [location.pathname]);
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
     <nav className={cn(
-      "fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-3 sm:px-6 md:px-8 pointer-events-none",
-      scrolled ? "py-2 sm:py-3" : "py-3 sm:py-5"
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out px-3 sm:px-6 md:px-8 pointer-events-none",
+      scrolled ? "py-2 sm:py-3" : "py-3 sm:py-5",
+      isVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none"
     )}>
       <div className={cn(
         "container mx-auto px-4 sm:px-6 transition-all duration-500 pointer-events-auto border",
