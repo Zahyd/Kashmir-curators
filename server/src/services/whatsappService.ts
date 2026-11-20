@@ -2,6 +2,7 @@ import prisma from '../lib/prisma';
 import { googleSheetsService } from './googleSheetsService';
 import { notificationService } from './notificationService';
 import { CRMService } from './crmService';
+import { broadcastSalesEvent } from '../routes/salesRoutes';
 import env from '../config/env';
 
 // Conversational States
@@ -400,6 +401,34 @@ export const whatsappService = {
         }
       } catch (dbErr: any) {
         console.warn('Failed to persist inbound WhatsApp message to DB:', dbErr.message);
+      }
+
+      // Direct Concierge Handoff: If traveler already received an instant quote or is a Meta Ad lead
+      if (matchedInquiry && (matchedInquiry.leadStage === 'QUOTE_SENT' || (matchedInquiry as any).sourceCta?.includes('META'))) {
+        console.log(`[WhatsApp Workflow] Customer replied to proposal! Initiating human concierge handoff for ${matchedInquiry.customerName}...`);
+        
+        await (prisma as any).inquiry.update({
+          where: { id: matchedInquiry.id },
+          data: {
+            leadStage: 'NEGOTIATION',
+            priority: 'URGENT'
+          }
+        });
+
+        // Broadcast to SalesPro Live Queues
+        broadcastSalesEvent('CUSTOMER_REQUESTED_CONCIERGE', {
+          inquiryId: matchedInquiry.id,
+          customerName: matchedInquiry.customerName,
+          phone: sender,
+          assignedTo: matchedInquiry.assignedTo,
+          message: text
+        });
+
+        const conciergeName = matchedInquiry.assignedTo || 'Your Kashmir Curators Concierge';
+        const conciergeReply = `🏔️ *Thank you ${matchedInquiry.customerName}!* Your private concierge *${conciergeName}* has received your message and is stepping into this conversation right now to connect with you. One moment please! ✨`;
+
+        await WhatsAppWorkflowEngine.executeWhatsAppSenderNode(sender, conciergeReply);
+        return true;
       }
 
       // 2. Route Conversational Chatbot State Machine

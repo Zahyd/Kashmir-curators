@@ -42,6 +42,8 @@ interface Lead {
   status: string;
   leadStage?: string;
   assignedTo?: string | null;
+  sourceCta?: string;
+  leadCategory?: string;
   createdAt: string;
   notes?: string;
 }
@@ -68,6 +70,39 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
   const [priorityFilter, setPriorityFilter] = useState<'ALL' | 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
   const [conflictAlert, setConflictAlert] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  const [simulatingMeta, setSimulatingMeta] = useState(false);
+
+  // Simulate incoming Meta Lead Ad submission
+  const handleSimulateMetaLead = async () => {
+    try {
+      setSimulatingMeta(true);
+      const res = await fetch(`${API_BASE_URL}/api/webhooks/meta-leads/simulate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: `Aarav Mehta (${Math.floor(100 + Math.random() * 900)})`,
+          phone: `+91 99060 ${Math.floor(10000 + Math.random() * 90000)}`,
+          email: 'aarav.mehta@instagram-leads.com',
+          destination: 'Gulmarg Gondola & Dal Lake Houseboat',
+          duration: '5 Nights / 6 Days',
+          travelers: '2 Adults',
+          hotelPreference: '4-Star Mountain Boutique'
+        })
+      });
+
+      if (res.ok) {
+        toast.success('Meta Lead Simulated! Auto-quoted on WhatsApp & pushed to Live Queue.', {
+          icon: '🚀'
+        });
+        fetchUnclaimedLeads();
+        onRefreshMetrics?.();
+      }
+    } catch (err) {
+      toast.error('Simulation request failed');
+    } finally {
+      setSimulatingMeta(false);
+    }
+  };
 
   // 1. Fetch unclaimed inquiries from Neon API
   const fetchUnclaimedLeads = async () => {
@@ -316,6 +351,17 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
 
           <Button
             size="sm"
+            onClick={handleSimulateMetaLead}
+            disabled={simulatingMeta}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold h-9 px-3 rounded-lg shadow-md shadow-purple-500/20 flex items-center gap-1.5"
+            title="Simulate incoming Meta Ad Lead Form"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${simulatingMeta ? 'animate-spin' : ''}`} />
+            <span>Simulate Meta Lead</span>
+          </Button>
+
+          <Button
+            size="sm"
             variant="outline"
             onClick={() => { setLoading(true); fetchUnclaimedLeads(); }}
             className="border-white/10 text-slate-300 hover:text-white hover:bg-white/5 h-9 px-2.5"
@@ -358,13 +404,23 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
               >
                 {/* Top Strip: SLA Badge & Inbound Tag */}
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="w-2 h-2 rounded-full bg-amber-400" />
                     <span className="text-[11px] font-mono text-slate-400">
                       #{lead.id.slice(0, 8)}
                     </span>
+                    {(lead.sourceCta?.includes('META') || lead.leadCategory === 'META_AD_CONVERT') && (
+                      <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 border border-pink-500/30 text-[9px] font-bold px-1.5 py-0">
+                        Meta Ad
+                      </Badge>
+                    )}
+                    {lead.leadStage === 'QUOTE_SENT' && (
+                      <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold px-1.5 py-0">
+                        Auto-Quoted
+                      </Badge>
+                    )}
                   </div>
-                  <Badge className={`${sla.badgeColor} text-[10px] font-mono font-bold px-2 py-0.5 flex items-center gap-1`}>
+                  <Badge className={`${sla.badgeColor} text-[10px] font-mono font-bold px-2 py-0.5 flex items-center gap-1 shrink-0`}>
                     <Clock className="w-2.5 h-2.5" />
                     {sla.remainingText}
                   </Badge>
