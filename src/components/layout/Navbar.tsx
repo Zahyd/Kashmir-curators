@@ -93,7 +93,7 @@ export default function Navbar() {
           ? "bg-white/95 dark:bg-[#07090E]/90 backdrop-blur-2xl border-slate-200/80 dark:border-white/10 shadow-slate-900/10 dark:shadow-black/50 py-2 sm:py-2.5" 
           : "bg-white/90 dark:bg-[#07090E]/80 backdrop-blur-xl border-slate-200/60 dark:border-white/10 shadow-slate-900/5 dark:shadow-black/40 py-2.5 sm:py-3"
       )}>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           
           {/* 1. Left: Luxury Monogram / Brand Logo */}
           <Link to="/" className="flex items-center group shrink-0">
@@ -192,15 +192,15 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    className="h-8 sm:h-9 px-3 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 gap-2 group"
+                    className="h-8 sm:h-9 px-2 sm:px-3 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 gap-1.5 sm:gap-2 group shrink-0"
                   >
-                    <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
+                    <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30 shrink-0">
                       <User className="h-3 w-3 text-amber-600 dark:text-amber-400" />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider max-w-[75px] sm:max-w-[95px] truncate">
-                      {user?.name || teamUser?.name}
+                    <span className="hidden min-[420px]:inline-block text-[10px] font-bold uppercase tracking-wider max-w-[70px] sm:max-w-[95px] truncate">
+                      {(user?.name || teamUser?.name || 'Account').split(' ')[0]}
                     </span>
-                    <ChevronDown className="h-3 w-3 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
+                    <ChevronDown className="h-3 w-3 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors shrink-0" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 bg-white/95 dark:bg-[#0F141C]/95 backdrop-blur-2xl border-slate-200 dark:border-white/10 text-slate-800 dark:text-white rounded-2xl p-2 mt-3 shadow-2xl">

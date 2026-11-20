@@ -128,8 +128,8 @@ export default function FloatingActions() {
         </div>
       )}
 
-      {/* Floating Buttons - Bottom Right */}
-      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col-reverse items-end gap-2.5 sm:gap-3">
+      {/* Floating Buttons - Bottom Right (Safe Area Inset Aware) */}
+      <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col-reverse items-end gap-2.5 sm:gap-3">
         {/* Action Buttons */}
         {isOpen && (
           <div className="flex flex-col gap-2.5 animate-fade-up items-end">

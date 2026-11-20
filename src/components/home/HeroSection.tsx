@@ -282,12 +282,15 @@ export default function HeroSection() {
           {/* Daylight Command Module (Search) */}
           <div className="w-full max-w-5xl animate-fade-up" style={{ animationDelay: '300ms' }}>
             {/* Flat Search Tabs */}
-            <div className="flex items-center gap-3 sm:gap-6 md:gap-10 mb-6 justify-start px-2 sm:px-4 overflow-x-auto no-scrollbar pb-2 w-full">
+            <div 
+              className="flex items-center gap-4 sm:gap-6 md:gap-10 mb-6 justify-start px-2 sm:px-4 overflow-x-auto no-scrollbar pb-2 w-full scroll-smooth"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               <button 
                 type="button"
                 onClick={() => setSearchTab('packages')}
                 className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
+                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
                   searchTab === 'packages' 
                     ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
                     : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
@@ -301,7 +304,7 @@ export default function HeroSection() {
                 type="button"
                 onClick={() => setSearchTab('hotels')}
                 className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
+                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
                   searchTab === 'hotels' 
                     ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
                     : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
@@ -315,7 +318,7 @@ export default function HeroSection() {
                 type="button"
                 onClick={() => setSearchTab('cabs')}
                 className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
+                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
                   searchTab === 'cabs' 
                     ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
                     : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
@@ -329,7 +332,7 @@ export default function HeroSection() {
                 type="button"
                 onClick={() => setSearchTab('flights')}
                 className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
+                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
                   searchTab === 'flights' 
                     ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
                     : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
@@ -343,7 +346,7 @@ export default function HeroSection() {
                 type="button"
                 onClick={() => setSearchTab('bus')}
                 className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2",
+                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
                   searchTab === 'bus' 
                     ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
                     : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
