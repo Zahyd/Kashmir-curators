@@ -32,6 +32,69 @@ router.post('/curate', async (req: Request, res: Response) => {
   }
 });
 
+// AI Itinerary Day Copilot: Magic Luxury Storytelling Polish
+router.post('/enhance-day', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { dayNumber = 1, currentTitle = '', currentActivities = '', destination = 'Kashmir', theme = 'LUXURY' } = req.body;
+
+    if (geminiClient) {
+      try {
+        const prompt = `You are the chief luxury travel curator for "Kashmir Curators" (an ultra-high-end DMC equivalent to Aman / Belmond).
+Rewrite and elevate this single day of a Kashmir luxury travel itinerary:
+- Day Number: ${dayNumber}
+- Destination/Location: ${destination}
+- Current Title: "${currentTitle}"
+- Current Activities / Notes: "${currentActivities}"
+- Traveler Vibe: ${theme}
+
+Guidelines:
+1. "enhancedTitle": Craft a sophisticated, evocative title (max 10-12 words).
+2. "enhancedActivities": Write 2-3 immersive, sensory-rich sentences or a short narrative detailing morning, afternoon, and evening experiences. Mention authentic local nuances (e.g. Saffron Kahwa, pine scented breezes, Shikara glides, Pashmina weaving, Lidder riverbanks, Gondola Apharwat views, private fireside dining).
+3. "proTip": 1 insider concierge tip for this specific day.
+
+Return ONLY a valid JSON object matching:
+{
+  "enhancedTitle": "string",
+  "enhancedActivities": "string",
+  "proTip": "string"
+}`;
+
+        const response = await geminiClient.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt
+        });
+
+        const text = response.text?.trim() || '';
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return res.json({
+            success: true,
+            title: parsed.enhancedTitle || currentTitle,
+            activities: parsed.enhancedActivities || currentActivities,
+            proTip: parsed.proTip || 'Private chauffeur on standby at all times.'
+          });
+        }
+      } catch (geminiErr: any) {
+        console.warn('[AI Enhance Day] Gemini call notice, using expert curator fallback:', geminiErr.message);
+      }
+    }
+
+    // High-Fidelity Kashmir Fallback Re-writer
+    const fallbackActivities = `${currentActivities ? `${currentActivities}. ` : ''}Indulge in an exclusive morning guided excursion through whispering deodar pine forests accompanied by authentic Kashmiri saffron Kahwa. In the afternoon, savor panoramic Himalayan vistas followed by a private evening dining experience featuring traditional Wazwan delicacies beside the crackling fireplace.`;
+    
+    res.json({
+      success: true,
+      title: currentTitle ? (currentTitle.length > 5 ? currentTitle : `Day ${dayNumber}: Bespoke Alpine Excursion`) : `Day ${dayNumber}: Private Mountain Haven & Scenic Vistas`,
+      activities: fallbackActivities,
+      proTip: 'Schedule your departure 30 minutes before golden hour for the most breathtaking mountain light.'
+    });
+  } catch (error: any) {
+    console.error('Enhance day error:', error);
+    res.status(500).json({ error: 'Failed to enhance itinerary day' });
+  }
+});
+
 // AI Copilot: Comprehensive Lead Analysis & Explainable Scoring
 router.post('/copilot/analyze-lead', authenticateToken, async (req: Request, res: Response) => {
   const { inquiryId } = req.body;

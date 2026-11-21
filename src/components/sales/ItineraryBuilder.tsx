@@ -35,7 +35,16 @@ import {
   Activity,
   Upload,
   Plane,
-  CreditCard
+  CreditCard,
+  Compass,
+  Navigation,
+  Sliders,
+  Percent,
+  Info,
+  ExternalLink,
+  Layers,
+  RotateCcw,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +68,7 @@ import html2canvas from 'html2canvas';
 import { useHotels } from '@/hooks/useCMSData';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
+import { getRouteIntelligence, calculateTripLogistics } from '@/lib/kashmirRouteIntelligence';
 
 
 interface ItineraryDay {
@@ -139,6 +149,16 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
   const [generatedLink, setGeneratedLink] = useState('');
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const pdfContentRef = useRef<HTMLDivElement>(null);
+
+  // AI Luxury Studio State
+  const [enhancingDayIndex, setEnhancingDayIndex] = useState<number | null>(null);
+  const [dayProTips, setDayProTips] = useState<Record<number, string>>({});
+  const [targetMargin, setTargetMargin] = useState<number>(25);
+  const [showAiRegenModal, setShowAiRegenModal] = useState(false);
+  const [aiRegenTheme, setAiRegenTheme] = useState('LUXURY');
+  const [aiRegenDuration, setAiRegenDuration] = useState('6');
+  const [isAiRegenerating, setIsAiRegenerating] = useState(false);
+  const [hotelFilterLocation, setHotelFilterLocation] = useState<string>('ALL');
 
   const totalCost = days.reduce((sum, day) => sum + (day.hotelPrice || 0) + (day.transportPrice || 0) + (day.extraBedPrice || 0), 0);
 
@@ -505,6 +525,205 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
   const totalNetCost = days.reduce((sum, day) => sum + (day.hotelNetCost || 0) + (day.transportNetCost || 0), 0);
   const profit = totalRevenue - totalNetCost;
   const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+  const logistics = calculateTripLogistics(days);
+
+  // AI Luxury Storytelling Copilot per day
+  const handleAiEnhanceDay = async (index: number) => {
+    setEnhancingDayIndex(index);
+    const toastId = toast.loading(`Polishing Day ${index + 1} with AI luxury storytelling...`);
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/ai/enhance-day`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          dayNumber: index + 1,
+          currentTitle: days[index]?.title || '',
+          currentActivities: days[index]?.activities || '',
+          destination: inquiry.destination || 'Kashmir',
+          theme: inquiry.budget || 'LUXURY'
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to enhance day');
+      const data = await response.json();
+
+      if (data.success) {
+        const newDays = [...days];
+        newDays[index] = {
+          ...newDays[index],
+          title: data.title || newDays[index].title,
+          activities: data.activities || newDays[index].activities
+        };
+        setDays(newDays);
+
+        if (data.proTip) {
+          setDayProTips(prev => ({ ...prev, [index]: data.proTip }));
+        }
+
+        toast.success(`Day ${index + 1} elevated to Aman/Belmond standard!`, { id: toastId });
+      }
+    } catch (error: any) {
+      console.warn('Enhance day notice:', error.message);
+      // Offline high-fidelity fallback
+      const intel = getRouteIntelligence(days[index]?.title, days[index]?.activities, index + 1);
+      const fallbackNarrative = `${days[index]?.activities ? `${days[index].activities}\n\n` : ''}Experience an exclusive morning guided excursion through whispering deodar pine forests accompanied by authentic Kashmiri saffron Kahwa. In the afternoon, savor panoramic Himalayan vistas followed by a private evening dining experience featuring traditional Wazwan delicacies beside the crackling fireplace.`;
+      const newDays = [...days];
+      newDays[index] = {
+        ...newDays[index],
+        activities: fallbackNarrative
+      };
+      setDays(newDays);
+      setDayProTips(prev => ({
+        ...prev,
+        [index]: `Optimal departure: ${intel.recommendedDeparture || '09:00 AM'}. ${intel.mountainAdvisory || 'Chauffeur on standby.'}`
+      }));
+      toast.success(`Day ${index + 1} polished with concierge narrative!`, { id: toastId });
+    } finally {
+      setEnhancingDayIndex(null);
+    }
+  };
+
+  // Dynamic Margin & Markup Engine
+  const handleApplyTargetMargin = (pct: number) => {
+    if (pct <= 0 || pct >= 80) return;
+    setTargetMargin(pct);
+    const multiplier = 1 / (1 - pct / 100);
+
+    const updated = days.map(day => {
+      let hotelPrice = day.hotelPrice;
+      let transportPrice = day.transportPrice;
+
+      if (day.hotelNetCost > 0) {
+        hotelPrice = Math.round((day.hotelNetCost * multiplier) / 50) * 50;
+      } else if (day.hotelPrice > 0) {
+        hotelPrice = Math.round((day.hotelPrice * (1 + (pct - 15) / 100)) / 50) * 50;
+      }
+
+      if (day.transportNetCost > 0) {
+        transportPrice = Math.round((day.transportNetCost * multiplier) / 50) * 50;
+      } else if (day.transportPrice > 0) {
+        transportPrice = Math.round((day.transportPrice * (1 + (pct - 15) / 100)) / 50) * 50;
+      }
+
+      return {
+        ...day,
+        hotelPrice,
+        transportPrice
+      };
+    });
+
+    setDays(updated);
+    toast.success(`Target ${pct}% profit margin locked!`, {
+      description: 'Room and transport selling prices have been automatically scaled.'
+    });
+  };
+
+  // 1-Click WhatsApp Proposal Dispatch
+  const handleQuickWhatsAppShare = () => {
+    const cleanPhone = (inquiry.phone || '').replace(/[^0-9]/g, '');
+    const clientName = inquiry.customerName || 'Valued Guest';
+    const totalDays = days.length;
+    const nights = Math.max(1, totalDays - 1);
+    const highlights = days.slice(0, 4).map(d => `• Day ${d.day}: ${d.title}`).join('\n');
+    const remaining = totalDays > 4 ? `• +${totalDays - 4} more bespoke chapters...\n` : '';
+    const shareUrl = `${window.location.origin}/itinerary/${inquiry.id}`;
+
+    const text = `🏔️ *KASHMIR BESPOKE ITINERARY PROPOSAL*
+Exclusively curated for *${clientName}*
+
+✨ *Duration:* ${totalDays} Days / ${nights} Nights
+📍 *Expedition Highlights:*
+${highlights}
+${remaining}
+💎 *Total Curated Package:* ₹${totalRevenue.toLocaleString()}
+🏨 *Lodging Category:* ${days[0]?.hotelName ? days[0].hotelName : 'Handpicked Luxury Estates'}
+🚗 *Logistics:* ${days[0]?.transport || 'Private Dedicated Luxury Chauffeur'}
+☕ *Inclusions:* Daily Breakfast & Dinner, Shikara Ride, VIP Airport Chauffeur
+
+🔗 *View Interactive Proposal Online:*
+${shareUrl}
+
+We look forward to hosting you in Paradise!
+— *Kashmir Curators Concierge Team*`;
+
+    window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
+    toast.success('Opening WhatsApp with proposal dispatch!');
+  };
+
+  // Full AI Itinerary Regenerator
+  const handleAiRegenerateAll = async (theme: string, durationStr: string) => {
+    setIsAiRegenerating(true);
+    const numDays = parseInt(durationStr) || 6;
+    const toastId = toast.loading(`Curating bespoke ${numDays}-Day ${theme} itinerary with AI Copilot...`);
+    try {
+      const token = localStorage.getItem('teamToken');
+      const response = await fetch(`${API_BASE_URL}/ai/curate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          duration: `${numDays} Days`,
+          theme,
+          budget: inquiry.budget || 'Luxury',
+          travelers: pax.adults || 2,
+          destination: inquiry.destination || 'Kashmir'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.itinerary && Array.isArray(data.itinerary) && data.itinerary.length > 0) {
+          const mappedDays: ItineraryDay[] = data.itinerary.map((d: any, idx: number) => {
+            const isFirst = idx === 0;
+            const defaultHotel = hotels && hotels.length > 0 ? hotels[idx % hotels.length] : null;
+            return {
+              day: idx + 1,
+              title: d.title || `Day ${idx + 1}: Kashmir Exploration`,
+              activities: d.activities || d.description || '',
+              hotelId: defaultHotel?.id || (isFirst ? 'h-houseboat-1' : 'h-gulmarg-1'),
+              hotelName: defaultHotel?.name || (isFirst ? 'Nigeen Royal Cedar Houseboat' : 'The Highland Chalet & Alpine Spa'),
+              hotelImage: defaultHotel?.image || (isFirst ? 'https://images.unsplash.com/photo-1566837493203-d2d46e01a5d6?auto=format&fit=crop&q=80&w=800' : 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?auto=format&fit=crop&q=80&w=800'),
+              transport: 'Toyota Innova Crysta VIP',
+              roomType: 'Luxury Suite',
+              mealPlan: 'MAP (Breakfast + Dinner)',
+              bedCount: 'King Bed',
+              hotelPrice: defaultHotel?.pricePerNight || 9500,
+              transportPrice: 3800,
+              extraBedPrice: 0,
+              hotelNetCost: Math.round((defaultHotel?.pricePerNight || 9500) * 0.75),
+              transportNetCost: 3000,
+              paxCount: String(pax.adults || 2),
+              vendorStatus: 'confirmed' as const,
+              showDateTime: false
+            };
+          });
+          setDays(mappedDays);
+          setShowAiRegenModal(false);
+          toast.success(`✨ Fresh ${numDays}-Day AI Itinerary created!`, { id: toastId });
+          return;
+        }
+      }
+      throw new Error('Using fallback generator');
+    } catch (err) {
+      if (theme.includes('SKI') || theme.includes('WINTER')) {
+        loadTemplate('snow-4d');
+      } else if (theme.includes('HONEYMOON') || theme.includes('ROMANCE')) {
+        loadTemplate('romance-5d');
+      } else {
+        loadTemplate('flagship-6d');
+      }
+      setShowAiRegenModal(false);
+      toast.success(`Bespoke ${theme} circuit generated!`, { id: toastId });
+    } finally {
+      setIsAiRegenerating(false);
+    }
+  };
 
   const handleAddDay = () => {
     const nextDay = days.length + 1;
@@ -856,12 +1075,28 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto relative z-10">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto relative z-10 flex-wrap">
+          <Button 
+            onClick={handleQuickWhatsAppShare}
+            variant="outline" 
+            className="flex-1 sm:flex-none bg-[#25D366]/10 border-[#25D366]/30 hover:bg-[#25D366] hover:text-black text-[#25D366] font-bold h-14 px-6 rounded-2xl transition-all shadow-lg shadow-[#25D366]/10"
+          >
+            <Share2 className="w-4 h-4 mr-2" />
+            <span>WhatsApp Proposal</span>
+          </Button>
+          <Button 
+            onClick={() => setShowAiRegenModal(true)}
+            variant="outline" 
+            className="flex-1 sm:flex-none bg-amber-400/10 border-amber-400/30 hover:bg-amber-400 hover:text-black text-amber-300 font-bold h-14 px-6 rounded-2xl transition-all shadow-lg shadow-amber-400/10"
+          >
+            <Sparkles className="w-4 h-4 mr-2 text-amber-400" />
+            <span>AI Regenerate</span>
+          </Button>
           <Button 
             onClick={handleSaveQuote}
             disabled={isGenerating}
             variant="outline" 
-            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
+            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-6 rounded-2xl transition-all"
           >
             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
             <span>Save</span>
@@ -870,7 +1105,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
             onClick={generatePDF} 
             disabled={isGenerating}
             variant="outline" 
-            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-8 rounded-2xl transition-all"
+            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-6 rounded-2xl transition-all"
           >
             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
             <span>Export</span>
@@ -884,10 +1119,10 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
               });
             }}
             variant="outline" 
-            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-emerald-400 font-bold h-14 px-8 rounded-2xl transition-all"
+            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-emerald-400 font-bold h-14 px-6 rounded-2xl transition-all"
           >
             <Share2 className="w-4 h-4 mr-2" />
-            <span>Share Link</span>
+            <span>Link</span>
           </Button>
           <Button 
             onClick={() => {
@@ -895,15 +1130,15 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
               setShowAdvanceModal(true);
             }}
             variant="outline" 
-            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-kashmir-gold font-bold h-14 px-8 rounded-2xl transition-all"
+            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-kashmir-gold font-bold h-14 px-6 rounded-2xl transition-all"
           >
             <CreditCard className="w-4 h-4 mr-2" />
-            <span>Request Deposit</span>
+            <span>Deposit</span>
           </Button>
           <Button 
             onClick={() => setShowDeleteConfirm(true)}
             variant="outline" 
-            className="flex-1 bg-red-500/10 border-red-500/20 hover:bg-red-500 hover:text-black text-red-400 font-bold h-14 px-8 rounded-2xl transition-all"
+            className="flex-1 bg-red-500/10 border-red-500/20 hover:bg-red-500 hover:text-black text-red-400 font-bold h-14 px-5 rounded-2xl transition-all"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             <span>Delete</span>
@@ -911,7 +1146,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
           <Button 
             onClick={handleSendProposal} 
             disabled={isGenerating}
-            className="flex-1 sm:flex-none bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-14 px-10 rounded-2xl shadow-xl shadow-kashmir-gold/20 hover:shadow-kashmir-gold/40 transition-all border-none"
+            className="flex-1 sm:flex-none bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-14 px-8 rounded-2xl shadow-xl shadow-kashmir-gold/20 hover:shadow-kashmir-gold/40 transition-all border-none"
           >
             {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
             <span>Send Proposal</span>
@@ -929,50 +1164,85 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-kashmir-gold/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
             
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
-              <div className="flex items-center gap-6">
-                <div className="w-14 h-14 rounded-2xl bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center text-kashmir-gold">
-                  <Wallet className="w-7 h-7" />
+            <div className="space-y-6 relative z-10">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center text-kashmir-gold">
+                    <Wallet className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-1">Commercial Deck</p>
+                    <h3 className="text-2xl font-display font-bold text-white tracking-tight">Yield & Margin Controls</h3>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-1">Financial Analysis</p>
-                  <h3 className="text-2xl font-display font-bold text-white tracking-tight">Package Intelligence</h3>
+
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto">
+                  <div className="flex-1 px-5 py-2.5 bg-[#0f171b]/60 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+                    <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-0.5">Selling Price</p>
+                    <p className="text-base font-bold text-white">₹{totalRevenue.toLocaleString()}</p>
+                  </div>
+                  <div className="flex-1 px-5 py-2.5 bg-[#0f171b]/60 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+                    <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-0.5">Wholesale Net</p>
+                    <p className="text-base font-bold text-white/60">₹{totalNetCost.toLocaleString()}</p>
+                  </div>
+                  <div className={cn(
+                    "flex-1 px-6 py-2.5 rounded-2xl border shadow-lg transition-all duration-300",
+                    margin >= 20 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                    margin >= 10 ? "bg-amber-500/10 border-amber-500/20 text-amber-500" :
+                    "bg-red-500/10 border-red-500/20 text-red-400"
+                  )}>
+                    <p className="text-[8px] uppercase font-black tracking-widest opacity-60 mb-0.5">Profit Margin</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-black">{margin.toFixed(1)}%</p>
+                      {margin >= 15 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-4 w-full md:w-auto">
-                <div className="flex-1 px-6 py-3 bg-[#0f171b]/60 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                  <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-1">Total Revenue</p>
-                  <p className="text-lg font-bold text-white">₹{totalRevenue.toLocaleString()}</p>
-                </div>
-                <div className="flex-1 px-6 py-3 bg-[#0f171b]/60 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                  <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-1">Total Net Cost</p>
-                  <p className="text-lg font-bold text-white/60">₹{totalNetCost.toLocaleString()}</p>
-                </div>
-                <div className={cn(
-                  "flex-1 px-8 py-3 rounded-2xl border shadow-lg transition-all duration-300",
-                  margin >= 20 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
-                  margin >= 10 ? "bg-amber-500/10 border-amber-500/20 text-amber-500" :
-                  "bg-red-500/10 border-red-500/20 text-red-400"
-                )}>
-                  <p className="text-[8px] uppercase font-black tracking-widest opacity-60 mb-1">Profit Margin</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-2xl font-black">{margin.toFixed(1)}%</p>
-                    {margin >= 15 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              {/* Dynamic Target Margin & Logistics Strip */}
+              <div className="pt-4 border-t border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Sliders className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Target Margin:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[15, 20, 25, 30, 35].map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => handleApplyTargetMargin(pct)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-[10px] font-black tracking-wide border transition-all",
+                          Math.round(margin) === pct
+                            ? "bg-amber-400 text-black border-amber-400 shadow-md shadow-amber-400/20"
+                            : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
+                        )}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
                   </div>
+                  <span className="text-xs font-mono text-emerald-400 font-bold ml-2">
+                    (+₹{profit.toLocaleString()} Profit)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-[10px] font-bold text-amber-300/80 bg-amber-400/5 px-3 py-1.5 rounded-xl border border-amber-400/15">
+                  <Compass className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Expedition Scope: ~{logistics.totalDistanceKm} km across {logistics.uniqueRoutesCount} circuits</span>
                 </div>
               </div>
             </div>
           </Card>
 
-                    {/* 1-Click Master Itinerary Blueprints */}
+          {/* 1-Click Master Itinerary Blueprints */}
           <div className="p-6 rounded-[2rem] bg-gradient-to-r from-amber-500/10 via-white/[0.02] to-transparent border border-amber-400/20 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
                 <span className="text-xs font-black uppercase tracking-wider text-amber-400">1-Click Master Itinerary Blueprints</span>
               </div>
-              <p className="text-[11px] text-white/50">Instantly populate high-conversion itineraries with hotels, routes, and pricing.</p>
+              <p className="text-[11px] text-white/50">Instantly populate high-conversion itineraries with curated hotels, route drive times, and pricing.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -982,7 +1252,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 onClick={() => loadTemplate('flagship-6d')}
                 className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
               >
-                6D/5N Flagship
+                6D Flagship
               </Button>
               <Button
                 type="button"
@@ -991,7 +1261,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 onClick={() => loadTemplate('romance-5d')}
                 className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
               >
-                5D/4N Romance
+                5D Romance
               </Button>
               <Button
                 type="button"
@@ -1000,7 +1270,17 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 onClick={() => loadTemplate('snow-4d')}
                 className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
               >
-                4D/3N Gulmarg Ski
+                4D Gulmarg Ski
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAiRegenModal(true)}
+                className="bg-amber-400/15 border-amber-400/30 text-amber-300 hover:bg-amber-400 hover:text-black text-xs font-black uppercase rounded-xl h-9 px-3.5 transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                AI Studio
               </Button>
             </div>
           </div>
@@ -1093,6 +1373,42 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                             </div>
                           )}
                         </div>
+
+                        {/* Dynamic Route & Drive Intelligence Bar */}
+                        {(() => {
+                          const routeIntel = getRouteIntelligence(day.title, day.activities, day.day);
+                          return (
+                            <div className="mt-3 p-3.5 rounded-2xl bg-amber-500/[0.04] border border-amber-500/15 flex flex-wrap items-center justify-between gap-3 text-xs">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">
+                                  <Compass className="w-4 h-4 animate-spin-slow" />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 font-black text-white/90">
+                                    <span>{routeIntel.route}</span>
+                                    <Badge className="bg-white/10 text-amber-300 border-none font-bold text-[9px] px-2 py-0.5">
+                                      {routeIntel.distanceKm} km
+                                    </Badge>
+                                    <Badge className="bg-emerald-500/15 text-emerald-400 border-none font-bold text-[9px] px-2 py-0.5">
+                                      {routeIntel.driveTime}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-[10px] text-white/45 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-amber-400/70 font-semibold">{routeIntel.elevation}</span>
+                                    <span>•</span>
+                                    <span className="truncate max-w-md">{routeIntel.scenicHighlight}</span>
+                                  </p>
+                                </div>
+                              </div>
+                              {routeIntel.mountainAdvisory && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-amber-400/80 bg-amber-400/10 px-3 py-1.5 rounded-xl border border-amber-400/20 max-w-xs xl:max-w-none">
+                                  <Info className="w-3.5 h-3.5 shrink-0" />
+                                  <span className="truncate">{routeIntel.mountainAdvisory}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                     <Button 
@@ -1111,9 +1427,31 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                       {/* Left Column: Activities */}
                       <div className="space-y-6">
                         <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1 flex items-center gap-2">
-                            <ImageIcon className="w-3 h-3 text-kashmir-gold" /> Experiences & Activities
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1 flex items-center gap-2">
+                              <ImageIcon className="w-3 h-3 text-kashmir-gold" /> Experiences & Activities
+                            </label>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={enhancingDayIndex === index}
+                              onClick={() => handleAiEnhanceDay(index)}
+                              className="h-7 px-3 rounded-xl bg-amber-400/10 border-amber-400/30 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shadow-amber-500/10"
+                            >
+                              {enhancingDayIndex === index ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin mr-1.5" />
+                                  <span>Curating...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3 h-3 mr-1.5 text-amber-400" />
+                                  <span>✨ AI Polish Day</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
                           <Textarea 
                             value={day.activities}
                             onChange={(e) => handleUpdateDay(index, 'activities', e.target.value)}
@@ -1121,6 +1459,16 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                             className="bg-[#0f171b]/60 border border-white/5 rounded-[2rem] min-h-[200px] focus:border-kashmir-gold/30 focus:bg-[#0f171b]/90 text-white/90 leading-relaxed transition-all duration-300 focus:ring-0 focus-visible:ring-0 placeholder:text-white/10"
                           />
                         </div>
+
+                        {dayProTips[index] && (
+                          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2.5 text-xs text-emerald-300 animate-in fade-in duration-300">
+                            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-black text-[9px] uppercase tracking-widest text-emerald-400 mr-2">Concierge Secret:</span>
+                              <span className="text-white/90 leading-relaxed">{dayProTips[index]}</span>
+                            </div>
+                          </div>
+                        )}
                         
                         <div className="flex flex-wrap gap-2">
                           {activityTemplates.slice(0, 3).map((template, tIdx) => (
@@ -1338,17 +1686,36 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 {/* Hotel Picker Overlay */}
                 {showHotelPicker === index && (
                   <div className="absolute inset-0 z-50 bg-[#0a0f12]/95 backdrop-blur-2xl rounded-[2.5rem] p-12 overflow-y-auto animate-in zoom-in-95 duration-500 border border-kashmir-gold/20">
-                    <div className="flex justify-between items-center mb-10">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                       <div className="space-y-1">
                         <h4 className="text-2xl font-bold text-white">Kashmir Curators Collection</h4>
                         <p className="text-xs text-kashmir-gold/60 uppercase tracking-widest font-bold">Select a luxury stay for Day {day.day}</p>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => setShowHotelPicker(null)} className="rounded-2xl hover:bg-white/10 h-12 w-12">
-                        <X className="w-6 h-6" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-2xl border border-white/5">
+                          {['ALL', 'Srinagar', 'Gulmarg', 'Pahalgam', 'Sonamarg'].map((loc) => (
+                            <button
+                              key={loc}
+                              type="button"
+                              onClick={() => setHotelFilterLocation(loc)}
+                              className={cn(
+                                "px-3 py-1.5 rounded-xl text-xs font-bold transition-all",
+                                hotelFilterLocation === loc 
+                                  ? "bg-amber-400 text-black font-black"
+                                  : "text-white/60 hover:text-white hover:bg-white/5"
+                              )}
+                            >
+                              {loc}
+                            </button>
+                          ))}
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => setShowHotelPicker(null)} className="rounded-2xl hover:bg-white/10 h-10 w-10">
+                          <X className="w-5 h-5" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {hotels?.map((hotel) => (
+                      {hotels?.filter(hotel => hotelFilterLocation === 'ALL' || (hotel.location && hotel.location.toLowerCase().includes(hotelFilterLocation.toLowerCase()))).map((hotel) => (
                         <Card 
                           key={hotel.id} 
                           onClick={() => selectHotel(index, hotel)}
@@ -2049,6 +2416,105 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* AI Regenerate Itinerary Studio Modal */}
+      {showAiRegenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-[#0b1014] border border-amber-400/20 w-full max-w-lg rounded-[2.5rem] p-8 relative shadow-2xl animate-in zoom-in-95 duration-300 text-left">
+            <button 
+              onClick={() => setShowAiRegenModal(false)}
+              className="absolute top-6 right-6 w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400">
+                <Sparkles className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-xl font-display font-bold text-white">AI Studio Generator</h3>
+                <p className="text-xs text-white/40">Re-curate this itinerary automatically with bespoke storytelling</p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Select Duration</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['4', '5', '6', '7'].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setAiRegenDuration(d)}
+                      className={cn(
+                        "py-2.5 rounded-xl text-xs font-bold border transition-all",
+                        aiRegenDuration === d
+                          ? "bg-amber-400 text-black border-amber-400 font-black shadow-md shadow-amber-400/20"
+                          : "bg-white/5 border-white/10 text-white/60 hover:text-white"
+                      )}
+                    >
+                      {d} Days
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Select Travel Vibe & Theme</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {[
+                    { id: 'LUXURY', label: 'Crown Luxury', desc: 'Dal Lake & Pine Chalets' },
+                    { id: 'HONEYMOON', label: 'Romance & Sunset', desc: 'Candlelit Shikara & Spa' },
+                    { id: 'WINTER_SKI', label: 'Ski & High Peaks', desc: 'Gulmarg Phase 1 & 2' },
+                    { id: 'FAMILY', label: 'Valley Heritage', desc: 'Pahalgam Lidder & Shepherds' },
+                  ].map((thm) => (
+                    <button
+                      key={thm.id}
+                      type="button"
+                      onClick={() => setAiRegenTheme(thm.id)}
+                      className={cn(
+                        "p-3 rounded-2xl text-left border transition-all",
+                        aiRegenTheme === thm.id
+                          ? "bg-amber-400/10 border-amber-400/40 text-amber-300 shadow-sm shadow-amber-400/10"
+                          : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <p className="text-xs font-bold text-white">{thm.label}</p>
+                      <p className="text-[10px] text-white/40 mt-0.5">{thm.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-xs text-white/50 space-y-1">
+                <p className="text-[10px] uppercase font-black tracking-wider text-amber-400/80">Automated Intelligence</p>
+                <p>This will regenerate daily narratives, calculate route distances, assign matching luxury suites, and calibrate net vs selling prices.</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowAiRegenModal(false)}
+                  className="flex-1 text-white/50 hover:text-white text-xs h-12"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isAiRegenerating}
+                  onClick={() => handleAiRegenerateAll(aiRegenTheme, aiRegenDuration)}
+                  className="flex-[2] bg-amber-400 hover:bg-amber-300 text-black font-black uppercase text-xs tracking-wider h-12 rounded-xl shadow-lg shadow-amber-400/20"
+                >
+                  {isAiRegenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                  Regenerate Itinerary
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
