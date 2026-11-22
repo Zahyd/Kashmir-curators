@@ -338,37 +338,39 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search traveler, city, phone..."
-              className="pl-8 bg-[#07090E] border-white/10 text-xs text-white placeholder:text-slate-500 h-9 rounded-lg focus:border-amber-400"
+              className="pl-8 bg-[#07090E] border-white/10 text-xs text-white placeholder:text-slate-500 h-9 rounded-lg focus:border-amber-400 w-full"
             />
           </div>
 
-          <Button
-            size="sm"
-            onClick={handleSimulateMetaLead}
-            disabled={simulatingMeta}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold h-9 px-3 rounded-lg shadow-md shadow-purple-500/20 flex items-center gap-1.5"
-            title="Simulate incoming Meta Ad Lead Form"
-          >
-            <Sparkles className={`w-3.5 h-3.5 ${simulatingMeta ? 'animate-spin' : ''}`} />
-            <span>Simulate Meta Lead</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleSimulateMetaLead}
+              disabled={simulatingMeta}
+              className="flex-1 sm:flex-initial bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold h-9 px-3 rounded-lg shadow-md shadow-purple-500/20 flex items-center justify-center gap-1.5"
+              title="Simulate incoming Meta Ad Lead Form"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${simulatingMeta ? 'animate-spin' : ''}`} />
+              <span className="truncate">Simulate Meta Lead</span>
+            </Button>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => { setLoading(true); fetchUnclaimedLeads(); }}
-            className="border-white/10 text-slate-300 hover:text-white hover:bg-white/5 h-9 px-2.5"
-            title="Refresh queue"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-400' : ''}`} />
-          </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setLoading(true); fetchUnclaimedLeads(); }}
+              className="border-white/10 text-slate-300 hover:text-white hover:bg-white/5 h-9 px-2.5 shrink-0"
+              title="Refresh queue"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-400' : ''}`} />
+            </Button>
+          </div>
         </div>
       </div>
 

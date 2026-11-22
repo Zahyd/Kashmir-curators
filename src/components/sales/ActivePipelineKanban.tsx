@@ -25,6 +25,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 
 export type PipelineStage = 'CLAIMED' | 'QUOTED' | 'NEGOTIATION' | 'CONFIRMED' | 'LOST';
@@ -77,6 +78,7 @@ export const ActivePipelineKanban: React.FC<ActivePipelineKanbanProps> = ({
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterScope, setFilterScope] = useState<'my' | 'all'>('my');
+  const [mobileStageFilter, setMobileStageFilter] = useState<'ALL' | PipelineStage>('ALL');
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
   const [confirmedModalDeal, setConfirmedModalDeal] = useState<Deal | null>(null);
 
@@ -281,6 +283,62 @@ export const ActivePipelineKanban: React.FC<ActivePipelineKanbanProps> = ({
         </div>
       )}
 
+      {/* Mobile Stage Selector Ribbon (Smooth horizontal swipe) */}
+      <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar -mx-1 px-1">
+        <button
+          type="button"
+          onClick={() => setMobileStageFilter('ALL')}
+          className={cn(
+            "px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 flex items-center gap-1.5",
+            mobileStageFilter === 'ALL'
+              ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
+              : "bg-[#0F141C] text-slate-400 hover:text-white border border-white/10"
+          )}
+        >
+          <span>All Stages</span>
+          <span className={cn(
+            "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
+            mobileStageFilter === 'ALL' ? "bg-black/20 text-black font-black" : "bg-white/10 text-slate-300"
+          )}>
+            {visibleDeals.length}
+          </span>
+        </button>
+
+        {STAGES.map((s) => {
+          const count = visibleDeals.filter(d => {
+            const currentStage = (d.leadStage || 'CLAIMED').toUpperCase();
+            if (s.key === 'CLAIMED') return currentStage === 'CLAIMED' || currentStage === 'NEW_LEAD' || currentStage === 'FOLLOW_UP';
+            if (s.key === 'QUOTED') return currentStage === 'QUOTED' || currentStage === 'QUOTE_SENT';
+            if (s.key === 'NEGOTIATION') return currentStage === 'NEGOTIATION' || currentStage === 'PAYMENT_PENDING';
+            return currentStage === s.key;
+          }).length;
+
+          const isActive = mobileStageFilter === s.key;
+
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setMobileStageFilter(s.key)}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 active:scale-95",
+                isActive
+                  ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
+                  : "bg-[#0F141C] text-slate-400 hover:text-white border border-white/10"
+              )}
+            >
+              <span>{s.label.split(' ')[0]}</span>
+              <span className={cn(
+                "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
+                isActive ? "bg-black/20 text-black font-black" : "bg-white/10 text-slate-300"
+              )}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* 5-Column Kanban Board */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
         {STAGES.map((stage) => {
@@ -298,10 +356,16 @@ export const ActivePipelineKanban: React.FC<ActivePipelineKanbanProps> = ({
             return currentStage === stage.key;
           });
 
+          const isVisibleOnMobile = mobileStageFilter === 'ALL' || mobileStageFilter === stage.key;
+
           return (
             <div 
               key={stage.key}
-              className={`flex flex-col rounded-xl border ${stage.color} p-3 min-h-[500px] bg-[#0F141C]/60 backdrop-blur-md`}
+              className={cn(
+                "flex flex-col rounded-xl border p-3 min-h-[420px] bg-[#0F141C]/60 backdrop-blur-md transition-all",
+                stage.color,
+                !isVisibleOnMobile && "hidden lg:flex"
+              )}
             >
               {/* Column Header */}
               <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/5">

@@ -53,6 +53,7 @@ import InquiryVault from '@/components/sales/InquiryVault';
 import PaymentPortal from '@/components/sales/PaymentPortal';
 import WorkLog from '@/components/sales/WorkLog';
 import SelectionRequired from '@/components/sales/SelectionRequired';
+import MobileSalesBottomBar from '@/components/sales/MobileSalesBottomBar';
 
 type PortalTab = 
   | 'dashboard' 
@@ -202,30 +203,72 @@ export default function SalesPortal() {
     role: teamUser.role
   };
 
+  const unclaimedCount = inquiries.filter(i => !i.assignedTo && i.status !== 'Lost' && i.status !== 'Booked').length;
+
   return (
     <div className="min-h-screen bg-[#07090E] text-white flex flex-col lg:flex-row font-sans">
-      {/* Mobile Top Header */}
-      <div className="lg:hidden flex items-center justify-between p-4 bg-[#0F141C] border-b border-white/10 sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-bold text-black text-sm">
+      {/* Mobile Top Header (Touch-optimized, notch-aware) */}
+      <header className="lg:hidden sticky top-0 z-40 bg-[#0F141C]/95 backdrop-blur-2xl border-b border-white/10 px-3.5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-2.5">
+          <Link to="/" className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-bold text-black text-xs shadow-md shadow-amber-500/20 active:scale-95 transition-transform">
             KC
-          </div>
+          </Link>
           <div>
-            <h1 className="text-sm font-bold text-white tracking-wide">SalesPro</h1>
-            <p className="text-[10px] text-amber-400 font-medium">Kashmir Curators</p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-white tracking-wide">SalesPro</span>
+              <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1 py-0.2 rounded font-mono font-bold">OS</span>
+            </div>
+            <p className="text-[9px] text-slate-400 font-medium font-mono">The Kashmir Curators</p>
           </div>
         </div>
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 text-slate-300 hover:text-white rounded-lg bg-white/5"
-        >
-          {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
+
+        <div className="flex items-center gap-2">
+          {/* Quick Availability Switch on Mobile */}
+          <button
+            onClick={toggleAvailability}
+            disabled={isTogglingAvailability}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] font-bold border transition-all active:scale-95",
+              isOnline
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                : "bg-amber-500/15 border-amber-500/30 text-amber-300"
+            )}
+            title="Toggle Live Availability"
+          >
+            <span className={cn(
+              "w-2 h-2 rounded-full shrink-0",
+              isOnline ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#10B981]" : "bg-amber-400"
+            )} />
+            <span className="font-mono">{isOnline ? 'Online' : 'Away'}</span>
+          </button>
+
+          {/* User Initial Avatar */}
+          <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-bold text-amber-400 text-xs shrink-0">
+            {teamUser.name ? teamUser.name.charAt(0) : 'S'}
+          </div>
+
+          {/* Menu Drawer Toggle */}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 text-slate-300 hover:text-white rounded-lg bg-white/5 active:scale-95 transition-all"
+            aria-label="Toggle navigation drawer"
+          >
+            {isSidebarOpen ? <X className="w-4 h-4 text-amber-400" /> : <Menu className="w-4 h-4" />}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Drawer Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity animate-in fade-in duration-200"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
       {/* Sidebar - FIXED OVERFLOW WITH PROPER SCROLLING AND STICKY FOOTER */}
       <aside className={cn(
-        "w-72 h-screen fixed left-0 top-0 bg-[#07090E] border-r border-white/10 flex flex-col z-50 transition-all duration-300 shadow-2xl overflow-hidden",
+        "w-72 sm:w-80 max-w-[85vw] h-screen fixed left-0 top-0 bg-[#07090E] border-r border-white/10 flex flex-col z-50 transition-all duration-300 shadow-2xl overflow-hidden",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* 1. Header (Compact, Non-Clipping) */}
@@ -296,7 +339,7 @@ export default function SalesPortal() {
         </nav>
 
         {/* 3. Sticky Bottom Authenticated Employee Profile Card */}
-        <div className="shrink-0 p-4 border-t border-white/10 bg-[#0F141C]/95 backdrop-blur-md space-y-3">
+        <div className="shrink-0 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-white/10 bg-[#0F141C]/95 backdrop-blur-md space-y-3">
           {/* User Details */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 truncate">
@@ -340,6 +383,7 @@ export default function SalesPortal() {
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
             <Link
               to="/"
+              onClick={() => setIsSidebarOpen(false)}
               className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-[11px] font-medium transition"
             >
               <ExternalLink className="w-3 h-3" />
@@ -347,7 +391,10 @@ export default function SalesPortal() {
             </Link>
 
             <button
-              onClick={handleLogout}
+              onClick={() => {
+                setIsSidebarOpen(false);
+                handleLogout();
+              }}
               className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[11px] font-medium transition"
             >
               <LogOut className="w-3 h-3" />
@@ -359,7 +406,7 @@ export default function SalesPortal() {
 
       {/* Main Workspace Area */}
       <main className="flex-1 lg:ml-72 flex flex-col min-h-screen">
-        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6">
+        <div className="p-3 sm:p-6 lg:p-8 pt-4 lg:pt-8 pb-28 lg:pb-8 max-w-[1600px] w-full mx-auto space-y-6">
 
           {/* TAB 1: EXECUTIVE COMMAND DASHBOARD */}
           {activeTab === 'dashboard' && (
@@ -608,6 +655,18 @@ export default function SalesPortal() {
 
         </div>
       </main>
+
+      {/* Unified Mobile Bottom Dock */}
+      <MobileSalesBottomBar
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setIsSidebarOpen(false);
+        }}
+        isSidebarOpen={isSidebarOpen}
+        onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        unclaimedCount={unclaimedCount}
+      />
     </div>
   );
 }

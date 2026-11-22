@@ -113,39 +113,41 @@ export const ClientDirectory: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search clients by name, phone..."
-              className="pl-8 bg-[#07090E] border-white/10 text-xs text-white placeholder:text-slate-500 h-9 rounded-lg"
+              className="pl-8 bg-[#07090E] border-white/10 text-xs text-white placeholder:text-slate-500 h-9 rounded-lg w-full"
             />
           </div>
 
-          <div className="flex items-center bg-[#07090E] p-1 rounded-lg border border-white/10 text-xs">
-            {(['ALL', 'CONFIRMED', 'ACTIVE', 'LOST'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setStageFilter(tab)}
-                className={`px-2.5 py-1 rounded font-medium transition ${
-                  stageFilter === tab ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+          <div className="flex items-center gap-2 justify-between sm:justify-start">
+            <div className="flex items-center bg-[#07090E] p-1 rounded-lg border border-white/10 text-xs overflow-x-auto scrollbar-none">
+              {(['ALL', 'CONFIRMED', 'ACTIVE', 'LOST'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setStageFilter(tab)}
+                  className={`px-2.5 py-1 rounded font-medium transition text-[11px] ${
+                    stageFilter === tab ? 'bg-amber-500 text-black font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => { setLoading(true); fetchClients(); }}
-            className="border-white/10 text-slate-300 hover:text-white h-9 px-2.5"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-400' : ''}`} />
-          </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setLoading(true); fetchClients(); }}
+              className="border-white/10 text-slate-300 hover:text-white h-9 px-2.5 shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-400' : ''}`} />
+            </Button>
+          </div>
         </div>
       </div>
 

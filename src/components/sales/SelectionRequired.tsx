@@ -290,16 +290,16 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
   };
 
   return (
-    <div className="max-w-6xl mx-auto py-8 md:py-12 animate-in fade-in duration-500 px-4 space-y-12">
+    <div className="max-w-6xl mx-auto py-4 sm:py-8 md:py-12 animate-in fade-in duration-500 px-1 sm:px-4 space-y-6 sm:space-y-10">
       
       {/* 1. Header Banner */}
-      <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-amber-500/10 via-white/[0.02] to-transparent border border-amber-400/20 shadow-2xl backdrop-blur-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-br from-amber-500/10 via-white/[0.02] to-transparent border border-amber-400/20 shadow-2xl backdrop-blur-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5 sm:gap-6">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] font-black uppercase tracking-wider mb-2">
             <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
             <span>AI Autonomous Itinerary Studio</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-black text-white tracking-tight">
             Curate Luxury Kashmir Itineraries
           </h2>
           <p className="text-white/60 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
@@ -307,11 +307,11 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto shrink-0">
           <Button 
             onClick={handleOpenBlankSandbox}
             variant="outline"
-            className="h-11 px-5 rounded-2xl border-white/20 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2"
+            className="w-full sm:w-auto h-11 px-5 rounded-xl sm:rounded-2xl border-white/20 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2"
           >
             <Compass className="w-4 h-4 text-amber-400" />
             <span>Open Clean Studio</span>
@@ -319,7 +319,7 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
 
           <Button 
             onClick={() => setIsCustomModalOpen(true)}
-            className="h-11 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 flex items-center gap-2"
+            className="w-full sm:w-auto h-11 px-6 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Manual Custom Lead</span>
@@ -328,7 +328,7 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
       </div>
 
       {/* 2. AI INSTANT CURATION CONTROL MODULE */}
-      <Card className="bg-[#0b1016]/90 border border-amber-500/30 p-6 md:p-8 rounded-[2.5rem] shadow-2xl shadow-black/60 relative overflow-hidden backdrop-blur-2xl">
+      <Card className="bg-[#0b1016]/90 border border-amber-500/30 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-black/60 relative overflow-hidden backdrop-blur-2xl">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 blur-3xl pointer-events-none" />
         
         <div className="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
