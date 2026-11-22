@@ -3,6 +3,7 @@ import { googleSheetsService } from './googleSheetsService';
 import { notificationService } from './notificationService';
 import { CRMService } from './crmService';
 import { broadcastSalesEvent } from '../routes/salesRoutes';
+import { AIConciergeAgentService } from './aiConciergeAgentService';
 import env from '../config/env';
 
 // Conversational States
@@ -431,39 +432,23 @@ export const whatsappService = {
         return true;
       }
 
-      // 2. Route Conversational Chatbot State Machine
-      const { replyText, isComplete, sessionData } = WhatsAppWorkflowEngine.executeChatbotSessionNode(sender, text);
+      // 2. Process message using the Autonomous AI Concierge Agent
+      const aiResult = await AIConciergeAgentService.processInboundMessage(sender, text, io);
+      const replyText = aiResult.replyText;
 
-      // 3. If questionnaire is fully completed, sync CRM, Email, and Google Sheets
-      let createdInquiry = matchedInquiry;
-      if (isComplete) {
-        console.log('\n🏁 [n8n Branch: Form Fully Completed] Initiating downstream integrations...');
-        
-        // CRM Creation Node
-        createdInquiry = await WhatsAppWorkflowEngine.executeCRMNode(io, sessionData);
-
-        // Async Non-blocking Downstream triggers
-        WhatsAppWorkflowEngine.executeNotificationEmailNode(createdInquiry);
-        WhatsAppWorkflowEngine.executeGoogleSheetsSyncNode(createdInquiry);
-
-        // Reset the state machine session for this user so they can start fresh next time
-        sessions.delete(sender);
-        console.log(`[n8n Branch: Form Fully Completed] Reset session database for ${sender}.`);
-      }
-
-      // 4. Send the conversational chatbot text back to WhatsApp
+      // 3. Send the conversational AI reply back to WhatsApp
       await WhatsAppWorkflowEngine.executeWhatsAppSenderNode(sender, replyText);
 
-      // Persist Outbound Bot Reply to Database
+      // 4. Persist Outbound Bot Reply to Database
       try {
         await prisma.whatsAppMessage.create({
           data: {
             customerPhone: sender,
             direction: 'OUTBOUND',
             content: replyText,
-            inquiryId: (createdInquiry || matchedInquiry)?.id || null,
+            inquiryId: aiResult.inquiryId || matchedInquiry?.id || null,
             senderId: 'SYSTEM',
-            senderName: 'Kashmir Curators AI Concierge',
+            senderName: 'Mehak (AI Concierge)',
             status: 'SENT'
           }
         });
@@ -471,7 +456,7 @@ export const whatsappService = {
         console.warn('Failed to record bot reply in DB:', err.message);
       }
 
-      console.log('🌟 [n8n Automation Pipeline: DONE] Execution finished successfully.');
+      console.log('🌟 [AI Concierge Workflow] Inbound message handled autonomously.');
       return true;
     } catch (err: any) {
       console.error('🌟 [n8n Automation Pipeline: ABORTED] Workflow crashed:', err.message);

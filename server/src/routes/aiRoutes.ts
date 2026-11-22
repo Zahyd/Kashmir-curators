@@ -5,11 +5,29 @@ import { aiGatewayService } from '../services/aiGatewayService';
 import { AICopilotService } from '../services/aiCopilotService';
 import { WeatherService } from '../services/weatherService';
 import { conciergeAgentCrmService } from '../services/conciergeAgentCrmService';
+import { AIConciergeAgentService } from '../services/aiConciergeAgentService';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
 const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
 const geminiClient = geminiKey ? new GoogleGenAI({ apiKey: geminiKey }) : null;
+
+// Autonomous AI Concierge Chat (WhatsApp / Instagram / Webhook Simulator)
+router.post('/concierge-chat', async (req: Request, res: Response) => {
+  try {
+    const { phone = '+919103798448', message } = req.body;
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Message text is required' });
+    }
+
+    const io = (req as any).io;
+    const result = await AIConciergeAgentService.processInboundMessage(phone, message, io);
+    res.json(result);
+  } catch (error: any) {
+    console.error('AI Concierge Chat error:', error);
+    res.status(500).json({ error: 'Failed to process AI chat message: ' + error.message });
+  }
+});
 
 // Public / Agent Itinerary Generator
 router.post('/curate', async (req: Request, res: Response) => {
