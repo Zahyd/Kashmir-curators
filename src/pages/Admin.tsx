@@ -48,6 +48,7 @@ import {
 
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import MobilePortalNav from '@/components/layout/MobilePortalNav';
+import MobilePortalBottomBar from '@/components/layout/MobilePortalBottomBar';
 import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
 import { AdminCommandPalette } from '@/components/admin/AdminCommandPalette';
 import { DirectorAiCopilot } from '@/components/admin/DirectorAiCopilot';
@@ -235,26 +236,26 @@ export default function Admin() {
         return (
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
             {/* EXECUTIVE HERO RADAR */}
-            <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent border border-white/10 shadow-xl backdrop-blur-2xl">
+            <div className="relative overflow-hidden p-4 sm:p-6 lg:p-8 rounded-2xl bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent border border-white/10 shadow-xl backdrop-blur-2xl">
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 blur-[100px] pointer-events-none" />
-              <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5 sm:gap-6">
                 {/* Greeting & Live Advisories */}
                 <div className="space-y-2.5 max-w-2xl">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[9px] font-black uppercase tracking-wider">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="px-2 sm:px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[9px] font-black uppercase tracking-wider">
                       COMMAND RADAR
                     </span>
                     <span className="text-white/40 text-[10px] font-mono">
-                      {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+                      {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                     <span className="text-white/20">•</span>
                     <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-emerald-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Neon Live OS Synced
+                      Neon Synced
                     </span>
                   </div>
 
-                  <h1 className="text-2xl sm:text-4xl font-display font-bold text-white tracking-tight">
+                  <h1 className="text-xl sm:text-3xl lg:text-4xl font-display font-bold text-white tracking-tight">
                     {getGreeting()},{' '}
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-200">
                       {teamUser?.name?.split(' ')[0] || ROLE_LABELS[teamRole]}
@@ -266,7 +267,7 @@ export default function Admin() {
                   </p>
 
                   {/* Live Neon Ground Corridor Status Chips */}
-                  <div className="pt-1 flex flex-wrap items-center gap-2 text-[10px]">
+                  <div className="pt-1 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px]">
                     {(dynamicStats?.liveAdvisories || []).length > 0 ? (
                       (dynamicStats.liveAdvisories as any[]).slice(0, 3).map((adv: any) => (
                         <button
@@ -274,7 +275,7 @@ export default function Admin() {
                           type="button"
                           onClick={() => setActiveSection('disruptions')}
                           className={cn(
-                            'px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-colors',
+                            'px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-colors text-[10px]',
                             adv.emergencyModeActive || adv.severity === 'CRITICAL_EMERGENCY'
                               ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
                               : 'bg-white/[0.03] border-white/10 text-white/75 hover:border-amber-400/40'
@@ -290,9 +291,9 @@ export default function Admin() {
                       <button
                         type="button"
                         onClick={() => setActiveSection('disruptions')}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 flex items-center gap-1.5"
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 flex items-center gap-1.5 text-[10px]"
                       >
-                        <Compass className="w-3 h-3 text-emerald-400" />
+                        <Compass className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span>All Corridors Clear • 0 Active Disruption Alerts</span>
                       </button>
                     )}
@@ -300,25 +301,25 @@ export default function Admin() {
                 </div>
 
                 {/* Live Operations Snapshot Pills */}
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2.5 w-full lg:w-auto">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-2.5 w-full lg:w-auto">
                   <div
                     onClick={() => setActiveSection('inquiries')}
-                    className="flex-1 sm:w-36 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-400/40 transition-all cursor-pointer group text-center"
+                    className="flex-1 sm:w-36 p-2.5 sm:p-3.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-400/40 transition-all cursor-pointer group text-center"
                   >
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-0.5">Active Queue</p>
-                    <p className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors">
-                      {dynamicStats?.activeInquiries ?? 0} <span className="text-xs text-amber-400 font-mono">leads</span>
+                    <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white/40 mb-0.5">Active Queue</p>
+                    <p className="text-lg sm:text-xl font-bold text-white group-hover:text-amber-300 transition-colors">
+                      {dynamicStats?.activeInquiries ?? 0} <span className="text-[10px] sm:text-xs text-amber-400 font-mono">leads</span>
                     </p>
                   </div>
 
                   <div
                     onClick={() => setActiveSection('cabs')}
-                    className="flex-1 sm:w-36 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-400/40 transition-all cursor-pointer group text-center"
+                    className="flex-1 sm:w-36 p-2.5 sm:p-3.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-400/40 transition-all cursor-pointer group text-center"
                   >
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-0.5">Active Fleet</p>
-                    <p className="text-xl font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                    <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white/40 mb-0.5">Active Fleet</p>
+                    <p className="text-lg sm:text-xl font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">
                       {dynamicStats?.cabAvailability ?? '0%'}{' '}
-                      <span className="text-[10px] text-white/40 font-mono">
+                      <span className="text-[9px] sm:text-[10px] text-white/40 font-mono">
                         ({dynamicStats?.activeCabs ?? 0}/{dynamicStats?.totalCabs ?? 0})
                       </span>
                     </p>
@@ -327,9 +328,9 @@ export default function Admin() {
                   <button
                     type="button"
                     onClick={() => setAiCopilotOpen(true)}
-                    className="col-span-2 sm:w-auto px-4 py-3.5 rounded-xl bg-amber-400 text-black hover:bg-amber-300 transition-all cursor-pointer font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                    className="col-span-2 sm:w-auto px-4 py-2.5 sm:py-3.5 rounded-xl bg-amber-400 text-black hover:bg-amber-300 transition-all cursor-pointer font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20"
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-3.5 h-3.5" />
                     <span>Ask Ops AI</span>
                   </button>
                 </div>
@@ -337,21 +338,21 @@ export default function Admin() {
             </div>
 
             {/* REAL-TIME KPI STATS GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               {getDisplayStats().map((stat) => (
                 <Card
                   key={stat.label}
                   onClick={() => stat.section && setActiveSection(stat.section)}
-                  className="bg-[#0a0f14]/80 border-white/10 p-5 rounded-2xl backdrop-blur-xl transition-all duration-300 hover:border-amber-400/30 hover:bg-white/[0.03] hover:-translate-y-0.5 cursor-pointer group relative overflow-hidden"
+                  className="bg-[#0a0f14]/80 border-white/10 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl backdrop-blur-xl transition-all duration-300 hover:border-amber-400/30 hover:bg-white/[0.03] hover:-translate-y-0.5 cursor-pointer group relative overflow-hidden"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center group-hover:bg-amber-400/10 group-hover:border-amber-400/30 transition-colors">
-                      <stat.icon className="w-5 h-5 text-amber-400" />
+                  <div className="flex items-start justify-between mb-2 sm:mb-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center group-hover:bg-amber-400/10 group-hover:border-amber-400/30 transition-colors shrink-0">
+                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                     </div>
                     <Badge
                       variant="outline"
                       className={cn(
-                        'text-[9px] font-black uppercase tracking-wider',
+                        'text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5',
                         stat.trend === 'up'
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                           : 'bg-white/5 text-white/60 border-white/10'
@@ -362,15 +363,15 @@ export default function Admin() {
                   </div>
 
                   <div className="space-y-0.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/45">{stat.label}</p>
-                    <div className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight">
+                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/45 truncate">{stat.label}</p>
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-display font-bold text-white tracking-tight truncate">
                       {stat.value}
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] text-white/40 group-hover:text-amber-300 transition-colors">
-                    <span>Manage Module</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  <div className="mt-2.5 sm:mt-4 pt-2 sm:pt-3 border-t border-white/5 flex items-center justify-between text-[9px] sm:text-[10px] text-white/40 group-hover:text-amber-300 transition-colors">
+                    <span>Manage</span>
+                    <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                   </div>
                 </Card>
               ))}
@@ -548,53 +549,55 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="h-[240px] w-full flex items-end gap-2 relative px-2 pt-6">
-                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="w-full h-px bg-white/20" />
-                    ))}
-                  </div>
+                <div className="overflow-x-auto pb-2 custom-scrollbar">
+                  <div className="min-w-[320px] sm:min-w-0 h-[200px] sm:h-[240px] w-full flex items-end gap-1.5 sm:gap-2 relative px-1 sm:px-2 pt-6">
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="w-full h-px bg-white/20" />
+                      ))}
+                    </div>
 
-                  {activeSeries.length > 0 ? (
-                    activeSeries.map((bucket) => {
-                      const pct = bucket.value > 0
-                        ? Math.max(12, Math.min(100, Math.round((bucket.value / maxSeriesVal) * 95)))
-                        : 6;
-                      return (
-                        <div key={bucket.label} className="flex-1 flex flex-col items-center gap-2 group/bar">
-                          <div className="w-full relative h-[180px] flex items-end">
-                            <div
-                              className={cn(
-                                'w-full rounded-t-md transition-all duration-500',
-                                bucket.isCurrent
-                                  ? 'bg-gradient-to-t from-amber-500/40 via-amber-400 to-yellow-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
-                                  : bucket.value > 0
-                                    ? 'bg-amber-400/35 group-hover/bar:bg-amber-400/70'
-                                    : 'bg-white/[0.06] group-hover/bar:bg-white/15'
-                              )}
-                              style={{ height: `${pct}%` }}
-                            >
-                              <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all bg-amber-400 text-black font-black text-[9px] px-2 py-0.5 rounded shadow whitespace-nowrap z-20 pointer-events-none">
-                                ₹{bucket.value.toLocaleString('en-IN')}
+                    {activeSeries.length > 0 ? (
+                      activeSeries.map((bucket) => {
+                        const pct = bucket.value > 0
+                          ? Math.max(12, Math.min(100, Math.round((bucket.value / maxSeriesVal) * 95)))
+                          : 6;
+                        return (
+                          <div key={bucket.label} className="flex-1 flex flex-col items-center gap-2 group/bar">
+                            <div className="w-full relative h-[150px] sm:h-[180px] flex items-end">
+                              <div
+                                className={cn(
+                                  'w-full rounded-t-md transition-all duration-500',
+                                  bucket.isCurrent
+                                    ? 'bg-gradient-to-t from-amber-500/40 via-amber-400 to-yellow-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
+                                    : bucket.value > 0
+                                      ? 'bg-amber-400/35 group-hover/bar:bg-amber-400/70'
+                                      : 'bg-white/[0.06] group-hover/bar:bg-white/15'
+                                )}
+                                style={{ height: `${pct}%` }}
+                              >
+                                <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all bg-amber-400 text-black font-black text-[9px] px-2 py-0.5 rounded shadow whitespace-nowrap z-20 pointer-events-none">
+                                  ₹{bucket.value.toLocaleString('en-IN')}
+                                </div>
                               </div>
                             </div>
+                            <span
+                              className={cn(
+                                'text-[9px] font-bold uppercase truncate max-w-full text-center',
+                                bucket.isCurrent ? 'text-amber-400 font-black' : 'text-white/35'
+                              )}
+                            >
+                              {bucket.label}
+                            </span>
                           </div>
-                          <span
-                            className={cn(
-                              'text-[9px] font-bold uppercase',
-                              bucket.isCurrent ? 'text-amber-400 font-black' : 'text-white/35'
-                            )}
-                          >
-                            {bucket.label}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-white/35 font-mono">
-                      Loading Neon revenue series...
-                    </div>
-                  )}
+                        );
+                      })
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-white/35 font-mono">
+                        Loading Neon revenue series...
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap items-center justify-between text-[10px] text-white/40 gap-2">
@@ -717,6 +720,7 @@ export default function Admin() {
           roleLabel={ROLE_LABELS[teamRole]}
           isOpen={isSidebarOpen}
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
         />
 
         {/* Desktop Top Control Header Bar (Clean vertical centering, zero clipping) */}
@@ -864,13 +868,25 @@ export default function Admin() {
         </header>
 
         {/* Content Container with Suspense Code-Splitting */}
-        <main className="p-4 sm:p-6 lg:p-8 pt-24 lg:pt-8 max-w-7xl mx-auto w-full min-w-0">
+        <main className="p-3 sm:p-6 lg:p-8 pt-20 lg:pt-8 pb-28 lg:pb-8 max-w-7xl mx-auto w-full min-w-0">
           <AdminErrorBoundary>
             <Suspense fallback={<ModuleSkeleton />}>
               {renderContent()}
             </Suspense>
           </AdminErrorBoundary>
         </main>
+
+        {/* Unified Mobile Bottom Navigation Dock */}
+        <MobilePortalBottomBar
+          activeSection={activeSection}
+          onSectionChange={(section) => {
+            setActiveSection(section);
+            setIsSidebarOpen(false);
+          }}
+          isSidebarOpen={isSidebarOpen}
+          onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+          unassignedCount={dynamicStats?.unassignedLeads ?? dynamicStats?.activeInquiries ?? 0}
+        />
       </div>
 
       {/* Global Executive Command Palette (Ctrl+K / Cmd+K) */}

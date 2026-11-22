@@ -358,47 +358,47 @@ export default function CMSBookings() {
           {filteredBookings.map((booking) => (
             <div 
               key={booking.id}
-              className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-amber-400/30 transition-all duration-300 group cursor-pointer shadow-lg"
+              className="p-4 sm:p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-amber-400/30 transition-all duration-300 group cursor-pointer shadow-lg"
               onClick={() => setSelectedBooking(booking)}
             >
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                <div className="flex items-center gap-6">
-                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 group-hover:bg-kashmir-gold/10 group-hover:text-kashmir-gold transition-all shrink-0">
-                    {booking.type === 'package' ? <Package className="w-6 h-6" /> : 
-                     booking.type === 'hotel' ? <Building className="w-6 h-6" /> : <Car className="w-6 h-6" />}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+                <div className="flex items-start sm:items-center gap-3 sm:gap-6 min-w-0">
+                  <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 group-hover:bg-kashmir-gold/10 group-hover:text-kashmir-gold transition-all shrink-0">
+                    {booking.type === 'package' ? <Package className="w-5 h-5 sm:w-6 sm:h-6" /> : 
+                     booking.type === 'hotel' ? <Building className="w-5 h-5 sm:w-6 sm:h-6" /> : <Car className="w-5 h-5 sm:w-6 sm:h-6" />}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-lg font-bold text-white group-hover:text-kashmir-gold transition-colors">{booking.itemName}</h3>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+                      <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-kashmir-gold transition-colors truncate">{booking.itemName}</h3>
                       <Badge variant="outline" className="text-[8px] font-mono border-white/10 text-white/40 uppercase">#{booking.id.slice(-6)}</Badge>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                    <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-6 gap-y-1 sm:gap-y-2">
                       <p className="text-xs text-white/40 flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> {booking.user.name}</p>
                       <p className="text-xs text-white/40 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {new Date(booking.bookingDate).toLocaleDateString()}</p>
                       <p className="text-xs font-bold text-kashmir-gold flex items-center gap-1.5"><IndianRupee className="w-3.5 h-3.5" /> {booking.totalAmount.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-6 w-full lg:w-auto justify-between lg:justify-end">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1.5">Payment State</p>
+                <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t border-white/5 sm:border-t-0">
+                  <div className="text-left sm:text-right">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1 hidden sm:block">Payment State</p>
                     {getStatusBadge(booking.status)}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="w-12 h-12 rounded-xl text-red-500/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl text-red-500/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
                       onClick={(e) => {
                         e.stopPropagation();
                         setBookingToDelete(booking);
                         setDeleteConfirmOpen(true);
                       }}
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="w-12 h-12 rounded-xl text-white/20 group-hover:text-white group-hover:bg-white/5 transition-all">
-                      <ChevronRight className="w-5 h-5" />
+                    <Button variant="ghost" size="icon" className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl text-white/20 group-hover:text-white group-hover:bg-white/5 transition-all">
+                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
                   </div>
                 </div>
@@ -416,16 +416,16 @@ export default function CMSBookings() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
-        <DialogContent className="max-w-2xl bg-[#0d1216] border-white/10 text-white rounded-[3rem] p-10 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+        <DialogContent className="w-[95vw] sm:max-w-2xl bg-[#0d1216] border-white/10 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-10 max-h-[90vh] overflow-y-auto custom-scrollbar">
           {selectedBooking && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-3xl font-display font-bold">Booking Intelligence</DialogTitle>
+                <DialogTitle className="text-xl sm:text-3xl font-display font-bold">Booking Intelligence</DialogTitle>
                 <p className="text-white/40 text-xs uppercase tracking-widest font-black mt-2">REF: {selectedBooking.id}</p>
               </DialogHeader>
               
-              <div className="py-8 space-y-10">
-                <div className="grid grid-cols-2 gap-8">
+              <div className="py-5 sm:py-8 space-y-6 sm:space-y-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
                   <div className="space-y-6">
                     <div>
                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 block mb-2">Customer Details</label>

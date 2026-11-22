@@ -821,13 +821,13 @@ export default function CMSHotels() {
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* Top Header Command Bar */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-gradient-to-r from-amber-500/[0.04] via-transparent to-transparent p-6 rounded-3xl border border-white/5 backdrop-blur-xl">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-gradient-to-r from-amber-500/[0.04] via-transparent to-transparent p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 backdrop-blur-xl">
         <div>
           <div className="flex items-center gap-2 text-amber-400 text-[10px] font-black uppercase tracking-[0.25em] mb-1">
             <Building className="w-3.5 h-3.5" />
             <span>Hospitality CRM & Accommodation Management</span>
           </div>
-          <h1 className="text-3xl lg:text-4xl font-display font-bold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-white tracking-tight">
             Hotels & Resorts CMS
           </h1>
           <p className="text-xs text-white/50 mt-1">
@@ -835,7 +835,7 @@ export default function CMSHotels() {
           </p>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2.5">
+        <div className="flex items-center flex-wrap gap-2 sm:gap-2.5">
           {/* Hotel selector */}
           {hotels.length > 0 && (
             <div className="flex items-center bg-black/40 border border-white/10 rounded-xl px-3 h-10">
@@ -894,7 +894,7 @@ export default function CMSHotels() {
       </div>
 
       {/* Modern Executive Telemetry Ribbon */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3.5">
         {[
           { label: 'Occupancy Rate', value: `${kpi.occupancyRate}%`, color: 'text-amber-400', desc: 'Active rooms booked' },
           { label: "Today's Check-Ins", value: kpi.todayCheckIns, color: 'text-white', desc: 'Arriving guests' },
@@ -903,10 +903,10 @@ export default function CMSHotels() {
           { label: 'Monthly Revenue', value: `₹${(kpi.monthlyRevenue || 0).toLocaleString()}`, color: 'text-amber-300', desc: 'Hospitality volume' },
           { label: 'Service Alerts', value: kpi.alertsCount || 0, color: (kpi.alertsCount > 0 ? 'text-rose-400' : 'text-white/40'), desc: 'Maintenance tickets' }
         ].map(card => (
-          <div key={card.label} className="p-4 rounded-2xl bg-[#090e13]/90 border border-white/5 hover:border-white/10 transition-all flex flex-col justify-between shadow-lg">
+          <div key={card.label} className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-[#090e13]/90 border border-white/5 hover:border-white/10 transition-all flex flex-col justify-between shadow-lg">
             <span className="text-[8px] font-black uppercase text-white/40 tracking-wider block">{card.label}</span>
-            <span className={cn("text-xl lg:text-2xl font-display font-bold mt-1.5", card.color)}>{card.value}</span>
-            <span className="text-[9px] text-white/30 block mt-1">{card.desc}</span>
+            <span className={cn("text-lg sm:text-xl lg:text-2xl font-display font-bold mt-1", card.color)}>{card.value}</span>
+            <span className="text-[8px] sm:text-[9px] text-white/30 block mt-0.5 truncate">{card.desc}</span>
           </div>
         ))}
       </div>
