@@ -74,10 +74,13 @@ export default function PublicItinerary() {
     }
   }, []);
 
-  const handlePayAdvance = async () => {
+  const handlePayAdvance = async (payFull = false) => {
     setIsPaying(true);
     const toastId = toast.loading('Redirecting to secure Razorpay gateway...');
     try {
+      const totalAmount = itinerary?.netPrice || 20000;
+      const depositAmount = payFull ? totalAmount : Math.max(5000, Math.round(totalAmount * 0.25));
+
       const response = await fetch(`${API_BASE_URL}/payments/razorpay/create-payment-link`, {
         method: 'POST',
         headers: {
@@ -85,7 +88,7 @@ export default function PublicItinerary() {
         },
         body: JSON.stringify({
           inquiryId: itinerary?.id,
-          amount: itinerary?.netPrice || 5000,
+          amount: depositAmount,
           customerEmail: ''
         })
       });
@@ -260,8 +263,8 @@ export default function PublicItinerary() {
         </Card>
       </div>
 
-      {/* Advance Payment Action Banner */}
-      {itinerary.leadStage === 'PAYMENT_PENDING' && (
+      {/* Advance Payment Action Banner (Always available for Quoted / Active Itineraries) */}
+      {(itinerary.leadStage === 'PAYMENT_PENDING' || itinerary.leadStage === 'QUOTED' || itinerary.leadStage === 'NEGOTIATION' || (itinerary.netPrice && itinerary.netPrice > 0)) && itinerary.leadStage !== 'CONFIRMED' && itinerary.leadStage !== 'LOST' && (
         <div className="container max-w-4xl mx-auto px-6 mt-10">
           <Card className="relative overflow-hidden bg-gradient-to-br from-[#0c1f24] via-[#0d161a] to-[#080d0f] border border-kashmir-gold/20 p-8 rounded-3xl shadow-[0_20px_45px_-10px_rgba(212,175,55,0.15)] flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="absolute top-0 right-0 p-8 opacity-5">
@@ -270,27 +273,38 @@ export default function PublicItinerary() {
             
             <div className="space-y-3 text-center md:text-left relative z-10">
               <Badge className="bg-kashmir-gold/20 hover:bg-kashmir-gold/20 text-kashmir-gold border border-kashmir-gold/30 px-3 py-1 text-[9px] font-black uppercase tracking-widest">
-                Action Required: Secure Booking
+                Action: Secure & Hold Booking
               </Badge>
-              <h3 className="text-2xl font-display font-black text-white tracking-tight">Lock in Your Reservation</h3>
+              <h3 className="text-2xl font-display font-black text-white tracking-tight">Lock in Your Kashmir Holiday</h3>
               <p className="text-sm text-white/60 max-w-md">
-                To guarantee hotel pricing, room configurations, and cab availability for your tour dates, please submit the secure advance deposit.
+                Submit a 25% booking advance to lock your hotel vouchers, heated private 4x4 cab, and Gondola ticket slots. Balance payable upon arrival in Srinagar.
               </p>
             </div>
             
             <div className="flex flex-col items-center md:items-end gap-3 w-full md:w-auto relative z-10">
               <div className="text-center md:text-right">
-                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Advance Deposit Amount</p>
-                <p className="text-3xl font-black text-kashmir-gold mt-1">₹{itinerary.netPrice?.toLocaleString() || '5,000'}</p>
+                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">25% Booking Advance Deposit</p>
+                <p className="text-3xl font-black text-kashmir-gold mt-1">₹{Math.max(5000, Math.round((itinerary.netPrice || 20000) * 0.25)).toLocaleString()}</p>
+                <p className="text-[10px] text-white/40 mt-0.5">Total Package: ₹{(itinerary.netPrice || 20000).toLocaleString()}</p>
               </div>
-              <Button 
-                onClick={handlePayAdvance}
-                disabled={isPaying}
-                className="w-full md:w-auto bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-12 px-8 rounded-xl shadow-lg shadow-kashmir-gold/20 border-none"
-              >
-                {isPaying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Pay Securely with Razorpay
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button 
+                  onClick={() => handlePayAdvance(false)}
+                  disabled={isPaying}
+                  className="w-full sm:w-auto bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-12 px-6 rounded-xl shadow-lg shadow-kashmir-gold/20 border-none"
+                >
+                  {isPaying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Pay 25% Deposit
+                </Button>
+                <Button 
+                  onClick={() => handlePayAdvance(true)}
+                  disabled={isPaying}
+                  variant="outline"
+                  className="w-full sm:w-auto border-white/20 bg-white/5 hover:bg-white/10 text-white font-bold uppercase tracking-widest text-xs h-12 px-4 rounded-xl"
+                >
+                  Pay Full (100%)
+                </Button>
+              </div>
             </div>
           </Card>
         </div>
@@ -409,7 +423,7 @@ export default function PublicItinerary() {
             <Button 
               onClick={() => {
                 const message = `Hello Kashmir Curators, I am reviewing my custom itinerary proposal (ID: ${itinerary.id}). I would like to discuss some details.`;
-                window.open(`https://api.whatsapp.com/send?phone=918899825591&text=${encodeURIComponent(message)}`, '_blank');
+                window.open(`https://api.whatsapp.com/send?phone=919103798448&text=${encodeURIComponent(message)}`, '_blank');
               }}
               className="flex-2 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-black rounded-xl border-none text-xs font-black uppercase tracking-wider h-11 px-6 flex items-center justify-center gap-2"
             >

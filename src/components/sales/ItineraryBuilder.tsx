@@ -996,7 +996,7 @@ We look forward to hosting you in Paradise!
           useCORS: true,
           allowTaint: true,
           logging: false,
-          backgroundColor: '#faf9f6',
+          backgroundColor: '#ffffff',
           windowWidth: 1200,
         });
 
@@ -2049,7 +2049,7 @@ We look forward to hosting you in Paradise!
           className="w-[1200px] bg-transparent p-0"
         >
           {/* Page 1 */}
-          <div className="pdf-page bg-[#faf9f6] text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
+          <div className="pdf-page bg-white text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
             <div>
               {/* PDF Cover Header */}
               <div className="relative mb-14">
@@ -2179,7 +2179,7 @@ We look forward to hosting you in Paradise!
           {dayPairs.map((pair, pIdx) => {
             const pageNum = pIdx + 2;
             return (
-              <div key={pIdx} className="pdf-page bg-[#faf9f6] text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
+              <div key={pIdx} className="pdf-page bg-white text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
                 <div>
                   <div className="flex justify-between items-center border-b-2 border-amber-500/20 pb-6 mb-12">
                     <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px]">Itinerary Continued</p>
@@ -2270,7 +2270,7 @@ We look forward to hosting you in Paradise!
           })}
 
           {/* Final Page */}
-          <div className="pdf-page bg-[#faf9f6] text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
+          <div className="pdf-page bg-white text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
             <div>
               <div className="flex justify-between items-center border-b-2 border-amber-500/20 pb-6 mb-12">
                 <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px]">Package Terms & Value</p>
