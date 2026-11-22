@@ -23,7 +23,8 @@ import {
   ArrowRight,
   Phone,
   Layers,
-  Car
+  Car,
+  Globe
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,10 +55,12 @@ import PaymentPortal from '@/components/sales/PaymentPortal';
 import WorkLog from '@/components/sales/WorkLog';
 import SelectionRequired from '@/components/sales/SelectionRequired';
 import MobileSalesBottomBar from '@/components/sales/MobileSalesBottomBar';
+import MetaLeadsHub from '@/components/sales/MetaLeadsHub';
 
 type PortalTab = 
   | 'dashboard' 
   | 'live-leads' 
+  | 'meta-hub'
   | 'active-pipeline' 
   | 'builder' 
   | 'vault' 
@@ -298,6 +301,7 @@ export default function SalesPortal() {
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-amber-400' },
             { id: 'live-leads', label: 'Live Leads', icon: Zap, color: 'text-emerald-400', badge: '15m SLA' },
+            { id: 'meta-hub', label: 'Meta Raw Leads', icon: Globe, color: 'text-purple-400', badge: 'Option B' },
             { id: 'active-pipeline', label: 'Active Pipeline', icon: Layers, color: 'text-blue-400' },
             { id: 'builder', label: 'Itinerary Builder', icon: FilePlus, color: 'text-purple-400' },
             { id: 'vault', label: 'Inquiry Vault', icon: ShieldCheck, color: 'text-teal-400' },
@@ -541,6 +545,19 @@ export default function SalesPortal() {
                   setMetricsRefreshKey(k => k + 1);
                 }}
                 onRefreshMetrics={() => setMetricsRefreshKey(k => k + 1)}
+              />
+            </div>
+          )}
+
+          {/* TAB: META LEADS RAW DATA HUB (OPTION B) */}
+          {activeTab === 'meta-hub' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <MetaLeadsHub 
+                currentEmployee={employeeProfile}
+                onOpenItineraryBuilder={(lead) => {
+                  setSelectedInquiry(lead);
+                  setActiveTab('builder');
+                }}
               />
             </div>
           )}

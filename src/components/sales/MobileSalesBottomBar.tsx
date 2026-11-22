@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 export type SalesPortalTab = 
   | 'dashboard' 
   | 'live-leads' 
+  | 'meta-hub'
   | 'active-pipeline' 
   | 'builder' 
   | 'vault' 

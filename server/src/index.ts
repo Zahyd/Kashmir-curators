@@ -216,6 +216,7 @@ app.use('/api/portal-keys', portalAccessRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/sales/meta-leads', metaLeadRoutes);
 app.use('/api/webhooks/meta-leads', metaLeadRoutes);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/', seoRoutes);
