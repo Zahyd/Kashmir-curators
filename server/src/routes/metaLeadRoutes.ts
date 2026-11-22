@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { MetaLeadAutomationService } from '../services/metaLeadService';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken, optionalAuthenticate } from '../middleware/authMiddleware';
 import prisma from '../lib/prisma';
 
 const router = Router();
@@ -350,7 +350,7 @@ router.get('/export.csv', authenticateToken, async (req: Request, res: Response)
 // ---------------------------------------------------------------------------
 // 5. Test & Simulation Endpoint (Domestic or International)
 // ---------------------------------------------------------------------------
-router.post('/simulate', authenticateToken, async (req: Request, res: Response) => {
+router.post('/simulate', optionalAuthenticate, async (req: Request, res: Response) => {
   try {
     const {
       type = 'DOMESTIC', // 'DOMESTIC' | 'INTERNATIONAL'
