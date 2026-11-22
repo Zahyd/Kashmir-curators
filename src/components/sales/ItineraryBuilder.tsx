@@ -44,7 +44,10 @@ import {
   ExternalLink,
   Layers,
   RotateCcw,
-  RefreshCw
+  RefreshCw,
+  Send,
+  Check,
+  Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1049,433 +1052,464 @@ We look forward to hosting you in Paradise!
   const totalPagesCount = 2 + dayPairs.length; // Page 1, Day Pairs, Final Page
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-700">
-      {/* Premium Header */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white/[0.03] p-8 rounded-[3rem] border border-white/5 backdrop-blur-2xl shadow-2xl relative overflow-hidden group">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-kashmir-gold/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-700">
+      {/* 1. Sleek Luxury Studio Command Deck */}
+      <div className="bg-[#0B1015]/95 backdrop-blur-2xl border border-white/10 rounded-2xl md:rounded-3xl p-4 md:px-6 md:py-4 shadow-2xl relative overflow-hidden group">
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
         
-        <div className="flex items-center gap-6 relative z-10">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onBack} 
-            className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all"
-          >
-            <ArrowLeft className="w-5 h-5 text-white/60" />
-          </Button>
-          <div>
-            <div className="flex items-center gap-3 text-kashmir-gold text-[10px] font-black uppercase tracking-[0.4em] mb-2">
-              <div className="w-6 h-[1px] bg-kashmir-gold/40" />
-              <Sparkles className="w-3 h-3" />
-              <span>Bespoke Proposal Builder</span>
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 relative z-10">
+          {/* Left: Studio Identity & Guest Title */}
+          <div className="flex items-center gap-3 md:gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onBack} 
+              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-amber-400/40 text-white/70 hover:text-white transition-all shrink-0"
+              title="Return to Pipeline"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-widest">
+                  <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
+                  AI Luxury Studio
+                </span>
+                <span className="text-[10px] text-white/40 uppercase font-mono tracking-wider">
+                  {inquiry.id?.startsWith('AI-') ? 'Sandbox Mode' : (inquiry.id?.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${(inquiry.id || '').substring(0, 8).toUpperCase()}`)}
+                </span>
+                {inquiry.destination && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-white/40 font-medium">
+                    • <MapPin className="w-3 h-3 text-amber-400/70" /> {inquiry.destination}
+                  </span>
+                )}
+              </div>
+              <h1 className="text-lg md:text-2xl font-display font-bold text-white tracking-tight flex items-center gap-2">
+                <span>Curating for</span>
+                <span className="text-amber-400">{inquiry.customerName || 'Valued Guest'}</span>
+              </h1>
             </div>
-            <h2 className="text-4xl font-display font-bold text-white tracking-tight">
-              Curating for <span className="text-kashmir-gold">{inquiry.customerName}</span>
-            </h2>
           </div>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto relative z-10 flex-wrap">
-          <Button 
-            onClick={handleQuickWhatsAppShare}
-            variant="outline" 
-            className="flex-1 sm:flex-none bg-[#25D366]/10 border-[#25D366]/30 hover:bg-[#25D366] hover:text-black text-[#25D366] font-bold h-14 px-6 rounded-2xl transition-all shadow-lg shadow-[#25D366]/10"
-          >
-            <Share2 className="w-4 h-4 mr-2" />
-            <span>WhatsApp Proposal</span>
-          </Button>
-          <Button 
-            onClick={() => setShowAiRegenModal(true)}
-            variant="outline" 
-            className="flex-1 sm:flex-none bg-amber-400/10 border-amber-400/30 hover:bg-amber-400 hover:text-black text-amber-300 font-bold h-14 px-6 rounded-2xl transition-all shadow-lg shadow-amber-400/10"
-          >
-            <Sparkles className="w-4 h-4 mr-2 text-amber-400" />
-            <span>AI Regenerate</span>
-          </Button>
-          <Button 
-            onClick={handleSaveQuote}
-            disabled={isGenerating}
-            variant="outline" 
-            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-6 rounded-2xl transition-all"
-          >
-            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            <span>Save</span>
-          </Button>
-          <Button 
-            onClick={generatePDF} 
-            disabled={isGenerating}
-            variant="outline" 
-            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white font-bold h-14 px-6 rounded-2xl transition-all"
-          >
-            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
-            <span>Export</span>
-          </Button>
-          <Button 
-            onClick={() => {
-              const url = `${window.location.origin}/itinerary/${inquiry.id}`;
-              navigator.clipboard.writeText(url);
-              toast.success('Shareable link copied to clipboard!', {
-                description: 'Send this link to the customer to let them view the interactive itinerary.'
-              });
-            }}
-            variant="outline" 
-            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-emerald-400 font-bold h-14 px-6 rounded-2xl transition-all"
-          >
-            <Share2 className="w-4 h-4 mr-2" />
-            <span>Link</span>
-          </Button>
-          <Button 
-            onClick={() => {
-              setGeneratedLink('');
-              setShowAdvanceModal(true);
-            }}
-            variant="outline" 
-            className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-kashmir-gold font-bold h-14 px-6 rounded-2xl transition-all"
-          >
-            <CreditCard className="w-4 h-4 mr-2" />
-            <span>Deposit</span>
-          </Button>
-          <Button 
-            onClick={() => setShowDeleteConfirm(true)}
-            variant="outline" 
-            className="flex-1 bg-red-500/10 border-red-500/20 hover:bg-red-500 hover:text-black text-red-400 font-bold h-14 px-5 rounded-2xl transition-all"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            <span>Delete</span>
-          </Button>
-          <Button 
-            onClick={handleSendProposal} 
-            disabled={isGenerating}
-            className="flex-1 sm:flex-none bg-kashmir-gold text-black hover:bg-amber-500 font-black uppercase tracking-widest text-xs h-14 px-8 rounded-2xl shadow-xl shadow-kashmir-gold/20 hover:shadow-kashmir-gold/40 transition-all border-none"
-          >
-            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
-            <span>Send Proposal</span>
-          </Button>
+
+          {/* Right: Modern Streamlined Action Toolbar */}
+          <div className="flex items-center gap-2 w-full xl:w-auto flex-wrap justify-start xl:justify-end">
+            <Button 
+              onClick={handleSaveQuote}
+              disabled={isGenerating}
+              variant="outline" 
+              size="sm"
+              className="h-9 px-3.5 rounded-xl bg-white/[0.04] border-white/10 hover:bg-white/[0.08] hover:border-white/20 text-white font-semibold text-xs transition-all"
+            >
+              {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5 text-white/70" />}
+              <span>Save</span>
+            </Button>
+
+            <Button 
+              onClick={generatePDF} 
+              disabled={isGenerating}
+              variant="outline" 
+              size="sm"
+              className="h-9 px-3.5 rounded-xl bg-white/[0.04] border-white/10 hover:bg-white/[0.08] hover:border-white/20 text-white font-semibold text-xs transition-all"
+            >
+              {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Download className="w-3.5 h-3.5 mr-1.5 text-white/70" />}
+              <span>Export PDF</span>
+            </Button>
+
+            <Button 
+              onClick={handleQuickWhatsAppShare}
+              variant="outline" 
+              size="sm"
+              className="h-9 px-3.5 rounded-xl bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500 hover:text-black text-emerald-400 font-bold text-xs transition-all shadow-sm shadow-emerald-500/10"
+            >
+              <Share2 className="w-3.5 h-3.5 mr-1.5" />
+              <span>WhatsApp</span>
+            </Button>
+
+            <Button 
+              onClick={() => {
+                const url = `${window.location.origin}/itinerary/${inquiry.id}`;
+                navigator.clipboard.writeText(url);
+                toast.success('Shareable link copied to clipboard!');
+              }}
+              variant="outline" 
+              size="sm"
+              className="h-9 px-3 rounded-xl bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white/80 hover:text-white text-xs transition-all"
+              title="Copy Interactive Client Proposal Link"
+            >
+              <ExternalLink className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
+              <span>Link</span>
+            </Button>
+
+            <Button 
+              onClick={() => {
+                setGeneratedLink('');
+                setShowAdvanceModal(true);
+              }}
+              variant="outline" 
+              size="sm"
+              className="h-9 px-3 rounded-xl bg-amber-400/10 border-amber-400/20 hover:bg-amber-400/20 text-amber-300 text-xs font-semibold transition-all"
+              title="Generate Razorpay Advance Deposit Link"
+            >
+              <CreditCard className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
+              <span>Deposit</span>
+            </Button>
+
+            <Button 
+              onClick={() => setShowAiRegenModal(true)}
+              variant="outline" 
+              size="sm"
+              className="h-9 px-3.5 rounded-xl bg-amber-400/15 border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 font-bold text-xs transition-all shadow-sm shadow-amber-400/10"
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
+              <span>AI Studio</span>
+            </Button>
+
+            <Button 
+              onClick={() => setShowDeleteConfirm(true)}
+              variant="ghost" 
+              size="icon"
+              className="h-9 w-9 rounded-xl bg-rose-500/5 border border-rose-500/20 hover:bg-rose-500 hover:text-white text-rose-400 transition-all shrink-0"
+              title="Delete Curation"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+
+            <Button 
+              onClick={handleSendProposal} 
+              disabled={isGenerating}
+              className="h-9 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black uppercase text-xs tracking-wider shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all border-none"
+            >
+              {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Send className="w-3.5 h-3.5 mr-1.5" />}
+              <span>Send Proposal</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* Editor Side */}
-        <div className="lg:col-span-8 space-y-10">
-          {/* Financial Control Panel */}
-          <Card className="bg-[#0b1317]/90 backdrop-blur-3xl border border-white/10 p-8 rounded-[3rem] sticky top-8 z-30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden group border-l-kashmir-gold border-l-4">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity duration-700">
-              <IndianRupee className="w-32 h-32 text-kashmir-gold" />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-kashmir-gold/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-            
-            <div className="space-y-6 relative z-10">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-2xl bg-kashmir-gold/10 border border-kashmir-gold/20 flex items-center justify-center text-kashmir-gold">
-                    <Wallet className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-1">Commercial Deck</p>
-                    <h3 className="text-2xl font-display font-bold text-white tracking-tight">Yield & Margin Controls</h3>
-                  </div>
+      {/* 2. Main Studio Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+        {/* Left Column: Editor & Telemetry */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Integrated Financial & Telemetry HUD */}
+          <div className="bg-[#0B1015]/90 backdrop-blur-2xl border border-white/10 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-xl space-y-5">
+            {/* Top Stat Ribbon: Commercial Metrics & Dynamic Yield Dial */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              {/* Selling Price */}
+              <div className="p-3.5 md:p-4 rounded-xl md:rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex items-center justify-between text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-wider mb-1">
+                  <span>Client Selling Price</span>
+                  <IndianRupee className="w-3.5 h-3.5 text-amber-400" />
                 </div>
-
-                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto">
-                  <div className="flex-1 px-5 py-2.5 bg-[#0f171b]/60 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                    <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-0.5">Selling Price</p>
-                    <p className="text-base font-bold text-white">₹{totalRevenue.toLocaleString()}</p>
-                  </div>
-                  <div className="flex-1 px-5 py-2.5 bg-[#0f171b]/60 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                    <p className="text-[8px] uppercase font-black tracking-widest text-white/20 mb-0.5">Wholesale Net</p>
-                    <p className="text-base font-bold text-white/60">₹{totalNetCost.toLocaleString()}</p>
-                  </div>
-                  <div className={cn(
-                    "flex-1 px-6 py-2.5 rounded-2xl border shadow-lg transition-all duration-300",
-                    margin >= 20 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
-                    margin >= 10 ? "bg-amber-500/10 border-amber-500/20 text-amber-500" :
-                    "bg-red-500/10 border-red-500/20 text-red-400"
-                  )}>
-                    <p className="text-[8px] uppercase font-black tracking-widest opacity-60 mb-0.5">Profit Margin</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xl font-black">{margin.toFixed(1)}%</p>
-                      {margin >= 15 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    </div>
-                  </div>
+                <div className="text-xl md:text-2xl font-display font-black text-amber-400">
+                  ₹{totalRevenue.toLocaleString()}
                 </div>
               </div>
 
-              {/* Dynamic Target Margin & Logistics Strip */}
-              <div className="pt-4 border-t border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Sliders className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Target Margin:</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {[15, 20, 25, 30, 35].map((pct) => (
-                      <button
-                        key={pct}
-                        type="button"
-                        onClick={() => handleApplyTargetMargin(pct)}
-                        className={cn(
-                          "px-2.5 py-1 rounded-lg text-[10px] font-black tracking-wide border transition-all",
-                          Math.round(margin) === pct
-                            ? "bg-amber-400 text-black border-amber-400 shadow-md shadow-amber-400/20"
-                            : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
-                        )}
-                      >
-                        {pct}%
-                      </button>
-                    ))}
-                  </div>
-                  <span className="text-xs font-mono text-emerald-400 font-bold ml-2">
-                    (+₹{profit.toLocaleString()} Profit)
+              {/* Wholesale Net Cost */}
+              <div className="p-3.5 md:p-4 rounded-xl md:rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex items-center justify-between text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-wider mb-1">
+                  <span>Wholesale Cost</span>
+                  <Wallet className="w-3.5 h-3.5 text-blue-400" />
+                </div>
+                <div className="text-xl md:text-2xl font-display font-black text-white/70">
+                  ₹{totalNetCost.toLocaleString()}
+                </div>
+              </div>
+
+              {/* Profit & Margin */}
+              <div className={cn(
+                "p-3.5 md:p-4 rounded-xl md:rounded-2xl border transition-all",
+                margin >= 20 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" :
+                margin >= 10 ? "bg-amber-500/10 border-amber-500/25 text-amber-400" :
+                "bg-rose-500/10 border-rose-500/25 text-rose-400"
+              )}>
+                <div className="flex items-center justify-between opacity-70 text-[9px] md:text-[10px] font-black uppercase tracking-wider mb-1">
+                  <span>Gross Profit</span>
+                  {margin >= 15 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl md:text-2xl font-display font-black">₹{profit.toLocaleString()}</span>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-black/40">
+                    {margin.toFixed(1)}%
                   </span>
                 </div>
+              </div>
 
-                <div className="flex items-center gap-2 text-[10px] font-bold text-amber-300/80 bg-amber-400/5 px-3 py-1.5 rounded-xl border border-amber-400/15">
-                  <Compass className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Expedition Scope: ~{logistics.totalDistanceKm} km across {logistics.uniqueRoutesCount} circuits</span>
+              {/* Yield Margin Dial */}
+              <div className="p-3.5 md:p-4 rounded-xl md:rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[9px] md:text-[10px] font-black uppercase tracking-wider text-amber-400 mb-1.5">
+                  <span className="flex items-center gap-1"><Sliders className="w-3 h-3" /> Target Margin</span>
+                  <span className="text-white/40 font-mono text-[9px]">Auto-Calibrate</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {[15, 20, 25, 30, 35].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => handleApplyTargetMargin(pct)}
+                      className={cn(
+                        "flex-1 py-1 rounded-md text-[11px] font-black transition-all",
+                        Math.round(margin) === pct
+                          ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
+                          : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
-          </Card>
 
-          {/* 1-Click Master Itinerary Blueprints */}
-          <div className="p-6 rounded-[2rem] bg-gradient-to-r from-amber-500/10 via-white/[0.02] to-transparent border border-amber-400/20 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-                <span className="text-xs font-black uppercase tracking-wider text-amber-400">1-Click Master Itinerary Blueprints</span>
+            {/* Bottom Strip: Logistics Telemetry & 1-Click Blueprints */}
+            <div className="pt-3.5 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-white/60">
+                <Compass className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="text-white/80 font-bold">Expedition:</span>
+                <span className="text-white/50">~{logistics.totalDistanceKm} km across {logistics.uniqueRoutesCount} circuits • {days.length} Days</span>
               </div>
-              <p className="text-[11px] text-white/50">Instantly populate high-conversion itineraries with curated hotels, route drive times, and pricing.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => loadTemplate('flagship-6d')}
-                className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
-              >
-                6D Flagship
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => loadTemplate('romance-5d')}
-                className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
-              >
-                5D Romance
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => loadTemplate('snow-4d')}
-                className="bg-white/5 border-white/10 hover:bg-amber-400 hover:text-black hover:border-amber-400 text-xs font-bold rounded-xl h-9 px-3.5 transition-all"
-              >
-                4D Gulmarg Ski
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAiRegenModal(true)}
-                className="bg-amber-400/15 border-amber-400/30 text-amber-300 hover:bg-amber-400 hover:text-black text-xs font-black uppercase rounded-xl h-9 px-3.5 transition-all"
-              >
-                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                AI Studio
-              </Button>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] uppercase font-black tracking-wider text-white/30 mr-1">Blueprints:</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => loadTemplate('flagship-6d')}
+                  className="h-7 px-2.5 rounded-lg bg-white/5 hover:bg-amber-400 hover:text-black text-white/70 text-xs font-bold transition-all"
+                >
+                  👑 6D Crown
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => loadTemplate('romance-5d')}
+                  className="h-7 px-2.5 rounded-lg bg-white/5 hover:bg-amber-400 hover:text-black text-white/70 text-xs font-bold transition-all"
+                >
+                  🌹 5D Romance
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => loadTemplate('snow-4d')}
+                  className="h-7 px-2.5 rounded-lg bg-white/5 hover:bg-amber-400 hover:text-black text-white/70 text-xs font-bold transition-all"
+                >
+                  ❄️ 4D Ski
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAiRegenModal(true)}
+                  className="h-7 px-2.5 rounded-lg bg-amber-400/15 border border-amber-400/30 hover:bg-amber-400 hover:text-black text-amber-300 text-xs font-bold transition-all"
+                >
+                  <Sparkles className="w-3 h-3 mr-1 text-amber-400" />
+                  AI Prompt
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-4">
-            <h3 className="text-xl font-bold text-white flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-kashmir-gold" />
-      Timeline Editor
-            </h3>
-            <Badge className="bg-white/5 text-white/40 border-none font-bold uppercase tracking-widest text-[9px]">
-              {days.length} Days Total
-            </Badge>
+          {/* Section Header: Chapters */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400">
+                <Calendar className="w-3.5 h-3.5" />
+              </div>
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Itinerary Timeline Chapters
+              </h3>
+              <span className="text-xs text-white/40 font-medium">({days.length} Days • {days.length - 1} Nights)</span>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleAddDay}
+              className="h-8 px-3 rounded-lg bg-white/5 border-white/10 hover:border-amber-400/40 text-xs font-bold text-white flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5 text-amber-400" />
+              <span>Add Chapter</span>
+            </Button>
           </div>
 
-          <div className="space-y-8">
-            {days.map((day, index) => (
-              <div key={index} className="relative group">
-                <Card className="bg-[#0a0f12]/40 bg-white/[0.03] border-white/5 p-10 rounded-[2.5rem] backdrop-blur-xl relative overflow-hidden transition-all duration-500 hover:border-white/20 group-hover:shadow-2xl group-hover:shadow-black/50">
-                  <div className="absolute top-0 left-0 w-2 h-full bg-kashmir-gold/20 group-hover:bg-kashmir-gold transition-all duration-700" />
-                  
-                  {/* Card Header: Day & Title */}
-                  <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-10">
-                    <div className="flex items-center gap-6 flex-1 w-full">
-                      <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-kashmir-gold text-2xl font-black shadow-inner">
-                        {day.day}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <Input 
-                          value={day.title}
-                          onChange={(e) => handleUpdateDay(index, 'title', e.target.value)}
-                          className="bg-transparent border-none text-2xl font-display font-bold text-white p-0 h-auto focus-visible:ring-0 placeholder:text-white/10"
-                          placeholder="Untitled Day"
-                        />
-                        <div className="flex flex-wrap items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-white/30">
-                          <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-white/20" /> Full Day Plan</span>
-                          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Live Preview</span>
-                          <div className="h-4 w-px bg-white/10" />
-                          <label className="flex items-center gap-2.5 cursor-pointer select-none text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-kashmir-gold transition-colors">
-                            <input 
-                              type="checkbox" 
-                              checked={day.showDateTime || false} 
-                              onChange={(e) => handleUpdateDay(index, 'showDateTime', e.target.checked)}
-                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-kashmir-gold focus:ring-0 focus:ring-offset-0 cursor-pointer accent-kashmir-gold"
-                            />
-                            <span>Set Date & Time</span>
-                          </label>
+          {/* Day Cards List */}
+          <div className="space-y-6">
+            {days.map((day, index) => {
+              const routeIntel = getRouteIntelligence(day.title, day.activities, day.day);
 
-                          {day.showDateTime && (
-                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
-                              <div className="relative flex items-center">
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className="bg-[#0f171b]/80 border border-white/10 rounded-xl h-10 pl-9 pr-8 text-xs font-bold text-white hover:bg-white/[0.08] transition-all w-38 text-left relative flex items-center"
-                                    >
-                                      <Calendar className="absolute left-3 w-3.5 h-3.5 text-kashmir-gold" />
-                                      <span className="truncate">
-                                        {day.date ? format(new Date(day.date), 'dd-MM-yyyy') : 'dd-mm-yyyy'}
-                                      </span>
-                                    </button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0 bg-[#0b1317]/95 border border-white/10 backdrop-blur-md rounded-2xl shadow-2xl" align="start">
-                                    <UICalendar
-                                      mode="single"
-                                      selected={day.date ? new Date(day.date) : undefined}
-                                      onSelect={(date) => {
-                                        if (date) {
-                                          const yyyy = date.getFullYear();
-                                          const mm = String(date.getMonth() + 1).padStart(2, '0');
-                                          const dd = String(date.getDate()).padStart(2, '0');
-                                          handleUpdateDay(index, 'date', `${yyyy}-${mm}-${dd}`);
-                                        }
-                                      }}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                              <div className="relative flex items-center">
-                                <Clock className="w-3.5 h-3.5 absolute left-3 text-kashmir-gold" />
-                                <input 
-                                  type="time" 
-                                  value={day.time || ''} 
-                                  onChange={(e) => handleUpdateDay(index, 'time', e.target.value)}
-                                  className="bg-[#0f171b]/80 border border-white/10 rounded-xl h-10 pl-9 pr-3 text-xs font-bold text-white focus:outline-none focus:border-kashmir-gold/40 focus:bg-white/[0.08] transition-all w-28 color-scheme-dark"
-                                  style={{ colorScheme: 'dark' }}
-                                />
-                              </div>
-                            </div>
-                          )}
+              return (
+                <div key={index} className="relative group">
+                  <Card className="bg-[#0B1015]/90 border border-white/10 hover:border-white/20 p-5 md:p-6 rounded-2xl md:rounded-3xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 shadow-xl group-hover:shadow-black/60">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-amber-400/50 via-amber-400/20 to-transparent group-hover:from-amber-400 transition-all duration-500" />
+                    
+                    {/* Chapter Header: Day Pill, Editable Title & Actions */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                      <div className="flex items-center gap-3 flex-1 w-full">
+                        <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 text-sm font-black shadow-inner shrink-0">
+                          {String(day.day).padStart(2, '0')}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <Input 
+                            value={day.title}
+                            onChange={(e) => handleUpdateDay(index, 'title', e.target.value)}
+                            className="bg-transparent border-none text-base md:text-lg font-display font-bold text-white p-0 h-auto focus-visible:ring-0 placeholder:text-white/20 focus:underline"
+                            placeholder={`Day ${day.day}: Untitled Expedition`}
+                          />
+                        </div>
+                      </div>
 
-                        {/* Dynamic Route & Drive Intelligence Bar */}
-                        {(() => {
-                          const routeIntel = getRouteIntelligence(day.title, day.activities, day.day);
-                          return (
-                            <div className="mt-3 p-3.5 rounded-2xl bg-amber-500/[0.04] border border-amber-500/15 flex flex-wrap items-center justify-between gap-3 text-xs">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">
-                                  <Compass className="w-4 h-4 animate-spin-slow" />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2 font-black text-white/90">
-                                    <span>{routeIntel.route}</span>
-                                    <Badge className="bg-white/10 text-amber-300 border-none font-bold text-[9px] px-2 py-0.5">
-                                      {routeIntel.distanceKm} km
-                                    </Badge>
-                                    <Badge className="bg-emerald-500/15 text-emerald-400 border-none font-bold text-[9px] px-2 py-0.5">
-                                      {routeIntel.driveTime}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-[10px] text-white/45 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-amber-400/70 font-semibold">{routeIntel.elevation}</span>
-                                    <span>•</span>
-                                    <span className="truncate max-w-md">{routeIntel.scenicHighlight}</span>
-                                  </p>
-                                </div>
-                              </div>
-                              {routeIntel.mountainAdvisory && (
-                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-amber-400/80 bg-amber-400/10 px-3 py-1.5 rounded-xl border border-amber-400/20 max-w-xs xl:max-w-none">
-                                  <Info className="w-3.5 h-3.5 shrink-0" />
-                                  <span className="truncate">{routeIntel.mountainAdvisory}</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-amber-400 transition-colors mr-1">
+                          <input 
+                            type="checkbox" 
+                            checked={day.showDateTime || false} 
+                            onChange={(e) => handleUpdateDay(index, 'showDateTime', e.target.checked)}
+                            className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-amber-400 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-amber-400"
+                          />
+                          <span>Date/Time</span>
+                        </label>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={enhancingDayIndex === index}
+                          onClick={() => handleAiEnhanceDay(index)}
+                          className="h-8 px-2.5 rounded-lg bg-amber-400/10 border-amber-400/30 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-black uppercase tracking-wider transition-all"
+                        >
+                          {enhancingDayIndex === index ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                              <span>Polishing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3 h-3 mr-1 text-amber-400" />
+                              <span>✨ AI Polish</span>
+                            </>
+                          )}
+                        </Button>
+
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleRemoveDay(index)}
+                          className="w-8 h-8 text-white/30 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                          title="Remove Day"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleRemoveDay(index)}
-                      className="text-white/10 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </Button>
-                  </div>
 
-                  <div className="space-y-12">
-                    {/* Top Section: Activities & Hotel Selection */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                      {/* Left Column: Activities */}
-                      <div className="space-y-6">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1 flex items-center gap-2">
-                              <ImageIcon className="w-3 h-3 text-kashmir-gold" /> Experiences & Activities
-                            </label>
-                            <Button
+                    {/* Date/Time Row (if active) */}
+                    {day.showDateTime && (
+                      <div className="flex items-center gap-2 mb-4 p-2.5 rounded-xl bg-white/[0.02] border border-white/5 animate-in fade-in duration-300">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
                               type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={enhancingDayIndex === index}
-                              onClick={() => handleAiEnhanceDay(index)}
-                              className="h-7 px-3 rounded-xl bg-amber-400/10 border-amber-400/30 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shadow-amber-500/10"
+                              className="bg-[#0f171b]/80 border border-white/10 rounded-lg h-8 pl-8 pr-4 text-xs font-bold text-white hover:bg-white/[0.08] transition-all relative flex items-center"
                             >
-                              {enhancingDayIndex === index ? (
-                                <>
-                                  <Loader2 className="w-3 h-3 animate-spin mr-1.5" />
-                                  <span>Curating...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Sparkles className="w-3 h-3 mr-1.5 text-amber-400" />
-                                  <span>✨ AI Polish Day</span>
-                                </>
-                              )}
-                            </Button>
+                              <Calendar className="absolute left-2.5 w-3.5 h-3.5 text-amber-400" />
+                              <span>
+                                {day.date ? format(new Date(day.date), 'dd MMM yyyy') : 'Set Date'}
+                              </span>
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 bg-[#0B1015] border border-white/10 backdrop-blur-md rounded-xl shadow-2xl" align="start">
+                            <UICalendar
+                              mode="single"
+                              selected={day.date ? new Date(day.date) : undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const yyyy = date.getFullYear();
+                                  const mm = String(date.getMonth() + 1).padStart(2, '0');
+                                  const dd = String(date.getDate()).padStart(2, '0');
+                                  handleUpdateDay(index, 'date', `${yyyy}-${mm}-${dd}`);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+
+                        <div className="relative flex items-center">
+                          <Clock className="w-3.5 h-3.5 absolute left-2.5 text-amber-400" />
+                          <input 
+                            type="time" 
+                            value={day.time || ''} 
+                            onChange={(e) => handleUpdateDay(index, 'time', e.target.value)}
+                            className="bg-[#0f171b]/80 border border-white/10 rounded-lg h-8 pl-8 pr-2 text-xs font-bold text-white focus:outline-none focus:border-amber-400/40 transition-all w-28 color-scheme-dark"
+                            style={{ colorScheme: 'dark' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dynamic Route & Telemetry Ribbon */}
+                    <div className="mb-5 p-3 rounded-xl bg-amber-500/[0.04] border border-amber-500/15 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">
+                          <Compass className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-white/90">{routeIntel.route}</span>
+                          <span className="px-2 py-0.5 rounded bg-white/10 text-amber-300 font-mono font-bold text-[10px]">
+                            {routeIntel.distanceKm} km
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold text-[10px]">
+                            {routeIntel.driveTime}
+                          </span>
+                          <span className="text-white/40 text-[11px] hidden sm:inline">• {routeIntel.elevation}</span>
+                        </div>
+                      </div>
+                      {routeIntel.mountainAdvisory && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-amber-400/90 bg-amber-400/10 px-2.5 py-1 rounded-lg border border-amber-400/20">
+                          <Info className="w-3 h-3 shrink-0" />
+                          <span className="truncate max-w-xs">{routeIntel.mountainAdvisory}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2-Column Modular Studio Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+                      {/* Left: Experiences & Activities */}
+                      <div className="space-y-3 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-white/40 flex items-center gap-1.5">
+                              <ImageIcon className="w-3 h-3 text-amber-400" /> Curated Excursions & Activities
+                            </label>
                           </div>
                           <Textarea 
                             value={day.activities}
                             onChange={(e) => handleUpdateDay(index, 'activities', e.target.value)}
-                            placeholder="Craft the magic here..."
-                            className="bg-[#0f171b]/60 border border-white/5 rounded-[2rem] min-h-[200px] focus:border-kashmir-gold/30 focus:bg-[#0f171b]/90 text-white/90 leading-relaxed transition-all duration-300 focus:ring-0 focus-visible:ring-0 placeholder:text-white/10"
+                            placeholder="Detail the day's experiences, sightseeing, scenic stops, and private moments..."
+                            className="bg-[#07090E]/70 border border-white/10 rounded-xl min-h-[140px] focus:border-amber-400/40 text-xs md:text-sm text-white/90 leading-relaxed transition-all focus:ring-0 placeholder:text-white/20 resize-y"
                           />
                         </div>
 
                         {dayProTips[index] && (
-                          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2.5 text-xs text-emerald-300 animate-in fade-in duration-300">
-                            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2 text-xs text-emerald-300 animate-in fade-in duration-300">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                             <div>
-                              <span className="font-black text-[9px] uppercase tracking-widest text-emerald-400 mr-2">Concierge Secret:</span>
-                              <span className="text-white/90 leading-relaxed">{dayProTips[index]}</span>
+                              <span className="font-bold text-[9px] uppercase tracking-wider text-emerald-400 mr-1.5">Concierge Secret:</span>
+                              <span className="text-white/80 leading-relaxed">{dayProTips[index]}</span>
                             </div>
                           </div>
                         )}
-                        
-                        <div className="flex flex-wrap gap-2">
+
+                        <div className="flex flex-wrap gap-1.5 pt-1">
                           {activityTemplates.slice(0, 3).map((template, tIdx) => (
                             <button
                               key={tIdx}
+                              type="button"
                               onClick={() => addTemplate(index, template)}
-                              className="text-[9px] font-bold px-4 py-2 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-kashmir-gold hover:border-kashmir-gold/30 hover:bg-kashmir-gold/5 transition-all duration-300"
+                              className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-amber-400 hover:border-amber-400/30 hover:bg-amber-400/5 transition-all"
                             >
                               + {template.split(' ').slice(0, 3).join(' ')}...
                             </button>
@@ -1483,494 +1517,368 @@ We look forward to hosting you in Paradise!
                         </div>
                       </div>
 
-                      {/* Right Column: Hotel Selection */}
-                      <div className="space-y-8">
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1 flex items-center gap-2">
-                            <HotelIcon className="w-3 h-3 text-amber-400" /> Accommodation Selection
-                          </label>
-                          <div className="flex gap-4">
+                      {/* Right: Accommodation */}
+                      <div className="space-y-3 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-white/40 flex items-center gap-1.5">
+                              <HotelIcon className="w-3 h-3 text-amber-400" /> Accommodation Selection
+                            </label>
+                          </div>
+
+                          <div className="flex gap-2">
                             <div 
                               onClick={() => setShowImageActions(index)}
-                              className="w-20 h-20 rounded-2xl bg-[#0f171b]/60 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden relative cursor-pointer hover:bg-white/10 transition-all duration-300 group/himg shadow-inner"
+                              className="w-12 h-12 rounded-xl bg-[#07090E] border border-white/10 flex items-center justify-center shrink-0 overflow-hidden relative cursor-pointer hover:border-amber-400/40 transition-all group/himg"
+                              title="Change Hotel Image"
                             >
                               {day.hotelImage ? (
-                                <img src={day.hotelImage} className="w-full h-full object-cover group-hover/himg:scale-110 transition-transform duration-500" />
+                                <img src={day.hotelImage} className="w-full h-full object-cover group-hover/himg:scale-110 transition-transform" />
                               ) : (
-                                <ImageIcon className="w-7 h-7 text-white/10" />
+                                <ImageIcon className="w-5 h-5 text-white/20" />
                               )}
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/himg:opacity-100 flex items-center justify-center transition-opacity">
-                                <Plus className="w-5 h-5 text-white" />
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/himg:opacity-100 flex items-center justify-center transition-opacity">
+                                <Plus className="w-4 h-4 text-white" />
                               </div>
                             </div>
+
                             <div className="flex-1 relative">
                               <Input 
                                 value={day.hotelName}
                                 onChange={(e) => handleUpdateDay(index, 'hotelName', e.target.value)}
-                                className="bg-[#0f171b]/60 border border-white/5 rounded-2xl h-20 pl-14 pr-12 focus:border-kashmir-gold/30 font-bold text-lg placeholder:text-white/10 transition-colors focus:bg-[#0f171b]/90"
-                                placeholder="Select Luxury Stay..."
+                                className="bg-[#07090E]/70 border border-white/10 rounded-xl h-12 pl-10 pr-3 font-semibold text-xs md:text-sm placeholder:text-white/20 text-white focus:border-amber-400/40"
+                                placeholder="Select or type luxury stay..."
                               />
-                              <HotelIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+                              <HotelIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                             </div>
+
                             <Button 
+                              type="button"
                               onClick={() => setShowHotelPicker(index)}
-                              className="h-20 w-20 rounded-2xl bg-kashmir-gold text-black hover:bg-amber-500 shadow-xl shadow-kashmir-gold/20 shrink-0 group/pb"
+                              className="h-12 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs shrink-0 flex items-center gap-1"
+                              title="Browse Collection"
                             >
-                              <Plus className="w-8 h-8 group-hover/pb:rotate-90 transition-transform duration-300" />
+                              <Plus className="w-4 h-4" />
+                              <span className="hidden sm:inline">Browse</span>
                             </Button>
                           </div>
                         </div>
 
-                        {/* Accommodation Details Grid */}
-                        {day.hotelName && (
-                          <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 bg-[#0f171b]/40 border border-white/5 p-6 rounded-[2rem]">
-                            {/* Row 1: Room, Plan, Pax */}
-                            <div className="grid grid-cols-3 gap-6">
-                              <div className="space-y-3">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Bed className="w-3.5 h-3.5 text-kashmir-gold/50" /> Room Type</label>
-                                <Select value={day.roomType} onValueChange={(value) => handleUpdateDay(index, 'roomType', value)}>
-                                  <SelectTrigger className="bg-[#0f171b]/80 border-white/10 rounded-2xl h-14 font-bold text-xs focus:border-kashmir-gold/30 hover:border-white/20 transition-all"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-[#0b1317] border-white/10 text-white">
-                                    <SelectItem value="Deluxe Room">Deluxe Room</SelectItem>
-                                    <SelectItem value="Premium Room">Premium Room</SelectItem>
-                                    <SelectItem value="Luxury Suite">Luxury Suite</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-3">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Coffee className="w-3.5 h-3.5 text-kashmir-gold/50" /> Meal Plan</label>
-                                <Select value={day.mealPlan} onValueChange={(value) => handleUpdateDay(index, 'mealPlan', value)}>
-                                  <SelectTrigger className="bg-[#0f171b]/80 border-white/10 rounded-2xl h-14 font-bold text-xs focus:border-kashmir-gold/30 hover:border-white/20 transition-all"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-[#0b1317] border-white/10 text-white">
-                                    <SelectItem value="EP (Room Only)">EP (Room Only)</SelectItem>
-                                    <SelectItem value="CP (Breakfast)">CP (Breakfast)</SelectItem>
-                                    <SelectItem value="MAP (Breakfast + Dinner)">MAP (Bf + Din)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-3">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2"><Users className="w-3.5 h-3.5 text-kashmir-gold/50" /> Pax Count</label>
-                                <Input 
-                                  value={day.paxCount} 
-                                  onChange={(e) => handleUpdateDay(index, 'paxCount', e.target.value)} 
-                                  className="bg-[#0f171b]/80 border-white/10 rounded-2xl h-14 font-bold text-center text-sm focus:border-kashmir-gold/30 hover:border-white/20 transition-all" 
-                                />
-                              </div>
-                            </div>
-
-                            {/* Row 2: Stay Pricing */}
-                            <div className="grid grid-cols-2 gap-6 p-4 rounded-2xl bg-white/[0.01] border border-white/5">
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-kashmir-gold/50 ml-1 flex items-center gap-2">Stay Selling Price</label>
-                                <div className="relative">
-                                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-kashmir-gold font-bold">₹</span>
-                                  <Input 
-                                    type="number"
-                                    value={day.hotelPrice === 0 ? '' : day.hotelPrice}
-                                    onChange={(e) => handleUpdateDay(index, 'hotelPrice', parseInt(e.target.value) || 0)}
-                                    className="bg-[#0f171b]/80 border-white/10 rounded-xl h-12 pl-10 font-bold text-white focus:border-kashmir-gold/30 hover:border-white/20 transition-all"
-                                  />
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/20 ml-1 flex items-center gap-2">Stay Net Cost</label>
-                                <div className="relative">
-                                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 font-bold">₹</span>
-                                  <Input 
-                                    type="number"
-                                    value={day.hotelNetCost === 0 ? '' : day.hotelNetCost}
-                                    onChange={(e) => handleUpdateDay(index, 'hotelNetCost', parseInt(e.target.value) || 0)}
-                                    className="bg-[#0f171b]/80 border-white/10 rounded-xl h-12 pl-10 font-bold text-white/40 focus:border-white/20 hover:border-white/20 transition-all"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Bottom Row: Transport & Financial Strip (FULL WIDTH) */}
-                    <div className="pt-12 border-t border-white/5">
-                      <div className="space-y-8">
-                        <div className="flex justify-between items-center px-2">
-                          <label className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40 flex items-center gap-3">
-                            <Car className="w-4 h-4 text-emerald-400" /> Operational Logistics & Financials
-                          </label>
-                          <Badge className="bg-emerald-500/10 text-emerald-400 border-none px-3 py-1 text-[9px] font-bold uppercase">
-                            Operational Preview Active
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 items-end bg-[#0f171b]/40 p-10 rounded-[2.5rem] border border-white/5 shadow-inner hover:border-white/10 transition-all duration-300">
-                          {/* Transport Config */}
-                          <div className="xl:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-4">
-                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 ml-1">Assigned Vehicle</p>
-                              <Select value={day.transport} onValueChange={(value) => handleUpdateDay(index, 'transport', value)}>
-                                <SelectTrigger className="bg-[#0f171b]/80 border-white/10 rounded-2xl h-16 focus:ring-kashmir-gold/30 focus:border-kashmir-gold/30 hover:border-white/20 transition-all font-bold text-sm">
-                                  <SelectValue placeholder="Select Transport" />
+                        {/* Stay Specs & Rates (Always accessible) */}
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-3">
+                          {/* Row 1: Room, Meal, Pax */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[9px] font-black uppercase tracking-wider text-white/30 block mb-1">Room</label>
+                              <Select value={day.roomType} onValueChange={(value) => handleUpdateDay(index, 'roomType', value)}>
+                                <SelectTrigger className="bg-[#07090E]/80 border-white/10 rounded-lg h-8 text-[11px] font-semibold text-white focus:border-amber-400/40">
+                                  <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#0b1317] border-white/10 text-white">
-                                  <SelectItem value="Private Luxury Sedan">Private Luxury Sedan</SelectItem>
-                                  <SelectItem value="Luxury SUV (Innova)">Luxury SUV (Innova)</SelectItem>
-                                  <SelectItem value="Tempo Traveller">Tempo Traveller</SelectItem>
-                                  <SelectItem value="Urbania Luxury">Urbania Luxury</SelectItem>
+                                <SelectContent className="bg-[#0B1015] border-white/10 text-white">
+                                  <SelectItem value="Deluxe Room">Deluxe Room</SelectItem>
+                                  <SelectItem value="Premium Room">Premium Room</SelectItem>
+                                  <SelectItem value="Luxury Suite">Luxury Suite</SelectItem>
+                                  <SelectItem value="Heritage Suite">Heritage Suite</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="space-y-4">
-                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 ml-1">Cab Selling Price</label>
-                              <div className="relative group/input">
-                                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-kashmir-gold text-lg font-bold z-10">₹</div>
-                                <Input 
-                                  type="number"
-                                  value={day.transportPrice === 0 ? '' : day.transportPrice}
-                                  onChange={(e) => handleUpdateDay(index, 'transportPrice', parseInt(e.target.value) || 0)}
-                                  className="bg-[#0f171b]/80 border border-white/10 rounded-2xl h-16 pl-12 focus:border-kashmir-gold/30 font-bold text-xl text-white transition-all hover:border-white/20 focus:bg-[#0f171b]/95"
-                                />
-                              </div>
+
+                            <div>
+                              <label className="text-[9px] font-black uppercase tracking-wider text-white/30 block mb-1">Meal</label>
+                              <Select value={day.mealPlan} onValueChange={(value) => handleUpdateDay(index, 'mealPlan', value)}>
+                                <SelectTrigger className="bg-[#07090E]/80 border-white/10 rounded-lg h-8 text-[11px] font-semibold text-white focus:border-amber-400/40">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#0B1015] border-white/10 text-white">
+                                  <SelectItem value="EP (Room Only)">EP (Room Only)</SelectItem>
+                                  <SelectItem value="CP (Breakfast)">CP (Breakfast)</SelectItem>
+                                  <SelectItem value="MAP (Breakfast + Dinner)">MAP (Bf + Din)</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
-                            <div className="space-y-4">
-                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400/30 ml-1">Cab Net Cost</label>
-                              <div className="relative group/input">
-                                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-blue-400 text-lg font-bold z-10">₹</div>
-                                <Input 
-                                  type="number"
-                                  value={day.transportNetCost === 0 ? '' : day.transportNetCost}
-                                  onChange={(e) => handleUpdateDay(index, 'transportNetCost', parseInt(e.target.value) || 0)}
-                                  className="bg-[#0f171b]/80 border border-blue-500/10 rounded-2xl h-16 pl-12 focus:border-blue-400/30 font-bold text-xl text-blue-300/60 transition-all hover:border-white/20 focus:bg-[#0f171b]/95"
-                                />
-                              </div>
+
+                            <div>
+                              <label className="text-[9px] font-black uppercase tracking-wider text-white/30 block mb-1">Guests</label>
+                              <Input 
+                                value={day.paxCount} 
+                                onChange={(e) => handleUpdateDay(index, 'paxCount', e.target.value)} 
+                                className="bg-[#07090E]/80 border-white/10 rounded-lg h-8 text-center text-xs font-bold text-white focus:border-amber-400/40" 
+                              />
                             </div>
                           </div>
 
-                          {/* Operational Status */}
-                          <div className="xl:col-span-3 space-y-4">
-                            <div className="flex justify-between items-center px-1">
-                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Operational Status</p>
-                              <Badge className={cn(
-                                "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border-none shadow-lg",
-                                day.vendorStatus === 'confirmed' ? "bg-emerald-500/20 text-emerald-400 shadow-emerald-500/10" :
-                                day.vendorStatus === 'waitlist' ? "bg-red-500/20 text-red-400 shadow-red-500/10" :
-                                "bg-amber-500/20 text-amber-500 shadow-amber-500/10"
-                              )}>
-                                {day.vendorStatus}
-                              </Badge>
+                          {/* Row 2: Stay Pricing */}
+                          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
+                            <div>
+                              <label className="text-[9px] font-black uppercase tracking-wider text-amber-400/70 block mb-1">Stay Selling Rate</label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-400 font-bold text-xs">₹</span>
+                                <Input 
+                                  type="number"
+                                  value={day.hotelPrice === 0 ? '' : day.hotelPrice}
+                                  onChange={(e) => handleUpdateDay(index, 'hotelPrice', parseInt(e.target.value) || 0)}
+                                  className="bg-[#07090E]/80 border-white/10 rounded-lg h-8 pl-6 text-xs font-bold text-amber-400 focus:border-amber-400/40"
+                                  placeholder="0"
+                                />
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1.5 p-1.5 bg-[#0a0f12]/60 rounded-2xl border border-white/5">
-                              {(['pending', 'confirmed', 'waitlist'] as const).map((status) => (
-                                <button
-                                  key={status}
-                                  onClick={() => handleUpdateDay(index, 'vendorStatus', status)}
-                                  className={cn(
-                                    "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-500 truncate px-2 border border-transparent",
-                                    day.vendorStatus === status 
-                                      ? status === 'confirmed' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]" :
-                                        status === 'waitlist' ? "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]" :
-                                        "bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
-                                      : "text-white/20 hover:text-white/50 hover:bg-white/[0.02]"
-                                  )}
-                                >
-                                  {status}
-                                </button>
-                              ))}
+                            <div>
+                              <label className="text-[9px] font-black uppercase tracking-wider text-white/30 block mb-1">Stay Wholesale Net</label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30 font-bold text-xs">₹</span>
+                                <Input 
+                                  type="number"
+                                  value={day.hotelNetCost === 0 ? '' : day.hotelNetCost}
+                                  onChange={(e) => handleUpdateDay(index, 'hotelNetCost', parseInt(e.target.value) || 0)}
+                                  className="bg-[#07090E]/80 border-white/10 rounded-lg h-8 pl-6 text-xs font-bold text-white/50 focus:border-white/20"
+                                  placeholder="0"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
 
-                {/* Hotel Picker Overlay */}
-                {showHotelPicker === index && (
-                  <div className="absolute inset-0 z-50 bg-[#0a0f12]/95 backdrop-blur-2xl rounded-[2.5rem] p-12 overflow-y-auto animate-in zoom-in-95 duration-500 border border-kashmir-gold/20">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                      <div className="space-y-1">
-                        <h4 className="text-2xl font-bold text-white">Kashmir Curators Collection</h4>
-                        <p className="text-xs text-kashmir-gold/60 uppercase tracking-widest font-bold">Select a luxury stay for Day {day.day}</p>
+                    {/* Day Logistics Strip: Assigned Vehicle & Cab Rates */}
+                    <div className="pt-3.5 border-t border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-[#07090E]/40 p-3 rounded-xl border border-white/5">
+                      <div className="flex items-center gap-2 w-full md:w-auto">
+                        <Car className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-white/40 shrink-0">Chauffeur & Fleet:</span>
+                        <Select value={day.transport} onValueChange={(value) => handleUpdateDay(index, 'transport', value)}>
+                          <SelectTrigger className="bg-[#0B1015] border-white/10 rounded-lg h-8 text-xs font-bold text-white w-full md:w-52 focus:border-amber-400/40">
+                            <SelectValue placeholder="Select Vehicle" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0B1015] border-white/10 text-white">
+                            <SelectItem value="Private Luxury Sedan">Private Luxury Sedan</SelectItem>
+                            <SelectItem value="Luxury SUV (Innova)">Luxury SUV (Innova Crysta)</SelectItem>
+                            <SelectItem value="Tempo Traveller">Tempo Traveller (Group)</SelectItem>
+                            <SelectItem value="Urbania Luxury">Urbania VIP Lounge</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-2xl border border-white/5">
-                          {['ALL', 'Srinagar', 'Gulmarg', 'Pahalgam', 'Sonamarg'].map((loc) => (
+
+                      <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-amber-400 font-bold">₹</span>
+                          <Input 
+                            type="number"
+                            value={day.transportPrice === 0 ? '' : day.transportPrice}
+                            onChange={(e) => handleUpdateDay(index, 'transportPrice', parseInt(e.target.value) || 0)}
+                            className="bg-[#0B1015] border-white/10 rounded-lg h-8 w-24 text-xs font-bold text-amber-400 focus:border-amber-400/40"
+                            placeholder="Cab Sell"
+                            title="Cab Selling Price"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-white/30 font-bold">₹</span>
+                          <Input 
+                            type="number"
+                            value={day.transportNetCost === 0 ? '' : day.transportNetCost}
+                            onChange={(e) => handleUpdateDay(index, 'transportNetCost', parseInt(e.target.value) || 0)}
+                            className="bg-[#0B1015] border-white/10 rounded-lg h-8 w-24 text-xs font-bold text-white/50 focus:border-white/20"
+                            placeholder="Cab Net"
+                            title="Cab Wholesale Net Cost"
+                          />
+                        </div>
+
+                        {/* Operational Status Toggle */}
+                        <div className="flex items-center gap-1 p-0.5 bg-black/40 rounded-lg border border-white/5 shrink-0">
+                          {(['pending', 'confirmed', 'waitlist'] as const).map((status) => (
                             <button
-                              key={loc}
+                              key={status}
                               type="button"
-                              onClick={() => setHotelFilterLocation(loc)}
+                              onClick={() => handleUpdateDay(index, 'vendorStatus', status)}
                               className={cn(
-                                "px-3 py-1.5 rounded-xl text-xs font-bold transition-all",
-                                hotelFilterLocation === loc 
-                                  ? "bg-amber-400 text-black font-black"
-                                  : "text-white/60 hover:text-white hover:bg-white/5"
+                                "px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all",
+                                day.vendorStatus === status 
+                                  ? status === 'confirmed' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
+                                    status === 'waitlist' ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" :
+                                    "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                  : "text-white/30 hover:text-white"
                               )}
                             >
-                              {loc}
+                              {status === 'confirmed' ? 'Conf' : status === 'waitlist' ? 'Wait' : 'Pend'}
                             </button>
                           ))}
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => setShowHotelPicker(null)} className="rounded-2xl hover:bg-white/10 h-10 w-10">
-                          <X className="w-5 h-5" />
-                        </Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {hotels?.filter(hotel => hotelFilterLocation === 'ALL' || (hotel.location && hotel.location.toLowerCase().includes(hotelFilterLocation.toLowerCase()))).map((hotel) => (
-                        <Card 
-                          key={hotel.id} 
-                          onClick={() => selectHotel(index, hotel)}
-                          className="bg-white/5 border-white/5 p-5 rounded-3xl hover:border-kashmir-gold/50 cursor-pointer transition-all flex flex-col gap-5 group/hitem hover:bg-white/[0.08]"
-                        >
-                          <div className="h-40 rounded-2xl overflow-hidden relative">
-                            <img src={hotel.image} className="w-full h-full object-cover group-hover/hitem:scale-110 transition-transform duration-700" />
-                            <Badge className="absolute top-3 right-3 bg-black/60 backdrop-blur-md border-none font-bold text-[10px]">₹{hotel.pricePerNight.toLocaleString()}</Badge>
-                          </div>
-                          <div>
-                            <p className="text-lg font-bold text-white mb-1">{hotel.name}</p>
-                            <p className="text-xs text-white/40 flex items-center gap-1.5"><MapPin className="w-3 h-3" /> {hotel.location}</p>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  </Card>
+                </div>
+              );
+            })}
 
-                {/* Image Configurator Overlay */}
-                {showImageActions === index && (
-                  <div className="absolute inset-0 z-[60] bg-[#0a0f12]/98 backdrop-blur-3xl rounded-[2.5rem] flex flex-col items-center justify-center gap-10 p-16 animate-in zoom-in-95 duration-300">
-                    <div className="text-center space-y-3">
-                      <h4 className="text-3xl font-display font-bold text-white">Visual Storytelling</h4>
-                      <p className="text-xs text-kashmir-gold uppercase tracking-[0.4em] font-black opacity-60">Configure the display image for {day.hotelName || 'this stay'}</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-8 w-full max-w-lg">
-                      <div className="relative group/up">
-                        <div className="h-44 rounded-[2.5rem] bg-white/5 border border-white/10 flex flex-col items-center justify-center gap-4 group-hover/up:border-kashmir-gold/50 group-hover/up:bg-kashmir-gold/5 transition-all duration-500">
-                          <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 flex items-center justify-center group-hover/up:scale-110 transition-transform shadow-inner">
-                            <Plus className="w-8 h-8 text-white/20 group-hover/up:text-kashmir-gold" />
-                          </div>
-                          <span className="text-sm font-bold text-white/40">Local Archive</span>
-                        </div>
-                        <input 
-                          type="file" 
-                          accept="image/*"
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          onChange={(e) => {
-                            handleImageUpload(index, e);
-                            setShowImageActions(null);
-                          }}
-                        />
-                      </div>
-
-                      <button 
-                        onClick={() => {
-                          if (day.hotelName) {
-                            window.open(`https://www.google.com/search?q=${encodeURIComponent(day.hotelName)}+hotel+kashmir&tbm=isch`, '_blank');
-                          } else {
-                            toast.error("Enter hotel name first");
-                          }
-                          setShowImageActions(null);
-                        }}
-                        className="h-44 rounded-[2.5rem] bg-white/5 border border-white/10 flex flex-col items-center justify-center gap-4 hover:border-kashmir-gold/50 hover:bg-kashmir-gold/5 transition-all duration-500 group/sh"
-                      >
-                        <div className="w-16 h-16 rounded-[1.5rem] bg-kashmir-gold/10 flex items-center justify-center group/sh:scale-110 transition-transform">
-                          <Search className="w-8 h-8 text-kashmir-gold" />
-                        </div>
-                        <span className="text-sm font-bold text-white/40">Web Intelligence</span>
-                      </button>
-                    </div>
-                    
-                    <div className="w-full max-w-md pt-8 border-t border-white/5 space-y-4">
-                      <p className="text-[10px] text-white/20 uppercase tracking-[0.3em] font-black text-center">Or Paste Direct Image Link</p>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={tempImageUrl}
-                          onChange={(e) => setTempImageUrl(e.target.value)}
-                          placeholder="https://images.unsplash.com/photo..."
-                          className="bg-white/5 border-white/5 rounded-2xl h-12 text-sm focus:border-kashmir-gold/30"
-                        />
-                        <Button 
-                          onClick={() => handleImageUrlApply(showImageActions!, tempImageUrl)}
-                          className="bg-kashmir-gold text-black hover:bg-amber-500 rounded-2xl h-12 px-6 font-bold"
-                        >
-                          Apply
-                        </Button>
-                      </div>
-                    </div>
-
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => {
-                        setShowImageActions(null);
-                        setTempImageUrl('');
-                      }}
-                      className="text-white/20 hover:text-white rounded-xl text-[10px] uppercase font-black tracking-widest transition-all"
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-
+            {/* Add Next Chapter Button */}
             <Button 
+              type="button"
               onClick={handleAddDay}
-              className="w-full h-24 bg-white/[0.02] border-2 border-dashed border-white/5 hover:border-kashmir-gold/40 hover:bg-white/[0.05] text-white/20 hover:text-kashmir-gold rounded-[2rem] transition-all duration-700 gap-3 group"
+              className="w-full h-14 bg-white/[0.02] border-2 border-dashed border-white/10 hover:border-amber-400/40 hover:bg-amber-400/5 text-white/40 hover:text-amber-400 rounded-2xl transition-all duration-300 gap-2 font-bold text-xs uppercase tracking-widest flex items-center justify-center"
             >
-              <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                <Plus className="w-6 h-6" />
-              </div>
-              <span className="font-black uppercase tracking-[0.3em] text-[10px]">Add Next Chapter</span>
+              <Plus className="w-4 h-4 text-amber-400" />
+              <span>Add Next Chapter (Day {days.length + 1})</span>
             </Button>
           </div>
         </div>
 
-        {/* Customer Sidebar */}
+        {/* Right Column: Customer Brief Sidebar */}
         <div className="lg:col-span-4">
-          <div className="sticky top-32 space-y-8">
-            <Card className="bg-[#0a0f12]/80 bg-gradient-to-br from-white/[0.05] to-transparent border-white/10 p-10 rounded-[3rem] backdrop-blur-2xl shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-kashmir-gold to-transparent" />
+          <div className="sticky top-6 space-y-6">
+            <Card className="bg-[#0B1015]/90 border border-white/10 p-5 md:p-6 rounded-2xl md:rounded-3xl backdrop-blur-2xl shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
               
-              <h3 className="text-2xl font-display font-bold text-white mb-8 flex items-center gap-3">
-                <FileText className="w-6 h-6 text-kashmir-gold" />
-                Inquiry Brief
-              </h3>
-              
-              <div className="space-y-6">
-                <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Destination</p>
-                  <p className="text-lg font-bold text-white">{inquiry.destination}</p>
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/10">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-amber-400" />
+                  <span>Inquiry Brief</span>
+                </h3>
+                <Badge className="bg-amber-400/10 text-amber-300 border border-amber-400/20 text-[9px] font-mono">
+                  {inquiry.budget || 'Luxury'}
+                </Badge>
+              </div>
+
+              <div className="space-y-4">
+                {/* Guest Profile */}
+                <div className="p-3.5 bg-white/[0.02] rounded-xl border border-white/5 space-y-1">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-white/30">Client Name & Route</p>
+                  <p className="text-sm font-bold text-white">{inquiry.customerName || 'Valued Guest'}</p>
+                  <p className="text-xs text-amber-400/90 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> {inquiry.destination || 'Kashmir Circuit'}
+                  </p>
                 </div>
-                <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Group & Stay</p>
-                  <p className="text-lg font-bold text-white mb-4">{days.length} Days ({days.length - 1} Nights)</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[8px] text-white/20 uppercase font-black tracking-widest ml-1">Adults</label>
+
+                {/* Duration & Pax */}
+                <div className="p-3.5 bg-white/[0.02] rounded-xl border border-white/5 space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-white/30">Group & Stay</p>
+                    <span className="text-xs font-bold text-white">{days.length} Days ({days.length - 1} Nights)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[8px] text-white/30 uppercase font-bold tracking-wider block mb-1">Adults</label>
                       <Input 
                         type="number" 
                         value={pax.adults === 0 ? '' : pax.adults} 
                         onChange={(e) => setPax({...pax, adults: parseInt(e.target.value) || 0})}
-                        className="bg-white/5 border-white/5 h-10 rounded-xl text-white font-bold focus:border-kashmir-gold/30"
+                        className="bg-[#07090E]/80 border-white/10 h-8 rounded-lg text-white font-bold text-xs"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[8px] text-white/20 uppercase font-black tracking-widest ml-1">Children</label>
+                    <div>
+                      <label className="text-[8px] text-white/30 uppercase font-bold tracking-wider block mb-1">Children</label>
                       <Input 
                         type="number" 
                         value={pax.children === 0 ? '' : pax.children} 
                         onChange={(e) => setPax({...pax, children: parseInt(e.target.value) || 0})}
-                        className="bg-white/5 border-white/5 h-10 rounded-xl text-white font-bold focus:border-kashmir-gold/30"
+                        className="bg-[#07090E]/80 border-white/10 h-8 rounded-lg text-white font-bold text-xs"
                       />
                     </div>
                   </div>
                 </div>
-                <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Budget Target</p>
-                  <Badge className="bg-kashmir-gold text-black font-black uppercase text-[10px] px-3 py-1 rounded-lg">
-                    {inquiry.budget} Experience
-                  </Badge>
-                </div>
-                <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Primary Contact</p>
-                  <p className="text-base font-bold text-white/80 mb-1">{inquiry.phone}</p>
-                  <p className="text-xs text-white/20 font-medium">{inquiry.email}</p>
+
+                {/* Contact Links */}
+                <div className="p-3.5 bg-white/[0.02] rounded-xl border border-white/5 flex items-center justify-between text-xs">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-white/30">Primary Contact</p>
+                    <p className="font-semibold text-white/90">{inquiry.phone || 'No phone'}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleQuickWhatsAppShare}
+                    className="h-8 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black font-bold text-xs"
+                  >
+                    <Share2 className="w-3 h-3 mr-1" /> WhatsApp
+                  </Button>
                 </div>
 
+                {/* Flight Details (if present) */}
                 {inquiry.flightDetails && (() => {
                   try {
                     const flight = JSON.parse(inquiry.flightDetails);
                     if (!flight || !flight.includeFlights) return null;
                     return (
-                      <div className="p-6 bg-blue-500/5 rounded-3xl border border-blue-500/10 text-left animate-in fade-in duration-500">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-3 flex items-center gap-2">
-                          <Plane className="w-4 h-4 text-blue-400 animate-pulse" /> Flight Request
+                      <div className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/10 text-xs text-left animate-in fade-in duration-300">
+                        <p className="text-[9px] font-black uppercase tracking-wider text-blue-400 mb-1 flex items-center gap-1.5">
+                          <Plane className="w-3.5 h-3.5 animate-pulse" /> Flight Request
                         </p>
-                        <div className="space-y-2.5 text-xs">
-                          <p className="font-bold text-white/90 uppercase">{flight.origin} &rarr; {flight.destination}</p>
-                          <p className="text-white/40">{flight.tripType === 'roundtrip' ? 'Round Trip' : 'One Way'} • <span className="capitalize">{flight.cabinClass ? flight.cabinClass.replace('_', ' ') : 'Economy'}</span></p>
-                          <p className="text-white/40">Timing: <span className="capitalize">{flight.departureTimePref}</span></p>
-                          {flight.directOnly && <p className="text-kashmir-gold font-bold text-[9px] uppercase tracking-wider">Direct Flights Only</p>}
-                        </div>
+                        <p className="font-bold text-white uppercase">{flight.origin} &rarr; {flight.destination}</p>
+                        <p className="text-white/40 text-[11px]">{flight.tripType === 'roundtrip' ? 'Round Trip' : 'One Way'} • {flight.cabinClass || 'Economy'}</p>
                       </div>
                     );
                   } catch (e) {
                     return null;
                   }
                 })()}
-              </div>
 
-              <div className="mt-10 p-6 rounded-3xl bg-kashmir-gold/5 border border-kashmir-gold/10">
-                <div className="flex items-center gap-2 text-kashmir-gold text-[10px] font-black uppercase tracking-widest mb-2">
-                  <Zap className="w-3 h-3" /> Expert Insight
-                </div>
-                <p className="text-xs text-white/40 leading-relaxed italic">
-                  "This client prefers {inquiry.budget.toLowerCase()} stays. Recommend the houseboats for Day 1 to create that immediate 'Paradise' impact."
-                </p>
-              </div>
-
-              {/* Total Calculation & Exclusions Input */}
-              <div className="mt-8 pt-8 border-t border-white/5 space-y-8">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-sm font-bold text-white/60">Estimated Total Package</h4>
-                  <div className="text-3xl font-display font-bold text-kashmir-gold">
-                    ₹{totalCost.toLocaleString()}
+                {/* Total Financial Summary */}
+                <div className="pt-4 border-t border-white/10 space-y-2">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-xs font-semibold text-white/60">Estimated Total Package:</span>
+                    <span className="text-2xl font-display font-black text-amber-400">
+                      ₹{totalRevenue.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-white/40">
+                    <span>Wholesale Net: ₹{totalNetCost.toLocaleString()}</span>
+                    <span className="text-emerald-400 font-bold">Profit: ₹{profit.toLocaleString()} ({margin.toFixed(1)}%)</span>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1 flex items-center gap-2">
-                    <ShieldX className="w-3 h-3 text-red-400" /> Package Exclusions
+                {/* Package Exclusions */}
+                <div className="space-y-1.5 pt-2">
+                  <label className="text-[9px] font-black uppercase tracking-wider text-white/40 flex items-center gap-1.5">
+                    <ShieldX className="w-3 h-3 text-rose-400" /> Package Exclusions
                   </label>
                   <Textarea 
                     value={exclusions}
                     onChange={(e) => setExclusions(e.target.value)}
-                    placeholder="What's not included?"
-                    className="bg-white/5 border-white/5 rounded-3xl min-h-[120px] focus:border-red-400/30 text-white/60 text-xs leading-relaxed"
+                    placeholder="e.g. Pony rides in Gulmarg/Pahalgam, Gondola Phase 2 tickets, personal tips..."
+                    className="bg-[#07090E]/80 border-white/10 rounded-xl min-h-[80px] focus:border-rose-400/40 text-white/70 text-xs leading-relaxed"
                   />
                 </div>
-              </div>
 
-              {/* Proposal Document Link */}
-              <div className="mt-8 pt-8 border-t border-white/5 space-y-6">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-emerald-400" /> Professional Proposal
-                  </h4>
-                  {proposalUrl && (
-                    <Badge className="bg-emerald-500/10 text-emerald-400 border-none px-2 py-0.5 text-[8px] font-black uppercase tracking-widest">
-                      Linked
-                    </Badge>
-                  )}
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="relative group/prop">
-                    <Input 
-                      value={proposalUrl}
-                      onChange={(e) => setProposalUrl(e.target.value)}
-                      placeholder="Paste PDF Link (Google Drive/S3)..."
-                      className="bg-white/5 border-white/5 h-12 rounded-xl text-[11px] pl-10 focus:border-emerald-500/30 font-medium"
-                    />
-                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                {/* Professional Proposal Link */}
+                <div className="space-y-2.5 pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-emerald-400" /> Linked PDF Proposal
+                    </span>
+                    {proposalUrl && (
+                      <Badge className="bg-emerald-500/10 text-emerald-400 border-none px-1.5 py-0.5 text-[8px] font-mono">
+                        Active
+                      </Badge>
+                    )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <Input 
+                    value={proposalUrl}
+                    onChange={(e) => setProposalUrl(e.target.value)}
+                    placeholder="Paste PDF Link (Google Drive / S3)..."
+                    className="bg-[#07090E]/80 border-white/10 h-8 rounded-lg text-xs"
+                  />
+
+                  <div className="grid grid-cols-2 gap-2">
                     <Button 
+                      type="button"
+                      size="sm"
                       onClick={() => handleUpdateProposal(proposalUrl)}
-                      className="bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold h-12 rounded-xl text-[10px] uppercase tracking-widest"
+                      className="bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold h-8 rounded-lg text-[10px] uppercase tracking-wider"
                     >
                       Update Link
                     </Button>
                     <div className="relative">
                       <Button 
+                        type="button"
+                        size="sm"
                         variant="ghost"
-                        className="w-full bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 text-emerald-400 font-bold h-12 rounded-xl text-[10px] uppercase tracking-widest"
+                        className="w-full bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 font-bold h-8 rounded-lg text-[10px] uppercase tracking-wider"
                       >
-                        <Upload className="w-3.5 h-3.5 mr-2" /> Attach PDF Document
+                        <Upload className="w-3 h-3 mr-1" /> Attach PDF
                       </Button>
                       <input 
                         type="file" 
+                        accept="application/pdf"
                         className="absolute inset-0 opacity-0 cursor-pointer" 
                         onChange={(e) => {
                           const file = e.target.files?.[0];
@@ -1989,6 +1897,150 @@ We look forward to hosting you in Paradise!
           </div>
         </div>
       </div>
+
+      {/* Hotel Picker Modal (Clean High-Z-Index Modal) */}
+      {showHotelPicker !== null && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
+          <div className="bg-[#090D11] border border-white/15 rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-5 border-b border-white/10 bg-[#0B1015]">
+              <div>
+                <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                  <HotelIcon className="w-4 h-4 text-amber-400" /> Kashmir Curators Luxury Collection
+                </h4>
+                <p className="text-xs text-white/50">Select a verified luxury stay for Day {days[showHotelPicker]?.day}</p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10">
+                  {['ALL', 'Srinagar', 'Gulmarg', 'Pahalgam', 'Sonamarg'].map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setHotelFilterLocation(loc)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all",
+                        hotelFilterLocation === loc 
+                          ? "bg-amber-400 text-black font-black"
+                          : "text-white/60 hover:text-white"
+                      )}
+                    >
+                      {loc}
+                    </button>
+                  ))}
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowHotelPicker(null)} 
+                  className="rounded-xl hover:bg-white/10 h-8 w-8 text-white/50 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {hotels?.filter(hotel => hotelFilterLocation === 'ALL' || (hotel.location && hotel.location.toLowerCase().includes(hotelFilterLocation.toLowerCase()))).map((hotel) => (
+                <Card 
+                  key={hotel.id} 
+                  onClick={() => selectHotel(showHotelPicker, hotel)}
+                  className="bg-white/[0.03] border-white/10 p-3 rounded-2xl hover:border-amber-400/50 cursor-pointer transition-all flex flex-col gap-3 group/hitem hover:bg-white/[0.06]"
+                >
+                  <div className="h-32 rounded-xl overflow-hidden relative">
+                    <img src={hotel.image} className="w-full h-full object-cover group-hover/hitem:scale-110 transition-transform duration-500" />
+                    <Badge className="absolute top-2 right-2 bg-black/70 backdrop-blur-md border-none font-bold text-[10px] text-amber-300">
+                      ₹{hotel.pricePerNight.toLocaleString()}/nt
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white truncate">{hotel.name}</p>
+                    <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3 text-amber-400/70" /> {hotel.location}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Actions Modal (Clean High-Z-Index Modal) */}
+      {showImageActions !== null && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#090D11] border border-white/15 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h4 className="text-base font-bold text-white">Visual Storytelling</h4>
+                <p className="text-xs text-white/40">Configure stay photo for {days[showImageActions]?.hotelName || 'this day'}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  setShowImageActions(null);
+                  setTempImageUrl('');
+                }}
+                className="h-8 w-8 rounded-lg text-white/40 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative group/up">
+                <div className="h-28 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center gap-2 group-hover/up:border-amber-400/40 group-hover/up:bg-amber-400/5 transition-all">
+                  <Upload className="w-5 h-5 text-amber-400" />
+                  <span className="text-xs font-bold text-white/80">Upload Photo</span>
+                </div>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={(e) => {
+                    handleImageUpload(showImageActions, e);
+                    setShowImageActions(null);
+                  }}
+                />
+              </div>
+
+              <button 
+                type="button"
+                onClick={() => {
+                  if (days[showImageActions]?.hotelName) {
+                    window.open(`https://www.google.com/search?q=${encodeURIComponent(days[showImageActions].hotelName)}+hotel+kashmir&tbm=isch`, '_blank');
+                  } else {
+                    toast.error("Enter hotel name first");
+                  }
+                  setShowImageActions(null);
+                }}
+                className="h-28 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center gap-2 hover:border-amber-400/40 hover:bg-amber-400/5 transition-all"
+              >
+                <Search className="w-5 h-5 text-amber-400" />
+                <span className="text-xs font-bold text-white/80">Search Web</span>
+              </button>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <label className="text-[10px] uppercase font-bold text-white/40 block">Or Paste Direct Image Link</label>
+              <div className="flex gap-2">
+                <Input 
+                  value={tempImageUrl}
+                  onChange={(e) => setTempImageUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/photo..."
+                  className="bg-[#07090E]/80 border-white/10 rounded-lg h-9 text-xs"
+                />
+                <Button 
+                  type="button"
+                  onClick={() => handleImageUrlApply(showImageActions, tempImageUrl)}
+                  className="bg-amber-400 text-black hover:bg-amber-300 rounded-lg h-9 px-4 font-bold text-xs"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* OFF-SCREEN PDF CONTENT (Used for generation) */}
       <div className="fixed -left-[10000px] top-0 pointer-events-none opacity-0">
