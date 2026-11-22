@@ -43,10 +43,10 @@ export const ClientDirectory: React.FC = () => {
 
   const fetchClients = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('token') || '';
+      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
       const portalKey = localStorage.getItem('kashmir_portal_key') || '';
 
-      const res = await fetch(`${API_BASE_URL}/api/inquiries`, {
+      const res = await fetch(`${API_BASE_URL}/inquiries`, {
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),

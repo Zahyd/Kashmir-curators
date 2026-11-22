@@ -41,10 +41,10 @@ export const SalesMetricsRibbon: React.FC<SalesMetricsRibbonProps> = ({ onRefres
 
   const fetchMetrics = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('token') || '';
+      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
       const portalKey = localStorage.getItem('kashmir_portal_key') || '';
       
-      const res = await fetch(`${API_BASE_URL}/api/sales/metrics`, {
+      const res = await fetch(`${API_BASE_URL}/sales/metrics`, {
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),

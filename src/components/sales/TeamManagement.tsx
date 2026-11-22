@@ -44,10 +44,10 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee 
 
   const fetchTeam = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('token') || '';
+      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
       const portalKey = localStorage.getItem('kashmir_portal_key') || '';
 
-      const res = await fetch(`${API_BASE_URL}/api/sales/team`, {
+      const res = await fetch(`${API_BASE_URL}/sales/team`, {
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),

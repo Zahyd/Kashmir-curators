@@ -119,6 +119,14 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Defense-in-depth: automatically normalize duplicate /api/api to /api
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api/api/')) {
+    req.url = req.url.replace('/api/api/', '/api/');
+  }
+  next();
+});
+
 // Stripe webhook needs raw body parser
 app.post('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 

@@ -76,7 +76,7 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
   const handleSimulateMetaLead = async () => {
     try {
       setSimulatingMeta(true);
-      const res = await fetch(`${API_BASE_URL}/api/webhooks/meta-leads/simulate`, {
+      const res = await fetch(`${API_BASE_URL}/webhooks/meta-leads/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,10 +107,10 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
   // 1. Fetch unclaimed inquiries from Neon API
   const fetchUnclaimedLeads = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('token') || '';
+      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
       const portalKey = localStorage.getItem('kashmir_portal_key') || '';
 
-      const res = await fetch(`${API_BASE_URL}/api/inquiries`, {
+      const res = await fetch(`${API_BASE_URL}/inquiries`, {
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
@@ -143,7 +143,7 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
 
     let eventSource: EventSource | null = null;
     try {
-      eventSource = new EventSource(`${API_BASE_URL}/api/sales/stream`);
+      eventSource = new EventSource(`${API_BASE_URL}/sales/stream`);
 
       eventSource.addEventListener('LEAD_CLAIMED', (e: MessageEvent) => {
         try {
@@ -193,10 +193,10 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
     setConflictAlert(null);
 
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('token') || '';
+      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
       const portalKey = localStorage.getItem('kashmir_portal_key') || '';
 
-      const res = await fetch(`${API_BASE_URL}/api/sales/leads/${lead.id}/claim`, {
+      const res = await fetch(`${API_BASE_URL}/sales/leads/${lead.id}/claim`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

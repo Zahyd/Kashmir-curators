@@ -106,10 +106,10 @@ export default function SalesPortal() {
   // 2. Fetch Inquiries for sub-components that need initial list
   const fetchInquiries = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('token') || '';
+      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
       const portalKey = localStorage.getItem('kashmir_portal_key') || '';
 
-      const res = await fetch(`${API_BASE_URL}/api/inquiries`, {
+      const res = await fetch(`${API_BASE_URL}/inquiries`, {
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
@@ -152,10 +152,10 @@ export default function SalesPortal() {
     setIsTogglingAvailability(true);
 
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('token') || '';
+      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
       const portalKey = localStorage.getItem('kashmir_portal_key') || '';
 
-      const res = await fetch(`${API_BASE_URL}/api/sales/availability`, {
+      const res = await fetch(`${API_BASE_URL}/sales/availability`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
