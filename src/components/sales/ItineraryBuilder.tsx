@@ -97,9 +97,22 @@ interface ItineraryDay {
   time?: string;
 }
 
-interface ItineraryBuilderProps {
+export interface AgencyBranding {
+  agencyName?: string;
+  agencyTagline?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+}
+
+export interface ItineraryBuilderProps {
   inquiry: any;
   onBack: () => void;
+  agencyBranding?: AgencyBranding;
+  planTier?: 'STARTER' | 'PRO_DMC' | 'ENTERPRISE' | string;
+  agentPlan?: string;
 }
 
 const formatPDFDate = (dateStr: string) => {
@@ -135,8 +148,56 @@ const activityTemplates = [
   "Traditional Kashmiri Wazwan dinner experience",
 ];
 
-export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderProps) {
+export default function ItineraryBuilder({
+  inquiry,
+  onBack,
+  agencyBranding,
+  planTier,
+  agentPlan
+}: ItineraryBuilderProps) {
   if (!inquiry) return null;
+
+  // Resolve plan tier and white-label eligibility
+  const effectivePlan = (
+    planTier || 
+    agentPlan || 
+    localStorage.getItem('agent_saas_plan') || 
+    'STARTER'
+  ).toUpperCase();
+  
+  const isPro = effectivePlan === 'PRO_DMC' || effectivePlan === 'ENTERPRISE' || effectivePlan === 'PROFESSIONAL';
+
+  // Resolve branding with safe fallbacks
+  const effectiveBranding: AgencyBranding = agencyBranding || (() => {
+    try {
+      const saved = localStorage.getItem('agent_branding');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  })() || {
+    agencyName: 'Kashmir Curators',
+    agencyTagline: 'Luxury Travel Curators',
+    logoUrl: '',
+    primaryColor: '#d97706',
+    phone: '+91 91037 98448',
+    website: 'www.kashmircurators.com'
+  };
+
+  const brandColor = isPro && effectiveBranding.primaryColor ? effectiveBranding.primaryColor : '#d97706';
+  const brandName = effectiveBranding.agencyName || 'Kashmir Curators';
+  const brandTagline = effectiveBranding.agencyTagline || 'Luxury Travel Curators';
+
+  // Unified token helper for agent and sales team auth
+  const getAuthToken = () => {
+    return (
+      localStorage.getItem('token') ||
+      localStorage.getItem('auth_token') ||
+      localStorage.getItem('teamToken') ||
+      ''
+    );
+  };
+
   const { data: hotels } = useHotels();
   const [days, setDays] = useState<ItineraryDay[]>([]);
   const [exclusions, setExclusions] = useState<string>('- Airfare or Train fare\n- Lunch (Unless specified)\n- Personal expenses (Laundry, Tips, etc.)\n- Any entry fees for monuments or activities not mentioned');
@@ -535,7 +596,7 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     setEnhancingDayIndex(index);
     const toastId = toast.loading(`Polishing Day ${index + 1} with AI luxury storytelling...`);
     try {
-      const token = localStorage.getItem('teamToken');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/ai/enhance-day`, {
         method: 'POST',
         headers: {
@@ -635,8 +696,12 @@ export default function ItineraryBuilder({ inquiry, onBack }: ItineraryBuilderPr
     const remaining = totalDays > 4 ? `• +${totalDays - 4} more bespoke chapters...\n` : '';
     const shareUrl = `${window.location.origin}/itinerary/${inquiry.id}`;
 
+    const signoff = isPro 
+      ? `— *${brandName} Concierge Team*${effectiveBranding.phone ? `\nDirect: ${effectiveBranding.phone}` : ''}${effectiveBranding.website ? `\nWeb: ${effectiveBranding.website}` : ''}`
+      : `— *${brandName}*\n(In partnership with Kashmir Connect Travel OS)`;
+
     const text = `🏔️ *KASHMIR BESPOKE ITINERARY PROPOSAL*
-Exclusively curated for *${clientName}*
+Curated for *${clientName}*
 
 ✨ *Duration:* ${totalDays} Days / ${nights} Nights
 📍 *Expedition Highlights:*
@@ -651,10 +716,10 @@ ${remaining}
 ${shareUrl}
 
 We look forward to hosting you in Paradise!
-— *Kashmir Curators Concierge Team*`;
+${signoff}`;
 
     window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
-    toast.success('Opening WhatsApp with proposal dispatch!');
+    toast.success('Opening WhatsApp with bespoke proposal dispatch!');
   };
 
   // Full AI Itinerary Regenerator
@@ -663,7 +728,7 @@ We look forward to hosting you in Paradise!
     const numDays = parseInt(durationStr) || 6;
     const toastId = toast.loading(`Curating bespoke ${numDays}-Day ${theme} itinerary with AI Copilot...`);
     try {
-      const token = localStorage.getItem('teamToken');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/ai/curate`, {
         method: 'POST',
         headers: {
@@ -854,9 +919,8 @@ We look forward to hosting you in Paradise!
     const toastId = toast.loading('Saving quote to pipeline...');
     
     try {
-      const token = localStorage.getItem('teamToken');
-      const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
-
+      const token = getAuthToken();
+      let response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -867,6 +931,28 @@ We look forward to hosting you in Paradise!
           status: 'Ready for Review'
         })
       });
+
+      if (response.status === 404 || response.status === 500) {
+        // Fallback to POST /api/inquiries for newly created ad-hoc B2B quotes
+        response = await fetch(`${API_BASE_URL}/inquiries`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            customerName: inquiry.customerName || 'Valued Traveler',
+            email: inquiry.email || 'guest@kashmirconnect.com',
+            phone: inquiry.phone || '',
+            destination: inquiry.destination || 'Srinagar, Gulmarg, Pahalgam',
+            duration: `${days.length} Days`,
+            travelers: String(pax.adults + pax.children),
+            budget: inquiry.budget || 'Luxury',
+            accommodation: days[0]?.hotelName || 'Luxury Hotel',
+            quoteData: JSON.stringify(days)
+          })
+        });
+      }
 
       if (!response.ok) throw new Error('Failed to save quote');
       
@@ -883,7 +969,7 @@ We look forward to hosting you in Paradise!
     setIsGenerating(true);
     const toastId = toast.loading('Deleting inquiry curation...');
     try {
-      const token = localStorage.getItem('teamToken');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
         method: 'DELETE',
         headers: {
@@ -909,7 +995,7 @@ We look forward to hosting you in Paradise!
     setIsGeneratingLink(true);
     const toastId = toast.loading('Generating secure Razorpay payment link...');
     try {
-      const token = localStorage.getItem('teamToken');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/payments/razorpay/create-payment-link`, {
         method: 'POST',
         headers: {
@@ -939,7 +1025,7 @@ We look forward to hosting you in Paradise!
 
   const handleUpdateProposal = async (url: string) => {
     try {
-      const token = localStorage.getItem('teamToken');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}`, {
 
         method: 'PATCH',
@@ -1023,7 +1109,7 @@ We look forward to hosting you in Paradise!
       // First save it
       await handleSaveQuote();
 
-      const token = localStorage.getItem('teamToken');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/inquiries/${inquiry.id}/send-proposal`, {
         method: 'POST',
         headers: {
@@ -1073,8 +1159,13 @@ We look forward to hosting you in Paradise!
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-widest">
                   <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
-                  AI Luxury Studio
+                  {isPro ? `${brandName} • White-Label Active` : 'AI Luxury Studio'}
                 </span>
+                {!isPro && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-800/90 border border-slate-700 text-slate-300 text-[9px] font-medium tracking-wide">
+                    In partnership with Kashmir Connect Travel OS
+                  </span>
+                )}
                 <span className="text-[10px] text-white/40 uppercase font-mono tracking-wider">
                   {inquiry.id?.startsWith('AI-') ? 'Sandbox Mode' : (inquiry.id?.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${(inquiry.id || '').substring(0, 8).toUpperCase()}`)}
                 </span>
@@ -2053,19 +2144,70 @@ We look forward to hosting you in Paradise!
             <div>
               {/* PDF Cover Header */}
               <div className="relative mb-14">
-                <div className="absolute top-[-40px] right-[-40px] w-64 h-64 bg-amber-50 rounded-full opacity-50 blur-3xl" />
-                <div className="flex justify-between items-end border-b-8 border-amber-500 pb-10 relative z-10">
+                <div 
+                  className="absolute top-[-40px] right-[-40px] w-64 h-64 rounded-full opacity-30 blur-3xl" 
+                  style={{ backgroundColor: `${brandColor}20` }}
+                />
+                <div 
+                  className="flex justify-between items-end border-b-8 pb-10 relative z-10"
+                  style={{ borderColor: brandColor }}
+                >
                   <div className="flex items-center gap-8">
-                    <Logo className="w-64 h-auto text-slate-900" />
-                    <div className="h-16 w-px bg-amber-500/20" />
+                    {/* Dynamic Agency Logo, Monogram, or Platform Logo */}
+                    {isPro && effectiveBranding.logoUrl ? (
+                      <img 
+                        src={effectiveBranding.logoUrl} 
+                        alt={brandName} 
+                        className="h-16 max-w-[260px] object-contain"
+                        crossOrigin="anonymous"
+                      />
+                    ) : isPro ? (
+                      <div 
+                        className="h-16 px-6 rounded-2xl flex items-center justify-center font-serif font-black text-white text-2xl shadow-md"
+                        style={{ backgroundColor: brandColor }}
+                      >
+                        {brandName}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4">
+                        <Logo className="w-56 h-auto text-slate-900" />
+                      </div>
+                    )}
+
+                    <div className="h-16 w-px bg-slate-200" />
                     <div>
-                      <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px] mb-1">Luxury Travel Curators</p>
-                      <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest italic">Exclusively for {inquiry.customerName}</p>
+                      <p 
+                        className="font-black uppercase tracking-[0.35em] text-[10px] mb-1"
+                        style={{ color: brandColor }}
+                      >
+                        {brandTagline}
+                      </p>
+                      <p className="text-slate-500 font-bold uppercase text-[9px] tracking-widest italic">
+                        Exclusively for {inquiry.customerName}
+                      </p>
+                      {/* Subtle Partnership Seal for Starter Agents */}
+                      {!isPro && (
+                        <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200/80 w-fit">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span className="text-[9px] font-semibold tracking-wider text-slate-600 uppercase">
+                            In partnership with <strong className="text-slate-900 font-bold">Kashmir Connect Travel OS</strong>
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-black text-2xl text-slate-900 tracking-widest">{inquiry.id.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${inquiry.id.substring(0, 8).toUpperCase()}`}</p>
-                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2">Proposal Created: {new Date().toLocaleDateString()}</p>
+                    <p className="font-black text-2xl text-slate-900 tracking-widest">
+                      {inquiry.id?.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${(inquiry.id || '').substring(0, 8).toUpperCase()}`}
+                    </p>
+                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2">
+                      Proposal Created: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                    {effectiveBranding.phone && (
+                      <p className="text-slate-500 font-medium text-[10px] mt-1">
+                        Direct: {effectiveBranding.phone}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2097,7 +2239,10 @@ We look forward to hosting you in Paradise!
               <div className="space-y-12">
                 {firstTwoDays.map((day) => (
                   <div key={day.day} className="relative pl-24 border-l-4 border-amber-500/10">
-                    <div className="absolute left-[-22px] top-0 w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-amber-500/20">
+                    <div 
+                      className="absolute left-[-22px] top-0 w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl"
+                      style={{ backgroundColor: brandColor, boxShadow: `0 10px 25px -5px ${brandColor}40` }}
+                    >
                       {day.day}
                     </div>
                     
@@ -2170,7 +2315,9 @@ We look forward to hosting you in Paradise!
             </div>
             
             <div className="flex justify-between items-center border-t border-slate-200/50 pt-6 mt-6">
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Kashmir Curators Proposal</p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                {isPro ? `${brandName} Curated Proposal` : `${brandName} Proposal • In partnership with Kashmir Connect Travel OS`}
+              </p>
               <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Page 1 of {totalPagesCount}</p>
             </div>
           </div>
@@ -2181,15 +2328,33 @@ We look forward to hosting you in Paradise!
             return (
               <div key={pIdx} className="pdf-page bg-white text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
                 <div>
-                  <div className="flex justify-between items-center border-b-2 border-amber-500/20 pb-6 mb-12">
-                    <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px]">Itinerary Continued</p>
+                  <div 
+                    className="flex justify-between items-center border-b-2 pb-6 mb-12"
+                    style={{ borderColor: `${brandColor}30` }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <p 
+                        className="font-black uppercase tracking-[0.4em] text-[10px]"
+                        style={{ color: brandColor }}
+                      >
+                        {brandName} • Itinerary Continued
+                      </p>
+                      {!isPro && (
+                        <span className="text-[9px] text-slate-400 font-medium">
+                          (In partnership with Kashmir Connect Travel OS)
+                        </span>
+                      )}
+                    </div>
                     <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">{inquiry.customerName}</p>
                   </div>
                   
                   <div className="space-y-12">
                     {pair.map((day) => (
                       <div key={day.day} className="relative pl-24 border-l-4 border-amber-500/10">
-                        <div className="absolute left-[-22px] top-0 w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-amber-500/20">
+                        <div 
+                          className="absolute left-[-22px] top-0 w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl"
+                          style={{ backgroundColor: brandColor, boxShadow: `0 10px 25px -5px ${brandColor}40` }}
+                        >
                           {day.day}
                         </div>
                         
@@ -2262,7 +2427,9 @@ We look forward to hosting you in Paradise!
                 </div>
                 
                 <div className="flex justify-between items-center border-t border-slate-200/50 pt-6 mt-6">
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Kashmir Curators Proposal</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                    {isPro ? `${brandName} Curated Proposal` : `${brandName} Proposal • In partnership with Kashmir Connect Travel OS`}
+                  </p>
                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Page {pageNum} of {totalPagesCount}</p>
                 </div>
               </div>
@@ -2272,8 +2439,16 @@ We look forward to hosting you in Paradise!
           {/* Final Page */}
           <div className="pdf-page bg-white text-slate-900 font-sans p-24 w-[1200px] h-[1697px] relative flex flex-col justify-between" style={{ boxSizing: 'border-box' }}>
             <div>
-              <div className="flex justify-between items-center border-b-2 border-amber-500/20 pb-6 mb-12">
-                <p className="text-amber-700 font-black uppercase tracking-[0.4em] text-[10px]">Package Terms & Value</p>
+              <div 
+                className="flex justify-between items-center border-b-2 pb-6 mb-12"
+                style={{ borderColor: `${brandColor}30` }}
+              >
+                <p 
+                  className="font-black uppercase tracking-[0.4em] text-[10px]"
+                  style={{ color: brandColor }}
+                >
+                  Package Terms & Value
+                </p>
                 <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">{inquiry.customerName}</p>
               </div>
 
@@ -2283,19 +2458,19 @@ We look forward to hosting you in Paradise!
                   <h3 className="text-xl font-serif font-bold text-slate-900 mb-6">Exclusive Inclusions</h3>
                   <div className="grid grid-cols-2 gap-8">
                     <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
+                      <div className="w-2 h-2 rounded-full mt-2 shrink-0" style={{ backgroundColor: brandColor }} />
                       <p className="text-sm text-slate-600 font-medium">All transfers and sightseeing by private luxury vehicle.</p>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
+                      <div className="w-2 h-2 rounded-full mt-2 shrink-0" style={{ backgroundColor: brandColor }} />
                       <p className="text-sm text-slate-600 font-medium">Accommodation in hand-picked luxury hotels/houseboats.</p>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
+                      <div className="w-2 h-2 rounded-full mt-2 shrink-0" style={{ backgroundColor: brandColor }} />
                       <p className="text-sm text-slate-600 font-medium">Meal plans as specified (Daily Breakfast & Dinner included).</p>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
+                      <div className="w-2 h-2 rounded-full mt-2 shrink-0" style={{ backgroundColor: brandColor }} />
                       <p className="text-sm text-slate-600 font-medium">24/7 Local support and expert curation.</p>
                     </div>
                   </div>
@@ -2316,11 +2491,13 @@ We look forward to hosting you in Paradise!
                   <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px]" />
                   <div className="flex justify-between items-center relative z-10">
                     <div>
-                      <h3 className="text-amber-500 font-black uppercase tracking-[0.4em] text-[10px] mb-4">Total Package Investment</h3>
+                      <h3 className="font-black uppercase tracking-[0.4em] text-[10px] mb-4" style={{ color: brandColor }}>
+                        Total Package Investment
+                      </h3>
                       <p className="text-4xl font-serif font-bold">Comprehensive Tour Price</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-6xl font-bold text-amber-500 tracking-tighter">₹{totalCost.toLocaleString()}</p>
+                      <p className="text-6xl font-bold tracking-tighter" style={{ color: brandColor }}>₹{totalCost.toLocaleString()}</p>
                       <p className="text-white/40 text-[10px] font-bold uppercase mt-2">*Inclusive of GST & All Taxes</p>
                     </div>
                   </div>
@@ -2329,15 +2506,51 @@ We look forward to hosting you in Paradise!
             </div>
 
             <div className="flex flex-col items-center">
-              <p className="text-slate-400 text-xs font-medium tracking-[0.2em] mb-4 uppercase">Official Proposal from Kashmir Curators Experience Team</p>
-              <div className="inline-flex flex-col items-center mb-6">
-                <h4 className="text-2xl font-serif font-bold text-slate-900 mb-1">The Kashmir Curators</h4>
-                <div className="w-12 h-1 bg-amber-500 rounded-full mb-3" />
-                <p className="text-[10px] font-black uppercase tracking-[0.6em] text-amber-700">Luxury Travel Reimagined</p>
+              <p className="text-slate-400 text-xs font-medium tracking-[0.2em] mb-4 uppercase">
+                Official Proposal from {brandName}
+              </p>
+
+              <div className="inline-flex flex-col items-center mb-6 text-center">
+                {isPro && effectiveBranding.logoUrl ? (
+                  <img 
+                    src={effectiveBranding.logoUrl} 
+                    alt={brandName} 
+                    className="h-16 max-w-[240px] object-contain mb-2"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <h4 className="text-3xl font-serif font-bold text-slate-900 mb-1">{brandName}</h4>
+                )}
+                
+                <div className="w-16 h-1 rounded-full mb-3" style={{ backgroundColor: brandColor }} />
+                <p 
+                  className="text-[10px] font-black uppercase tracking-[0.5em]"
+                  style={{ color: brandColor }}
+                >
+                  {brandTagline}
+                </p>
+
+                {/* Agency Contact Details */}
+                <div className="flex items-center gap-6 mt-4 text-xs font-semibold text-slate-600">
+                  {effectiveBranding.phone && <span>📞 {effectiveBranding.phone}</span>}
+                  {effectiveBranding.website && <span>🌐 {effectiveBranding.website}</span>}
+                </div>
+
+                {/* Subtle Seal for Starter Agents */}
+                {!isPro && (
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 shadow-sm mt-5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    <p className="text-[10px] text-slate-600 font-medium">
+                      Verified Kashmir Partner • In partnership with <strong className="text-slate-900 font-bold">Kashmir Connect Travel OS</strong>
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div className="flex justify-between items-center border-t border-slate-200/50 pt-6 w-full">
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Kashmir Curators Proposal</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                  {isPro ? `${brandName} Curated Proposal` : `${brandName} Proposal • In partnership with Kashmir Connect Travel OS`}
+                </p>
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Page {totalPagesCount} of {totalPagesCount}</p>
               </div>
             </div>

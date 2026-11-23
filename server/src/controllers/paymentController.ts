@@ -681,3 +681,168 @@ export const createRazorpayPaymentLink = async (req: Request, res: Response) => 
     res.status(500).json({ error: 'Failed to initialize Razorpay payment: ' + error.message });
   }
 };
+
+/**
+ * POST /api/payments/razorpay/create-subscription-order
+ * Initiates Razorpay Order for B2B SaaS Plan Upgrade
+ */
+export const createSubscriptionOrder = async (req: any, res: Response) => {
+  const { planId, billingCycle = 'MONTHLY' } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  // Validate billingCycle if present
+  if (req.body.billingCycle !== undefined && req.body.billingCycle !== 'MONTHLY' && req.body.billingCycle !== 'ANNUAL') {
+    return res.status(400).json({ error: 'Invalid billing cycle. Must be MONTHLY or ANNUAL' });
+  }
+
+  // Exact pricing per requirement R3
+  let amount = 0;
+  if (planId === 'PRO_DMC' || planId === 'PROFESSIONAL') {
+    amount = billingCycle === 'ANNUAL' ? 15999 : 1999;
+  } else if (planId === 'ENTERPRISE') {
+    amount = billingCycle === 'ANNUAL' ? 39999 : 4999;
+  } else {
+    return res.status(400).json({ error: 'Invalid subscription plan selected' });
+  }
+
+  const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_TC6hJeqiMJD6a5';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+  let razorpayOrderId = `ORDER_SUB_${Date.now()}`;
+
+  if (keyId && keySecret) {
+    try {
+      const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
+        },
+        body: JSON.stringify({
+          amount: Math.round(amount * 100), // paise
+          currency: 'INR',
+          receipt: `SUB-${planId}-${Date.now().toString().slice(-6)}`,
+          notes: {
+            userId,
+            planId,
+            billingCycle
+          }
+        })
+      });
+
+      if (orderRes.ok) {
+        const orderData = await orderRes.json();
+        razorpayOrderId = orderData.id;
+      }
+    } catch (err: any) {
+      console.warn('[Razorpay] Order API fallback:', err.message);
+    }
+  }
+
+  return res.status(200).json({
+    success: true,
+    orderId: razorpayOrderId,
+    amount,
+    currency: 'INR',
+    keyId,
+    planId,
+    billingCycle
+  });
+};
+
+/**
+ * POST /api/payments/razorpay/verify-subscription
+ * Verifies Razorpay payment signature & persists updated plan in DB
+ */
+export const verifySubscriptionPayment = async (req: any, res: Response) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planId, billingCycle } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId || !planId) {
+    return res.status(400).json({ error: 'Missing userId or planId' });
+  }
+
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const isSimulation = process.env.NODE_ENV === 'development' && (req.headers['x-simulation-mode'] === 'true' || !keySecret);
+
+  if (!isSimulation) {
+    if (!razorpay_signature || !razorpay_order_id || !razorpay_payment_id) {
+      return res.status(400).json({ error: 'Missing required Razorpay payment verification parameters' });
+    }
+    if (!keySecret) {
+      return res.status(500).json({ error: 'Razorpay payment verification configuration error: secret missing' });
+    }
+    const expectedSignature = crypto
+      .createHmac('sha256', keySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ error: 'Invalid Razorpay payment signature' });
+    }
+  }
+
+  try {
+    const normalizedPlan = (planId === 'PROFESSIONAL' || planId === 'PRO_DMC') ? 'PRO_DMC' : planId;
+
+    // 1. Upsert AgentProfile with new plan and APPROVED status
+    const profile = await prisma.agentProfile.upsert({
+      where: { userId },
+      update: {
+        plan: normalizedPlan,
+        billingCycle: billingCycle || 'MONTHLY',
+        status: 'APPROVED'
+      },
+      create: {
+        userId,
+        companyName: req.user?.name ? `${req.user.name} Travels` : 'Registered Agency',
+        agentCode: `AGT-${(req.user?.name || 'PARTNER').toUpperCase().replace(/\s+/g, '-').slice(0, 8)}-${Math.floor(1000 + Math.random() * 9000)}`,
+        commissionPct: 10.0,
+        plan: normalizedPlan,
+        billingCycle: billingCycle || 'MONTHLY',
+        status: 'APPROVED'
+      }
+    });
+
+    // 2. Ensure User role is agent
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: 'agent' }
+    });
+
+    // 3. Record transaction in TransactionLedger
+    const amount = (normalizedPlan === 'PRO_DMC' ? (billingCycle === 'ANNUAL' ? 15999 : 1999) : (billingCycle === 'ANNUAL' ? 39999 : 4999));
+    await (prisma as any).transactionLedger.create({
+      data: {
+        bookingId: profile.id,
+        amount,
+        type: 'CREDIT',
+        paymentId: razorpay_payment_id || `PAY_MOCK_${Date.now()}`,
+        orderId: razorpay_order_id || `ORD_MOCK_${Date.now()}`,
+        description: `B2B SaaS Subscription Upgrade to ${normalizedPlan} (${billingCycle || 'MONTHLY'})`
+      }
+    }).catch((e: any) => console.warn('Ledger write notice:', e.message));
+
+    // 4. Broadcast websocket event
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'AGENT_SUBSCRIPTION_UPGRADED',
+        message: `Agent ${profile.companyName} upgraded to ${normalizedPlan} (${billingCycle || 'MONTHLY'})`
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully upgraded to ${normalizedPlan}`,
+      profile,
+      plan: normalizedPlan
+    });
+  } catch (error: any) {
+    console.error('verifySubscriptionPayment error:', error);
+    return res.status(500).json({ error: 'Failed to activate subscription' });
+  }
+};

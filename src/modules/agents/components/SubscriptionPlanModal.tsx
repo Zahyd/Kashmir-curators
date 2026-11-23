@@ -58,7 +58,7 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
       badge: 'Most Popular',
       tagline: 'For established travel operators scaling high-margin Kashmir tours',
       monthlyPrice: 1999,
-      annualPrice: 1599, // 20% discount
+      annualPrice: 15999, // ₹15,999/yr
       features: [
         'Unlimited Travel CRM Inquiries & Leads',
         '100% White-Label: Your Agency Logo & Colors on Itineraries',
@@ -76,7 +76,7 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
       badge: 'DMC Enterprise',
       tagline: 'Multi-seat team management with exclusive wholesale inventory locks',
       monthlyPrice: 4999,
-      annualPrice: 3999,
+      annualPrice: 39999, // ₹39,999/yr
       features: [
         'Everything in Pro DMC plan',
         'Up to 10 Agent & Staff Sub-accounts',
@@ -197,12 +197,14 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
                         {price === 0 ? 'Free' : `₹${price.toLocaleString('en-IN')}`}
                       </span>
                       {price > 0 && (
-                        <span className="text-xs text-muted-foreground">/ month</span>
+                        <span className="text-xs text-muted-foreground">
+                          {billingCycle === 'ANNUAL' ? '/ year' : '/ month'}
+                        </span>
                       )}
                     </div>
                     {billingCycle === 'ANNUAL' && price > 0 && (
                       <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                        Billed annually (₹{(price * 12).toLocaleString('en-IN')}/yr)
+                        Billed annually (₹{price.toLocaleString('en-IN')}/yr)
                       </span>
                     )}
                   </div>
@@ -226,7 +228,13 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
                       isSelected ? 'shadow-sm shadow-primary/20' : ''
                     }`}
                   >
-                    {isCurrent ? 'Current Tier' : isSelected ? 'Selected' : 'Select Plan'}
+                    {isCurrent 
+                      ? 'Current Tier' 
+                      : (plan.id === 'PRO_DMC' 
+                          ? 'Upgrade to Pro DMC' 
+                          : plan.id === 'ENTERPRISE' 
+                            ? 'Upgrade to Enterprise' 
+                            : isSelected ? 'Selected' : 'Select Plan')}
                   </Button>
                 </div>
               </div>
@@ -250,7 +258,15 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
               className="rounded-xl text-xs font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 flex-1 sm:flex-initial"
             >
               <CreditCard className="w-3.5 h-3.5" />
-              <span>{isProcessing ? 'Processing Upgrade...' : `Activate ${selectedPlan.replace('_', ' ')}`}</span>
+              <span>
+                {isProcessing 
+                  ? 'Processing Upgrade...' 
+                  : (selectedPlan === 'PRO_DMC' 
+                      ? 'Upgrade to Pro DMC' 
+                      : selectedPlan === 'ENTERPRISE' 
+                        ? 'Upgrade to Enterprise' 
+                        : 'Activate Starter')}
+              </span>
             </Button>
           </div>
         </DialogFooter>

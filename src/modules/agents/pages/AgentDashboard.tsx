@@ -38,9 +38,12 @@ import { AgencyTeamManager } from '../components/AgencyTeamManager';
 import { EnterpriseApiGateway } from '../components/EnterpriseApiGateway';
 import { CustomDomainCard } from '../components/CustomDomainCard';
 import { SupplierCreditCard } from '../components/SupplierCreditCard';
+import ItineraryBuilder from '@/components/sales/ItineraryBuilder';
+import { useRazorpay } from '@/hooks/useRazorpay';
 
 export const AgentDashboard: React.FC = () => {
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
+  const isRazorpayLoaded = useRazorpay();
   const [activeTab, setActiveTab] = useState<AgentTab>('overview');
   
   // Real-time Agent & Lead State
@@ -131,6 +134,15 @@ export const AgentDashboard: React.FC = () => {
     }
   };
 
+  // Sync persisted database plan to dashboard state
+  useEffect(() => {
+    if (agentProfile?.plan) {
+      const normalized = (agentProfile.plan === 'PROFESSIONAL' ? 'PRO_DMC' : agentProfile.plan) as SaaSPlanId;
+      setCurrentPlan(normalized);
+      localStorage.setItem('agent_saas_plan', normalized);
+    }
+  }, [agentProfile?.plan]);
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchData();
@@ -208,8 +220,20 @@ export const AgentDashboard: React.FC = () => {
   };
 
   const handleOpenQuoteModal = (lead?: LeadItem) => {
-    setSelectedLeadForQuote(lead || null);
-    setQuoteModalOpen(true);
+    const quoteInquiry = lead || {
+      id: `B2B-QUOTE-${Date.now().toString(36).toUpperCase()}`,
+      customerName: 'Valued Traveler',
+      email: '',
+      phone: '',
+      destination: 'Srinagar, Gulmarg, Pahalgam',
+      duration: '6 Days',
+      travelers: '2 Adults',
+      budget: 'Luxury',
+      leadStage: 'NEW_LEAD',
+      createdAt: new Date().toISOString()
+    };
+    setSelectedLeadForQuote(quoteInquiry);
+    setActiveTab('quotes');
   };
 
   const handleSubmitVerification = async (data: { licenseNumber: string; file: File | null }) => {
@@ -235,8 +259,133 @@ export const AgentDashboard: React.FC = () => {
   };
 
   const handleUpgradePlan = async (planId: SaaSPlanId, billingCycle: 'MONTHLY' | 'ANNUAL') => {
-    setCurrentPlan(planId);
-    localStorage.setItem('agent_saas_plan', planId);
+    if (planId === 'STARTER') {
+      setCurrentPlan('STARTER');
+      localStorage.setItem('agent_saas_plan', 'STARTER');
+      return;
+    }
+
+    const authToken = token || localStorage.getItem('auth_token') || '';
+
+    // 1. Create order on server
+    const orderRes = await fetch(`${API_BASE_URL}/payments/razorpay/create-subscription-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ planId, billingCycle })
+    });
+
+    if (!orderRes.ok) {
+      const err = await orderRes.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to initialize Razorpay subscription order');
+    }
+
+    const orderData = await orderRes.json();
+
+    // 2. Open Razorpay Checkout modal
+    return new Promise<void>((resolve, reject) => {
+      const options = {
+        key: orderData.keyId,
+        amount: Math.round(orderData.amount * 100),
+        currency: orderData.currency || 'INR',
+        name: 'Kashmir Connect Travel OS',
+        description: `B2B SaaS Subscription - ${planId.replace('_', ' ')} (${billingCycle})`,
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          try {
+            // 3. Verify on server and persist to database
+            const verifyRes = await fetch(`${API_BASE_URL}/payments/razorpay/verify-subscription`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${authToken}`
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planId,
+                billingCycle
+              })
+            });
+
+            if (!verifyRes.ok) {
+              const verifyErr = await verifyRes.json().catch(() => ({}));
+              throw new Error(verifyErr.error || 'Payment verification failed');
+            }
+
+            const verifyData = await verifyRes.json();
+            
+            // 4. Update state and persistence
+            setCurrentPlan(planId);
+            localStorage.setItem('agent_saas_plan', planId);
+            setAgentProfile(verifyData.profile);
+            
+            toast.success(`Successfully Upgraded to ${planId.replace('_', ' ')}!`, {
+              description: 'White-labeling and wholesale B2B net rates are now active.',
+              icon: '🎉'
+            });
+
+            fetchData();
+            resolve();
+          } catch (vErr: any) {
+            toast.error(vErr.message || 'Verification error');
+            reject(vErr);
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || ''
+        },
+        theme: {
+          color: '#D4AF37'
+        },
+        modal: {
+          ondismiss: function () {
+            toast.info('Subscription checkout cancelled');
+            reject(new Error('Payment cancelled'));
+          }
+        }
+      };
+
+      if ((window as any).Razorpay) {
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      } else {
+        // Fallback simulation in dev if script is blocked
+        fetch(`${API_BASE_URL}/payments/razorpay/verify-subscription`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            razorpay_order_id: orderData.orderId,
+            razorpay_payment_id: `pay_sim_${Date.now()}`,
+            razorpay_signature: 'simulated_dev_signature',
+            planId,
+            billingCycle
+          })
+        })
+          .then(async (res) => {
+            if (res.ok) {
+              const d = await res.json();
+              setCurrentPlan(planId);
+              localStorage.setItem('agent_saas_plan', planId);
+              setAgentProfile(d.profile);
+              toast.success(`Upgraded to ${planId.replace('_', ' ')}! (Active)`);
+              fetchData();
+              resolve();
+            } else {
+              reject(new Error('Razorpay SDK failed to load'));
+            }
+          })
+          .catch(reject);
+      }
+    });
   };
 
   const handleSaveBranding = async (branding: any) => {
@@ -467,23 +616,59 @@ export const AgentDashboard: React.FC = () => {
           {/* TAB 4: QUOTATION GENERATOR */}
           {activeTab === 'quotes' && (
             <div className="space-y-6">
-              <div className="bg-card p-6 rounded-3xl border border-border/70 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-bold text-lg text-foreground">Interactive Proposal & WhatsApp Quote Generator</h3>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-                    Create luxury Kashmir proposals with automatic hotel, cab, and houseboat cost calculations, apply your agency margin, and dispatch via WhatsApp in one tap.
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => handleOpenQuoteModal()} 
-                  className="rounded-xl text-xs font-bold gap-2 shrink-0 shadow-md shadow-primary/20"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Launch Quote Generator</span>
-                </Button>
-              </div>
+              {selectedLeadForQuote ? (
+                <ItineraryBuilder
+                  inquiry={selectedLeadForQuote}
+                  onBack={() => setSelectedLeadForQuote(null)}
+                  agencyBranding={agencyBranding}
+                  planTier={currentPlan}
+                />
+              ) : (
+                <div className="space-y-6">
+                  <div className="bg-card p-6 rounded-3xl border border-border/70 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-foreground">Interactive Proposal & WhatsApp Quote Generator</h3>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+                        Create bespoke luxury Kashmir proposals with live hotel inventory, cab fleets, markup controls, pure white PDF exports, and 1-tap WhatsApp dispatch.
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={() => handleOpenQuoteModal()} 
+                      className="rounded-xl text-xs font-bold gap-2 shrink-0 shadow-md shadow-primary/20 bg-primary text-primary-foreground"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create New Quotation</span>
+                    </Button>
+                  </div>
 
-              <B2BInventoryBrowser />
+                  {/* Active Lead Selection Cards */}
+                  {leads.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-bold text-foreground">Select an Active Traveler Lead</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {leads.map((l) => (
+                          <Card 
+                            key={l.id} 
+                            className="p-4 rounded-2xl hover:border-amber-500/50 cursor-pointer transition-all bg-card"
+                            onClick={() => handleOpenQuoteModal(l)}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-bold text-sm text-foreground">{l.customerName}</span>
+                              <Badge variant="outline" className="text-[10px]">{l.leadStage}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-3">{l.destination} • {l.duration} • {l.travelers}</p>
+                            <Button size="sm" variant="secondary" className="w-full text-xs font-bold">
+                              Open Itinerary Builder &rarr;
+                            </Button>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <B2BInventoryBrowser />
+                </div>
+              )}
             </div>
           )}
 

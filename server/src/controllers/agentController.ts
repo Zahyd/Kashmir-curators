@@ -290,13 +290,18 @@ export const getAgentStats = async (req: AuthRequest, res: Response) => {
       where: { userId }
     });
 
+    const profile = await prisma.agentProfile.findUnique({
+      where: { userId }
+    });
+
     const totalRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
     
     res.json({
       inquiriesCount: inquiries.length,
       bookingsCount: bookings.length,
       totalRevenue,
-      commissionEarned: totalRevenue * 0.10
+      commissionEarned: totalRevenue * 0.10,
+      profile
     });
   } catch (error) {
     console.error('getAgentStats error:', error);

@@ -495,7 +495,10 @@ export const updateInquiry = async (req: Request, res: Response) => {
     }
 
     res.json(inquiry);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2025' || error?.message?.includes('P2025') || (error?.message && error.message.includes('Record to update not found'))) {
+      return res.status(404).json({ error: 'Inquiry not found' });
+    }
     console.error('Inquiry update error:', (error as any).message);
     res.status(500).json({ error: 'Failed to update inquiry' });
   }
