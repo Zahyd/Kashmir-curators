@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { io } from '../index';
 
 const router = Router();
 
@@ -14,6 +15,23 @@ export function broadcastDriverEvent(eventType: string, payload: any) {
       client.write(data);
     } catch {
       sseClients.delete(client);
+    }
+  }
+
+  // Dual-Channel Real-Time Socket.IO Synchronization
+  if (io) {
+    io.emit(eventType, payload);
+    io.to('admin-room').emit('new-system-event', {
+      type: eventType.toUpperCase(),
+      message: `Fleet operational event: ${eventType}`,
+      payload
+    });
+
+    if (payload?.driverId) {
+      io.to(`driver-${payload.driverId}`).emit(eventType, payload);
+    }
+    if (payload?.tenantId) {
+      io.to(`tenant-${payload.tenantId}`).emit(eventType, payload);
     }
   }
 }
@@ -465,6 +483,12 @@ router.post('/vehicles/:id/authenticate', authenticateToken, async (req: Request
         }
       });
 
+      broadcastDriverEvent('vehicle-verified', {
+        vehicleId: id,
+        model: updated.name,
+        plateNumber: features.plateNumber,
+        status: 'APPROVED'
+      });
       broadcastDriverEvent('VEHICLE_VERIFIED', {
         vehicleId: id,
         model: updated.name,
@@ -496,6 +520,13 @@ router.post('/vehicles/:id/authenticate', authenticateToken, async (req: Request
         }
       });
 
+      broadcastDriverEvent('vehicle-verified', {
+        vehicleId: id,
+        model: updated.name,
+        plateNumber: features.plateNumber,
+        status: 'REJECTED',
+        reason: features.rejectionReason
+      });
       broadcastDriverEvent('VEHICLE_VERIFIED', {
         vehicleId: id,
         model: updated.name,
@@ -716,6 +747,50 @@ router.post('/payout', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to initiate UPI payout' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 11. Real-Time Chauffeur Fleet Dispatch Trigger (Socket.IO + Cockpit Channel)
+// ---------------------------------------------------------------------------
+router.post('/dispatch-trip', async (req: Request, res: Response) => {
+  try {
+    const {
+      tripId = `KC-TRIP-${Math.floor(1000 + Math.random() * 9000)}`,
+      pickup = 'Srinagar International Airport (SXR)',
+      drop = 'The Khyber Resort & Spa, Gulmarg',
+      fare = 2850,
+      passengerName = 'Aditi Sharma',
+      passengerPhone = '+91 98111 22334',
+      travelers = 2,
+      driverId,
+      tenantId
+    } = req.body;
+
+    const offerPayload = {
+      tripId,
+      pickup,
+      drop,
+      distanceKm: 54,
+      estimatedDuration: '1h 35m',
+      fare: Number(fare),
+      passengerName,
+      passengerPhone,
+      travelers: Number(travelers),
+      expiresInSeconds: 45,
+      driverId,
+      tenantId
+    };
+
+    broadcastDriverEvent('driver-trip-dispatched', offerPayload);
+
+    res.json({
+      success: true,
+      message: 'Trip dispatch broadcast to chauffeur network.',
+      offer: offerPayload
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to dispatch trip' });
   }
 });
 

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "npx prisma generate && node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc",
+    "typecheck": "node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --noEmit",
     "start": "node dist/src/index.js",
     "seed": "ts-node prisma/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1"

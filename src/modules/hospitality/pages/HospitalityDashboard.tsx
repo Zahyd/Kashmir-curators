@@ -208,10 +208,20 @@ export const HospitalityDashboard: React.FC = () => {
       setSocketConnected(true);
       if (user?.id) socket.emit('join-user', user.id);
       socket.emit('join-room', 'admin-room');
+      const orgId = (user as any)?.organizationId || (user as any)?.organization?.id;
+      if (orgId) socket.emit('join-tenant', orgId);
     });
 
     socket.on('disconnect', () => {
       setSocketConnected(false);
+    });
+
+    socket.on('hotel-crs-inquiry', (data: any) => {
+      toast.info('Direct Hotel CRS Inquiry Received!', {
+        description: data.message || 'New reservation or rate inquiry.',
+        icon: '🛎️'
+      });
+      fetchHotels();
     });
 
     socket.on('new-system-event', (data: any) => {

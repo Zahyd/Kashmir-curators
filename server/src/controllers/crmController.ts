@@ -243,20 +243,31 @@ export const updateLeadStage = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    // Real-time synchronization
+    // Real-time synchronization across Admin Room, Tenant Desks & Global Network
     if (io) {
-      io.emit('lead-updated', {
+      const leadPayload = {
         inquiryId: id,
         customerName: updated.customerName,
         newStage: leadStage,
         updatedLead: updated
-      });
+      };
 
+      io.emit('lead-updated', leadPayload);
       io.to('admin-room').emit('new-system-event', {
         type: 'LEAD_STAGE_UPDATED',
         inquiry: updated,
         message: `${updated.customerName} transitioned to ${leadStage?.replace(/_/g, ' ')}`
       });
+
+      const tenantId = (updated as any).organizationId || (req.user as any)?.organizationId;
+      if (tenantId) {
+        io.to(`tenant-${tenantId}`).emit('lead-updated', leadPayload);
+        io.to(`tenant-${tenantId}`).emit('new-system-event', {
+          type: 'LEAD_STAGE_UPDATED',
+          inquiry: updated,
+          message: `${updated.customerName} transitioned to ${leadStage?.replace(/_/g, ' ')}`
+        });
+      }
     }
 
     res.json(updated);

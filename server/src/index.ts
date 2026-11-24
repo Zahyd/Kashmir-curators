@@ -55,6 +55,9 @@ import driverRoutes from './routes/driverRoutes';
 import salesRoutes from './routes/salesRoutes';
 import metaLeadRoutes from './routes/metaLeadRoutes';
 import auditRoutes from './routes/auditRoutes';
+import organizationRoutes from './routes/organizationRoutes';
+import { tenantMiddleware } from './middleware/tenantMiddleware';
+import { ensureDefaultOrganization } from './lib/tenant';
 import { handleStripeWebhook } from './controllers/paymentController';
 import prisma from './lib/prisma';
 
@@ -172,19 +175,59 @@ app.post('/api/payments/stripe/webhook', express.raw({ type: 'application/json' 
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(tenantMiddleware);
 
-// Socket.io Connection
+// Socket.io Connection Matrix for Real-Time Travel OS Operational Desks
 io.on('connection', (socket) => {
-  socket.on('join-user', (userId) => {
-    socket.join(`user-${userId}`);
+  // Direct user personal channel
+  socket.on('join-user', (userId: string) => {
+    if (userId) socket.join(`user-${userId}`);
   });
 
+  // Admin central oversight room
   socket.on('join-admin', () => {
     socket.join('admin-room');
   });
 
-  socket.on('join-payment', (paymentId) => {
-    socket.join(`payment-${paymentId}`);
+  // Tenant / Organization operational desk (B2B Agency, Hotel Operator, Fleet Provider)
+  socket.on('join-tenant', (tenantId: string) => {
+    if (tenantId) socket.join(`tenant-${tenantId}`);
+  });
+
+  socket.on('leave-tenant', (tenantId: string) => {
+    if (tenantId) socket.leave(`tenant-${tenantId}`);
+  });
+
+  // Hotel CRS Reception Operational Desk
+  socket.on('join-hotel', (hotelId: string) => {
+    if (hotelId) socket.join(`hotel-${hotelId}`);
+  });
+
+  socket.on('leave-hotel', (hotelId: string) => {
+    if (hotelId) socket.leave(`hotel-${hotelId}`);
+  });
+
+  // Chauffeur / Driver Cockpit & Fleet Dispatch Desk
+  socket.on('join-driver', (driverId: string) => {
+    if (driverId) socket.join(`driver-${driverId}`);
+  });
+
+  socket.on('leave-driver', (driverId: string) => {
+    if (driverId) socket.leave(`driver-${driverId}`);
+  });
+
+  // Generic room join/leave (for backwards compatibility across client dashboards)
+  socket.on('join-room', (room: string) => {
+    if (room) socket.join(room);
+  });
+
+  socket.on('leave-room', (room: string) => {
+    if (room) socket.leave(room);
+  });
+
+  // Payment synchronization
+  socket.on('join-payment', (paymentId: string) => {
+    if (paymentId) socket.join(`payment-${paymentId}`);
   });
 });
 
@@ -259,6 +302,7 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/sales/meta-leads', metaLeadRoutes);
 app.use('/api/webhooks/meta-leads', metaLeadRoutes);
 app.use('/api/audit-logs', auditRoutes);
+app.use('/api/organizations', organizationRoutes);
 app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers
@@ -284,6 +328,11 @@ import { emailQueueService } from './services/emailQueueService';
 cronService.initialize();
 emailQueueService.initQueue().catch((err: any) => {
   console.warn('[ServerBoot] Email queue background worker notice:', err.message);
+});
+
+// Ensure default multi-tenant organization foundation is provisioned
+ensureDefaultOrganization().catch((err: any) => {
+  console.warn('[ServerBoot] Default tenant initialization notice:', err.message);
 });
 
 httpServer.listen(PORT, () => {

@@ -7,6 +7,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  type        String   @default("AGENCY") // AGENCY, HOTEL_OPERATOR, FLEET_PROVIDER, DMC_PLATFORM
+  status      String   @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING
+  tier        String   @default("STARTER") // STARTER, PROFESSIONAL, ENTERPRISE
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  state       String?
+  logo        String?
+  domain      String?  // custom domain or subdomain
+  settings    String?  // JSON string: branding, operational config, notification settings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users             User[]
+  hotels            Hotel[]
+  cabs              Cab[]
+  inquiries         Inquiry[]
+  bookings          Booking[]
+  hotelReservations HotelReservation[]
+  agentProfiles     AgentProfile[]
+  driverProfiles    DriverProfile[]
+
+  @@index([slug])
+  @@index([type])
+  @@index([status])
+}
+
 model User {
   id                String             @id @default(uuid())
   email             String             @unique
@@ -19,6 +51,8 @@ model User {
   employeeCode      String?            @unique
   isOnline          Boolean            @default(false)
   leadCapacity      Int                @default(5)
+  organizationId    String?
+  organization      Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   bookings          Booking[]
   inquiries         Inquiry[]
   agentInquiries    Inquiry[]          @relation("AgentInquiries")
@@ -32,6 +66,8 @@ model User {
 
   sessions      Session[]
   accounts      Account[]
+
+  @@index([organizationId])
 }
 
 model Package {
@@ -88,6 +124,8 @@ model Hotel {
   paymentTerms        String?
   commissionStructure String?
   seasonalPricing     String?            // JSON string
+  organizationId      String?
+  organization        Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   reservations        HotelReservation[]
   roomCategories      RoomCategory[]
   rooms               HotelRoom[]
@@ -98,21 +136,27 @@ model Hotel {
   reviews             HotelReview[]
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
+
+  @@index([organizationId])
 }
 
 model Cab {
-  id           String           @id @default(uuid())
-  type         String
-  name         String
-  capacity     Int
-  pricePerKm   Float
-  basePrice    Float
-  image        String
-  features     String           // JSON string
-  isActive     Boolean          @default(true)
-  reservations CabReservation[]
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id             String           @id @default(uuid())
+  type           String
+  name           String
+  capacity       Int
+  pricePerKm     Float
+  basePrice      Float
+  image          String
+  features       String           // JSON string
+  isActive       Boolean          @default(true)
+  organizationId String?
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  reservations   CabReservation[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId])
 }
 
 model Testimonial {
@@ -138,24 +182,31 @@ model FAQ {
 }
 
 model Booking {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  type         String   // hotel, package, cab
-  itemName     String
-  bookingDate  DateTime
-  status       String   @default("pending") // pending, confirmed, cancelled
-  stage        String   @default("DRAFT") // DRAFT, SUPPLIER_REQUESTED, CONFIRMED, VOUCHERED, EXECUTED, COMPLETED, CANCELLED
-  totalAmount  Float
-  details      String   // JSON string
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  type           String        // hotel, package, cab
+  itemName       String
+  bookingDate    DateTime
+  status         String        @default("pending") // pending, confirmed, cancelled
+  stage          String        @default("DRAFT") // DRAFT, SUPPLIER_REQUESTED, CONFIRMED, VOUCHERED, EXECUTED, COMPLETED, CANCELLED
+  totalAmount    Float
+  details        String        // JSON string
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([userId])
 }
 
 model Inquiry {
   id                String             @id @default(uuid())
   userId            String?
   user              User?              @relation(fields: [userId], references: [id])
+  organizationId    String?
+  organization      Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   customerName      String
   email             String
   phone             String
@@ -215,6 +266,7 @@ model Inquiry {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
+  @@index([organizationId])
   @@index([phone])
   @@index([email])
   @@index([leadStage])
@@ -552,12 +604,19 @@ model HotelReservation {
   voucherApprovedBy       String?
   voucherApprovedAt       DateTime?
   idempotencyKey          String?   @unique
+  organizationId          String?
+  organization            Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   emailDispatches         EmailDispatchRecord[]
   inboundEmails           InboundEmailLog[]
   aiAgentActions          AiAgentActionLog[]
 
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@index([hotelId])
+  @@index([inquiryId])
+  @@index([status])
 }
 
 model EmailDispatchRecord {
@@ -625,20 +684,24 @@ model AiAgentActionLog {
 }
 
 model AgentProfile {
-  id             String   @id @default(uuid())
+  id             String        @id @default(uuid())
   companyName    String
   licenseNumber  String?
-  agentCode      String   @unique
-  commissionPct  Float    @default(0.0)
-  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  plan           String   @default("STARTER") // STARTER, PROFESSIONAL, ENTERPRISE
-  billingCycle   String   @default("MONTHLY") // MONTHLY, ANNUAL
+  agentCode      String        @unique
+  commissionPct  Float         @default(0.0)
+  status         String        @default("PENDING") // PENDING, APPROVED, REJECTED
+  plan           String        @default("STARTER") // STARTER, PROFESSIONAL, ENTERPRISE
+  billingCycle   String        @default("MONTHLY") // MONTHLY, ANNUAL
   city           String?
   state          String?
   website        String?
   applicationRef String?
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model AgencyApplication {
@@ -670,24 +733,28 @@ model AgencyApplication {
 }
 
 model DriverProfile {
-  id                 String   @id @default(uuid())
+  id                 String        @id @default(uuid())
   licenseNumber      String
   vehicleRegNo       String
-  status             String   @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
-  rating             Float    @default(4.8)
-  tripsCompleted     Int      @default(0)
-  earnings           Float    @default(0)
-  attendance         String   @default("Present") // Present, Absent, Off Duty
-  licenseExpiry      String   @default("2027-12-31")
-  policeVerification String   @default("Verified") // Verified, Pending, Expired
-  aadhaar            String   @default("0000-0000-0000")
-  experience         Int      @default(3)
-  languages          String   @default("English, Kashmiri, Urdu")
-  emergencyContact   String   @default("+919876543219")
-  userId             String   @unique
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @default(now()) @updatedAt
+  status             String        @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
+  rating             Float         @default(4.8)
+  tripsCompleted     Int           @default(0)
+  earnings           Float         @default(0)
+  attendance         String        @default("Present") // Present, Absent, Off Duty
+  licenseExpiry      String        @default("2027-12-31")
+  policeVerification String        @default("Verified") // Verified, Pending, Expired
+  aadhaar            String        @default("0000-0000-0000")
+  experience         Int           @default(3)
+  languages          String        @default("English, Kashmiri, Urdu")
+  emergencyContact   String        @default("+919876543219")
+  organizationId     String?
+  organization       Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId             String        @unique
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @default(now()) @updatedAt
+
+  @@index([organizationId])
 }
 
 model Supplier {

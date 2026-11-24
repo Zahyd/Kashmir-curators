@@ -151,6 +151,8 @@ export const AgentDashboard: React.FC = () => {
       const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
       socket.on('connect', () => {
         if (user?.id) socket.emit('join-user', user.id);
+        const orgId = (user as any)?.organizationId || (user as any)?.organization?.id;
+        if (orgId) socket.emit('join-tenant', orgId);
       });
 
       socket.on('lead-updated', (data: any) => {

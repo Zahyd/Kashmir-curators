@@ -162,6 +162,15 @@ export const createBooking = async (req: any, res: Response) => {
         ...payload,
         message: `New manual booking: ${booking.itemName} for ${clientName || clientEmail || 'User'}`
       });
+
+      const tenantId = (booking as any).organizationId || (req as any).tenantId;
+      if (tenantId) {
+        req.io.to(`tenant-${tenantId}`).emit('booking-updated', payload);
+        req.io.to(`tenant-${tenantId}`).emit('new-system-event', {
+          ...payload,
+          message: `New booking: ${booking.itemName}`
+        });
+      }
       
       // Emit to everyone for live social proof / curation updates
       let travelers = '2';
@@ -248,6 +257,15 @@ export const updateBookingStatus = async (req: any, res: Response) => {
         ...payload,
         message: `Booking ${booking.itemName} (Ref: ${booking.id.slice(0,8)}) updated`
       });
+
+      const tenantId = (booking as any).organizationId || (req as any).tenantId;
+      if (tenantId) {
+        req.io.to(`tenant-${tenantId}`).emit('booking-updated', payload);
+        req.io.to(`tenant-${tenantId}`).emit('new-system-event', {
+          ...payload,
+          message: `Booking ${booking.itemName} updated`
+        });
+      }
 
       // Emit to everyone for live social proof if confirmed
       if (booking.status === 'confirmed') {

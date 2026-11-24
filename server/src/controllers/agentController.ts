@@ -155,13 +155,43 @@ export const reviewApplication = async (req: AuthRequest, res: Response): Promis
       }
     });
 
-    // If APPROVED and linked to a User, provision their AgentProfile & role
+    // If APPROVED and linked to a User, provision their AgentProfile, Role & Multi-Tenant Agency Organization
     if (status === 'APPROVED' && application.userId) {
       const agentCode = `AGT-${application.agencyName.toUpperCase().replace(/\s+/g, '-').slice(0, 8)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+      // Provision or link multi-tenant Organization for this B2B agency
+      let agencyOrgId: string | null = null;
+      try {
+        const agencySlug = application.agencyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + `-${Math.floor(100 + Math.random() * 900)}`;
+        const createdOrg = await prisma.organization.create({
+          data: {
+            name: application.agencyName,
+            slug: agencySlug,
+            type: 'AGENCY',
+            tier: application.selectedPlan || 'STARTER',
+            status: 'ACTIVE',
+            email: application.email,
+            phone: application.phone,
+            city: application.location,
+            settings: JSON.stringify({
+              tourismLicenseNo: application.tourismLicenseNo,
+              gstin: application.gstin,
+              commissionPct: parseFloat(String(commissionPct)) || 10.0
+            })
+          }
+        });
+        agencyOrgId = createdOrg.id;
+      } catch (orgErr) {
+        const existingOrg = await prisma.organization.findFirst({ where: { name: application.agencyName } });
+        agencyOrgId = existingOrg?.id || null;
+      }
+
       await prisma.user.update({
         where: { id: application.userId },
-        data: { role: 'agent' }
+        data: {
+          role: 'agent',
+          organizationId: agencyOrgId || undefined
+        }
       });
 
       await prisma.agentProfile.upsert({
@@ -173,7 +203,8 @@ export const reviewApplication = async (req: AuthRequest, res: Response): Promis
           status: 'APPROVED',
           plan: application.selectedPlan,
           billingCycle: application.billingCycle,
-          applicationRef: application.applicationRef
+          applicationRef: application.applicationRef,
+          organizationId: agencyOrgId || undefined
         },
         create: {
           userId: application.userId,
@@ -184,7 +215,8 @@ export const reviewApplication = async (req: AuthRequest, res: Response): Promis
           status: 'APPROVED',
           plan: application.selectedPlan,
           billingCycle: application.billingCycle,
-          applicationRef: application.applicationRef
+          applicationRef: application.applicationRef,
+          organizationId: agencyOrgId || undefined
         }
       });
     }

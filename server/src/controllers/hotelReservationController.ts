@@ -510,11 +510,22 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
     }
 
     if (req.io) {
-      req.io.to('admin-room').emit('new-system-event', {
+      const eventPayload = {
         type: 'CREATE',
         message: `New reservation voucher ${generatedRef} for ${guestName} dispatched to ${hotelRecord?.name || 'hotel'}`,
         booking: { ...reservation, entityType: 'reservation' }
-      });
+      };
+
+      req.io.to('admin-room').emit('new-system-event', eventPayload);
+      if (hotelId) {
+        req.io.to(`hotel-${hotelId}`).emit('hotel-crs-inquiry', eventPayload);
+        req.io.to(`hotel-${hotelId}`).emit('new-system-event', eventPayload);
+        req.io.to(`hotel-${hotelId}`).emit('booking-updated', eventPayload);
+      }
+      const tenantId = (reservation as any).organizationId || (req.user as any)?.organizationId;
+      if (tenantId) {
+        req.io.to(`tenant-${tenantId}`).emit('new-system-event', eventPayload);
+      }
     }
 
     res.status(201).json({
@@ -623,11 +634,22 @@ export const updateReservation = async (req: AuthRequest, res: Response) => {
     });
 
     if (req.io) {
-      req.io.to('admin-room').emit('new-system-event', {
+      const eventPayload = {
         type: 'UPDATE',
         message: `Reservation for ${updated.guestName} updated to ${updated.status}`,
         booking: { ...updated, entityType: 'reservation' }
-      });
+      };
+
+      req.io.to('admin-room').emit('new-system-event', eventPayload);
+      if (updated.hotelId) {
+        req.io.to(`hotel-${updated.hotelId}`).emit('hotel-crs-inquiry', eventPayload);
+        req.io.to(`hotel-${updated.hotelId}`).emit('new-system-event', eventPayload);
+        req.io.to(`hotel-${updated.hotelId}`).emit('booking-updated', eventPayload);
+      }
+      const tenantId = (updated as any).organizationId || (req.user as any)?.organizationId;
+      if (tenantId) {
+        req.io.to(`tenant-${tenantId}`).emit('new-system-event', eventPayload);
+      }
     }
 
     res.json(updated);
@@ -676,11 +698,22 @@ export const confirmReservation = async (req: AuthRequest, res: Response) => {
     });
 
     if (req.io) {
-      req.io.to('admin-room').emit('new-system-event', {
+      const eventPayload = {
         type: 'UPDATE',
         message: `Hotel Reservation CONFIRMED for ${updated.guestName}`,
         booking: { ...updated, entityType: 'reservation' }
-      });
+      };
+
+      req.io.to('admin-room').emit('new-system-event', eventPayload);
+      if (updated.hotelId) {
+        req.io.to(`hotel-${updated.hotelId}`).emit('hotel-crs-inquiry', eventPayload);
+        req.io.to(`hotel-${updated.hotelId}`).emit('new-system-event', eventPayload);
+        req.io.to(`hotel-${updated.hotelId}`).emit('booking-updated', eventPayload);
+      }
+      const tenantId = (updated as any).organizationId || (req.user as any)?.organizationId;
+      if (tenantId) {
+        req.io.to(`tenant-${tenantId}`).emit('new-system-event', eventPayload);
+      }
     }
 
     res.json(updated);
