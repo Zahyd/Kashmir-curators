@@ -54,7 +54,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
+import { io } from 'socket.io-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import { getHospitalityHeaders, getHospitalityToken } from '../utils/hospitalityAuth';
@@ -414,6 +415,61 @@ export const UnifiedOperationsWorkspace: React.FC<UnifiedOperationsWorkspaceProp
     fetchKpis();
     fetchReservations();
   }, [selectedHotelId, filterStage, filterDestination, filterPayment, filterSource]);
+
+  // Real-Time Socket.IO Synchronization for Hospitality Operations Desk
+  useEffect(() => {
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
+
+    socket.on('connect', () => {
+      if (user?.id) socket.emit('join-user', user.id);
+      socket.emit('join-room', 'admin-room');
+      if (selectedHotelId && selectedHotelId !== 'ALL') {
+        socket.emit('join-hotel', selectedHotelId);
+      }
+      const orgId = (user as any)?.organizationId || (user as any)?.organization?.id;
+      if (orgId) socket.emit('join-tenant', orgId);
+    });
+
+    const handleRealtimeUpdate = (data?: any) => {
+      fetchKpis();
+      fetchReservations();
+    };
+
+    socket.on('hotel-crs-inquiry', (data: any) => {
+      toast.info('Real-Time CRS Alert', {
+        description: data.message || 'Hotel inquiry updated',
+        icon: '🛎️'
+      });
+      handleRealtimeUpdate();
+    });
+
+    socket.on('booking-updated', (data: any) => {
+      toast.info('Live Booking Event', {
+        description: data.message || `${data.booking?.itemName || 'Reservation'} status: ${data.booking?.status || 'updated'}`,
+        icon: '🏨'
+      });
+      handleRealtimeUpdate();
+    });
+
+    socket.on('new-system-event', (data: any) => {
+      if (
+        data.type === 'CREATE' ||
+        data.type === 'UPDATE' ||
+        data.type === 'DELETE' ||
+        data.booking ||
+        data.entityType === 'reservation' ||
+        data.type === 'LEAD_STAGE_UPDATED'
+      ) {
+        handleRealtimeUpdate();
+      }
+    });
+
+    socket.on('reservation-updated', handleRealtimeUpdate);
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [selectedHotelId, token, user?.id]);
 
   // Handle Search Debounce or trigger
   const handleSearchSubmit = (e: React.FormEvent) => {
