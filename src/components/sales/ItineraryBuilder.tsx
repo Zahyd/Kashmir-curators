@@ -47,7 +47,10 @@ import {
   RefreshCw,
   Send,
   Check,
-  Crown
+  Crown,
+  Lock,
+  QrCode,
+  ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -914,6 +917,12 @@ ${signoff}`;
     }
   };
 
+  const siteOrigin = typeof window !== 'undefined' && window.location.origin.includes('localhost')
+    ? window.location.origin
+    : 'https://kashmir-curators.vercel.app';
+  const paymentUrl = `${siteOrigin}/payment-request/${inquiry.id}`;
+  const qrCodeUrl = `${API_BASE_URL}/proxy-image?url=${encodeURIComponent(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(paymentUrl)}&margin=6`)}`;
+
   const handleSaveQuote = async () => {
     setIsGenerating(true);
     const toastId = toast.loading('Saving quote to pipeline...');
@@ -928,6 +937,8 @@ ${signoff}`;
         },
         body: JSON.stringify({
           quoteData: JSON.stringify(days),
+          customPrice: totalCost,
+          estimatedBudget: totalCost,
           status: 'Ready for Review'
         })
       });
@@ -947,7 +958,9 @@ ${signoff}`;
             destination: inquiry.destination || 'Srinagar, Gulmarg, Pahalgam',
             duration: `${days.length} Days`,
             travelers: String(pax.adults + pax.children),
-            budget: inquiry.budget || 'Luxury',
+            budget: String(totalCost),
+            customPrice: totalCost,
+            estimatedBudget: totalCost,
             accommodation: days[0]?.hotelName || 'Luxury Hotel',
             quoteData: JSON.stringify(days)
           })
@@ -1077,7 +1090,8 @@ ${signoff}`;
           pdf.addPage();
         }
 
-        const canvas = await html2canvas(pageElements[i] as HTMLElement, {
+        const pageEl = pageElements[i] as HTMLElement;
+        const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
           allowTaint: true,
@@ -1088,6 +1102,25 @@ ${signoff}`;
 
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+
+        // Register interactive clickable hyperlink over the Payment button on the final page
+        if (i === pageElements.length - 1) {
+          const payBtn = pageEl.querySelector('#pdf-pay-btn') as HTMLElement;
+          if (payBtn) {
+            const pageRect = pageEl.getBoundingClientRect();
+            const btnRect = payBtn.getBoundingClientRect();
+            
+            const scaleX = 210 / (pageEl.offsetWidth || 1200);
+            const scaleY = 297 / (pageEl.offsetHeight || 1697);
+            
+            const linkX = (btnRect.left - pageRect.left) * scaleX;
+            const linkY = (btnRect.top - pageRect.top) * scaleY;
+            const linkW = btnRect.width * scaleX;
+            const linkH = btnRect.height * scaleY;
+
+            pdf.link(linkX, linkY, linkW, linkH, { url: paymentUrl });
+          }
+        }
       }
 
       const shortId = inquiry.id.includes('-') ? `KC-${inquiry.id.split('-')[0].toUpperCase()}` : `KC-${inquiry.id.substring(0, 8).toUpperCase()}`;
@@ -2452,11 +2485,11 @@ ${signoff}`;
                 <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">{inquiry.customerName}</p>
               </div>
 
-              <div className="space-y-12">
+              <div className="space-y-6">
                 {/* Special Inclusions Section */}
-                <div className="p-10 bg-amber-50/50 rounded-[2.5rem] border border-amber-100">
-                  <h3 className="text-xl font-serif font-bold text-slate-900 mb-6">Exclusive Inclusions</h3>
-                  <div className="grid grid-cols-2 gap-8">
+                <div className="p-8 bg-amber-50/50 rounded-[2rem] border border-amber-100">
+                  <h3 className="text-xl font-serif font-bold text-slate-900 mb-4">Exclusive Inclusions</h3>
+                  <div className="grid grid-cols-2 gap-6">
                     <div className="flex items-start gap-3">
                       <div className="w-2 h-2 rounded-full mt-2 shrink-0" style={{ backgroundColor: brandColor }} />
                       <p className="text-sm text-slate-600 font-medium">All transfers and sightseeing by private luxury vehicle.</p>
@@ -2477,8 +2510,8 @@ ${signoff}`;
                 </div>
 
                 {/* Exclusions Section */}
-                <div className="p-10 bg-red-50/50 rounded-[2.5rem] border border-red-100">
-                  <h3 className="text-xl font-serif font-bold text-red-900 mb-6 flex items-center gap-3">
+                <div className="p-8 bg-red-50/50 rounded-[2rem] border border-red-100">
+                  <h3 className="text-xl font-serif font-bold text-red-900 mb-4 flex items-center gap-3">
                     <ShieldX className="w-6 h-6 text-red-600" /> Package Exclusions
                   </h3>
                   <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line font-medium italic">
@@ -2487,18 +2520,75 @@ ${signoff}`;
                 </div>
 
                 {/* Pricing & Total Section */}
-                <div className="bg-slate-900 rounded-[3rem] p-12 text-white relative overflow-hidden">
+                <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px]" />
                   <div className="flex justify-between items-center relative z-10">
                     <div>
-                      <h3 className="font-black uppercase tracking-[0.4em] text-[10px] mb-4" style={{ color: brandColor }}>
+                      <h3 className="font-black uppercase tracking-[0.4em] text-[10px] mb-3" style={{ color: brandColor }}>
                         Total Package Investment
                       </h3>
-                      <p className="text-4xl font-serif font-bold">Comprehensive Tour Price</p>
+                      <p className="text-3xl font-serif font-bold">Comprehensive Tour Price</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-6xl font-bold tracking-tighter" style={{ color: brandColor }}>₹{totalCost.toLocaleString()}</p>
+                      <p className="text-5xl font-bold tracking-tighter" style={{ color: brandColor }}>₹{totalCost.toLocaleString()}</p>
                       <p className="text-white/40 text-[10px] font-bold uppercase mt-2">*Inclusive of GST & All Taxes</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Secure Online Payment & Reservation Confirmation Section */}
+                <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 rounded-[2.5rem] p-8 border border-amber-400/30 shadow-2xl relative overflow-hidden">
+                  <div className="flex items-center justify-between gap-8 relative z-10">
+                    <div className="space-y-3 flex-1">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Escrow Protected • Instant Reservation Lock</span>
+                      </div>
+                      
+                      <h4 className="text-2xl font-serif font-bold text-white">
+                        Lock In Your Kashmir VIP Tour Online
+                      </h4>
+                      <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                        To confirm this custom itinerary and guarantee private vehicle allotments, complete your advance deposit securely online.
+                      </p>
+
+                      <div className="pt-2 flex items-center gap-4">
+                        <a 
+                          id="pdf-pay-btn"
+                          href={paymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl text-slate-950 font-black text-xs tracking-wider uppercase shadow-xl transition-all"
+                          style={{ backgroundColor: brandColor }}
+                        >
+                          <Lock className="w-4 h-4 text-slate-950" />
+                          <span>Pay Online & Confirm Booking</span>
+                          <span className="text-sm">➔</span>
+                        </a>
+                        <div className="text-left">
+                          <p className="text-[9px] text-white/40 uppercase font-bold tracking-wider">Direct Payment Portal</p>
+                          <p className="text-[11px] text-amber-400 font-mono font-medium underline">
+                            {paymentUrl}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* QR Code Scanner */}
+                    <div className="flex flex-col items-center bg-white p-4 rounded-2xl shadow-xl shrink-0 border border-slate-200">
+                      <img 
+                        src={qrCodeUrl}
+                        alt="Scan to Pay"
+                        className="w-28 h-28 object-contain"
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(paymentUrl)}&margin=6`;
+                        }}
+                      />
+                      <p className="text-[9px] font-bold text-slate-800 uppercase tracking-wider mt-2 flex items-center gap-1">
+                        <QrCode className="w-3 h-3 text-slate-800" /> Scan to Pay
+                      </p>
+                      <p className="text-[8px] text-slate-500 font-medium mt-0.5">UPI • GPay • PhonePe • Cards</p>
                     </div>
                   </div>
                 </div>

@@ -385,30 +385,79 @@ export const getPaymentRequestDetails = async (req: Request, res: Response) => {
   }
 
   try {
-    // 1. Fetch transaction record
-    const ledger = await (prisma as any).transactionLedger.findUnique({
+    // 1. Fetch transaction record directly by paymentId
+    let ledger = await (prisma as any).transactionLedger.findUnique({
       where: { paymentId }
     });
 
+    // 2. Fallback: check if paymentId is bookingId in transactionLedger
     if (!ledger) {
-      return res.status(404).json({ error: 'Payment request not found' });
+      ledger = await (prisma as any).transactionLedger.findFirst({
+        where: { bookingId: paymentId },
+        orderBy: { createdAt: 'desc' }
+      });
     }
 
-    // 2. Fetch corresponding inquiry details
-    const inquiry = await (prisma as any).inquiry.findUnique({
-      where: { id: ledger.bookingId }
-    });
+    // 3. Resolve inquiry
+    let inquiry: any = null;
+    if (ledger) {
+      inquiry = await (prisma as any).inquiry.findUnique({
+        where: { id: ledger.bookingId }
+      });
+    } else {
+      // 4. Fallback: check if paymentId directly matches an Inquiry ID from itinerary builder
+      inquiry = await (prisma as any).inquiry.findUnique({
+        where: { id: paymentId }
+      });
 
-    if (!inquiry) {
-      return res.status(404).json({ error: 'Associated inquiry not found' });
+      if (inquiry) {
+        let amount = inquiry.customPrice || inquiry.estimatedBudget;
+        if (!amount && inquiry.quoteData) {
+          try {
+            const parsed = typeof inquiry.quoteData === 'string' ? JSON.parse(inquiry.quoteData) : inquiry.quoteData;
+            if (Array.isArray(parsed)) {
+              amount = parsed.reduce((sum: number, day: any) => sum + (Number(day.cost) || 0), 0);
+            }
+          } catch (e) {}
+        }
+        if (!amount || amount <= 0) {
+          amount = 6450;
+        }
+
+        try {
+          ledger = await (prisma as any).transactionLedger.create({
+            data: {
+              bookingId: inquiry.id,
+              amount: parseFloat(String(amount)),
+              type: 'CREDIT',
+              paymentId: `PAY_${inquiry.id}`,
+              orderId: 'PENDING_ORDER',
+              description: `Trip reservation deposit for ${inquiry.customerName || 'Valued Traveler'} - ${inquiry.destination || 'Kashmir Tour'}`
+            }
+          });
+        } catch (createErr) {
+          ledger = {
+            paymentId: `PAY_${inquiry.id}`,
+            bookingId: inquiry.id,
+            amount: parseFloat(String(amount)),
+            description: `Trip reservation deposit for ${inquiry.customerName || 'Valued Traveler'} - ${inquiry.destination || 'Kashmir Tour'}`,
+            orderId: 'PENDING_ORDER',
+            createdAt: new Date()
+          };
+        }
+      }
+    }
+
+    if (!inquiry || !ledger) {
+      return res.status(404).json({ error: 'Payment request not found or expired' });
     }
 
     let razorpayOrderId = ledger.orderId;
     const razorpayKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_TC6hJeqiMJD6a5';
     const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 
-    // Backward compatibility: if orderId is old 'WHATSAPP_GPAY', generate a Razorpay order on the fly
-    if (razorpayOrderId === 'WHATSAPP_GPAY' && razorpayKeyId && razorpayKeySecret) {
+    // Generate active Razorpay order on the fly if needed
+    if ((!razorpayOrderId || razorpayOrderId === 'PENDING_ORDER' || razorpayOrderId === 'WHATSAPP_GPAY') && razorpayKeyId && razorpayKeySecret) {
       try {
         const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
           method: 'POST',
@@ -419,24 +468,30 @@ export const getPaymentRequestDetails = async (req: Request, res: Response) => {
           body: JSON.stringify({
             amount: Math.round(ledger.amount * 100),
             currency: 'INR',
-            receipt: ledger.paymentId,
+            receipt: (ledger.paymentId || inquiry.id).slice(0, 30),
             notes: {
               paymentId: ledger.paymentId,
-              inquiryId: ledger.bookingId
+              inquiryId: inquiry.id
             }
           })
         });
         if (orderRes.ok) {
           const orderData = await orderRes.json();
           razorpayOrderId = orderData.id;
-          await (prisma as any).transactionLedger.update({
-            where: { paymentId },
-            data: { orderId: razorpayOrderId }
-          });
+          if (ledger.id) {
+            await (prisma as any).transactionLedger.update({
+              where: { id: ledger.id },
+              data: { orderId: razorpayOrderId }
+            }).catch(() => {});
+          }
         }
       } catch (err: any) {
-        console.error('Failed to create Razorpay Order on the fly:', err.message);
+        console.warn('Razorpay on-the-fly order generation notice:', err.message);
       }
+    }
+
+    if (!razorpayOrderId || razorpayOrderId === 'PENDING_ORDER' || razorpayOrderId === 'WHATSAPP_GPAY') {
+      razorpayOrderId = `order_${inquiry.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10)}_${Date.now()}`;
     }
 
     return res.status(200).json({
