@@ -59,7 +59,7 @@ export default function DestinationsGrid() {
     : defaultDestinations;
 
   const badgeText = cmsDestinations?.badgeText || 'Curated Geography';
-  const title = cmsDestinations?.title || 'SIGNATURE LOCATIONS';
+  const title = cmsDestinations?.title || 'Signature Locations';
   const subtitle = cmsDestinations?.subtitle || 'Beyond the maps, discover the hidden soul of the valley through our handpicked premier destinations.';
 
   return (
@@ -100,16 +100,16 @@ export default function DestinationsGrid() {
             <Link
               key={dest.name || dest.id}
               to={`/packages?destination=${dest.name}`}
-              className={`group relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-900/5 bg-[#0a0f12] min-h-[300px] md:min-h-0 ${dest.colSpan || 'col-span-1'} ${dest.rowSpan || 'row-span-1'} animate-fade-up transition-all duration-700 hover:border-amber-400/50 hover:shadow-2xl`}
+              className={`group relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-900/5 bg-[#0a0f12] min-h-[300px] md:min-h-0 ${dest.colSpan || 'col-span-1'} ${dest.rowSpan || 'row-span-1'} animate-fade-up transition-all duration-700 hover:border-amber-400/50 hover:shadow-2xl hover:scale-[1.01]`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Image with Parallax Effect */}
               <div 
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-110"
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105"
                 style={{ backgroundImage: `url(${dest.image})` }}
               />
               {/* Overlays */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#05080a] via-black/20 to-transparent opacity-80 transition-opacity duration-700 group-hover:opacity-90" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent opacity-80 transition-opacity duration-700 group-hover:opacity-90" />
               
               {/* Content */}
               <div className="absolute inset-0 p-8 md:p-10 flex flex-col justify-end">

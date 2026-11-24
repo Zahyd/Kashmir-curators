@@ -22,7 +22,7 @@ export default function FleetSection() {
 
   const meta = (content as any)?.fleetSection || {};
   const badgeText = meta.badge || 'VIP Chauffeurs & 4x4 Fleet';
-  const headingText = meta.heading || 'CHAUFFEUR CLASS FLEET';
+  const headingText = meta.heading || 'Chauffeur Class Fleet';
   const descriptionText = meta.description || 'Mountain-certified 4WDs, executive sedans, and luxury cruisers engineered for all weather conditions and seamless valley transit.';
 
   // Real-time synchronization with Fleet & Cabs CMS

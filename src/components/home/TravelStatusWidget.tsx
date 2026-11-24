@@ -62,14 +62,20 @@ export default function TravelStatusWidget() {
               <div key={i} className="p-4 rounded-2xl bg-[#F8F8F9] dark:bg-[#0a0f12] border border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md transition">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-[#111439] dark:text-white truncate max-w-[170px]">{c.location}</span>
-                  <Badge className={`text-[9px] uppercase font-black tracking-wider ${
+                  <Badge className={`text-[9px] uppercase font-black tracking-wider flex items-center gap-1 ${
                     isClosed
                       ? 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/40'
                       : isCaution
                       ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/40'
                       : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/40'
                   }`}>
-                    {c.status || 'Open'}
+                    {!isClosed && !isCaution && (
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                      </span>
+                    )}
+                    <span>{c.status || 'Open'}</span>
                   </Badge>
                 </div>
                 <p className="text-[11px] text-[#4A5568] dark:text-white/60 line-clamp-2">

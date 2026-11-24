@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   MapPin, Calendar as CalendarIcon, Users, Loader2, Sparkles, 
   ArrowRight, Search, CheckCircle, Award, ShieldCheck, 
-  Compass, Building, Car, Navigation, Clock,
+  Compass, Building, Car, Navigation, Clock, Star,
   Bed, Plane, Bus, Luggage, MessageCircle, Headphones, Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -68,7 +68,7 @@ export default function HeroSection() {
   });
 
   const [heroData, setHeroData] = useState({
-    title: 'BEYOND the ORDINARY',
+    title: 'Beyond the Ordinary',
     subtitle: 'Experience Kashmir as it was meant to be seen: Private, Peerless, and Profoundly Beautiful.',
     imageUrl: heroImage,
     stats: [
@@ -80,7 +80,7 @@ export default function HeroSection() {
 
   const updateHeroState = (h: Record<string, any>) => {
     setHeroData({
-      title: h?.title || 'BEYOND the ORDINARY',
+      title: h?.title || 'Beyond the Ordinary',
       subtitle: h?.subtitle || 'Experience Kashmir as it was meant to be seen: Private, Peerless, and Profoundly Beautiful.',
       imageUrl: h?.image_url || heroImage,
       stats: [
@@ -232,7 +232,7 @@ export default function HeroSection() {
 
           {/* Headline - Editorial Style in Solid Dark Blue #111439 */}
           <div className="max-w-5xl mb-8 space-y-4">
-            <h1 className="font-display text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-[#111439] dark:text-white leading-[1.05] sm:leading-[1.0] tracking-tight animate-fade-up transition-all duration-700 uppercase" style={{ animationDelay: '100ms' }}>
+            <h1 className="font-display text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-[#111439] dark:text-white leading-[1.05] sm:leading-[1.0] tracking-tight animate-fade-up transition-all duration-700" style={{ animationDelay: '100ms' }}>
               {renderStyledTitle(heroData.title)}
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-[#4A5568] dark:text-white/60 font-medium max-w-2xl mx-auto tracking-normal animate-fade-up transition-all duration-700" style={{ animationDelay: '200ms' }}>
@@ -281,80 +281,36 @@ export default function HeroSection() {
 
           {/* Daylight Command Module (Search) */}
           <div className="w-full max-w-5xl animate-fade-up" style={{ animationDelay: '300ms' }}>
-            {/* Flat Search Tabs */}
-            <div 
-              className="flex items-center gap-4 sm:gap-6 md:gap-10 mb-6 justify-start px-2 sm:px-4 overflow-x-auto no-scrollbar pb-2 w-full scroll-smooth"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-              <button 
-                type="button"
-                onClick={() => setSearchTab('packages')}
-                className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
-                  searchTab === 'packages' 
-                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
-                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
-                )}
-              >
-                <Luggage className="w-4 h-4 text-amber-500" />
-                <span>Luxury Packages</span>
-              </button>
-              
-              <button 
-                type="button"
-                onClick={() => setSearchTab('hotels')}
-                className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
-                  searchTab === 'hotels' 
-                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
-                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
-                )}
-              >
-                <Bed className="w-4 h-4 text-amber-500" />
-                <span>Premium Estates</span>
-              </button>
-              
-              <button 
-                type="button"
-                onClick={() => setSearchTab('cabs')}
-                className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
-                  searchTab === 'cabs' 
-                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
-                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
-                )}
-              >
-                <Car className="w-4 h-4 text-amber-500" />
-                <span>Luxury Fleet</span>
-              </button>
-              
-              <button 
-                type="button"
-                onClick={() => setSearchTab('flights')}
-                className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
-                  searchTab === 'flights' 
-                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
-                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
-                )}
-              >
-                <Plane className="w-4 h-4 text-amber-500" />
-                <span>Flights</span>
-              </button>
-              
-              <button 
-                type="button"
-                onClick={() => setSearchTab('bus')}
-                className={cn(
-                  "flex items-center gap-2 pb-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border-b-2 shrink-0 whitespace-nowrap",
-                  searchTab === 'bus' 
-                    ? "border-[#111439] text-[#111439] dark:border-amber-400 dark:text-amber-400 scale-105" 
-                    : "border-transparent text-[#4A5568] dark:text-white/60 hover:text-[#111439] dark:hover:text-white"
-                )}
-              >
-                <Bus className="w-4 h-4 text-amber-500" />
-                <span>Luxury Coaches</span>
-              </button>
+            {/* Modern Floating Segmented Pill Selector */}
+            <div className="inline-flex p-1.5 rounded-full bg-slate-100/90 dark:bg-white/[0.07] backdrop-blur-md border border-slate-200/80 dark:border-white/10 shadow-inner mb-6 overflow-x-auto max-w-full no-scrollbar">
+              <div className="flex items-center gap-1">
+                {[
+                  { id: 'packages', label: 'Luxury Packages', icon: Luggage },
+                  { id: 'hotels', label: 'Premium Estates', icon: Bed },
+                  { id: 'cabs', label: 'Luxury Fleet', icon: Car },
+                  { id: 'flights', label: 'Flights', icon: Plane },
+                  { id: 'bus', label: 'Luxury Coaches', icon: Bus },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = searchTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setSearchTab(tab.id as any)}
+                      className={cn(
+                        "flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-xs font-bold tracking-wide transition-all duration-300 whitespace-nowrap",
+                        isActive
+                          ? "bg-white dark:bg-amber-400 text-[#111439] dark:text-black shadow-md shadow-slate-900/10 scale-[1.02]"
+                          : "text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5"
+                      )}
+                    >
+                      <Icon className={cn("w-3.5 h-3.5", isActive ? "text-amber-600 dark:text-black" : "text-amber-500")} />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <form 
@@ -923,28 +879,38 @@ export default function HeroSection() {
             </form>
           </div>
 
-          {/* Trust & Authority Banner */}
+          {/* Unified Live Ground Radar & Operations Ribbon */}
           <div 
-            className="w-full max-w-4xl mt-12 px-6 py-4 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 shadow-sm backdrop-blur-md flex flex-wrap items-center justify-center gap-6 md:gap-16 text-[#111439] dark:text-white text-xs font-semibold animate-fade-up"
+            className="w-full max-w-4xl mt-12 px-6 py-3.5 rounded-full bg-white/90 dark:bg-[#0a0f12]/90 border border-slate-200/90 dark:border-white/10 shadow-lg shadow-slate-900/5 backdrop-blur-xl flex flex-wrap items-center justify-around gap-4 text-xs font-semibold animate-fade-up"
             style={{ animationDelay: '350ms' }}
           >
-            <div className="flex items-center gap-2.5 hover:text-amber-600 transition-all duration-300 cursor-default group">
-              <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:border-amber-500/40 transition-all">
-                <CheckCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439] dark:text-white">J&K Tourism Approved</span>
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] tracking-wide">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Live Ground Radar Active</span>
             </div>
-            <div className="flex items-center gap-2.5 hover:text-amber-600 transition-all duration-300 cursor-default group">
-              <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:border-amber-500/40 transition-all">
-                <Award className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439] dark:text-white">IATO Certified Member</span>
+            
+            <div className="h-4 w-[1px] bg-slate-200 dark:bg-white/10 hidden sm:block" />
+
+            <div className="flex items-center gap-1.5 text-slate-700 dark:text-white/80 font-bold text-[11px]">
+              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>4.95★ Verified Rating</span>
             </div>
-            <div className="flex items-center gap-2.5 hover:text-amber-600 transition-all duration-300 cursor-default group">
-              <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:border-amber-500/40 transition-all">
-                <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <span className="uppercase tracking-[0.2em] text-[10px] font-black text-[#111439] dark:text-white">TAAI Member</span>
+
+            <div className="h-4 w-[1px] bg-slate-200 dark:bg-white/10 hidden sm:block" />
+
+            <div className="flex items-center gap-1.5 text-slate-700 dark:text-white/80 font-bold text-[11px]">
+              <CheckCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>J&K Tourism Approved</span>
+            </div>
+
+            <div className="h-4 w-[1px] bg-slate-200 dark:bg-white/10 hidden sm:block" />
+
+            <div className="flex items-center gap-1.5 text-slate-700 dark:text-white/80 font-bold text-[11px]">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>24/7 Concierge Protocol</span>
             </div>
           </div>
 

@@ -28,7 +28,7 @@ export default function FeaturedPackages() {
 
   const meta = content.featuredPackagesSection || {};
   const badgeText = meta.badge || 'Seasonal Selections';
-  const headingText = meta.heading || 'PRIVATE COLLECTIONS';
+  const headingText = meta.heading || 'Private Collections';
   const descriptionText = meta.description || 'Exclusive itineraries engineered for those who demand transparent pricing and perfection in every mile.';
 
   return (
