@@ -57,6 +57,8 @@ import metaLeadRoutes from './routes/metaLeadRoutes';
 import auditRoutes from './routes/auditRoutes';
 import organizationRoutes from './routes/organizationRoutes';
 import { tenantMiddleware } from './middleware/tenantMiddleware';
+import { requestCorrelationMiddleware } from './middleware/requestCorrelation';
+import { centralizedErrorHandler } from './middleware/errorHandler';
 import { ensureDefaultOrganization } from './lib/tenant';
 import { handleStripeWebhook } from './controllers/paymentController';
 import prisma from './lib/prisma';
@@ -175,6 +177,7 @@ app.post('/api/payments/stripe/webhook', express.raw({ type: 'application/json' 
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(requestCorrelationMiddleware);
 app.use(tenantMiddleware);
 
 // Socket.io Connection Matrix for Real-Time Travel OS Operational Desks
@@ -307,6 +310,7 @@ app.use('/', seoRoutes);
 
 // The error handler must be before any other error middleware and after all controllers
 Sentry.setupExpressErrorHandler(app);
+app.use(centralizedErrorHandler);
 
 app.get('/health-check', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });

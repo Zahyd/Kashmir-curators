@@ -32,6 +32,7 @@ import {
   updateSeasonalRate
 } from '../controllers/hotelController';
 import { authenticateToken, optionalAuthenticate } from '../middleware/authMiddleware';
+import { cacheResponse, invalidateRouteCache } from '../lib/cache';
 
 const router = Router();
 
@@ -79,10 +80,19 @@ router.get('/operations/reviews', authenticateToken, getHotelReviews);
 router.post('/operations/reviews', authenticateToken, createHotelReview);
 
 // Base Hotel CRUD
-router.get('/', getHotels);
-router.get('/:id', getHotelById);
-router.post('/', authenticateToken, createHotel);
-router.patch('/:id', authenticateToken, updateHotel);
-router.delete('/:id', authenticateToken, deleteHotel);
+router.get('/', cacheResponse(300), getHotels);
+router.get('/:id', cacheResponse(300), getHotelById);
+router.post('/', authenticateToken, (req, res, next) => {
+  invalidateRouteCache('/hotels');
+  next();
+}, createHotel);
+router.patch('/:id', authenticateToken, (req, res, next) => {
+  invalidateRouteCache('/hotels');
+  next();
+}, updateHotel);
+router.delete('/:id', authenticateToken, (req, res, next) => {
+  invalidateRouteCache('/hotels');
+  next();
+}, deleteHotel);
 
 export default router;
