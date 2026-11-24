@@ -58,12 +58,42 @@ import auditRoutes from './routes/auditRoutes';
 import { handleStripeWebhook } from './controllers/paymentController';
 import prisma from './lib/prisma';
 
+const allowedOrigins = [
+  'https://kashmir-curators.vercel.app',
+  'https://www.kashmircurators.com',
+  'https://thekashmircurators.com',
+  'http://localhost:5173',
+  'http://localhost:5000',
+  'http://localhost:3000'
+];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. mobile apps, server-to-server, search bots)
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('kashmir-curators')
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+};
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PATCH", "DELETE"]
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true
   }
 });
 app.set('io', io);
@@ -104,18 +134,29 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use(cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
-// Apply HTTP security headers
-app.use(helmet());
+// Apply HTTP security headers with cross-origin resource sharing support
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  })
+);
 
-// Apply rate limiting to all requests
+// Apply rate limiting to all requests (generous threshold with bot exemption)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 200 requests per windowMs
+  max: 2000, // Generous limit for modern interactive SPA browsing
   message: 'Too many requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Exempt verified crawlers and health check routes from rate limits
+    const ua = req.get('User-Agent') || '';
+    return /Googlebot|Google-InspectionTool|bingbot|Baiduspider|DuckDuckBot|YandexBot|Lighthouse/i.test(ua) || req.path === '/health-check';
+  }
 });
 app.use(limiter);
 

@@ -1,5 +1,14 @@
 User-agent: *
 Allow: /
+Allow: /api/packages
+Allow: /api/hotels
+Allow: /api/cabs
+Allow: /api/faqs
+Allow: /api/advisories
+Allow: /api/site-content
+Allow: /api/testimonials
+Allow: /api/blog
+Allow: /api/bookings/recent
 Disallow: /admin
 Disallow: /sales/portal
 Disallow: /api/

@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import heroImage from '@/assets/kashmir-hero-new.jpg';
 import { useDestinations } from '@/hooks/useCMSData';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { io } from 'socket.io-client';
 import { useLeadCapture } from '@/contexts/LeadCaptureContext';
 
@@ -107,7 +107,7 @@ export default function HeroSection() {
     };
     fetchHeroContent();
 
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     socket.on('site-content-updated', (update) => {
       if (update.sectionKey === 'hero') {
         updateHeroState(update.data);

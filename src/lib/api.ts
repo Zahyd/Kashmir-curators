@@ -8,13 +8,17 @@ export const SOCKET_URL = window.location.hostname === 'localhost'
 
 export const NEON_AUTH_URL = (import.meta as any).env?.VITE_NEON_AUTH_URL || 'https://ep-purple-shadow-ao7lc51d.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth';
 
+export const isSearchBot = typeof navigator !== 'undefined' && 
+  /Googlebot|Google-InspectionTool|bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|Sogou|Exabot|facebot|facebookexternalhit|Lighthouse/i.test(navigator.userAgent || '');
+
 // Robust socket configuration: On cloud platforms like Render where native WebSocket upgrades
 // can be rejected or dropped by reverse proxies, polling ensures seamless 100% reliable delivery
 // without triggering native browser WebSocket error logs in the console.
 export const DEFAULT_SOCKET_OPTIONS = {
   transports: window.location.hostname === 'localhost' ? ['websocket', 'polling'] : ['polling'],
-  reconnection: true,
-  reconnectionAttempts: 10,
+  reconnection: !isSearchBot,
+  reconnectionAttempts: isSearchBot ? 0 : 5,
   reconnectionDelay: 2000,
-  timeout: 20000,
+  timeout: 10000,
+  autoConnect: !isSearchBot,
 };

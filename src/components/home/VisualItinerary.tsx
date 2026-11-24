@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, MapPin, CheckCircle, ChevronRight, Compass, Calendar, Plane, Coffee } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { io } from 'socket.io-client';
 
 interface ItineraryDay {
@@ -137,7 +137,7 @@ export default function VisualItinerary() {
     fetchItineraryData();
 
     // Listen to real-time updates via WebSocket
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
     socket.on('site-content-updated', (update) => {
       if (update.sectionKey === 'signatureItinerary') {
         const sectionData = update.data;
