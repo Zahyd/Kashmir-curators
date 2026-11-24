@@ -1,6 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -18,7 +21,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   build: {
     sourcemap: false,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -26,13 +29,19 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
               return 'vendor-react';
             }
+            if (id.includes('jspdf') || id.includes('html2canvas')) {
+              return 'vendor-pdf';
+            }
+            if (id.includes('@dnd-kit')) {
+              return 'vendor-dnd';
+            }
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }
-            if (id.includes('@radix-ui')) {
+            if (id.includes('@radix-ui') || id.includes('cmdk') || id.includes('vaul')) {
               return 'vendor-ui';
             }
-            if (id.includes('framer-motion') || id.includes('recharts')) {
+            if (id.includes('recharts')) {
               return 'vendor-charts';
             }
           }
