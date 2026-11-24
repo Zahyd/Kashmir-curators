@@ -135,7 +135,6 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
 // Apply HTTP security headers with cross-origin resource sharing support
 app.use(
