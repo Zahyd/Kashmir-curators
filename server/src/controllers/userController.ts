@@ -63,20 +63,33 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const getUserStats = async (req: Request, res: Response) => {
   try {
-    const totalUsers = await prisma.user.count();
-    const activeTravelers = await prisma.user.count({
-      where: {
-        bookings: {
-          some: {}
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [totalUsers, activeTravelers, newThisMonth] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({
+        where: {
+          bookings: {
+            some: {}
+          }
         }
-      }
-    });
+      }),
+      prisma.user.count({
+        where: {
+          createdAt: { gte: startOfMonth }
+        }
+      })
+    ]);
+
+    const pct = totalUsers > 0 ? Math.round((activeTravelers / totalUsers) * 100) : 0;
 
     res.json({
       totalUsers,
       activeTravelers,
-      newThisMonth: 12, // Mock for now or calculate from dates
-      conversionRate: '24%' // Mock for now
+      newThisMonth,
+      conversionRate: `${pct}%`
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user stats' });
@@ -132,6 +145,10 @@ export const deleteUser = async (req: Request, res: Response) => {
   }
 
   const { id } = req.params;
+
+  if (adminUser.id && String(adminUser.id) === String(id)) {
+    return res.status(400).json({ error: 'You cannot delete your own active administrator account.' });
+  }
 
   try {
     await prisma.user.delete({

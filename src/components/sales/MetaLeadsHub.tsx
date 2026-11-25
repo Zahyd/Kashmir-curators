@@ -32,6 +32,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
+import { getSalesAuthHeaders } from '@/lib/salesApi';
 
 interface MetaLead {
   id: string;
@@ -64,6 +65,7 @@ interface MetaLead {
 
 interface MetaLeadsHubProps {
   onOpenItineraryBuilder: (lead: any) => void;
+  onInspectLead?: (lead: any) => void;
   currentEmployee: {
     code: string;
     name: string;
@@ -71,7 +73,7 @@ interface MetaLeadsHubProps {
   };
 }
 
-export default function MetaLeadsHub({ onOpenItineraryBuilder, currentEmployee }: MetaLeadsHubProps) {
+export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, currentEmployee }: MetaLeadsHubProps) {
   const [leads, setLeads] = useState<MetaLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,15 +84,8 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, currentEmployee }
   // 1. Fetch Raw Leads Feed
   const fetchMetaLeads = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
-
       const res = await fetch(`${API_BASE_URL}/sales/meta-leads/leads`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
-        }
+        headers: getSalesAuthHeaders()
       });
 
       if (res.ok) {
@@ -464,26 +459,39 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, currentEmployee }
 
                 {/* Quick Action Toolbar */}
                 <div className="space-y-2 pt-2 border-t border-white/10">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {/* 1-Click WhatsApp Proposal Dispatch */}
                     <Button
                       size="sm"
                       onClick={() => handleSendWhatsAppProposal(lead)}
-                      className="bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/30 text-xs h-9 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all"
+                      className="bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/30 text-[11px] h-8 rounded-lg font-bold flex items-center justify-center gap-1 transition-all"
                     >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>WhatsApp</span>
+                      <Send className="w-3 h-3" />
+                      <span>WA</span>
                     </Button>
 
                     {/* Open in Itinerary Studio */}
                     <Button
                       size="sm"
                       onClick={() => onOpenItineraryBuilder(lead)}
-                      className="bg-amber-400/15 hover:bg-amber-400 text-amber-300 hover:text-black border border-amber-400/30 text-xs h-9 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all"
+                      className="bg-amber-400/15 hover:bg-amber-400 text-amber-300 hover:text-black border border-amber-400/30 text-[11px] h-8 rounded-lg font-bold flex items-center justify-center gap-1 transition-all"
                     >
-                      <FileEdit className="w-3.5 h-3.5" />
-                      <span>Open Studio</span>
+                      <FileEdit className="w-3 h-3" />
+                      <span>Studio</span>
                     </Button>
+
+                    {/* Inspect CRM */}
+                    {onInspectLead && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onInspectLead(lead)}
+                        className="border-white/15 text-slate-200 hover:bg-white/10 text-[11px] h-8 rounded-lg font-bold flex items-center justify-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>CRM</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>

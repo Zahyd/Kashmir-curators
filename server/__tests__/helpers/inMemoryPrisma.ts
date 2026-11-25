@@ -44,6 +44,7 @@ const DEFAULT_TIMESTAMPS = new Set([
   'employeeAttendance',
   'employeeSession',
   'customerSearchIntent',
+  'inquiryDocument',
 ]);
 
 const CREATED_AT_ONLY = new Set([
@@ -113,6 +114,7 @@ const MODEL_NAMES = [
   'employeeAttendance',
   'employeeSession',
   'customerSearchIntent',
+  'inquiryDocument',
 ] as const;
 
 type ModelName = (typeof MODEL_NAMES)[number];

@@ -455,6 +455,12 @@ export const updateInquiry = async (req: Request, res: Response) => {
       travelers,
       budget,
       accommodation,
+      netPrice,
+      adultsCount,
+      childrenCount,
+      arrivalCity,
+      transportPreference,
+      notes,
       leadStage
     } = req.body;
 
@@ -483,11 +489,27 @@ export const updateInquiry = async (req: Request, res: Response) => {
     if (travelers !== undefined) data.travelers = String(travelers);
     if (budget !== undefined) data.budget = String(budget);
     if (accommodation !== undefined) data.accommodation = String(accommodation);
+    if (netPrice !== undefined && !isNaN(Number(netPrice))) data.netPrice = Number(netPrice);
+    if (adultsCount !== undefined && !isNaN(Number(adultsCount))) data.adultsCount = Number(adultsCount);
+    if (childrenCount !== undefined && !isNaN(Number(childrenCount))) data.childrenCount = Number(childrenCount);
+    if (arrivalCity !== undefined) data.arrivalCity = arrivalCity ? String(arrivalCity) : null;
+    if (transportPreference !== undefined) data.transportPreference = transportPreference ? String(transportPreference) : null;
+    if (notes !== undefined) data.notes = notes ? String(notes) : null;
 
     const inquiry = await p.inquiry.update({
       where: { id: req.params.id },
       data
     });
+
+    await p.leadActivity.create({
+      data: {
+        inquiryId: inquiry.id,
+        type: 'PROFILE_UPDATED',
+        title: 'Lead profile updated',
+        description: `Updated by ${(req as any).user?.name || (req as any).user?.employeeCode || 'Staff'}`,
+        performedBy: (req as any).user?.employeeCode || (req as any).user?.name || 'System'
+      }
+    }).catch(() => {});
 
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {

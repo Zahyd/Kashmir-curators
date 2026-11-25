@@ -11,6 +11,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
+import { salesApi } from '@/lib/salesApi';
 import { cn } from '@/lib/utils';
 
 interface SelectionRequiredProps {
@@ -19,6 +20,7 @@ interface SelectionRequiredProps {
   icon: any;
   inquiries: any[];
   onSelect: (inquiry: any) => void;
+  onCreated?: () => void;
   teamUser?: any;
 }
 
@@ -74,7 +76,7 @@ const SIGNATURE_BLUEPRINTS = [
   }
 ];
 
-export default function SelectionRequired({ title, description, icon: Icon, inquiries, onSelect, teamUser }: SelectionRequiredProps) {
+export default function SelectionRequired({ title, description, icon: Icon, inquiries, onSelect, onCreated, teamUser }: SelectionRequiredProps) {
   const activeLeads = inquiries.filter(inq => inq.status !== 'Lost' && inq.status !== 'Booked');
 
   // AI Itinerary Studio Quick-Gen State
@@ -121,7 +123,6 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
       }
 
       const clientName = guestName.trim() || 'VIP Guest (AI Curated)';
-      const fakeInquiryId = `AI-${Date.now().toString().slice(-6)}`;
 
       // Synthesize formatted day items for ItineraryBuilder
       const durationNum = parseInt(aiDuration) || 6;
@@ -172,68 +173,96 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
         }));
       }
 
-      // Create rich inquiry payload with quoteData pre-baked
-      const syntheticInquiry = {
-        id: fakeInquiryId,
+      const estimatedTotal = synthesizedDays.reduce(
+        (sum, d) => sum + (Number(d.hotelPrice) || 0) + (Number(d.transportPrice) || 0),
+        0
+      );
+
+      // Persist real Inquiry row in Neon PostgreSQL so Quote/Vault/Payment actions work immediately
+      const created = await salesApi.createLead({
         customerName: clientName,
+        phone: '+919906000000',
         destination: `Kashmir (${aiDuration})`,
         duration: aiDuration,
-        travelers: '2 Adults',
+        adultsCount: 2,
+        childrenCount: 0,
         budget: aiTier,
+        netPrice: estimatedTotal,
         accommodation: aiTier,
-        status: 'Pending Curation',
-        phone: '+919906000000',
-        email: 'traveler@kashmircurators.com',
-        quoteData: JSON.stringify(synthesizedDays)
-      };
-
-      toast.success(`✨ AI generated bespoke ${aiDuration} itinerary in 3.8s!`, {
-        description: 'Opening directly in Luxury Itinerary Studio...'
+        assignedTo: teamUser?.code || undefined,
+        leadStage: 'CLAIMED',
+        sourceCta: 'AI_CURATOR_STUDIO'
       });
 
-      onSelect(syntheticInquiry);
-    } catch (err) {
+      const updatedLead = await salesApi.updateLead(created.id, {
+        quoteData: JSON.stringify(synthesizedDays),
+        netPrice: estimatedTotal
+      }).catch(() => ({ ...created, quoteData: JSON.stringify(synthesizedDays) }));
+
+      toast.success(`AI itinerary saved & loaded (${created.leadId || created.id.slice(0, 8)})`);
+      onCreated?.();
+      onSelect(updatedLead);
+    } catch (err: any) {
       console.error(err);
-      toast.error('AI Curate failed. Launching clean studio sandbox...');
-      handleOpenBlankSandbox();
+      toast.error(err?.message || 'AI Curate failed. Creating clean inquiry...');
+      await handleOpenBlankSandbox();
     } finally {
       setIsAiGenerating(false);
     }
   };
 
-  // Launch Clean Studio Sandbox with zero lead barrier
-  const handleOpenBlankSandbox = () => {
-    const sandboxInquiry = {
-      id: `SANDBOX-${Date.now().toString().slice(-4)}`,
-      customerName: 'Bespoke Traveler (Sandbox)',
-      destination: 'Srinagar, Gulmarg & Pahalgam',
-      duration: '6 Days',
-      travelers: '2 Adults',
-      budget: 'Luxury Boutique',
-      accommodation: '5-Star Mountain Lodge',
-      status: 'Draft Studio',
-      phone: '+919103798448',
-      email: 'concierge@kashmircurators.com'
-    };
-    onSelect(sandboxInquiry);
+  // Launch Clean Studio backed by a real persisted draft Inquiry
+  const handleOpenBlankSandbox = async () => {
+    setIsAiGenerating(true);
+    try {
+      const created = await salesApi.createLead({
+        customerName: guestName.trim() || 'Bespoke Traveler',
+        phone: '+919103798448',
+        destination: 'Srinagar, Gulmarg & Pahalgam',
+        duration: '6 Days',
+        adultsCount: 2,
+        childrenCount: 0,
+        budget: 'Luxury Boutique',
+        accommodation: '5-Star Mountain Lodge',
+        assignedTo: teamUser?.code || undefined,
+        leadStage: 'CLAIMED',
+        sourceCta: 'STUDIO_DRAFT'
+      });
+      onCreated?.();
+      onSelect(created);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to initialize studio lead');
+    } finally {
+      setIsAiGenerating(false);
+    }
   };
 
-  // 1-Click Launch of Signature Blueprint
-  const handleLaunchBlueprint = (bp: typeof SIGNATURE_BLUEPRINTS[0]) => {
-    const blueprintInquiry = {
-      id: `BP-${Date.now().toString().slice(-4)}`,
-      customerName: `VIP Traveler (${bp.tag})`,
-      destination: bp.destinations,
-      duration: bp.duration,
-      travelers: '2 Adults',
-      budget: 'Luxury',
-      accommodation: bp.hotels,
-      status: 'Curated Blueprint',
-      phone: '+919103798448',
-      email: 'concierge@kashmircurators.com'
-    };
-    toast.success(`Loaded ${bp.title}! Opening in Itinerary Studio...`);
-    onSelect(blueprintInquiry);
+  // 1-Click Launch of Signature Blueprint backed by real persisted Inquiry
+  const handleLaunchBlueprint = async (bp: typeof SIGNATURE_BLUEPRINTS[0]) => {
+    setIsAiGenerating(true);
+    try {
+      const created = await salesApi.createLead({
+        customerName: guestName.trim() || `VIP Traveler (${bp.tag})`,
+        phone: '+919103798448',
+        destination: bp.destinations,
+        duration: bp.duration,
+        adultsCount: 2,
+        childrenCount: 0,
+        budget: 'Luxury',
+        accommodation: bp.hotels,
+        transportPreference: bp.vehicle,
+        assignedTo: teamUser?.code || undefined,
+        leadStage: 'CLAIMED',
+        sourceCta: `BLUEPRINT_${bp.id.toUpperCase()}`
+      });
+      toast.success(`Loaded ${bp.title} into Itinerary Studio!`);
+      onCreated?.();
+      onSelect(created);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to launch blueprint');
+    } finally {
+      setIsAiGenerating(false);
+    }
   };
 
   const handleCustomSubmit = async (e: React.FormEvent) => {
@@ -241,49 +270,27 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
     setIsCreatingCustom(true);
 
     try {
-      const token = localStorage.getItem('teamToken');
-      
-      const response = await fetch(`${API_BASE_URL}/inquiries`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          customerName: customForm.customerName,
-          email: customForm.email,
-          phone: customForm.phone,
-          destination: customForm.destination,
-          duration: customForm.duration,
-          travelers: customForm.travelers,
-          budget: customForm.budget,
-          accommodation: customForm.accommodation
-        })
+      const newInq = await salesApi.createLead({
+        customerName: customForm.customerName,
+        email: customForm.email,
+        phone: customForm.phone,
+        destination: customForm.destination,
+        duration: customForm.duration,
+        adultsCount: parseInt(customForm.travelers, 10) || 2,
+        budget: customForm.budget,
+        accommodation: customForm.accommodation,
+        assignedTo: teamUser?.code || undefined,
+        leadStage: 'CLAIMED',
+        sourceCta: 'CUSTOM_STUDIO_MODAL'
       });
-
-      if (!response.ok) throw new Error('Failed to create custom package lead');
-      const newInq = await response.json();
-
-      if (teamUser?.code) {
-        await fetch(`${API_BASE_URL}/inquiries/${newInq.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ 
-            assignedTo: teamUser.code,
-            status: 'Pending Curation'
-          })
-        }).catch(() => {});
-      }
 
       toast.success('Custom itinerary inquiry created successfully!');
       setIsCustomModalOpen(false);
+      onCreated?.();
       onSelect(newInq);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('Failed to create customized package.');
+      toast.error(error?.message || 'Failed to create customized package.');
     } finally {
       setIsCreatingCustom(false);
     }

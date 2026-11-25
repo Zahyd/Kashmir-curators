@@ -1,52 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Clock, 
-  MapPin, 
-  Calendar, 
-  ShieldAlert, 
-  ArrowRight, 
-  Sparkles, 
-  Zap, 
-  Search, 
-  Filter, 
+import React, { useEffect, useState } from 'react';
+import {
+  Users,
+  Clock,
+  MapPin,
+  Calendar,
+  ArrowRight,
+  Zap,
+  Search,
   AlertTriangle,
   RefreshCw,
-  Building,
-  UserCheck,
   CheckCircle2,
   Hotel,
-  Car
+  Plus,
+  FolderOpen,
+  XCircle
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
-
-interface Lead {
-  id: string;
-  customerName: string;
-  phone: string;
-  email?: string;
-  destination?: string;
-  duration?: string;
-  startDate?: string;
-  adultsCount?: number;
-  childrenCount?: number;
-  budget?: string | number;
-  hotelCategory?: string;
-  vehiclePreference?: string;
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' | string;
-  status: string;
-  leadStage?: string;
-  assignedTo?: string | null;
-  sourceCta?: string;
-  leadCategory?: string;
-  createdAt: string;
-  notes?: string;
-}
+import { salesApi, SalesInquiry } from '@/lib/salesApi';
 
 interface LiveLeadQueueProps {
   currentEmployee: {
@@ -54,16 +30,24 @@ interface LiveLeadQueueProps {
     name: string;
     role: string;
   };
-  onClaimLead: (lead: Lead) => void;
+  onClaimLead: (lead: SalesInquiry) => void;
+  onInspectLead?: (lead: SalesInquiry) => void;
+  onCreateLead?: () => void;
   onRefreshMetrics?: () => void;
+  canManage?: boolean;
+  refreshTrigger?: number;
 }
 
 export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
   currentEmployee,
   onClaimLead,
-  onRefreshMetrics
+  onInspectLead,
+  onCreateLead,
+  onRefreshMetrics,
+  canManage = false,
+  refreshTrigger = 0
 }) => {
-  const [unclaimedLeads, setUnclaimedLeads] = useState<Lead[]>([]);
+  const [unclaimedLeads, setUnclaimedLeads] = useState<SalesInquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,80 +55,51 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
   const [conflictAlert, setConflictAlert] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
 
-  // 1. Fetch unclaimed inquiries from Neon API
   const fetchUnclaimedLeads = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
-
-      const res = await fetch(`${API_BASE_URL}/inquiries`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // Filter for leads that are not yet claimed and not booked/lost
-        const queue = (Array.isArray(data) ? data : data.inquiries || []).filter((item: Lead) => {
-          const isUnclaimed = !item.assignedTo || item.assignedTo.trim() === '';
-          const isActive = !['Booked', 'Lost', 'Cancelled'].includes(item.status) &&
-                           !['CONFIRMED', 'COMPLETED', 'CANCELLED', 'LOST'].includes(item.leadStage || '');
-          return isUnclaimed && isActive;
-        });
-
-        setUnclaimedLeads(queue);
-      }
-    } catch (err) {
-      console.warn('Error fetching unclaimed queue:', err);
+      const list = await salesApi.listInquiries();
+      const unclaimed = list.filter(
+        (inq) =>
+          (!inq.assignedTo || inq.assignedTo.trim() === '') &&
+          !['Booked', 'Lost', 'Cancelled'].includes(inq.status) &&
+          !['CONFIRMED', 'COMPLETED', 'CANCELLED', 'LOST'].includes(inq.leadStage || '')
+      );
+      setUnclaimedLeads(unclaimed);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to fetch live leads');
     } finally {
       setLoading(false);
     }
   };
 
-  // 2. Set up SSE Stream from /api/sales/stream
   useEffect(() => {
     fetchUnclaimedLeads();
 
     let eventSource: EventSource | null = null;
     try {
       eventSource = new EventSource(`${API_BASE_URL}/sales/stream`);
-
       eventSource.addEventListener('LEAD_CLAIMED', (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          // If claimed by someone else, remove it immediately from our queue
-          setUnclaimedLeads(prev => prev.filter(l => l.id !== data.leadId));
+          setUnclaimedLeads((prev) => prev.filter((l) => l.id !== data.leadId));
           if (data.claimedBy !== currentEmployee.code) {
-            toast.info(`Inquiry #${data.leadId.slice(0, 8)} claimed by ${data.claimedByName || data.claimedBy}`);
+            toast.info(`Inquiry #${String(data.leadId).slice(0, 8)} claimed by ${data.claimedByName || data.claimedBy}`);
           }
           onRefreshMetrics?.();
-        } catch (err) {
-          console.error('SSE parse error:', err);
+        } catch {
+          // Ignore malformed event
         }
       });
 
       eventSource.addEventListener('NEW_INQUIRY', () => {
         fetchUnclaimedLeads();
         onRefreshMetrics?.();
-        toast.success('New inbound tourist inquiry arrived in the live queue!');
       });
-
-      eventSource.onerror = () => {
-        // Fallback polling will handle updates
-      };
-    } catch (err) {
-      console.warn('SSE connection failed, relying on polling fallback:', err);
+    } catch {
+      // Polling fallback active
     }
 
-    // 1-second interval for ticking SLA countdown clocks
-    const timer = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-
-    // 25-second polling backup
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
     const poller = setInterval(fetchUnclaimedLeads, 25000);
 
     return () => {
@@ -152,66 +107,55 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
       clearInterval(timer);
       clearInterval(poller);
     };
-  }, [currentEmployee.code]);
+  }, [currentEmployee.code, refreshTrigger]);
 
-  // 3. Atomic Claim Action calling POST /api/sales/leads/:id/claim
-  const handleAtomicClaim = async (lead: Lead) => {
+  const handleAtomicClaim = async (lead: SalesInquiry) => {
     setClaimingId(lead.id);
     setConflictAlert(null);
-
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
-
-      const res = await fetch(`${API_BASE_URL}/sales/leads/${lead.id}/claim`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
-        },
-        body: JSON.stringify({
-          employeeCode: currentEmployee.code,
-          employeeName: currentEmployee.name
-        })
-      });
-
-      const data = await res.json();
-
-      if (res.status === 409 || data.code === 'RACE_CONDITION_BLOCKED') {
-        // Race condition: another sales executive claimed it in the same split second
-        setConflictAlert(`Collision Avoided: Inquiry #${lead.id.slice(0, 8)} was just claimed by another executive.`);
-        // Remove from list
-        setUnclaimedLeads(prev => prev.filter(l => l.id !== lead.id));
-        onRefreshMetrics?.();
-        return;
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to claim lead');
-      }
-
-      toast.success(`Inquiry claimed! Assigned to ${currentEmployee.name} (${currentEmployee.code})`);
-      
-      // Remove from unclaimed queue
-      setUnclaimedLeads(prev => prev.filter(l => l.id !== lead.id));
+      const data = await salesApi.claimLead(lead.id, currentEmployee.code, currentEmployee.name);
+      toast.success(`Inquiry claimed by ${currentEmployee.name} (${currentEmployee.code})`);
+      setUnclaimedLeads((prev) => prev.filter((l) => l.id !== lead.id));
       onRefreshMetrics?.();
-
-      // Send to parent to route to Itinerary Builder / Active Pipeline
       onClaimLead(data.lead || { ...lead, assignedTo: currentEmployee.code, leadStage: 'CLAIMED' });
     } catch (err: any) {
-      toast.error(err.message || 'Error executing atomic claim transaction');
+      const msg = err?.message || 'Failed to claim lead';
+      if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('conflict')) {
+        setConflictAlert(`Collision Avoided: Inquiry #${lead.id.slice(0, 8)} was claimed by another executive.`);
+        setUnclaimedLeads((prev) => prev.filter((l) => l.id !== lead.id));
+        onRefreshMetrics?.();
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setClaimingId(null);
     }
   };
 
-  // 4. Calculate SLA timer and auto-escalated priority
+  const handleDismissLead = async (lead: SalesInquiry) => {
+    const label = canManage ? 'permanently delete' : 'mark as Lost/Spam';
+    if (!window.confirm(`Are you sure you want to ${label} "${lead.customerName}"?`)) return;
+    setClaimingId(lead.id);
+    try {
+      if (canManage) {
+        await salesApi.deleteLead(lead.id);
+        toast.success('Inquiry removed');
+      } else {
+        await salesApi.transitionStage(lead.id, { stage: 'LOST', notes: 'Dismissed from Live Queue' });
+        toast.success('Inquiry marked Lost');
+      }
+      setUnclaimedLeads((prev) => prev.filter((l) => l.id !== lead.id));
+      onRefreshMetrics?.();
+    } catch (err: any) {
+      toast.error(err?.message || 'Action failed');
+    } finally {
+      setClaimingId(null);
+    }
+  };
+
   const calculateSLA = (createdAt: string) => {
-    const createdTime = new Date(createdAt).getTime();
-    const elapsedSeconds = Math.floor((currentTime - createdTime) / 1000);
-    const fifteenMinSeconds = 15 * 60;
-    const remainingSeconds = fifteenMinSeconds - elapsedSeconds;
+    const elapsedSeconds = Math.floor((currentTime - new Date(createdAt).getTime()) / 1000);
+    const remainingSeconds = 15 * 60 - elapsedSeconds;
 
     if (remainingSeconds <= 0) {
       const breachedMinutes = Math.abs(Math.floor(remainingSeconds / 60));
@@ -228,100 +172,93 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
     const pad = (n: number) => n.toString().padStart(2, '0');
     const remainingText = `${pad(minutes)}:${pad(seconds)} SLA`;
 
-    if (remainingSeconds < 300) { // < 5 mins
-      return {
-        isBreached: false,
-        remainingText,
-        badgeColor: 'bg-orange-500/20 text-orange-400 border border-orange-500/40 animate-pulse',
-        calculatedPriority: 'HIGH'
-      };
-    } else if (remainingSeconds < 600) { // < 10 mins
-      return {
-        isBreached: false,
-        remainingText,
-        badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-        calculatedPriority: 'MEDIUM'
-      };
-    } else {
-      return {
-        isBreached: false,
-        remainingText,
-        badgeColor: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
-        calculatedPriority: 'LOW'
-      };
+    if (remainingSeconds < 300) {
+      return { isBreached: false, remainingText, badgeColor: 'bg-orange-500/20 text-orange-400 border border-orange-500/40', calculatedPriority: 'HIGH' };
     }
+    if (remainingSeconds < 600) {
+      return { isBreached: false, remainingText, badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', calculatedPriority: 'MEDIUM' };
+    }
+    return { isBreached: false, remainingText, badgeColor: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30', calculatedPriority: 'LOW' };
   };
 
-  // 5. Filter and search
-  const filteredLeads = unclaimedLeads.filter(lead => {
+  const filteredLeads = unclaimedLeads.filter((lead) => {
     const query = searchTerm.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       (lead.customerName || '').toLowerCase().includes(query) ||
       (lead.destination || '').toLowerCase().includes(query) ||
-      (lead.phone || '').includes(query);
-
+      (lead.phone || '').includes(query) ||
+      (lead.leadId || '').toLowerCase().includes(query);
     if (!matchesSearch) return false;
-
     if (priorityFilter !== 'ALL') {
-      const sla = calculateSLA(lead.createdAt);
-      if (sla.calculatedPriority !== priorityFilter) return false;
+      return calculateSLA(lead.createdAt).calculatedPriority === priorityFilter;
     }
-
     return true;
   });
 
   return (
     <div className="space-y-4">
-      {/* Collision Alert Banner */}
       {conflictAlert && (
-        <div className="bg-rose-500/15 border border-rose-500/40 text-rose-200 px-4 py-3 rounded-xl flex items-center justify-between text-sm backdrop-blur-sm animate-in fade-in">
+        <div className="bg-rose-500/15 border border-rose-500/40 text-rose-200 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
             <span>{conflictAlert}</span>
           </div>
-          <button 
-            onClick={() => setConflictAlert(null)}
-            className="text-rose-400 hover:text-white text-xs font-semibold uppercase px-2 py-1 rounded"
-          >
+          <button onClick={() => setConflictAlert(null)} className="text-rose-400 hover:text-white text-xs font-semibold">
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Header and Controls */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-[#0F141C]/80 p-4 rounded-xl border border-white/10 backdrop-blur-md">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-[#0F141C]/90 p-4 rounded-xl border border-white/10 shadow-lg">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-            <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-              Live Inbound Lead Queue
-            </h2>
+            <h2 className="text-lg font-bold text-white tracking-wide">Live Inbound Lead Queue</h2>
             <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs">
               {unclaimedLeads.length} Unclaimed
             </Badge>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time SSE inbound inquiries with 15-minute response SLA escalation.
+            Real-time SSE inbound inquiries with 15-minute response SLA tracking.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 sm:w-64">
+          <div className="relative flex-1 sm:w-56">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <Input 
+            <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search traveler, city, phone..."
-              className="pl-8 bg-[#07090E] border-white/10 text-xs text-white placeholder:text-slate-500 h-9 rounded-lg focus:border-amber-400 w-full"
+              className="pl-8 bg-[#07090E] border-white/10 text-xs text-white h-9 rounded-lg w-full"
             />
           </div>
 
           <div className="flex items-center gap-2">
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value as any)}
+              className="h-9 bg-[#07090E] border border-white/10 rounded-lg px-2.5 text-xs text-slate-200"
+            >
+              <option value="ALL">All SLA</option>
+              <option value="URGENT">SLA Breached</option>
+              <option value="HIGH">&lt;5m Left</option>
+              <option value="MEDIUM">&lt;10m Left</option>
+              <option value="LOW">Fresh</option>
+            </select>
+
+            {onCreateLead && (
+              <Button size="sm" onClick={onCreateLead} className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-9 px-3 shrink-0">
+                <Plus className="w-3.5 h-3.5 mr-1" /> New Lead
+              </Button>
+            )}
+
             <Button
               size="sm"
               variant="outline"
               onClick={() => { setLoading(true); fetchUnclaimedLeads(); }}
-              className="border-white/10 text-slate-300 hover:text-white hover:bg-white/5 h-9 px-2.5 shrink-0"
+              className="border-white/10 text-slate-300 hover:text-white h-9 px-2.5 shrink-0"
               title="Refresh queue"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-400' : ''}`} />
@@ -330,18 +267,18 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
         </div>
       </div>
 
-      {/* Leads List / Cards */}
+      {/* Queue List */}
       {loading && unclaimedLeads.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 bg-[#0F141C]/50 rounded-xl border border-white/5">
+        <div className="p-12 text-center text-slate-400 bg-[#0F141C]/60 rounded-xl border border-white/10">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto text-amber-400 mb-2" />
-          <p className="text-sm">Connecting to live sales stream & fetching inquiries...</p>
+          <p className="text-xs">Connecting to live sales stream...</p>
         </div>
       ) : filteredLeads.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 bg-[#0F141C]/50 rounded-xl border border-white/5">
+        <div className="p-12 text-center text-slate-400 bg-[#0F141C]/60 rounded-xl border border-white/10">
           <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2 opacity-80" />
           <p className="text-sm font-medium text-white">All Clear! No unclaimed inquiries in queue.</p>
           <p className="text-xs text-slate-400 mt-1">
-            New traveler inquiries from the booking engine will stream here immediately.
+            Inbound traveler requests and Meta webhook leads will appear here immediately.
           </p>
         </div>
       ) : (
@@ -352,100 +289,106 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
             const isClaiming = claimingId === lead.id;
 
             return (
-              <Card 
+              <Card
                 key={lead.id}
-                className={`relative overflow-hidden bg-[#0F141C]/95 border transition-all duration-200 rounded-xl p-4 flex flex-col justify-between ${
-                  sla.isBreached 
-                    ? 'border-rose-500/40 hover:border-rose-500/70 shadow-lg shadow-rose-950/20' 
-                    : 'border-white/10 hover:border-amber-500/40 shadow-lg shadow-black/40'
+                className={`bg-[#0F141C]/95 border rounded-xl p-4 flex flex-col justify-between transition-all ${
+                  sla.isBreached ? 'border-rose-500/40' : 'border-white/10 hover:border-amber-500/40'
                 }`}
               >
-                {/* Top Strip: SLA Badge & Inbound Tag */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span className="text-[11px] font-mono text-slate-400">
-                      #{lead.id.slice(0, 8)}
-                    </span>
-                    {(lead.sourceCta?.includes('META') || lead.leadCategory === 'META_AD_CONVERT') && (
-                      <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 border border-pink-500/30 text-[9px] font-bold px-1.5 py-0">
-                        Meta Ad
-                      </Badge>
-                    )}
-                    {lead.leadStage === 'QUOTE_SENT' && (
-                      <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold px-1.5 py-0">
-                        Auto-Quoted
-                      </Badge>
-                    )}
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-mono text-amber-400">
+                        {lead.leadId || `#${lead.id.slice(0, 8)}`}
+                      </span>
+                      {(lead.sourceCta?.includes('META') || lead.leadCategory === 'META_AD_CONVERT') && (
+                        <Badge className="bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px]">
+                          Meta Ad
+                        </Badge>
+                      )}
+                    </div>
+                    <Badge className={`${sla.badgeColor} text-[10px] font-mono font-bold px-2 py-0.5 flex items-center gap-1`}>
+                      <Clock className="w-2.5 h-2.5" /> {sla.remainingText}
+                    </Badge>
                   </div>
-                  <Badge className={`${sla.badgeColor} text-[10px] font-mono font-bold px-2 py-0.5 flex items-center gap-1 shrink-0`}>
-                    <Clock className="w-2.5 h-2.5" />
-                    {sla.remainingText}
-                  </Badge>
-                </div>
 
-                {/* Traveler Name and Budget */}
-                <div className="mb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-base font-bold text-white tracking-wide truncate">
-                      {lead.customerName || 'Anonymous Traveler'}
-                    </h3>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-bold text-emerald-400">
-                        {typeof lead.budget === 'number' 
-                          ? `₹${lead.budget.toLocaleString('en-IN')}` 
-                          : lead.budget || 'Flexible Budget'}
+                  <div className="mb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-base font-bold text-white truncate">{lead.customerName || 'Anonymous Traveler'}</h3>
+                      <span className="text-xs font-bold text-emerald-400 shrink-0 font-mono">
+                        {typeof lead.budget === 'number' ? `₹${lead.budget.toLocaleString('en-IN')}` : lead.budget || 'Flexible'}
                       </span>
                     </div>
-                  </div>
-                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                    <span>{lead.phone}</span>
-                    {lead.email && <span className="text-slate-600">• {lead.email}</span>}
-                  </p>
-                </div>
-
-                {/* Itinerary Specs Grid */}
-                <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-[#07090E]/80 border border-white/5 mb-4 text-xs">
-                  <div className="flex items-center gap-1.5 text-slate-300 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="truncate">{lead.destination || 'Kashmir Circuit'}</span>
+                    <p className="text-xs text-slate-400 mt-0.5 truncate">
+                      {lead.phone} {lead.email ? `• ${lead.email}` : ''}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-slate-300">
-                    <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    <span>{lead.duration || '5N / 6D'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 text-slate-300">
-                    <Users className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                    <span>{paxTotal} Guests ({lead.adultsCount || 2}A{lead.childrenCount ? ` + ${lead.childrenCount}C` : ''})</span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 text-slate-300 truncate">
-                    <Hotel className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="truncate">{lead.hotelCategory || '4-Star Luxury'}</span>
+                  <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-[#07090E]/80 border border-white/5 mb-3 text-xs">
+                    <div className="flex items-center gap-1.5 text-slate-300 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate">{lead.destination || 'Kashmir Circuit'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      <span>{lead.duration || '5N / 6D'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <Users className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span>{paxTotal} Guests</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-300 truncate">
+                      <Hotel className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="truncate">{lead.preferredAccommodation || lead.accommodation || '4-Star'}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Action Button: Atomic CLAIM & BUILD */}
-                <Button
-                  onClick={() => handleAtomicClaim(lead)}
-                  disabled={isClaiming}
-                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs h-10 rounded-lg shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                >
-                  {isClaiming ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Locking Transaction...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3.5 h-3.5 fill-black" />
-                      <span>CLAIM & BUILD ITINERARY</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => handleAtomicClaim(lead)}
+                    disabled={isClaiming}
+                    className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-9 rounded-lg flex items-center justify-center gap-1.5"
+                  >
+                    {isClaiming ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Claiming...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 fill-black" />
+                        <span>CLAIM &amp; BUILD</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {onInspectLead && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onInspectLead(lead)}
+                        className="h-8 text-[11px] border-white/10 text-slate-200 hover:bg-white/10"
+                      >
+                        <FolderOpen className="w-3 h-3 mr-1" /> Inspect CRM
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isClaiming}
+                      onClick={() => handleDismissLead(lead)}
+                      className={cn(
+                        'h-8 text-[11px] border-white/10 text-slate-400 hover:text-rose-400 hover:border-rose-500/30',
+                        !onInspectLead && 'col-span-2'
+                      )}
+                    >
+                      <XCircle className="w-3 h-3 mr-1" /> {canManage ? 'Delete' : 'Dismiss'}
+                    </Button>
+                  </div>
+                </div>
               </Card>
             );
           })}

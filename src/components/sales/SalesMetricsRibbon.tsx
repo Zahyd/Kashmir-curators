@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { API_BASE_URL } from '@/lib/api';
+import { salesApi } from '@/lib/salesApi';
 
 interface MetricsData {
   unclaimedCount: number;
@@ -43,22 +43,9 @@ export const SalesMetricsRibbon: React.FC<SalesMetricsRibbonProps> = ({ onRefres
 
   const fetchMetrics = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
-      
-      const res = await fetch(`${API_BASE_URL}/sales/metrics`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setMetrics(data);
-        setLastUpdated(new Date());
-      }
+      const data = await salesApi.getMetrics();
+      setMetrics(data);
+      setLastUpdated(new Date());
     } catch (err) {
       console.warn('Failed to fetch sales metrics:', err);
     } finally {

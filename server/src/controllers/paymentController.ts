@@ -931,3 +931,100 @@ export const verifySubscriptionPayment = async (req: any, res: Response) => {
     return res.status(500).json({ error: 'Failed to activate subscription' });
   }
 };
+
+export const getInquiryPayments = async (req: Request, res: Response) => {
+  const { inquiryId } = req.params;
+  if (!inquiryId) {
+    return res.status(400).json({ error: 'inquiryId is required' });
+  }
+
+  try {
+    const entries = await (prisma as any).transactionLedger.findMany({
+      where: { bookingId: inquiryId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(entries);
+  } catch (error: any) {
+    console.error('getInquiryPayments error:', error);
+    res.status(500).json({ error: 'Failed to fetch inquiry payments' });
+  }
+};
+
+export const verifyManualPayment = async (req: Request, res: Response) => {
+  const { inquiryId } = req.params;
+  const { amount, utrNumber, markConfirmed = false, notes } = req.body;
+  const parsedAmount = Number(amount);
+
+  if (!inquiryId || !utrNumber || !String(utrNumber).trim() || isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ error: 'Valid inquiryId, positive amount, and UTR / transaction reference are required' });
+  }
+
+  const cleanUtr = String(utrNumber).trim();
+
+  try {
+    const inquiry = await (prisma as any).inquiry.findUnique({ where: { id: inquiryId } });
+    if (!inquiry) {
+      return res.status(404).json({ error: 'Inquiry not found' });
+    }
+
+    const existingTx = await (prisma as any).transactionLedger.findUnique({
+      where: { paymentId: cleanUtr }
+    });
+    if (existingTx) {
+      return res.status(409).json({ error: 'This UTR / Transaction Reference has already been recorded' });
+    }
+
+    const performer = (req as any).user?.name || (req as any).user?.employeeCode || 'Sales Staff';
+    const nextStage = markConfirmed ? 'CONFIRMED' : 'PAYMENT_PENDING';
+    const nextStatus = markConfirmed ? 'Booked' : 'Ready for Review';
+
+    const [ledgerEntry, updatedInquiry] = await (prisma as any).$transaction([
+      (prisma as any).transactionLedger.create({
+        data: {
+          bookingId: inquiryId,
+          amount: parsedAmount,
+          type: 'CREDIT',
+          paymentId: cleanUtr,
+          orderId: `MANUAL-${Date.now()}`,
+          description: notes
+            ? `Manual UPI/Bank UTR verified (${cleanUtr}): ${notes}`
+            : `Manual UPI/Bank UTR recorded by ${performer} (${cleanUtr})`
+        }
+      }),
+      (prisma as any).inquiry.update({
+        where: { id: inquiryId },
+        data: {
+          leadStage: nextStage,
+          status: nextStatus,
+          lastContactedAt: new Date()
+        }
+      }),
+      (prisma as any).leadActivity.create({
+        data: {
+          inquiryId,
+          type: 'PAYMENT_CAPTURED',
+          title: `Payment UTR recorded: ₹${parsedAmount.toLocaleString('en-IN')}`,
+          description: `UTR ${cleanUtr} logged by ${performer}. Stage set to ${nextStage}.`,
+          performedBy: performer
+        }
+      })
+    ]);
+
+    if ((req as any).io) {
+      (req as any).io.to('admin-room').emit('new-system-event', {
+        type: 'PAYMENT',
+        message: `Manual UTR ₹${parsedAmount.toLocaleString('en-IN')} recorded for ${inquiry.customerName} (${cleanUtr})`,
+        booking: { ...updatedInquiry, entityType: 'inquiry' }
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      ledgerEntry,
+      inquiry: updatedInquiry
+    });
+  } catch (error: any) {
+    console.error('verifyManualPayment error:', error);
+    res.status(500).json({ error: error.message || 'Failed to record manual payment verification' });
+  }
+};

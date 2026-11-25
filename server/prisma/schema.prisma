@@ -262,6 +262,7 @@ model Inquiry {
   whatsappMessages       WhatsAppMessage[]
   cabReservations        CabReservation[]
   searchIntents          CustomerSearchIntent[]
+  documents              InquiryDocument[]
   duplicateOfId          String?            // Inquiries flagged as potential duplicates
   lastContactedAt        DateTime?
   nextFollowUpDate       DateTime?
@@ -343,6 +344,25 @@ model WhatsAppMessage {
   @@index([customerPhone])
   @@index([inquiryId])
   @@index([createdAt])
+}
+
+model InquiryDocument {
+  id          String   @id @default(uuid())
+  inquiryId   String
+  inquiry     Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  name        String
+  category    String   @default("ID_PROOF") // ID_PROOF, FLIGHT_TICKET, VOUCHER, PROPOSAL, PAYMENT_RECEIPT, OTHER
+  url         String
+  publicId    String?
+  mimeType    String?
+  sizeBytes   Int      @default(0)
+  status      String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  uploadedBy  String?
+  verifiedBy  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([inquiryId])
 }
 
 model CabReservation {

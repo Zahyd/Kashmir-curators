@@ -3,6 +3,8 @@ import {
   handleRazorpayWebhook, 
   sendWhatsAppPaymentRequest, 
   getPaymentRequestDetails,
+  getInquiryPayments,
+  verifyManualPayment,
   createStripeCheckoutSession,
   createRazorpayPaymentLink,
   createSubscriptionOrder,
@@ -15,6 +17,8 @@ const router = Router();
 
 router.post('/webhook', handleRazorpayWebhook);
 router.post('/send-whatsapp-scanner', authenticateToken, authorizeRoles('admin', 'operations', 'sales'), sendWhatsAppPaymentRequest);
+router.get('/inquiry/:inquiryId', authenticateToken, authorizeRoles('admin', 'operations', 'sales', 'finance'), getInquiryPayments);
+router.post('/inquiry/:inquiryId/verify-manual', authenticateToken, authorizeRoles('admin', 'operations', 'sales', 'finance'), verifyManualPayment);
 router.get('/request/:paymentId', getPaymentRequestDetails);
 router.post('/stripe/create-checkout-session', authenticateToken, createStripeCheckoutSession);
 router.post('/razorpay/create-payment-link', authenticateToken, createRazorpayPaymentLink);

@@ -1,31 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  CheckCircle2, 
-  Clock, 
-  MapPin, 
-  Phone, 
-  MessageSquare, 
-  Share2, 
-  FileEdit, 
-  AlertCircle, 
-  Sparkles, 
-  ChevronRight, 
-  IndianRupee, 
-  User, 
-  Building, 
-  Car, 
-  Calendar,
-  XCircle,
-  ExternalLink,
+import React, { useEffect, useState } from 'react';
+import {
+  MapPin,
+  Phone,
+  FileEdit,
+  AlertCircle,
+  Sparkles,
+  Car,
   ShieldCheck,
   Send,
   RefreshCw,
   Search,
   Inbox,
-  TrendingUp,
-  Tag,
-  ArrowRight,
-  Filter
+  Plus,
+  FolderOpen,
+  CreditCard,
+  Clock
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,29 +22,21 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { API_BASE_URL } from '@/lib/api';
+import {
+  salesApi,
+  SalesInquiry,
+  normalizeStageKey,
+  getInquiryValueINR
+} from '@/lib/salesApi';
 
-export type PipelineStage = 'CLAIMED' | 'QUOTED' | 'NEGOTIATION' | 'CONFIRMED' | 'LOST';
-
-export interface Deal {
-  id: string;
-  customerName: string;
-  phone: string;
-  email?: string;
-  destination?: string;
-  duration?: string;
-  startDate?: string;
-  budget?: string | number;
-  netPrice?: number;
-  leadStage?: PipelineStage | string;
-  status: string;
-  assignedTo?: string | null;
-  hotelCategory?: string;
-  vehiclePreference?: string;
-  adultsCount?: number;
-  createdAt: string;
-  updatedAt?: string;
-}
+export type PipelineStage =
+  | 'CLAIMED'
+  | 'FOLLOW_UP'
+  | 'QUOTE_SENT'
+  | 'NEGOTIATION'
+  | 'PAYMENT_PENDING'
+  | 'CONFIRMED'
+  | 'LOST';
 
 interface ActivePipelineKanbanProps {
   currentEmployee: {
@@ -63,108 +44,118 @@ interface ActivePipelineKanbanProps {
     name: string;
     role: string;
   };
-  onOpenItineraryBuilder: (deal: Deal) => void;
+  onOpenItineraryBuilder: (deal: SalesInquiry) => void;
+  onInspectDeal?: (deal: SalesInquiry) => void;
+  onCreateDeal?: () => void;
   onRefreshMetrics?: () => void;
   isManagerOrDirector?: boolean;
+  refreshTrigger?: number;
 }
 
-const STAGES: { 
-  key: PipelineStage; 
-  label: string; 
+const STAGES: {
+  key: PipelineStage;
+  label: string;
   shortLabel: string;
-  color: string; 
+  color: string;
   badge: string;
   icon: any;
   emptyTitle: string;
   emptyDesc: string;
 }[] = [
-  { 
-    key: 'CLAIMED', 
-    label: 'Claimed / New', 
+  {
+    key: 'CLAIMED',
+    label: 'Claimed',
     shortLabel: 'Claimed',
-    color: 'border-blue-500/30 bg-blue-500/[0.02]', 
+    color: 'border-blue-500/30 bg-blue-500/[0.02]',
     badge: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
     icon: Inbox,
     emptyTitle: 'Queue Standby',
-    emptyDesc: 'Claim leads from Live Inbound Queue to start curating.'
+    emptyDesc: 'Claim leads from Live Queue or add a deal.'
   },
-  { 
-    key: 'QUOTED', 
-    label: 'Quote Sent', 
+  {
+    key: 'FOLLOW_UP',
+    label: 'Follow-Up',
+    shortLabel: 'Follow-Up',
+    color: 'border-indigo-500/30 bg-indigo-500/[0.02]',
+    badge: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+    icon: Clock,
+    emptyTitle: 'No Follow-Ups',
+    emptyDesc: 'Active discovery calls & follow-ups.'
+  },
+  {
+    key: 'QUOTE_SENT',
+    label: 'Quote Sent',
     shortLabel: 'Quoted',
-    color: 'border-amber-500/30 bg-amber-500/[0.02]', 
+    color: 'border-amber-500/30 bg-amber-500/[0.02]',
     badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
     icon: FileEdit,
     emptyTitle: 'No Pending Quotes',
-    emptyDesc: 'Curated itineraries sent via WhatsApp will appear here.'
+    emptyDesc: 'Curated itineraries dispatched to guests.'
   },
-  { 
-    key: 'NEGOTIATION', 
-    label: 'In Negotiation', 
+  {
+    key: 'NEGOTIATION',
+    label: 'Negotiation',
     shortLabel: 'In Neg',
-    color: 'border-purple-500/30 bg-purple-500/[0.02]', 
+    color: 'border-purple-500/30 bg-purple-500/[0.02]',
     badge: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
     icon: Sparkles,
-    emptyTitle: 'No Active Negotiations',
-    emptyDesc: 'Deals undergoing custom revisions or pricing adjustments.'
+    emptyTitle: 'No Negotiations',
+    emptyDesc: 'Deals with custom rate/stay revisions.'
   },
-  { 
-    key: 'CONFIRMED', 
-    label: 'Confirmed (Driver Dispatched)', 
+  {
+    key: 'PAYMENT_PENDING',
+    label: 'Payment Pending',
+    shortLabel: 'Payment',
+    color: 'border-cyan-500/30 bg-cyan-500/[0.02]',
+    badge: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30',
+    icon: CreditCard,
+    emptyTitle: 'No Pending Payments',
+    emptyDesc: 'Awaiting deposit UTR or Razorpay settlement.'
+  },
+  {
+    key: 'CONFIRMED',
+    label: 'Confirmed',
     shortLabel: 'Confirmed',
-    color: 'border-emerald-500/30 bg-emerald-500/[0.02]', 
+    color: 'border-emerald-500/30 bg-emerald-500/[0.02]',
     badge: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
     icon: Car,
-    emptyTitle: 'No Dispatched Trips',
-    emptyDesc: 'Confirmed bookings automatically trigger driver dispatch.'
+    emptyTitle: 'No Confirmed Trips',
+    emptyDesc: 'Confirmed bookings auto-dispatch to Driver OS.'
   },
-  { 
-    key: 'LOST', 
-    label: 'Archived / Lost', 
+  {
+    key: 'LOST',
+    label: 'Lost / Archived',
     shortLabel: 'Lost',
-    color: 'border-slate-500/30 bg-slate-500/[0.02]', 
+    color: 'border-slate-500/30 bg-slate-500/[0.02]',
     badge: 'bg-slate-500/20 text-slate-400 border border-slate-500/30',
     icon: AlertCircle,
     emptyTitle: 'Zero Archived Deals',
-    emptyDesc: 'Cancelled or inactive inquiries are preserved here.'
+    emptyDesc: 'Cancelled or archived inquiries.'
   }
 ];
 
 export const ActivePipelineKanban: React.FC<ActivePipelineKanbanProps> = ({
   currentEmployee,
   onOpenItineraryBuilder,
+  onInspectDeal,
+  onCreateDeal,
   onRefreshMetrics,
-  isManagerOrDirector = false
+  isManagerOrDirector = false,
+  refreshTrigger = 0
 }) => {
-  const [deals, setDeals] = useState<Deal[]>([]);
+  const [deals, setDeals] = useState<SalesInquiry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterScope, setFilterScope] = useState<'my' | 'all'>('my');
+  const [filterScope, setFilterScope] = useState<'my' | 'all'>(isManagerOrDirector ? 'all' : 'my');
   const [mobileStageFilter, setMobileStageFilter] = useState<'ALL' | PipelineStage>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
-  const [confirmedModalDeal, setConfirmedModalDeal] = useState<Deal | null>(null);
 
   const fetchDeals = async () => {
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
-
-      // Direct clean endpoint: /inquiries (API_BASE_URL already contains /api)
-      const res = await fetch(`${API_BASE_URL}/inquiries`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : data.inquiries || [];
-        setDeals(list);
-      }
-    } catch (err) {
-      console.warn('Error fetching pipeline deals:', err);
+      const list = await salesApi.listInquiries();
+      setDeals(list);
+    } catch (err: any) {
+      toast.error(err?.message || 'Error loading pipeline deals');
     } finally {
       setLoading(false);
     }
@@ -172,469 +163,305 @@ export const ActivePipelineKanban: React.FC<ActivePipelineKanbanProps> = ({
 
   useEffect(() => {
     fetchDeals();
-    const interval = setInterval(fetchDeals, 20000);
+    const interval = setInterval(fetchDeals, 25000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshTrigger]);
 
   const handleStageChange = async (dealId: string, newStage: PipelineStage) => {
     setTransitioningId(dealId);
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
-
-      const res = await fetch(`${API_BASE_URL}/sales/leads/${dealId}/stage`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
-        },
-        body: JSON.stringify({
-          stage: newStage,
-          notes: `Moved to ${newStage} by ${currentEmployee.name} (${currentEmployee.code})`
-        })
+      const res = await salesApi.transitionStage(dealId, {
+        stage: newStage,
+        notes: `Moved to ${newStage} by ${currentEmployee.name} (${currentEmployee.code})`
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to update deal stage');
-      }
-
-      // Update local state
-      setDeals(prev => prev.map(d => d.id === dealId ? { ...d, leadStage: newStage } : d));
+      setDeals((prev) => prev.map((d) => (d.id === dealId ? res.lead : d)));
       onRefreshMetrics?.();
 
       if (newStage === 'CONFIRMED') {
-        const targetDeal = deals.find(d => d.id === dealId);
-        if (targetDeal) {
-          setConfirmedModalDeal(targetDeal);
-        }
-        toast.success('Deal Confirmed! Chauffeur Cab Dispatch created and broadcasted to Driver Cockpit.');
+        toast.success('Deal Confirmed! Chauffeur dispatch broadcasted to Driver Cockpit.');
       } else {
-        toast.success(`Deal moved to ${newStage}`);
+        toast.success(`Deal moved to ${newStage.replace(/_/g, ' ')}`);
       }
     } catch (err: any) {
-      toast.error(err.message || 'Error updating stage');
+      toast.error(err?.message || 'Error updating deal stage');
     } finally {
       setTransitioningId(null);
     }
   };
 
-  const sendWhatsAppQuote = (deal: Deal) => {
+  const sendWhatsAppQuote = (deal: SalesInquiry) => {
     const phone = (deal.phone || '').replace(/[^0-9]/g, '');
+    if (!phone) {
+      toast.error('Deal has no phone number');
+      return;
+    }
     const recipient = phone.startsWith('91') ? phone : `91${phone}`;
-    const cleanDestination = deal.destination || 'Kashmir Custom Curated Tour';
-    const cleanDuration = deal.duration || '5 Nights / 6 Days';
     const quoteUrl = `${window.location.origin}/itinerary/${deal.id}`;
-
     const message = encodeURIComponent(
-      `Salaam & Greetings ${deal.customerName},\n\n` +
-      `Here is your private, bespoke Kashmir itinerary crafted by Kashmir Curators:\n` +
-      `📍 Route: ${cleanDestination}\n` +
-      `⏳ Duration: ${cleanDuration}\n` +
-      `🏨 Stays: Luxury Houseboat & Mountain Resort\n` +
-      `🚗 Cab Class: Innova Crysta / 4x4 Mountain Cruiser\n\n` +
-      `View your interactive live itinerary & secure your booking here:\n${quoteUrl}\n\n` +
-      `Warm regards,\n${currentEmployee.name} | Kashmir Curators Private Concierge`
+      `Salaam ${deal.customerName},\n\nHere is your bespoke Kashmir itinerary crafted by The Kashmir Curators:\n` +
+        `Route: ${deal.destination || 'Kashmir Circuit'}\nDuration: ${deal.duration || '5N/6D'}\n\n` +
+        `View interactive quote & confirm online:\n${quoteUrl}\n\nWarm regards,\n${currentEmployee.name}`
     );
-
     window.open(`https://wa.me/${recipient}?text=${message}`, '_blank');
   };
 
-  // Scope and Search Filtering
-  const myDeals = deals.filter(d => d.assignedTo === currentEmployee.code);
-  
-  const visibleDeals = deals.filter(deal => {
-    // Match search term
+  const myDeals = deals.filter(
+    (d) => (d.assignedTo || '').toUpperCase() === (currentEmployee.code || '').toUpperCase()
+  );
+
+  const visibleDeals = deals.filter((deal) => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matches = 
+      const matches =
         (deal.customerName || '').toLowerCase().includes(q) ||
         (deal.destination || '').toLowerCase().includes(q) ||
         (deal.phone || '').includes(q) ||
+        (deal.leadId || '').toLowerCase().includes(q) ||
         (deal.id || '').toLowerCase().includes(q);
       if (!matches) return false;
     }
 
-    // If scoped to "my", check assignedTo
-    if (filterScope === 'my') {
-      // If user has zero deals assigned, fall back gracefully so screen isn't completely empty
-      if (myDeals.length === 0) return true;
-      return deal.assignedTo === currentEmployee.code;
+    if (filterScope === 'my' && myDeals.length > 0) {
+      return (deal.assignedTo || '').toUpperCase() === (currentEmployee.code || '').toUpperCase();
     }
 
     return true;
   });
 
-  // Calculate live pipeline metrics
-  const totalPipelineINR = visibleDeals.reduce((sum, d) => {
-    const val = d.netPrice || parseInt(String(d.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
-    return sum + val;
-  }, 0);
+  const activePipelineDeals = visibleDeals.filter((d) => {
+    const st = normalizeStageKey(d.leadStage, d.status);
+    return !['CONFIRMED', 'COMPLETED', 'LOST'].includes(st);
+  });
+
+  const totalPipelineINR = activePipelineDeals.reduce((sum, d) => sum + getInquiryValueINR(d), 0);
 
   return (
     <div className="space-y-4">
-      {/* 1. Header & Controls Deck */}
-      <div className="bg-[#0F141C]/80 p-4 sm:p-5 rounded-2xl border border-white/10 backdrop-blur-md shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* Header & Controls */}
+      <div className="bg-[#0F141C]/90 p-4 sm:p-5 rounded-xl border border-white/10 shadow-lg flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-            <h2 className="text-lg sm:text-xl font-bold text-white tracking-wide flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-bold text-white tracking-wide">
               Active Concierge Pipeline
             </h2>
             <Badge className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono px-2 py-0.5">
-              ₹{totalPipelineINR.toLocaleString('en-IN')} Total Value
+              ₹{totalPipelineINR.toLocaleString('en-IN')} Active Value
             </Badge>
           </div>
           <p className="text-xs text-slate-400">
             {filterScope === 'my' && myDeals.length > 0
-              ? `Filtered to concierge ${currentEmployee.name} (${currentEmployee.code})`
-              : 'Displaying all company deals across executive pipelines'}
+              ? `Filtered to ${currentEmployee.name} (${currentEmployee.code})`
+              : 'Displaying all company pipeline inquiries synced with Neon DB'}
           </p>
         </div>
 
-        {/* Search, Scope Toggle & Refresh */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
-          {/* Quick Search */}
-          <div className="relative flex-1 sm:w-56">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+          <div className="relative flex-1 sm:w-52">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <Input 
+            <Input
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search client, phone, city..."
-              className="pl-8 bg-[#07090E] border-white/10 text-xs text-white placeholder:text-slate-500 h-9 rounded-xl focus:border-amber-400 w-full"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search deal or lead ID..."
+              className="pl-8 bg-[#07090E] border-white/10 text-xs text-white h-9 rounded-lg w-full"
             />
           </div>
 
-          <div className="flex items-center gap-2 justify-between sm:justify-start">
-            {/* Scope Toggle: My Deals vs Entire Team */}
-            <div className="bg-[#07090E] p-1 rounded-xl border border-white/10 flex items-center text-xs">
-              <button
-                type="button"
-                onClick={() => setFilterScope('my')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg font-semibold text-xs transition-all",
-                  filterScope === 'my' 
-                    ? "bg-amber-400 text-black shadow-md shadow-amber-400/20 font-bold" 
-                    : "text-slate-400 hover:text-white"
-                )}
-              >
-                My Deals ({myDeals.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterScope('all')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg font-semibold text-xs transition-all",
-                  filterScope === 'all' 
-                    ? "bg-amber-400 text-black shadow-md shadow-amber-400/20 font-bold" 
-                    : "text-slate-400 hover:text-white"
-                )}
-              >
-                Entire Team ({deals.length})
-              </button>
-            </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {isManagerOrDirector && (
+              <div className="flex bg-[#07090E] p-1 rounded-lg border border-white/10 text-xs">
+                <button
+                  onClick={() => setFilterScope('my')}
+                  className={cn(
+                    'px-2.5 py-1 rounded text-[11px] font-semibold transition',
+                    filterScope === 'my' ? 'bg-amber-500 text-black font-bold' : 'text-slate-400 hover:text-white'
+                  )}
+                >
+                  My Deals
+                </button>
+                <button
+                  onClick={() => setFilterScope('all')}
+                  className={cn(
+                    'px-2.5 py-1 rounded text-[11px] font-semibold transition',
+                    filterScope === 'all' ? 'bg-amber-500 text-black font-bold' : 'text-slate-400 hover:text-white'
+                  )}
+                >
+                  All Team
+                </button>
+              </div>
+            )}
 
-            {/* Refresh Button */}
+            {onCreateDeal && (
+              <Button size="sm" onClick={onCreateDeal} className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-9 px-3">
+                <Plus className="w-3.5 h-3.5 mr-1" /> New Deal
+              </Button>
+            )}
+
             <Button
               size="sm"
               variant="outline"
               onClick={() => { setLoading(true); fetchDeals(); }}
-              className="border-white/10 text-slate-300 hover:text-white h-9 px-3 rounded-xl bg-white/5 shrink-0"
-              title="Refresh Pipeline"
+              className="border-white/10 text-slate-300 hover:text-white h-9 px-2.5"
+              title="Refresh pipeline"
             >
-              <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin text-amber-400")} />
+              <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin text-amber-400')} />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* 2. Driver Handoff Modal */}
-      {confirmedModalDeal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
-          onClick={() => setConfirmedModalDeal(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#0F141C] border border-emerald-500/40 rounded-2xl sm:rounded-3xl p-5 sm:p-6 max-w-md w-full max-h-[90dvh] overflow-y-auto shadow-2xl shadow-emerald-950/40 text-center animate-in zoom-in-95"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto mb-4">
-              <Car className="w-7 h-7" />
-            </div>
-
-            <h3 className="text-xl font-bold text-white mb-1">
-              Deal Confirmed & Cab Dispatched!
-            </h3>
-            <p className="text-xs text-slate-300 mb-4">
-              Congratulations! Deal for <strong className="text-white">{confirmedModalDeal.customerName}</strong> has been successfully booked.
-            </p>
-
-            <div className="bg-[#07090E] p-3.5 rounded-xl border border-white/10 text-left text-xs space-y-2 mb-5">
-              <div className="flex justify-between text-slate-400">
-                <span>Trip Destination:</span>
-                <span className="text-white font-medium">{confirmedModalDeal.destination || 'Kashmir Tour'}</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Automated Handoff:</span>
-                <span className="text-emerald-400 font-medium">Broadcasted to Driver Cockpit</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Driver Security PIN:</span>
-                <span className="text-amber-400 font-mono font-bold">KC-{Math.floor(10 + Math.random() * 89)}</span>
-              </div>
-            </div>
-
-            <Button
-              onClick={() => setConfirmedModalDeal(null)}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold h-11 rounded-xl"
-            >
-              Continue Working
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Mobile Stage Selector Ribbon (Smooth horizontal swipe) */}
-      <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar -mx-1 px-1">
+      {/* Mobile Stage Filter Pills */}
+      <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto pb-1">
         <button
-          type="button"
           onClick={() => setMobileStageFilter('ALL')}
           className={cn(
-            "px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 flex items-center gap-1.5",
-            mobileStageFilter === 'ALL'
-              ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
-              : "bg-[#0F141C] text-slate-400 hover:text-white border border-white/10"
+            'px-3 py-1.5 rounded-lg text-xs font-bold shrink-0',
+            mobileStageFilter === 'ALL' ? 'bg-amber-500 text-black' : 'bg-[#0F141C] text-slate-400 border border-white/10'
           )}
         >
-          <span>All Stages</span>
-          <span className={cn(
-            "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
-            mobileStageFilter === 'ALL' ? "bg-black/20 text-black font-black" : "bg-white/10 text-slate-300"
-          )}>
-            {visibleDeals.length}
-          </span>
+          All ({visibleDeals.length})
         </button>
-
         {STAGES.map((s) => {
-          const count = visibleDeals.filter(d => {
-            const currentStage = (d.leadStage || 'CLAIMED').toUpperCase();
-            if (s.key === 'CLAIMED') return currentStage === 'CLAIMED' || currentStage === 'NEW_LEAD' || currentStage === 'FOLLOW_UP';
-            if (s.key === 'QUOTED') return currentStage === 'QUOTED' || currentStage === 'QUOTE_SENT';
-            if (s.key === 'NEGOTIATION') return currentStage === 'NEGOTIATION' || currentStage === 'PAYMENT_PENDING';
-            return currentStage === s.key;
+          const count = visibleDeals.filter((d) => {
+            const st = normalizeStageKey(d.leadStage, d.status);
+            if (s.key === 'CLAIMED') return st === 'CLAIMED' || st === 'NEW_LEAD';
+            return st === s.key;
           }).length;
-
-          const isActive = mobileStageFilter === s.key;
 
           return (
             <button
               key={s.key}
-              type="button"
               onClick={() => setMobileStageFilter(s.key)}
               className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 active:scale-95",
-                isActive
-                  ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
-                  : "bg-[#0F141C] text-slate-400 hover:text-white border border-white/10"
+                'px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 flex items-center gap-1.5',
+                mobileStageFilter === s.key ? 'bg-amber-500 text-black' : 'bg-[#0F141C] text-slate-400 border border-white/10'
               )}
             >
               <span>{s.shortLabel}</span>
-              <span className={cn(
-                "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
-                isActive ? "bg-black/20 text-black font-black" : "bg-white/10 text-slate-300"
-              )}>
-                {count}
-              </span>
+              <span className="font-mono text-[10px] opacity-80">({count})</span>
             </button>
           );
         })}
       </div>
 
-      {/* 4. 5-Column Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
+      {/* Horizontal Scrollable Kanban */}
+      <div className="flex flex-col lg:flex-row gap-3.5 lg:overflow-x-auto pb-4 custom-scrollbar">
         {STAGES.map((stage) => {
-          const columnDeals = visibleDeals.filter(d => {
-            const currentStage = (d.leadStage || 'CLAIMED').toUpperCase();
-            if (stage.key === 'CLAIMED') {
-              return currentStage === 'CLAIMED' || currentStage === 'NEW_LEAD' || currentStage === 'FOLLOW_UP';
-            }
-            if (stage.key === 'QUOTED') {
-              return currentStage === 'QUOTED' || currentStage === 'QUOTE_SENT';
-            }
-            if (stage.key === 'NEGOTIATION') {
-              return currentStage === 'NEGOTIATION' || currentStage === 'PAYMENT_PENDING';
-            }
-            return currentStage === stage.key;
+          const columnDeals = visibleDeals.filter((d) => {
+            const st = normalizeStageKey(d.leadStage, d.status);
+            if (stage.key === 'CLAIMED') return st === 'CLAIMED' || st === 'NEW_LEAD';
+            return st === stage.key;
           });
 
           const isVisibleOnMobile = mobileStageFilter === 'ALL' || mobileStageFilter === stage.key;
           const StageIcon = stage.icon;
 
           return (
-            <div 
+            <div
               key={stage.key}
               className={cn(
-                "flex flex-col rounded-2xl border p-3.5 min-h-[460px] bg-[#0F141C]/70 backdrop-blur-md transition-all shadow-xl",
+                'flex flex-col rounded-xl border p-3 min-h-[420px] lg:w-[275px] lg:shrink-0 bg-[#0F141C]/80 shadow-lg',
                 stage.color,
-                !isVisibleOnMobile && "hidden lg:flex"
+                !isVisibleOnMobile && 'hidden lg:flex'
               )}
             >
-              {/* Column Header */}
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-300">
+                  <div className="w-6 h-6 rounded-md bg-white/5 border border-white/10 flex items-center justify-center text-slate-300">
                     <StageIcon className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">
-                    {stage.label}
-                  </span>
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">{stage.label}</span>
                 </div>
-                <Badge className={cn(stage.badge, "text-[10px] px-2 py-0.5 rounded-full font-mono font-bold")}>
+                <Badge className={cn(stage.badge, 'text-[10px] px-2 py-0 rounded-full font-mono')}>
                   {columnDeals.length}
                 </Badge>
               </div>
 
-              {/* Column Cards */}
-              <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar">
+              <div className="flex-1 space-y-2.5 overflow-y-auto custom-scrollbar">
                 {columnDeals.length === 0 ? (
-                  /* Upgraded Luxury Empty State */
-                  <div className="h-48 flex flex-col items-center justify-center text-center p-4 rounded-xl border border-dashed border-white/10 bg-[#07090E]/50">
-                    <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center text-slate-500 mb-2">
-                      <StageIcon className="w-4 h-4 opacity-50" />
-                    </div>
-                    <p className="text-xs font-bold text-slate-300 mb-0.5">{stage.emptyTitle}</p>
-                    <p className="text-[10px] text-slate-500 max-w-[180px] leading-relaxed">
-                      {stage.emptyDesc}
-                    </p>
+                  <div className="h-36 flex flex-col items-center justify-center text-center p-3 rounded-lg border border-dashed border-white/10 bg-[#07090E]/50">
+                    <p className="text-xs font-bold text-slate-400">{stage.emptyTitle}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{stage.emptyDesc}</p>
                   </div>
                 ) : (
                   columnDeals.map((deal) => {
                     const isBusy = transitioningId === deal.id;
-                    const val = deal.netPrice || parseInt(String(deal.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
+                    const val = getInquiryValueINR(deal);
+                    const currentNormalized = normalizeStageKey(deal.leadStage, deal.status);
 
                     return (
                       <Card
                         key={deal.id}
-                        className="bg-[#07090E]/95 border border-white/10 hover:border-amber-400/50 p-4 rounded-xl shadow-lg transition-all duration-200 text-left flex flex-col justify-between group"
+                        className="bg-[#07090E]/95 border border-white/10 hover:border-amber-400/50 p-3.5 rounded-xl transition-all flex flex-col justify-between gap-2.5"
                       >
                         <div>
-                          {/* Traveler & Value */}
-                          <div className="flex items-start justify-between gap-1.5 mb-1.5">
-                            <h4 className="text-sm font-bold text-white tracking-wide truncate group-hover:text-amber-300 transition-colors">
-                              {deal.customerName || 'Private Traveler'}
-                            </h4>
+                          <div className="flex items-start justify-between gap-1.5 mb-1">
+                            <h4 className="text-sm font-bold text-white truncate">{deal.customerName || 'Private Traveler'}</h4>
                             <span className="text-xs font-bold text-emerald-400 shrink-0 font-mono">
-                              ₹{val.toLocaleString('en-IN')}
+                              {val > 0 ? `₹${val.toLocaleString('en-IN')}` : '₹0'}
                             </span>
                           </div>
-
-                          {/* Destination & Duration */}
-                          <p className="text-xs text-slate-300 flex items-center gap-1.5 mb-2.5 truncate">
-                            <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <p className="text-[11px] text-slate-300 flex items-center gap-1 truncate mb-2">
+                            <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
                             <span className="truncate">{deal.destination || 'Kashmir Tour'}</span>
                             <span className="text-slate-600">•</span>
-                            <span className="text-slate-400 shrink-0 font-mono text-[11px]">{deal.duration || '5N/6D'}</span>
+                            <span className="text-slate-400 shrink-0 font-mono">{deal.duration || '5N/6D'}</span>
                           </p>
-
-                          {/* Contact Info & Direct WhatsApp */}
-                          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-3 bg-white/[0.03] p-2 rounded-lg border border-white/5">
-                            <a href={`tel:${deal.phone}`} className="hover:text-amber-400 flex items-center gap-1.5 truncate">
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 bg-white/[0.03] px-2 py-1.5 rounded-lg border border-white/5">
+                            <a href={`tel:${deal.phone}`} className="hover:text-amber-400 flex items-center gap-1 truncate">
                               <Phone className="w-3 h-3 text-slate-500 shrink-0" />
                               <span className="truncate">{deal.phone}</span>
                             </a>
                             <button
                               onClick={() => sendWhatsAppQuote(deal)}
-                              className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-bold shrink-0 ml-2"
-                              title="Send WhatsApp Quote"
+                              className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-bold shrink-0 ml-1"
                             >
-                              <Send className="w-3 h-3" />
-                              <span>WhatsApp</span>
+                              <Send className="w-3 h-3" /> WA
                             </button>
                           </div>
                         </div>
 
-                        {/* Quick Actions */}
-                        <div className="space-y-2 pt-2.5 border-t border-white/10">
-                          {/* Action 1: Itinerary Builder Studio */}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onOpenItineraryBuilder(deal)}
-                            className="w-full text-xs h-8 border-amber-400/30 text-amber-300 hover:bg-amber-400/10 flex items-center justify-center gap-1.5 rounded-lg font-bold"
-                          >
-                            <FileEdit className="w-3.5 h-3.5" />
-                            <span>Open in Studio</span>
-                          </Button>
-
-                          {/* Stage Transition Actions */}
+                        <div className="space-y-1.5 pt-2 border-t border-white/10">
                           <div className="grid grid-cols-2 gap-1.5">
-                            {stage.key === 'CLAIMED' && (
-                              <>
-                                <button
-                                  onClick={() => handleStageChange(deal.id, 'QUOTED')}
-                                  disabled={isBusy}
-                                  className="text-[10px] bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 py-1.5 px-2 rounded-lg text-center font-bold transition active:scale-95"
-                                >
-                                  ➔ Mark Quoted
-                                </button>
-                                <button
-                                  onClick={() => handleStageChange(deal.id, 'LOST')}
-                                  disabled={isBusy}
-                                  className="text-[10px] bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 py-1.5 px-2 rounded-lg text-center transition active:scale-95"
-                                >
-                                  ✕ Mark Lost
-                                </button>
-                              </>
-                            )}
-
-                            {stage.key === 'QUOTED' && (
-                              <>
-                                <button
-                                  onClick={() => handleStageChange(deal.id, 'NEGOTIATION')}
-                                  disabled={isBusy}
-                                  className="text-[10px] bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 py-1.5 px-2 rounded-lg text-center font-bold transition active:scale-95"
-                                >
-                                  ➔ In Neg
-                                </button>
-                                <button
-                                  onClick={() => handleStageChange(deal.id, 'CONFIRMED')}
-                                  disabled={isBusy}
-                                  className="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 py-1.5 px-2 rounded-lg text-center font-bold transition active:scale-95"
-                                >
-                                  ✓ Confirm
-                                </button>
-                              </>
-                            )}
-
-                            {stage.key === 'NEGOTIATION' && (
-                              <button
-                                onClick={() => handleStageChange(deal.id, 'CONFIRMED')}
-                                disabled={isBusy}
-                                className="text-[10px] bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black py-2 px-2.5 rounded-lg text-center font-black transition col-span-2 flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-95"
+                            {onInspectDeal && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onInspectDeal(deal)}
+                                className="h-7 text-[11px] border-white/15 text-slate-200 hover:bg-white/10 px-2"
                               >
-                                <Car className="w-3.5 h-3.5" />
-                                <span>CONFIRM & DISPATCH CAB</span>
-                              </button>
+                                <FolderOpen className="w-3 h-3 mr-1" /> CRM
+                              </Button>
                             )}
-
-                            {stage.key === 'CONFIRMED' && (
-                              <div className="col-span-2 text-center text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1.5 py-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                <span>Driver Dispatched • PIN Protected</span>
-                              </div>
-                            )}
-
-                            {stage.key === 'LOST' && (
-                              <button
-                                onClick={() => handleStageChange(deal.id, 'CLAIMED')}
-                                disabled={isBusy}
-                                className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 py-1.5 px-2 rounded-lg text-center font-bold transition col-span-2 active:scale-95"
-                              >
-                                ↺ Re-Open Deal
-                              </button>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onOpenItineraryBuilder(deal)}
+                              className="h-7 text-[11px] border-amber-400/30 text-amber-300 hover:bg-amber-400/10 px-2"
+                            >
+                              <FileEdit className="w-3 h-3 mr-1" /> Studio
+                            </Button>
                           </div>
+
+                          <select
+                            value={currentNormalized}
+                            disabled={isBusy}
+                            onChange={(e) => handleStageChange(deal.id, e.target.value as PipelineStage)}
+                            className="w-full h-7 bg-[#0F141C] border border-white/10 rounded-md px-2 text-[11px] font-semibold text-slate-200 focus:border-amber-400 focus:outline-none"
+                          >
+                            {STAGES.map((opt) => (
+                              <option key={opt.key} value={opt.key}>
+                                Stage: {opt.label}
+                              </option>
+                            ))}
+                          </select>
+
+                          {stage.key === 'CONFIRMED' && (
+                            <div className="text-center text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1 py-1 bg-emerald-500/10 rounded border border-emerald-500/20">
+                              <ShieldCheck className="w-3 h-3" /> Driver Dispatched
+                            </div>
+                          )}
                         </div>
                       </Card>
                     );

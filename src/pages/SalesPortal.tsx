@@ -1,30 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  Zap, 
-  MessageSquare, 
-  ShieldCheck, 
-  FilePlus, 
-  Users, 
-  CreditCard, 
-  TrendingUp, 
-  Clock, 
-  LogOut, 
-  User, 
-  LayoutDashboard, 
-  Shield, 
-  ShieldAlert, 
-  ExternalLink, 
-  Sparkles, 
-  Menu, 
-  X, 
-  CheckCircle2, 
-  AlertTriangle,
+import {
+  Zap,
+  ShieldCheck,
+  FilePlus,
+  Users,
+  CreditCard,
+  Clock,
+  LogOut,
+  LayoutDashboard,
+  Shield,
+  ExternalLink,
+  Menu,
+  X,
   ArrowRight,
-  Phone,
   Layers,
-  Car,
-  Globe
+  Globe,
+  Plus,
+  RefreshCw,
+  Bell,
+  CheckCircle2,
+  FolderOpen
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,18 +28,24 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
-import { API_BASE_URL } from '@/lib/api';
-import { 
-  normalizeSalesRole, 
-  canAccessSalesPortal, 
-  isDriver, 
-  canManageTeam, 
+import {
+  normalizeSalesRole,
+  canAccessSalesPortal,
+  isDriver,
+  canManageTeam,
   canViewAllLeads,
   ROLE_DISPLAY_NAMES,
-  ROLE_BADGE_STYLES 
+  ROLE_BADGE_STYLES
 } from '@/lib/rbac';
+import {
+  salesApi,
+  SalesInquiry,
+  TeamMemberItem,
+  LeadReminderItem,
+  getInquiryValueINR,
+  normalizeStageKey
+} from '@/lib/salesApi';
 
-// Modular Sales Components
 import { SalesMetricsRibbon } from '@/components/sales/SalesMetricsRibbon';
 import { LiveLeadQueue } from '@/components/sales/LiveLeadQueue';
 import { ActivePipelineKanban } from '@/components/sales/ActivePipelineKanban';
@@ -56,92 +58,124 @@ import WorkLog from '@/components/sales/WorkLog';
 import SelectionRequired from '@/components/sales/SelectionRequired';
 import MobileSalesBottomBar from '@/components/sales/MobileSalesBottomBar';
 import MetaLeadsHub from '@/components/sales/MetaLeadsHub';
+import LeadFormModal from '@/components/sales/LeadFormModal';
+import LeadCommandDrawer from '@/components/sales/LeadCommandDrawer';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import PageLoading from '@/components/layout/PageLoading';
 
-type PortalTab = 
-  | 'dashboard' 
-  | 'live-leads' 
+type PortalTab =
+  | 'dashboard'
+  | 'live-leads'
   | 'meta-hub'
-  | 'active-pipeline' 
-  | 'builder' 
-  | 'vault' 
-  | 'clients' 
-  | 'payments' 
-  | 'team-rbac' 
+  | 'active-pipeline'
+  | 'builder'
+  | 'vault'
+  | 'clients'
+  | 'payments'
+  | 'team-rbac'
   | 'work-log';
+
+const TAB_TITLES: Record<PortalTab, string> = {
+  dashboard: 'Executive Command Center',
+  'live-leads': 'Live Inbound Queue',
+  'meta-hub': 'Meta Raw Leads Hub',
+  'active-pipeline': 'Active Concierge Pipeline',
+  builder: 'Itinerary Builder Studio',
+  vault: 'Inquiry Document Vault',
+  clients: 'Client Directory & CRM',
+  payments: 'Payment Links & Ledger',
+  'team-rbac': 'Team Roster & RBAC',
+  'work-log': 'Attendance & Work Log'
+};
 
 export default function SalesPortal() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const inquiryIdParam = searchParams.get('inquiryId');
 
-  const { teamUser, isTeamAuthenticated, isTeamLoading, teamLogout } = useTeamAuth();
-  
+  const { teamUser, isTeamAuthenticated, isTeamLoading, systemEvents, teamLogout } = useTeamAuth();
+
   const [activeTab, setActiveTab] = useState<PortalTab>('dashboard');
-  const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
-  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [selectedInquiry, setSelectedInquiry] = useState<SalesInquiry | null>(null);
+  const [inquiries, setInquiries] = useState<SalesInquiry[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberItem[]>([]);
+  const [pendingReminders, setPendingReminders] = useState<LeadReminderItem[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
   const [metricsRefreshKey, setMetricsRefreshKey] = useState(0);
+  const [dataRefreshKey, setDataRefreshKey] = useState(0);
 
-  // 1. RBAC Route Guard: Block DRIVER and non-authenticated users
+  // Modals & CRM Drawer
+  const [leadModalOpen, setLeadModalOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<SalesInquiry | null>(null);
+  const [drawerLead, setDrawerLead] = useState<SalesInquiry | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // RBAC Route Guard
   useEffect(() => {
     if (isTeamLoading) return;
-
     if (!isTeamAuthenticated || !teamUser) {
       navigate('/sales/auth');
       return;
     }
-
     if (isDriver(teamUser.role)) {
-      toast.error('Access Denied: Drivers are strictly blocked from Sales Concierge OS.');
+      toast.error('Access Denied: Drivers cannot access Sales Concierge OS.');
       navigate('/driver');
       return;
     }
-
     if (!canAccessSalesPortal(teamUser.role)) {
       toast.error('Unauthorized access level for Sales Portal.');
       navigate('/');
-      return;
     }
   }, [isTeamLoading, isTeamAuthenticated, teamUser, navigate]);
 
-  // 2. Fetch Inquiries for sub-components that need initial list
-  const fetchInquiries = async () => {
+  const refreshWorkspace = async () => {
+    if (!isTeamAuthenticated) return;
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
+      const [inqList, roster, reminders] = await Promise.all([
+        salesApi.listInquiries().catch(() => []),
+        salesApi.getTeamRoster().catch(() => []),
+        salesApi.getPendingReminders().catch(() => [])
+      ]);
+      setInquiries(inqList);
+      setTeamMembers(roster);
+      setPendingReminders(reminders);
 
-      const res = await fetch(`${API_BASE_URL}/inquiries`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
+      if (teamUser?.code && roster.length > 0) {
+        const me = roster.find((m) => (m.employeeCode || '').toUpperCase() === teamUser.code.toUpperCase());
+        if (me && typeof me.isOnline === 'boolean') {
+          setIsOnline(me.isOnline);
         }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : data.inquiries || [];
-        setInquiries(list);
       }
-    } catch (err) {
-      console.warn('Error fetching inquiries:', err);
+    } catch {
+      // Handled per-call
     }
+  };
+
+  const triggerGlobalRefresh = () => {
+    setMetricsRefreshKey((k) => k + 1);
+    setDataRefreshKey((k) => k + 1);
+    refreshWorkspace();
   };
 
   useEffect(() => {
     if (isTeamAuthenticated) {
-      fetchInquiries();
+      refreshWorkspace();
     }
-  }, [isTeamAuthenticated]);
+  }, [isTeamAuthenticated, activeTab]);
 
-  // 3. Handle Auto-Routing to Itinerary Builder if inquiryId provided in URL
+  // Real-time refresh when WebSocket emits new system events
+  useEffect(() => {
+    if (systemEvents.length > 0 && isTeamAuthenticated) {
+      triggerGlobalRefresh();
+    }
+  }, [systemEvents.length]);
+
+  // Auto-routing via ?inquiryId=
   useEffect(() => {
     if (inquiryIdParam && inquiries.length > 0) {
-      const found = inquiries.find(i => i.id === inquiryIdParam);
+      const found = inquiries.find((i) => i.id === inquiryIdParam);
       if (found) {
         setSelectedInquiry(found);
         setActiveTab('builder');
@@ -150,33 +184,28 @@ export default function SalesPortal() {
     }
   }, [inquiryIdParam, inquiries, setSearchParams]);
 
-  // 4. Employee Availability Toggle (synced to User.isOnline in Prisma)
   const toggleAvailability = async () => {
     const nextStatus = !isOnline;
     setIsOnline(nextStatus);
     setIsTogglingAvailability(true);
-
     try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
-
-      const res = await fetch(`${API_BASE_URL}/sales/availability`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
-        },
-        body: JSON.stringify({ isOnline: nextStatus })
-      });
-
-      if (res.ok) {
-        toast.success(nextStatus ? 'Status: ONLINE — Ready to receive leads' : 'Status: AWAY — Availability paused');
-      }
-    } catch (err) {
-      console.warn('Failed to sync availability to server:', err);
+      await salesApi.toggleAvailability(nextStatus);
+      toast.success(nextStatus ? 'Status: ONLINE — Taking leads' : 'Status: AWAY — Queue paused');
+    } catch (err: any) {
+      setIsOnline(!nextStatus);
+      toast.error(err?.message || 'Failed to update availability');
     } finally {
       setIsTogglingAvailability(false);
+    }
+  };
+
+  const handleCompleteReminder = async (rem: LeadReminderItem) => {
+    try {
+      await salesApi.updateReminder(rem.id, { status: 'COMPLETED' });
+      toast.success('Follow-up completed');
+      refreshWorkspace();
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not update reminder');
     }
   };
 
@@ -200,6 +229,7 @@ export default function SalesPortal() {
   const roleLabel = ROLE_DISPLAY_NAMES[normalizedRole] || teamUser.role;
   const roleBadgeStyle = ROLE_BADGE_STYLES[normalizedRole] || 'bg-slate-800 text-slate-300';
   const showTeamTab = canManageTeam(teamUser.role);
+  const canManage = canViewAllLeads(teamUser.role);
 
   const employeeProfile = {
     code: teamUser.code || 'SALES001',
@@ -207,54 +237,70 @@ export default function SalesPortal() {
     role: teamUser.role
   };
 
-  const unclaimedCount = inquiries.filter(i => !i.assignedTo && i.status !== 'Lost' && i.status !== 'Booked').length;
+  const unclaimedCount = inquiries.filter(
+    (i) =>
+      (!i.assignedTo || i.assignedTo.trim() === '') &&
+      !['Booked', 'Lost', 'Cancelled'].includes(i.status) &&
+      !['CONFIRMED', 'COMPLETED', 'CANCELLED', 'LOST'].includes(i.leadStage || '')
+  ).length;
+
+  const recentActiveDeals = inquiries
+    .filter((i) => {
+      const st = normalizeStageKey(i.leadStage, i.status);
+      return !['CONFIRMED', 'COMPLETED', 'LOST'].includes(st);
+    })
+    .slice(0, 5);
+
+  const openCreateModal = () => {
+    setEditingLead(null);
+    setLeadModalOpen(true);
+  };
+
+  const openEditModal = (lead: SalesInquiry) => {
+    setEditingLead(lead);
+    setLeadModalOpen(true);
+  };
+
+  const openInspectDrawer = (lead: SalesInquiry) => {
+    setDrawerLead(lead);
+    setDrawerOpen(true);
+  };
 
   return (
     <div className="min-h-[100dvh] bg-[#07090E] text-white flex flex-col lg:flex-row font-sans overflow-x-hidden">
-      {/* Mobile Top Header (Touch-optimized, notch-aware) */}
+      {/* Mobile Top Header */}
       <header className="lg:hidden sticky top-0 z-40 bg-[#0F141C]/95 backdrop-blur-2xl border-b border-white/10 px-3.5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2.5">
-          <Link to="/" className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-bold text-black text-xs shadow-md shadow-amber-500/20 active:scale-95 transition-transform">
+          <Link to="/" className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-bold text-black text-xs shadow-md shadow-amber-500/20">
             KC
           </Link>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-bold text-white tracking-wide">SalesPro</span>
-              <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1 py-0.2 rounded font-mono font-bold">OS</span>
+              <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1 rounded font-mono font-bold">OS</span>
             </div>
-            <p className="text-[9px] text-slate-400 font-medium font-mono">The Kashmir Curators</p>
+            <p className="text-[9px] text-slate-400 font-mono truncate max-w-[140px]">{TAB_TITLES[activeTab]}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Quick Availability Switch on Mobile */}
+        <div className="flex items-center gap-1.5">
+          <Button size="sm" onClick={openCreateModal} className="h-7 px-2 bg-amber-500 text-black font-bold text-[10px] rounded-md">
+            <Plus className="w-3 h-3 mr-0.5" /> Lead
+          </Button>
           <button
             onClick={toggleAvailability}
             disabled={isTogglingAvailability}
             className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] font-bold border transition-all active:scale-95",
-              isOnline
-                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
-                : "bg-amber-500/15 border-amber-500/30 text-amber-300"
+              'flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border transition',
+              isOnline ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
             )}
-            title="Toggle Live Availability"
           >
-            <span className={cn(
-              "w-2 h-2 rounded-full shrink-0",
-              isOnline ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#10B981]" : "bg-amber-400"
-            )} />
-            <span className="font-mono">{isOnline ? 'Online' : 'Away'}</span>
+            <span className={cn('w-1.5 h-1.5 rounded-full', isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400')} />
+            <span className="font-mono">{isOnline ? 'On' : 'Away'}</span>
           </button>
-
-          {/* User Initial Avatar */}
-          <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-bold text-amber-400 text-xs shrink-0">
-            {teamUser.name ? teamUser.name.charAt(0) : 'S'}
-          </div>
-
-          {/* Menu Drawer Toggle */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 text-slate-300 hover:text-white rounded-lg bg-white/5 active:scale-95 transition-all"
+            className="p-1.5 text-slate-300 hover:text-white rounded-lg bg-white/5"
             aria-label="Toggle navigation drawer"
           >
             {isSidebarOpen ? <X className="w-4 h-4 text-amber-400" /> : <Menu className="w-4 h-4" />}
@@ -264,21 +310,22 @@ export default function SalesPortal() {
 
       {/* Mobile Drawer Backdrop */}
       {isSidebarOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[65] transition-opacity animate-in fade-in duration-200"
+        <div
+          className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[65]"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar - FIXED OVERFLOW WITH PROPER SCROLLING AND STICKY FOOTER */}
-      <aside className={cn(
-        "w-72 sm:w-80 lg:w-72 max-w-[85vw] h-[100dvh] fixed left-0 top-0 bg-[#07090E] border-r border-white/10 flex flex-col z-[70] lg:z-40 transition-all duration-300 shadow-2xl overflow-hidden",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
-        {/* 1. Header (Compact, Non-Clipping) */}
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'w-72 max-w-[85vw] h-[100dvh] fixed left-0 top-0 bg-[#07090E] border-r border-white/10 flex flex-col z-[70] lg:z-40 transition-transform duration-300 shadow-2xl overflow-hidden',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        )}
+      >
         <div className="shrink-0 p-5 border-b border-white/10 flex items-center justify-between bg-[#0F141C]/50">
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
               <ShieldCheck className="w-5 h-5 text-black" />
             </div>
             <div>
@@ -289,27 +336,23 @@ export default function SalesPortal() {
               <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">The Kashmir Curators</p>
             </div>
           </Link>
-          <button 
-            onClick={() => setIsSidebarOpen(false)} 
-            className="lg:hidden text-slate-400 hover:text-white p-1"
-          >
+          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* 2. Middle Scrollable Nav Items */}
-        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-1.5 custom-scrollbar">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar">
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-amber-400' },
-            { id: 'live-leads', label: 'Live Leads', icon: Zap, color: 'text-emerald-400', badge: '15m SLA' },
+            { id: 'dashboard', label: 'Command Center', icon: LayoutDashboard, color: 'text-amber-400' },
+            { id: 'live-leads', label: 'Live Leads', icon: Zap, color: 'text-emerald-400', badge: unclaimedCount > 0 ? String(unclaimedCount) : '15m SLA' },
             { id: 'meta-hub', label: 'Meta Raw Leads', icon: Globe, color: 'text-purple-400', badge: 'Live' },
             { id: 'active-pipeline', label: 'Active Pipeline', icon: Layers, color: 'text-blue-400' },
-            { id: 'builder', label: 'Itinerary Builder', icon: FilePlus, color: 'text-purple-400' },
+            { id: 'builder', label: 'Itinerary Studio', icon: FilePlus, color: 'text-purple-400' },
             { id: 'vault', label: 'Inquiry Vault', icon: ShieldCheck, color: 'text-teal-400' },
             { id: 'clients', label: 'Client Directory', icon: Users, color: 'text-orange-400' },
             { id: 'payments', label: 'Payment Links', icon: CreditCard, color: 'text-amber-400' },
             ...(showTeamTab ? [{ id: 'team-rbac', label: 'Team & RBAC', icon: Shield, color: 'text-rose-400', badge: 'Admin' }] : []),
-            { id: 'work-log', label: 'Work Log', icon: Clock, color: 'text-slate-400' },
+            { id: 'work-log', label: 'Work Log', icon: Clock, color: 'text-slate-400' }
           ].map((item) => {
             const isActive = activeTab === item.id;
             return (
@@ -320,21 +363,23 @@ export default function SalesPortal() {
                   setIsSidebarOpen(false);
                 }}
                 className={cn(
-                  "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-200 text-xs font-semibold group",
+                  'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-xs font-semibold group',
                   isActive
-                    ? "bg-[#0F141C] text-white border border-amber-500/30 shadow-md shadow-black/40"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    ? 'bg-[#0F141C] text-white border border-amber-500/30 shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon className={cn("w-4 h-4 transition-transform group-hover:scale-110", isActive ? item.color : "text-slate-500")} />
+                  <item.icon className={cn('w-4 h-4', isActive ? item.color : 'text-slate-500 group-hover:text-slate-300')} />
                   <span className="tracking-wide uppercase text-[11px]">{item.label}</span>
                 </div>
                 {item.badge && (
-                  <span className={cn(
-                    "text-[9px] font-mono px-1.5 py-0.5 rounded font-bold",
-                    isActive ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-slate-400"
-                  )}>
+                  <span
+                    className={cn(
+                      'text-[9px] font-mono px-1.5 py-0.5 rounded font-bold',
+                      isActive ? 'bg-amber-500/20 text-amber-300' : 'bg-white/5 text-slate-400'
+                    )}
+                  >
                     {item.badge}
                   </span>
                 )}
@@ -343,17 +388,15 @@ export default function SalesPortal() {
           })}
         </nav>
 
-        {/* 3. Sticky Bottom Authenticated Employee Profile Card */}
-        <div className="shrink-0 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-white/10 bg-[#0F141C]/95 backdrop-blur-md space-y-3">
-          {/* User Details */}
-          <div className="flex items-center justify-between gap-3">
+        <div className="shrink-0 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-white/10 bg-[#0F141C]/95 space-y-3">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 truncate">
               <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-bold text-amber-400 text-xs shrink-0">
                 {teamUser.name ? teamUser.name.charAt(0) : 'S'}
               </div>
               <div className="truncate">
                 <p className="text-xs font-bold text-white truncate">{teamUser.name}</p>
-                <p className="text-[10px] font-mono text-slate-400 truncate">{teamUser.code || 'ID: SALES001'}</p>
+                <p className="text-[10px] font-mono text-slate-400 truncate">{teamUser.code || 'SALES001'}</p>
               </div>
             </div>
             <Badge className={`${roleBadgeStyle} text-[9px] font-mono font-bold px-1.5 py-0.5 shrink-0`}>
@@ -361,40 +404,31 @@ export default function SalesPortal() {
             </Badge>
           </div>
 
-          {/* Live Availability Toggle Button */}
           <button
             onClick={toggleAvailability}
             disabled={isTogglingAvailability}
             className={cn(
-              "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all border",
-              isOnline 
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20" 
-                : "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
+              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition border',
+              isOnline
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
             )}
           >
             <div className="flex items-center gap-2">
-              <span className={cn(
-                "w-2.5 h-2.5 rounded-full shrink-0",
-                isOnline ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#10B981]" : "bg-amber-400"
-              )} />
+              <span className={cn('w-2 h-2 rounded-full', isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400')} />
               <span>{isOnline ? 'Online • Taking Leads' : 'Away • Queue Paused'}</span>
             </div>
-            <span className="text-[10px] uppercase font-mono font-bold text-slate-400">
-              Toggle
-            </span>
+            <span className="text-[10px] font-mono text-slate-400 uppercase">Toggle</span>
           </button>
 
-          {/* Action Links: Home & Logout */}
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
             <Link
               to="/"
               onClick={() => setIsSidebarOpen(false)}
               className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-[11px] font-medium transition"
             >
-              <ExternalLink className="w-3 h-3" />
-              <span>Portal Home</span>
+              <ExternalLink className="w-3 h-3" /> Portal Home
             </Link>
-
             <button
               onClick={() => {
                 setIsSidebarOpen(false);
@@ -402,281 +436,323 @@ export default function SalesPortal() {
               }}
               className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[11px] font-medium transition"
             >
-              <LogOut className="w-3 h-3" />
-              <span>Logout</span>
+              <LogOut className="w-3 h-3" /> Logout
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Main Workspace Area */}
+      {/* Main Workspace */}
       <main className="flex-1 min-w-0 lg:ml-72 flex flex-col min-h-[100dvh]">
-        <div className="p-3 sm:p-6 lg:p-8 pt-4 lg:pt-8 pb-28 lg:pb-8 max-w-[1600px] w-full mx-auto space-y-6">
+        {/* Desktop Executive Top Command Bar */}
+        <div className="hidden lg:flex sticky top-0 z-30 items-center justify-between px-8 py-3.5 bg-[#07090E]/90 backdrop-blur-xl border-b border-white/10">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">
+                Kashmir Curators • Live Sync
+              </span>
+            </div>
+            <h1 className="text-lg font-bold text-white tracking-tight">{TAB_TITLES[activeTab]}</h1>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <Badge className="bg-[#0F141C] border border-white/10 text-slate-300 text-xs font-mono py-1 px-2.5">
+              {roleLabel}
+            </Badge>
+            <Button
+              size="sm"
+              onClick={openCreateModal}
+              className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-9 px-3.5 rounded-lg"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> New Lead
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={triggerGlobalRefresh}
+              className="border-white/10 text-slate-300 hover:text-white h-9 px-2.5"
+              title="Refresh workspace data"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-3 sm:p-6 lg:p-8 pb-28 lg:pb-10 max-w-[1600px] w-full mx-auto space-y-6">
           <ErrorBoundary variant="panel">
+            {/* TAB 1: COMMAND CENTER DASHBOARD */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <SalesMetricsRibbon key={metricsRefreshKey} onRefreshNeeded={triggerGlobalRefresh} />
 
-          {/* TAB 1: EXECUTIVE COMMAND DASHBOARD */}
-          {activeTab === 'dashboard' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              {/* Top Banner */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0F141C]/80 p-5 rounded-xl border border-white/10 backdrop-blur-md">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
-                      Executive Command Center
-                    </span>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                  <div className="xl:col-span-2 space-y-4">
+                    <LiveLeadQueue
+                      currentEmployee={employeeProfile}
+                      canManage={canManage}
+                      refreshTrigger={dataRefreshKey}
+                      onCreateLead={openCreateModal}
+                      onInspectLead={openInspectDrawer}
+                      onClaimLead={(lead) => {
+                        setSelectedInquiry(lead);
+                        setActiveTab('builder');
+                        triggerGlobalRefresh();
+                      }}
+                      onRefreshMetrics={triggerGlobalRefresh}
+                    />
                   </div>
-                  <h1 className="text-2xl font-bold text-white tracking-tight mt-1">
-                    Welcome back, {teamUser.name}
-                  </h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Live operational telemetry, inbound lead escalation, and private client pipeline.
-                  </p>
-                </div>
 
-                <div className="flex items-center gap-2.5">
-                  <Button
-                    size="sm"
-                    onClick={() => setActiveTab('live-leads')}
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-9 px-4 rounded-lg flex items-center gap-1.5"
-                  >
-                    <Zap className="w-3.5 h-3.5 fill-black" />
-                    <span>View Live Leads</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setActiveTab('active-pipeline')}
-                    className="border-white/10 text-white hover:bg-white/5 text-xs h-9 px-3 rounded-lg flex items-center gap-1.5"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Active Pipeline</span>
-                  </Button>
+                  {/* Right Column: Follow-Up Reminders & Recent Pipeline Snapshot */}
+                  <div className="space-y-5">
+                    <Card className="bg-[#0F141C]/90 border border-white/10 p-4 rounded-xl space-y-3 shadow-lg">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Bell className="w-4 h-4 text-amber-400" />
+                          Follow-Up Queue ({pendingReminders.length})
+                        </h3>
+                        <button
+                          onClick={refreshWorkspace}
+                          className="text-xs text-slate-400 hover:text-white"
+                          title="Refresh reminders"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {pendingReminders.length === 0 ? (
+                        <div className="p-4 rounded-lg bg-[#07090E] border border-white/5 text-center text-xs text-slate-400">
+                          No pending follow-ups. Open any lead&apos;s CRM drawer to schedule calls.
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
+                          {pendingReminders.slice(0, 6).map((rem) => (
+                            <div
+                              key={rem.id}
+                              className={cn(
+                                'p-3 rounded-lg bg-[#07090E] border text-xs flex items-start justify-between gap-2',
+                                rem.isOverdue ? 'border-rose-500/40' : 'border-white/10'
+                              )}
+                            >
+                              <div className="min-w-0">
+                                <p className="font-bold text-white truncate">{rem.title}</p>
+                                <p className="text-[11px] text-slate-400 truncate">
+                                  {rem.inquiry?.customerName || 'Lead'} • {new Date(rem.dueDate).toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleCompleteReminder(rem)}
+                                  className="h-7 px-2 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black text-[10px] font-bold"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+
+                    <Card className="bg-[#0F141C]/90 border border-white/10 p-4 rounded-xl space-y-3 shadow-lg">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-blue-400" />
+                          Active Pipeline ({recentActiveDeals.length})
+                        </h3>
+                        <button
+                          onClick={() => setActiveTab('active-pipeline')}
+                          className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1"
+                        >
+                          Kanban <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {recentActiveDeals.length === 0 ? (
+                        <div className="p-4 rounded-lg bg-[#07090E] border border-white/5 text-center text-xs text-slate-400">
+                          Pipeline is currently empty. Claim a lead or click &ldquo;+ New Lead&rdquo;.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {recentActiveDeals.map((deal) => (
+                            <div
+                              key={deal.id}
+                              onClick={() => openInspectDrawer(deal)}
+                              className="p-3 rounded-lg bg-[#07090E] border border-white/10 hover:border-amber-400/40 cursor-pointer transition flex items-center justify-between gap-2 text-xs"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-bold text-white truncate">{deal.customerName}</p>
+                                <p className="text-[11px] text-slate-400 truncate">
+                                  {deal.destination} • {normalizeStageKey(deal.leadStage, deal.status).replace(/_/g, ' ')}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-mono font-bold text-emerald-400">
+                                  ₹{getInquiryValueINR(deal).toLocaleString('en-IN')}
+                                </span>
+                                <FolderOpen className="w-3.5 h-3.5 text-slate-400" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Live Prisma-Aggregated KPI Ribbon */}
-              <SalesMetricsRibbon 
-                key={metricsRefreshKey} 
-                onRefreshNeeded={() => setMetricsRefreshKey(k => k + 1)} 
-              />
-
-              {/* Command Deck Split: Live Queue on Left, Quick Pipeline on Right */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-amber-400" />
-                      Live Inbound Queue (15-Minute SLA)
-                    </h3>
-                    <button
-                      onClick={() => setActiveTab('live-leads')}
-                      className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1"
-                    >
-                      <span>Full Queue</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <LiveLeadQueue 
-                    currentEmployee={employeeProfile}
-                    onClaimLead={(lead) => {
-                      setSelectedInquiry(lead);
-                      setActiveTab('builder');
-                      setMetricsRefreshKey(k => k + 1);
-                    }}
-                    onRefreshMetrics={() => setMetricsRefreshKey(k => k + 1)}
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-blue-400" />
-                      Active Concierge Pipeline
-                    </h3>
-                    <button
-                      onClick={() => setActiveTab('active-pipeline')}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1"
-                    >
-                      <span>Kanban</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  {/* Pipeline Quick Access Card */}
-                  <Card className="bg-[#0F141C]/80 border border-white/10 p-5 rounded-xl space-y-4">
-                    <div className="p-4 rounded-lg bg-[#07090E] border border-white/5 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-400">Concierge Code:</span>
-                        <span className="font-mono text-amber-400 font-bold">{teamUser.code || 'SALES001'}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-400">Permissions Level:</span>
-                        <span className="text-emerald-400 font-semibold">{roleLabel}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-400">Driver Auto-Dispatch:</span>
-                        <span className="text-emerald-400 font-semibold">Enabled (Stage CONFIRMED)</span>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => setActiveTab('active-pipeline')}
-                      className="w-full bg-[#07090E] border border-white/10 hover:border-amber-400 text-white text-xs h-9 rounded-lg"
-                    >
-                      Open Full Pipeline Kanban
-                    </Button>
-                  </Card>
-                </div>
+            {/* TAB 2: LIVE LEADS QUEUE */}
+            {activeTab === 'live-leads' && (
+              <div className="space-y-5 animate-in fade-in duration-300">
+                <SalesMetricsRibbon key={metricsRefreshKey} onRefreshNeeded={triggerGlobalRefresh} />
+                <LiveLeadQueue
+                  currentEmployee={employeeProfile}
+                  canManage={canManage}
+                  refreshTrigger={dataRefreshKey}
+                  onCreateLead={openCreateModal}
+                  onInspectLead={openInspectDrawer}
+                  onClaimLead={(lead) => {
+                    setSelectedInquiry(lead);
+                    setActiveTab('builder');
+                    triggerGlobalRefresh();
+                  }}
+                  onRefreshMetrics={triggerGlobalRefresh}
+                />
               </div>
-            </div>
-          )}
+            )}
 
-          {/* TAB 2: LIVE LEADS QUEUE */}
-          {activeTab === 'live-leads' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <SalesMetricsRibbon 
-                key={metricsRefreshKey} 
-                onRefreshNeeded={() => setMetricsRefreshKey(k => k + 1)} 
-              />
-              <LiveLeadQueue 
+            {/* TAB 3: META LEADS HUB */}
+            {activeTab === 'meta-hub' && (
+              <MetaLeadsHub
                 currentEmployee={employeeProfile}
-                onClaimLead={(lead) => {
-                  setSelectedInquiry(lead);
-                  setActiveTab('builder');
-                  setMetricsRefreshKey(k => k + 1);
-                }}
-                onRefreshMetrics={() => setMetricsRefreshKey(k => k + 1)}
-              />
-            </div>
-          )}
-
-          {/* TAB: META LEADS RAW DATA HUB (OPTION B) */}
-          {activeTab === 'meta-hub' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <MetaLeadsHub 
-                currentEmployee={employeeProfile}
+                onInspectLead={openInspectDrawer}
                 onOpenItineraryBuilder={(lead) => {
                   setSelectedInquiry(lead);
                   setActiveTab('builder');
                 }}
               />
-            </div>
-          )}
+            )}
 
-          {/* TAB 3: ACTIVE PIPELINE KANBAN */}
-          {activeTab === 'active-pipeline' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <ActivePipelineKanban 
+            {/* TAB 4: ACTIVE PIPELINE KANBAN */}
+            {activeTab === 'active-pipeline' && (
+              <ActivePipelineKanban
                 currentEmployee={employeeProfile}
+                isManagerOrDirector={canManage}
+                refreshTrigger={dataRefreshKey}
+                onCreateDeal={openCreateModal}
+                onInspectDeal={openInspectDrawer}
                 onOpenItineraryBuilder={(deal) => {
                   setSelectedInquiry(deal);
                   setActiveTab('builder');
                 }}
-                onRefreshMetrics={() => setMetricsRefreshKey(k => k + 1)}
-                isManagerOrDirector={canViewAllLeads(teamUser.role)}
+                onRefreshMetrics={triggerGlobalRefresh}
               />
-            </div>
-          )}
+            )}
 
-          {/* TAB 4: ITINERARY BUILDER */}
-          {activeTab === 'builder' && (
-            <div className="animate-in fade-in duration-300">
-              {selectedInquiry ? (
-                <ItineraryBuilder 
-                  inquiry={selectedInquiry}
-                  onBack={() => setActiveTab('active-pipeline')}
-                />
-              ) : (
-                <SelectionRequired 
-                  title="Itinerary Builder"
-                  description="Select an active inquiry or deal from your pipeline to begin crafting a bespoke luxury Kashmir itinerary."
-                  icon={FilePlus}
-                  inquiries={inquiries}
-                  onSelect={(inq) => {
-                    setSelectedInquiry(inq);
-                    setActiveTab('builder');
-                  }}
-                  teamUser={teamUser}
-                />
-              )}
-            </div>
-          )}
+            {/* TAB 5: ITINERARY BUILDER */}
+            {activeTab === 'builder' && (
+              <div className="animate-in fade-in duration-300">
+                {selectedInquiry ? (
+                  <ItineraryBuilder inquiry={selectedInquiry} onBack={() => setActiveTab('active-pipeline')} />
+                ) : (
+                  <SelectionRequired
+                    title="Itinerary Builder"
+                    description="Select an inquiry from your pipeline or launch a new AI-curated blueprint."
+                    icon={FilePlus}
+                    inquiries={inquiries}
+                    onCreated={triggerGlobalRefresh}
+                    onSelect={(inq) => {
+                      setSelectedInquiry(inq);
+                      setActiveTab('builder');
+                    }}
+                    teamUser={teamUser}
+                  />
+                )}
+              </div>
+            )}
 
-          {/* TAB 5: INQUIRY VAULT */}
-          {activeTab === 'vault' && (
-            <div className="animate-in fade-in duration-300">
-              {selectedInquiry ? (
-                <InquiryVault 
-                  inquiry={selectedInquiry}
-                  onBack={() => setActiveTab('active-pipeline')}
-                />
-              ) : (
-                <SelectionRequired 
-                  title="Inquiry Vault & Guest Documents"
-                  description="Select an inquiry to view guest documentation, identity verification, flight manifests, and audit logs."
-                  icon={ShieldCheck}
-                  inquiries={inquiries}
-                  onSelect={(inq) => {
-                    setSelectedInquiry(inq);
-                    setActiveTab('vault');
-                  }}
-                  teamUser={teamUser}
-                />
-              )}
-            </div>
-          )}
+            {/* TAB 6: INQUIRY VAULT */}
+            {activeTab === 'vault' && (
+              <div className="animate-in fade-in duration-300">
+                {selectedInquiry ? (
+                  <InquiryVault
+                    inquiry={selectedInquiry}
+                    onBack={() => setActiveTab('active-pipeline')}
+                    onChanged={triggerGlobalRefresh}
+                  />
+                ) : (
+                  <SelectionRequired
+                    title="Inquiry Vault & Guest Documents"
+                    description="Select a client inquiry to upload, verify, and manage passports, IDs, tickets, and vouchers."
+                    icon={ShieldCheck}
+                    inquiries={inquiries}
+                    onCreated={triggerGlobalRefresh}
+                    onSelect={(inq) => {
+                      setSelectedInquiry(inq);
+                      setActiveTab('vault');
+                    }}
+                    teamUser={teamUser}
+                  />
+                )}
+              </div>
+            )}
 
-          {/* TAB 6: CLIENT DIRECTORY */}
-          {activeTab === 'clients' && (
-            <div className="animate-in fade-in duration-300">
-              <ClientDirectory />
-            </div>
-          )}
+            {/* TAB 7: CLIENT DIRECTORY */}
+            {activeTab === 'clients' && (
+              <ClientDirectory
+                canManage={canManage}
+                refreshTrigger={dataRefreshKey}
+                onCreateClient={openCreateModal}
+                onEditClient={openEditModal}
+                onInspectClient={openInspectDrawer}
+                onRefreshMetrics={triggerGlobalRefresh}
+                onNavigateTab={(tab, lead) => {
+                  setSelectedInquiry(lead);
+                  setActiveTab(tab);
+                }}
+              />
+            )}
 
-          {/* TAB 7: PAYMENT PORTAL */}
-          {activeTab === 'payments' && (
-            <div className="animate-in fade-in duration-300">
-              {selectedInquiry ? (
-                <PaymentPortal 
-                  inquiry={selectedInquiry}
-                  onBack={() => setActiveTab('active-pipeline')}
-                />
-              ) : (
-                <SelectionRequired 
-                  title="Payment Portal & UPI Links"
-                  description="Select a confirmed or quoting inquiry to generate and dispatch payment links."
-                  icon={CreditCard}
-                  inquiries={inquiries}
-                  onSelect={(inq) => {
-                    setSelectedInquiry(inq);
-                    setActiveTab('payments');
-                  }}
-                  teamUser={teamUser}
-                />
-              )}
-            </div>
-          )}
+            {/* TAB 8: PAYMENT PORTAL */}
+            {activeTab === 'payments' && (
+              <div className="animate-in fade-in duration-300">
+                {selectedInquiry ? (
+                  <PaymentPortal
+                    inquiry={selectedInquiry}
+                    onBack={() => setActiveTab('active-pipeline')}
+                    onPaymentRecorded={triggerGlobalRefresh}
+                  />
+                ) : (
+                  <SelectionRequired
+                    title="Payment Links & Settlement Ledger"
+                    description="Select a client inquiry to generate Razorpay links, WhatsApp QR requests, or verify UTR receipts."
+                    icon={CreditCard}
+                    inquiries={inquiries}
+                    onCreated={triggerGlobalRefresh}
+                    onSelect={(inq) => {
+                      setSelectedInquiry(inq);
+                      setActiveTab('payments');
+                    }}
+                    teamUser={teamUser}
+                  />
+                )}
+              </div>
+            )}
 
-          {/* TAB 8: TEAM & RBAC MANAGEMENT */}
-          {activeTab === 'team-rbac' && showTeamTab && (
-            <div className="animate-in fade-in duration-300">
-              <TeamManagement currentEmployee={employeeProfile} />
-            </div>
-          )}
+            {/* TAB 9: TEAM & RBAC */}
+            {activeTab === 'team-rbac' && showTeamTab && (
+              <TeamManagement currentEmployee={employeeProfile} onTeamChanged={refreshWorkspace} />
+            )}
 
-          {/* TAB 9: WORK LOG */}
-          {activeTab === 'work-log' && (
-            <div className="animate-in fade-in duration-300">
-              <WorkLog />
-            </div>
-          )}
-
+            {/* TAB 10: WORK LOG */}
+            {activeTab === 'work-log' && <WorkLog />}
           </ErrorBoundary>
         </div>
       </main>
 
-      {/* Unified Mobile Bottom Dock */}
+      {/* Mobile Bottom Dock */}
       <MobileSalesBottomBar
         activeTab={activeTab}
         onTabChange={(tab) => {
@@ -686,6 +762,38 @@ export default function SalesPortal() {
         isSidebarOpen={isSidebarOpen}
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         unclaimedCount={unclaimedCount}
+      />
+
+      {/* Unified Create / Edit Lead Modal */}
+      <LeadFormModal
+        open={leadModalOpen}
+        onOpenChange={setLeadModalOpen}
+        initialLead={editingLead}
+        teamMembers={teamMembers}
+        canAssign={canManage}
+        currentEmployeeCode={employeeProfile.code}
+        onSuccess={(saved) => {
+          if (drawerLead?.id === saved.id) setDrawerLead(saved);
+          if (selectedInquiry?.id === saved.id) setSelectedInquiry(saved);
+          triggerGlobalRefresh();
+        }}
+      />
+
+      {/* Unified CRM Command Drawer */}
+      <LeadCommandDrawer
+        inquiry={drawerLead}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        canManage={canManage}
+        teamMembers={teamMembers}
+        onUpdated={triggerGlobalRefresh}
+        onOpenEdit={(lead) => {
+          openEditModal(lead);
+        }}
+        onNavigateTab={(tab, lead) => {
+          setSelectedInquiry(lead);
+          setActiveTab(tab);
+        }}
       />
     </div>
   );

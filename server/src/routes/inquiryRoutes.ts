@@ -31,7 +31,7 @@ router.post('/search-intents/:id/nudge-now', authenticateToken, crmRoles, trigge
 router.get('/public/:id', getPublicInquiryItinerary);
 router.get('/', authenticateToken, crmRoles, getInquiries);
 router.patch('/:id', authenticateToken, crmRoles, updateInquiry);
-router.delete('/:id', authenticateToken, authorizeRoles('admin', 'operations', 'sales'), deleteInquiry);
+router.delete('/:id', authenticateToken, authorizeRoles('admin', 'operations'), deleteInquiry);
 router.post('/:id/send-proposal', authenticateToken, crmRoles, sendProposal);
 router.post('/quote', getDynamicQuote);
 
