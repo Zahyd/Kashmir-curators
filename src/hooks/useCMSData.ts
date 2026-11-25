@@ -45,6 +45,7 @@ export interface CMSCab {
   basePrice: number;
   image: string;
   features: string[];
+  isActive?: boolean;
 }
 
 export interface CMSTestimonial {

@@ -112,22 +112,38 @@ export const getReservations = async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Check conflicts dynamically for each reservation
-    const reservationsWithConflictFlag = await Promise.all(
-      reservations.map(async (resItem: any) => {
-        const isConflicting = await checkDuplicateConflict(
-          resItem.hotelId,
-          resItem.guestName,
-          resItem.checkIn,
-          resItem.checkOut,
-          resItem.id
-        );
-        return {
-          ...resItem,
-          hasConflict: isConflicting
-        };
-      })
-    );
+    // Batch-fetch active reservations once for O(1) in-memory duplicate conflict detection (eliminates N+1)
+    const hotelIds = Array.from(new Set(reservations.map((r: any) => r.hotelId).filter(Boolean)));
+    const candidateReservations = hotelIds.length > 0
+      ? await p.hotelReservation.findMany({
+          where: {
+            hotelId: { in: hotelIds },
+            status: { notIn: ['Cancelled', 'Rejected'] }
+          },
+          select: { id: true, hotelId: true, guestName: true, checkIn: true, checkOut: true }
+        })
+      : [];
+
+    const reservationsWithConflictFlag = reservations.map((resItem: any) => {
+      const targetIn = new Date(resItem.checkIn).getTime();
+      const targetOut = new Date(resItem.checkOut).getTime();
+      const guestLower = String(resItem.guestName || '').trim().toLowerCase();
+
+      const isConflicting = candidateReservations.some((cand: any) => {
+        if (cand.id === resItem.id || cand.hotelId !== resItem.hotelId) return false;
+        if (String(cand.guestName || '').trim().toLowerCase() !== guestLower) return false;
+        const cIn = new Date(cand.checkIn).getTime();
+        const cOut = new Date(cand.checkOut).getTime();
+        return (cIn <= targetIn && cOut > targetIn) ||
+               (cIn < targetOut && cOut >= targetOut) ||
+               (cIn >= targetIn && cOut <= targetOut);
+      });
+
+      return {
+        ...resItem,
+        hasConflict: isConflicting
+      };
+    });
 
     res.json(reservationsWithConflictFlag);
   } catch (error: any) {
@@ -824,17 +840,18 @@ export const deleteReservation = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant reservation deletion denied' });
     }
 
-    // Free up any room linked to this reservation
-    try {
-      await p.room.updateMany({
+    // Atomic transaction: free linked physical hotelRoom and delete reservation together
+    await p.$transaction(async (tx: any) => {
+      await tx.hotelRoom.updateMany({
         where: { currentReservationId: id },
-        data: { currentReservationId: null, occupancyStatus: 'VACANT_CLEAN' }
+        data: {
+          currentReservationId: null,
+          status: 'AVAILABLE',
+          operationalStatus: 'AVAILABLE_CLEAN'
+        }
       });
-    } catch (roomErr: any) {
-      console.warn('[ReservationsController] Room unassign warning:', roomErr.message);
-    }
-
-    await p.hotelReservation.delete({ where: { id } });
+      await tx.hotelReservation.delete({ where: { id } });
+    });
 
     if (req.io) {
       req.io.to('admin-room').emit('new-system-event', {

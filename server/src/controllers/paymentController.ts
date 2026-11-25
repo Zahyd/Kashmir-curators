@@ -127,16 +127,15 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
         }
       }
     } else {
-      // Fallback search for any booking whose details contains the orderId or matching parameters
-      const allBookings = await prisma.booking.findMany();
-      targetBooking = allBookings.find(b => {
-        try {
-          const parsed = JSON.parse(b.details);
-          return parsed.razorpayOrderId === orderId || b.id === orderId;
-        } catch {
-          return false;
+      // Targeted query instead of full-table scan
+      targetBooking = await prisma.booking.findFirst({
+        where: {
+          OR: [
+            { id: orderId },
+            { details: { contains: orderId } }
+          ]
         }
-      }) || null;
+      });
     }
 
     if (!targetBooking) {
@@ -611,62 +610,81 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
         });
 
         if (inquiry) {
-          let booking = await p.booking.findFirst({
-            where: {
-              details: {
-                contains: inquiryId
-              }
-            }
-          });
+          // Resolve a valid User ID for Booking.userId foreign key constraint
+          let resolvedUserId = inquiry.userId;
+          if (!resolvedUserId) {
+            const matchedUser = await p.user.findUnique({ where: { email: inquiry.email } }).catch(() => null);
+            const fallbackUser = matchedUser || await p.user.findFirst({ orderBy: { createdAt: 'asc' } });
+            resolvedUserId = fallbackUser?.id;
+          }
 
-          if (!booking) {
-            booking = await p.booking.create({
-              data: {
-                userId: inquiry.userId || 'SYSTEM_GUEST',
-                type: 'package',
-                itemName: `Kashmir Tour Package - ${inquiry.destination}`,
-                bookingDate: new Date(),
-                status: 'confirmed',
-                stage: 'CONFIRMED',
-                totalAmount: amount,
-                details: JSON.stringify({
-                  inquiryId: inquiry.id,
-                  customerName: inquiry.customerName,
-                  travelers: inquiry.travelers,
-                  duration: inquiry.duration,
-                  paymentMethod: 'Stripe'
+          if (!resolvedUserId) {
+            return res.status(400).json({ error: 'No user account found to bind Stripe booking' });
+          }
+
+          const updatedBooking = await p.$transaction(async (tx: any) => {
+            let booking = await tx.booking.findFirst({
+              where: {
+                details: {
+                  contains: inquiryId
+                }
+              }
+            });
+
+            if (!booking) {
+              booking = await tx.booking.create({
+                data: {
+                  userId: resolvedUserId,
+                  organizationId: inquiry.organizationId || null,
+                  type: 'package',
+                  itemName: `Kashmir Tour Package - ${inquiry.destination}`,
+                  bookingDate: new Date(),
+                  status: 'confirmed',
+                  stage: 'CONFIRMED',
+                  totalAmount: amount,
+                  details: JSON.stringify({
+                    inquiryId: inquiry.id,
+                    customerName: inquiry.customerName,
+                    travelers: inquiry.travelers,
+                    duration: inquiry.duration,
+                    paymentMethod: 'Stripe'
+                  })
+                }
+              });
+            } else {
+              booking = await tx.booking.update({
+                where: { id: booking.id },
+                data: {
+                  status: 'confirmed',
+                  stage: 'CONFIRMED'
+                }
+              });
+            }
+
+            await tx.transactionLedger.upsert({
+              where: { paymentId },
+              update: {},
+              create: {
+                bookingId: booking.id,
+                amount,
+                type: 'CREDIT',
+                paymentId,
+                orderId: session.id,
+                description: JSON.stringify({
+                  gateway: 'STRIPE',
+                  category: 'BOOKING_ADVANCE',
+                  inquiryId,
+                  customerEmail: session.customer_email || inquiry.email
                 })
               }
             });
-          } else {
-            booking = await p.booking.update({
-              where: { id: booking.id },
-              data: { 
-                status: 'confirmed',
-                stage: 'CONFIRMED'
-              }
-            });
-          }
 
-          await p.transactionLedger.create({
-            data: {
-              bookingId: booking.id,
-              amount: amount,
-              type: 'INFLOW',
-              category: 'BOOKING_ADVANCE',
-              paymentGateway: 'STRIPE',
-              transactionId: paymentId,
-              status: 'COMPLETED',
-              reconciled: true,
-              metadata: JSON.stringify({
-                inquiryId,
-                customerEmail: session.customer_email || inquiry.email,
-                checkoutSessionId: session.id
-              })
-            }
+            return booking;
           });
 
-          await bookingAutomationService.handleStageTransition(inquiryId, 'PAYMENT_RECEIVED', (req as any).io);
+          if (updatedBooking) {
+            await bookingAutomationService.handleStageTransition(inquiryId, 'PAYMENT_RECEIVED', (req as any).io);
+          }
         }
       } catch (dbErr: any) {
         console.error('[Stripe Webhook] DB Sync failed:', dbErr.message);

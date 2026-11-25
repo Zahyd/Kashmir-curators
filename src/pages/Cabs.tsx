@@ -696,6 +696,10 @@ export default function Cabs() {
       db.name?.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()) || 
       db.type?.toLowerCase() === s.type.toLowerCase()
     ) || {
+      name: db.name,
+      type: db.type,
+      pricePerKm: db.pricePerKm,
+      basePrice: db.basePrice,
       features: [],
       capacity: db.capacity || 4,
       luggage: 4,

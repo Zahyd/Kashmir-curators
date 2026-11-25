@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model Organization {
@@ -199,6 +200,8 @@ model Booking {
 
   @@index([organizationId])
   @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Inquiry {
@@ -366,6 +369,8 @@ model CabReservation {
 
   @@index([inquiryId])
   @@index([cabId])
+  @@index([status])
+  @@index([startDate, endDate])
 }
 
 model Media {
@@ -388,6 +393,9 @@ model TransactionLedger {
   orderId      String
   description  String?
   createdAt    DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([createdAt])
 }
 
 model BlogPost {
@@ -774,6 +782,9 @@ model AuditLog {
   action    String
   details   String   // JSON string of changes
   createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
 }
 
 model Notification {
@@ -787,6 +798,9 @@ model Notification {
   link      String?  // Redirect link (e.g. /admin)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, read])
+  @@index([createdAt])
 }
 
 model RoomCategory {
@@ -824,6 +838,9 @@ model HotelRoom {
   maintenanceNotes    String?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
+
+  @@index([hotelId, status])
+  @@index([currentReservationId])
 }
 
 model SeasonalRate {
@@ -870,6 +887,8 @@ model VendorSettlement {
   bookingIds        String?        // JSON array of settled reservation IDs
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+
+  @@index([hotelId, status])
 }
 
 model HousekeepingTask {

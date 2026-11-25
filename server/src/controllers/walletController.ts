@@ -45,21 +45,31 @@ export const applyWalletCredits = async (req: any, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Valid amount is required' });
 
+    const debitAmount = Number(amount);
+    if (!Number.isFinite(debitAmount) || debitAmount <= 0) {
+      return res.status(400).json({ error: 'Valid positive amount is required' });
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      const wallet = await tx.wallet.findUnique({ where: { userId } });
-      if (!wallet || wallet.balance < amount) {
+      // Atomic conditional balance debit prevents concurrent double-spend race conditions
+      const debited = await tx.wallet.updateMany({
+        where: { userId, balance: { gte: debitAmount } },
+        data: { balance: { decrement: debitAmount } }
+      });
+
+      if (debited.count === 0) {
         throw new Error('Insufficient wallet credit balance');
       }
 
-      const updated = await tx.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: { decrement: amount } }
-      });
+      const updated = await tx.wallet.findUnique({ where: { userId } });
+      if (!updated) {
+        throw new Error('Wallet not found after update');
+      }
 
       const txRecord = await tx.walletTransaction.create({
         data: {
-          walletId: wallet.id,
-          amount,
+          walletId: updated.id,
+          amount: debitAmount,
           type: 'DEBIT',
           source: 'BOOKING_PAYMENT',
           referenceId: bookingId || null,

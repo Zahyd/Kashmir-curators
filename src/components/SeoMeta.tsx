@@ -4,6 +4,7 @@ export interface SeoMetaProps {
   title: string;
   description: string;
   keywords?: string;
+  canonical?: string;
   image?: string;
   ogType?: 'website' | 'article' | 'travel';
   schema?: Record<string, any>;
@@ -13,6 +14,7 @@ export const SeoMeta = ({
   title,
   description,
   keywords = 'kashmir connect, kashmir curators, gulmarg tour, pahalgam package, srinagar houseboats',
+  canonical,
   image,
   ogType = 'website',
   schema
@@ -45,6 +47,16 @@ export const SeoMeta = ({
     setMetaTag('meta[property="og:url"]', 'property', 'og:url', window.location.href);
     if (image) {
       setMetaTag('meta[property="og:image"]', 'property', 'og:image', image);
+    }
+
+    if (canonical) {
+      let canonicalEl = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (!canonicalEl) {
+        canonicalEl = document.createElement('link');
+        canonicalEl.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonicalEl);
+      }
+      canonicalEl.setAttribute('href', canonical);
     }
 
     // 4. Set Twitter social cards

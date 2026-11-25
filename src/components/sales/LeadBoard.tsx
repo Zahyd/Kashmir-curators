@@ -53,6 +53,8 @@ export const STAGE_COLORS: Record<string, string> = {
 interface Inquiry {
   id: string;
   customerName: string;
+  phone?: string;
+  email?: string;
   destination: string;
   status: string;
   leadStage?: string;

@@ -238,9 +238,20 @@ export const AgentDashboard: React.FC = () => {
     setActiveTab('quotes');
   };
 
-  const handleSubmitVerification = async (data: { licenseNumber: string; file: File | null }) => {
+  const handleSubmitVerification = async (data: {
+    companyName?: string;
+    licenseNumber: string;
+    association?: string;
+    gstin?: string;
+    officeAddress?: string;
+    file?: File | null;
+  }) => {
     const formData = new FormData();
     formData.append('licenseNumber', data.licenseNumber);
+    if (data.companyName) formData.append('companyName', data.companyName);
+    if (data.association) formData.append('association', data.association);
+    if (data.gstin) formData.append('gstin', data.gstin);
+    if (data.officeAddress) formData.append('officeAddress', data.officeAddress);
     if (data.file) formData.append('licenseFile', data.file);
 
     const authToken = token || localStorage.getItem('auth_token') || '';

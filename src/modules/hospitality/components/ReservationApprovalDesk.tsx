@@ -54,6 +54,7 @@ export interface HotelReservationItem {
   assignedRoomNumber?: string;
   guestIdType?: string;
   guestIdNumber?: string;
+  guestIdVerified?: boolean;
   auditLogs?: string;
 }
 

@@ -2,8 +2,9 @@ services:
   - type: web
     name: kashmir-curators-api
     runtime: node
-    plan: free
+    plan: starter
     rootDir: server
+    healthCheckPath: /health-check
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
@@ -12,6 +13,8 @@ services:
       - key: PORT
         value: 5000
       - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
         sync: false
       - key: JWT_SECRET
         generateValue: true
@@ -23,3 +26,19 @@ services:
         value: https://ep-purple-shadow-ao7lc51d.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth
       - key: NEON_AUTH_JWKS_URL
         value: https://ep-purple-shadow-ao7lc51d.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/.well-known/jwks.json
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: SENTRY_DSN
+        sync: false

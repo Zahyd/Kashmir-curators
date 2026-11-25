@@ -302,7 +302,9 @@ export const ReservationCalendar: React.FC<ReservationCalendarProps> = ({
                               #{room.roomNumber}
                             </span>
                             {room.bukhariActive && (
-                              <Flame className="w-3.5 h-3.5 text-amber-500" title="Bukhari Active" />
+                              <span title="Bukhari Active" className="inline-flex">
+                                <Flame className="w-3.5 h-3.5 text-amber-500" />
+                              </span>
                             )}
                           </div>
                           <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">
