@@ -302,7 +302,7 @@ export default function SalesPortal() {
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-amber-400' },
             { id: 'live-leads', label: 'Live Leads', icon: Zap, color: 'text-emerald-400', badge: '15m SLA' },
-            { id: 'meta-hub', label: 'Meta Raw Leads', icon: Globe, color: 'text-purple-400', badge: 'Option B' },
+            { id: 'meta-hub', label: 'Meta Raw Leads', icon: Globe, color: 'text-purple-400', badge: 'Live' },
             { id: 'active-pipeline', label: 'Active Pipeline', icon: Layers, color: 'text-blue-400' },
             { id: 'builder', label: 'Itinerary Builder', icon: FilePlus, color: 'text-purple-400' },
             { id: 'vault', label: 'Inquiry Vault', icon: ShieldCheck, color: 'text-teal-400' },

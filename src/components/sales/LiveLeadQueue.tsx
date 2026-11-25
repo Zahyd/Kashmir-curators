@@ -70,39 +70,6 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
   const [priorityFilter, setPriorityFilter] = useState<'ALL' | 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
   const [conflictAlert, setConflictAlert] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
-  const [simulatingMeta, setSimulatingMeta] = useState(false);
-
-  // Simulate incoming Meta Lead Ad submission
-  const handleSimulateMetaLead = async () => {
-    try {
-      setSimulatingMeta(true);
-      const res = await fetch(`${API_BASE_URL}/webhooks/meta-leads/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: `Aarav Mehta (${Math.floor(100 + Math.random() * 900)})`,
-          phone: `+91 99060 ${Math.floor(10000 + Math.random() * 90000)}`,
-          email: 'aarav.mehta@instagram-leads.com',
-          destination: 'Gulmarg Gondola & Dal Lake Houseboat',
-          duration: '5 Nights / 6 Days',
-          travelers: '2 Adults',
-          hotelPreference: '4-Star Mountain Boutique'
-        })
-      });
-
-      if (res.ok) {
-        toast.success('Meta Lead Simulated! Auto-quoted on WhatsApp & pushed to Live Queue.', {
-          icon: '🚀'
-        });
-        fetchUnclaimedLeads();
-        onRefreshMetrics?.();
-      }
-    } catch (err) {
-      toast.error('Simulation request failed');
-    } finally {
-      setSimulatingMeta(false);
-    }
-  };
 
   // 1. Fetch unclaimed inquiries from Neon API
   const fetchUnclaimedLeads = async () => {
@@ -350,17 +317,6 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleSimulateMetaLead}
-              disabled={simulatingMeta}
-              className="flex-1 sm:flex-initial bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold h-9 px-3 rounded-lg shadow-md shadow-purple-500/20 flex items-center justify-center gap-1.5"
-              title="Simulate incoming Meta Ad Lead Form"
-            >
-              <Sparkles className={`w-3.5 h-3.5 ${simulatingMeta ? 'animate-spin' : ''}`} />
-              <span className="truncate">Simulate Meta Lead</span>
-            </Button>
-
             <Button
               size="sm"
               variant="outline"

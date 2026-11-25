@@ -268,7 +268,7 @@ export const ActivePipelineKanban: React.FC<ActivePipelineKanbanProps> = ({
 
   // Calculate live pipeline metrics
   const totalPipelineINR = visibleDeals.reduce((sum, d) => {
-    const val = d.netPrice || parseInt(String(d.budget || '0').replace(/[^0-9]/g, ''), 10) || 45000;
+    const val = d.netPrice || parseInt(String(d.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
     return sum + val;
   }, 0);
 
@@ -511,7 +511,7 @@ export const ActivePipelineKanban: React.FC<ActivePipelineKanbanProps> = ({
                 ) : (
                   columnDeals.map((deal) => {
                     const isBusy = transitioningId === deal.id;
-                    const val = deal.netPrice || parseInt(String(deal.budget || '0').replace(/[^0-9]/g, ''), 10) || 45000;
+                    const val = deal.netPrice || parseInt(String(deal.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
 
                     return (
                       <Card

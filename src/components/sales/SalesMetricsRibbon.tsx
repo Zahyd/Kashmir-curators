@@ -20,7 +20,8 @@ interface MetricsData {
   activePipelineCount: number;
   activePipelineValue: number;
   monthlyConversionRate: number;
-  avgResponseMinutes: number;
+  conversionDelta: number | null;
+  avgResponseMinutes: number | null;
 }
 
 interface SalesMetricsRibbonProps {
@@ -33,8 +34,9 @@ export const SalesMetricsRibbon: React.FC<SalesMetricsRibbonProps> = ({ onRefres
     slaBreachedCount: 0,
     activePipelineCount: 0,
     activePipelineValue: 0,
-    monthlyConversionRate: 34,
-    avgResponseMinutes: 4.2
+    monthlyConversionRate: 0,
+    conversionDelta: null,
+    avgResponseMinutes: null
   });
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -154,9 +156,15 @@ export const SalesMetricsRibbon: React.FC<SalesMetricsRibbonProps> = ({ onRefres
             <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {metrics.monthlyConversionRate}%
             </div>
-            <span className="text-[10px] sm:text-xs text-emerald-400 font-medium">
-              +5.4%
-            </span>
+            {metrics.conversionDelta !== null ? (
+              <span className={`text-[10px] sm:text-xs font-medium ${metrics.conversionDelta >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {metrics.conversionDelta >= 0 ? `+${metrics.conversionDelta}%` : `${metrics.conversionDelta}%`}
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-500 font-medium">
+                No prior 30d
+              </span>
+            )}
           </div>
         </div>
         <div className="mt-2 text-[10px] sm:text-[11px] text-slate-400 truncate">
@@ -182,11 +190,27 @@ export const SalesMetricsRibbon: React.FC<SalesMetricsRibbonProps> = ({ onRefres
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {metrics.avgResponseMinutes} <span className="text-xs sm:text-sm font-normal text-slate-400">min</span>
+              {metrics.avgResponseMinutes !== null ? (
+                <>
+                  {metrics.avgResponseMinutes} <span className="text-xs sm:text-sm font-normal text-slate-400">min</span>
+                </>
+              ) : (
+                <span className="text-slate-400">—</span>
+              )}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded border border-emerald-500/20 font-mono">
-              &lt;15m
-            </span>
+            {metrics.avgResponseMinutes !== null ? (
+              <span className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded border font-mono ${
+                metrics.avgResponseMinutes <= 15
+                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+              }`}>
+                {metrics.avgResponseMinutes <= 15 ? '<15m' : '>15m'}
+              </span>
+            ) : (
+              <span className="text-[9px] sm:text-[10px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10 font-mono">
+                No data
+              </span>
+            )}
           </div>
         </div>
         <div className="mt-2 text-[10px] sm:text-[11px] text-slate-400 truncate">

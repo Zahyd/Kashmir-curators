@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MetaLeadAutomationService } from '../services/metaLeadService';
-import { authenticateToken, optionalAuthenticate } from '../middleware/authMiddleware';
+import { authenticateToken } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 import prisma from '../lib/prisma';
 
 const router = Router();
@@ -236,7 +237,7 @@ router.get('/leads', authenticateToken, async (req: Request, res: Response) => {
 
     const enrichedLeads = leads.map((lead: any) => {
       const geo = detectLeadOrigin(lead.phone || '');
-      const valINR = lead.netPrice || parseInt(String(lead.budget || '0').replace(/[^0-9]/g, ''), 10) || 45000;
+      const valINR = lead.netPrice || parseInt(String(lead.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
       const convertedVal = Math.round(valINR / geo.exchangeRateToINR);
 
       return {
@@ -328,7 +329,7 @@ router.get('/export.csv', authenticateToken, async (req: Request, res: Response)
         `"${(lead.destination || 'Kashmir Tour').replace(/"/g, '""')}"`,
         `"${lead.duration || '5N/6D'}"`,
         `"${lead.travelers || '2'}"`,
-        `"${lead.netPrice || lead.budget || 45000}"`,
+        `"${lead.netPrice || lead.budget || 0}"`,
         `"${lead.leadStage || 'CLAIMED'}"`,
         `"${lead.status || 'Active'}"`,
         `"${lead.assignedTo || 'Unassigned'}"`,
@@ -350,7 +351,7 @@ router.get('/export.csv', authenticateToken, async (req: Request, res: Response)
 // ---------------------------------------------------------------------------
 // 5. Test & Simulation Endpoint (Domestic or International)
 // ---------------------------------------------------------------------------
-router.post('/simulate', optionalAuthenticate, async (req: Request, res: Response) => {
+router.post('/simulate', authenticateToken, authorizeRoles('admin', 'DIRECTOR'), async (req: Request, res: Response) => {
   try {
     const {
       type = 'DOMESTIC', // 'DOMESTIC' | 'INTERNATIONAL'
@@ -419,7 +420,13 @@ router.get('/telemetry', authenticateToken, async (req: Request, res: Response) 
         budget: true,
         leadStage: true,
         status: true,
-        createdAt: true
+        createdAt: true,
+        lastContactedAt: true,
+        activities: {
+          select: { createdAt: true },
+          orderBy: { createdAt: 'asc' },
+          take: 1
+        }
       }
     });
 
@@ -428,6 +435,7 @@ router.get('/telemetry', authenticateToken, async (req: Request, res: Response) 
     let autoQuotedCount = 0;
     let confirmedCount = 0;
     let totalPipelineValue = 0;
+    const responseSecondsList: number[] = [];
 
     for (const lead of allMetaLeads) {
       const geo = detectLeadOrigin(lead.phone || '');
@@ -437,9 +445,20 @@ router.get('/telemetry', authenticateToken, async (req: Request, res: Response) 
       if (lead.leadStage === 'QUOTE_SENT') autoQuotedCount++;
       if (lead.leadStage === 'CONFIRMED' || lead.status === 'Booked') confirmedCount++;
 
-      const val = lead.netPrice || parseInt(String(lead.budget || '0').replace(/[^0-9]/g, ''), 10) || 45000;
+      const val = lead.netPrice || parseInt(String(lead.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
       totalPipelineValue += val;
+
+      const firstActivityMs = lead.activities?.[0]?.createdAt ? new Date(lead.activities[0].createdAt).getTime() : null;
+      const contactedMs = lead.lastContactedAt ? new Date(lead.lastContactedAt).getTime() : null;
+      const earliestMs = firstActivityMs && contactedMs ? Math.min(firstActivityMs, contactedMs) : (firstActivityMs || contactedMs);
+      if (earliestMs) {
+        responseSecondsList.push(Math.max(0, (earliestMs - new Date(lead.createdAt).getTime()) / 1000));
+      }
     }
+
+    const avgResponseSeconds = responseSecondsList.length > 0
+      ? Math.round((responseSecondsList.reduce((a, b) => a + b, 0) / responseSecondsList.length) * 10) / 10
+      : null;
 
     res.json({
       totalMetaLeads: allMetaLeads.length,
@@ -448,7 +467,7 @@ router.get('/telemetry', authenticateToken, async (req: Request, res: Response) 
       autoQuotedCount,
       confirmedCount,
       totalPipelineValue,
-      avgResponseSeconds: 8.4,
+      avgResponseSeconds,
       conversionRatePct: allMetaLeads.length > 0 ? Math.round((confirmedCount / allMetaLeads.length) * 100) : 0
     });
   } catch (error: any) {

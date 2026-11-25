@@ -45,7 +45,10 @@ router.get('/metrics', authenticateToken, async (req: AuthRequest, res: Response
   try {
     const p = prisma as any;
 
-    const [unclaimedInquiries, activeLeads, confirmedLeads, allRecentLeads] = await Promise.all([
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+
+    const [unclaimedInquiries, activeLeads, recentInquiries, priorInquiries] = await Promise.all([
       // Unclaimed inquiries
       p.inquiry.findMany({
         where: {
@@ -67,18 +70,31 @@ router.get('/metrics', authenticateToken, async (req: AuthRequest, res: Response
         select: { id: true, netPrice: true, budget: true, leadStage: true }
       }),
 
-      // Confirmed deals (for conversion calculation)
-      p.inquiry.count({
+      // All leads created in last 30 days (for conversion rate and response SLA)
+      p.inquiry.findMany({
         where: {
-          leadStage: 'CONFIRMED'
+          createdAt: { gte: thirtyDaysAgo }
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          leadStage: true,
+          status: true,
+          lastContactedAt: true,
+          activities: {
+            select: { createdAt: true },
+            orderBy: { createdAt: 'asc' },
+            take: 1
+          }
         }
       }),
 
-      // All leads created in last 30 days
-      p.inquiry.count({
+      // Prior 30-day window (30-60 days ago) for real conversion delta comparison
+      p.inquiry.findMany({
         where: {
-          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-        }
+          createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo }
+        },
+        select: { id: true, leadStage: true, status: true }
       })
     ]);
 
@@ -90,16 +106,54 @@ router.get('/metrics', authenticateToken, async (req: AuthRequest, res: Response
       return (now - created) > fifteenMinMs;
     }).length;
 
-    // Calculate Active Pipeline Value in INR
+    // Calculate Active Pipeline Value in INR (strictly from real prices/numeric budgets)
     const totalPipelineValue = activeLeads.reduce((sum: number, lead: any) => {
       if (lead.netPrice && lead.netPrice > 0) return sum + lead.netPrice;
       const budgetNum = parseInt(String(lead.budget || '0').replace(/[^0-9]/g, ''), 10);
-      return sum + (isNaN(budgetNum) ? 35000 : budgetNum);
+      return sum + (isNaN(budgetNum) ? 0 : budgetNum);
     }, 0);
 
-    const conversionRate = allRecentLeads > 0 
-      ? Math.round((confirmedLeads / allRecentLeads) * 100) 
-      : 34;
+    const allRecentLeads = recentInquiries.length;
+    const confirmedRecentLeads = recentInquiries.filter(
+      (inq: any) => inq.leadStage === 'CONFIRMED' || inq.status === 'Booked'
+    ).length;
+
+    const conversionRate = allRecentLeads > 0
+      ? Math.round((confirmedRecentLeads / allRecentLeads) * 100)
+      : 0;
+
+    let conversionDelta: number | null = null;
+    if (priorInquiries.length > 0) {
+      const priorConfirmed = priorInquiries.filter(
+        (inq: any) => inq.leadStage === 'CONFIRMED' || inq.status === 'Booked'
+      ).length;
+      const priorRate = Math.round((priorConfirmed / priorInquiries.length) * 100);
+      conversionDelta = conversionRate - priorRate;
+    }
+
+    // Real Average First Response Time (minutes) from first LeadActivity or lastContactedAt
+    const responseMinutesList: number[] = [];
+    for (const inq of recentInquiries) {
+      const firstActivityMs = inq.activities?.[0]?.createdAt
+        ? new Date(inq.activities[0].createdAt).getTime()
+        : null;
+      const contactedMs = inq.lastContactedAt
+        ? new Date(inq.lastContactedAt).getTime()
+        : null;
+      const earliestResponseMs =
+        firstActivityMs && contactedMs
+          ? Math.min(firstActivityMs, contactedMs)
+          : (firstActivityMs || contactedMs);
+
+      if (earliestResponseMs) {
+        const diffMinutes = Math.max(0, (earliestResponseMs - new Date(inq.createdAt).getTime()) / 60000);
+        responseMinutesList.push(diffMinutes);
+      }
+    }
+
+    const avgResponseMinutes = responseMinutesList.length > 0
+      ? Math.round((responseMinutesList.reduce((acc, m) => acc + m, 0) / responseMinutesList.length) * 10) / 10
+      : null;
 
     res.json({
       unclaimedCount: unclaimedInquiries.length,
@@ -107,7 +161,9 @@ router.get('/metrics', authenticateToken, async (req: AuthRequest, res: Response
       activePipelineCount: activeLeads.length,
       activePipelineValue: totalPipelineValue,
       monthlyConversionRate: conversionRate,
-      avgResponseMinutes: 4.2
+      conversionDelta,
+      avgResponseMinutes,
+      measuredResponseCount: responseMinutesList.length
     });
   } catch (error: any) {
     console.error('Error fetching sales metrics:', error);

@@ -2004,12 +2004,30 @@ ${signoff}`;
                         type="file" 
                         accept="application/pdf"
                         className="absolute inset-0 opacity-0 cursor-pointer" 
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (file) {
-                            const mockUrl = `https://storage.kashmircurators.com/proposals/${file.name.replace(/\s+/g, '_')}`;
-                            setProposalUrl(mockUrl);
-                            handleUpdateProposal(mockUrl);
+                          if (!file) return;
+                          const toastId = toast.loading('Uploading PDF proposal...');
+                          try {
+                            const token = getAuthToken();
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const uploadRes = await fetch(`${API_BASE_URL}/media/upload`, {
+                              method: 'POST',
+                              headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                              body: formData
+                            });
+                            const uploadData = await uploadRes.json().catch(() => ({}));
+                            if (!uploadRes.ok || !uploadData?.url) {
+                              throw new Error(uploadData?.error || 'PDF upload failed');
+                            }
+                            toast.dismiss(toastId);
+                            setProposalUrl(uploadData.url);
+                            await handleUpdateProposal(uploadData.url);
+                          } catch (err: any) {
+                            toast.error(err?.message || 'Failed to upload PDF proposal', { id: toastId });
+                          } finally {
+                            e.target.value = '';
                           }
                         }}
                       />

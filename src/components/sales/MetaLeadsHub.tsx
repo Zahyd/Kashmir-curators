@@ -78,7 +78,6 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, currentEmployee }
   const [originFilter, setOriginFilter] = useState<'ALL' | 'DOMESTIC' | 'INTERNATIONAL'>('ALL');
   const [stageFilter, setStageFilter] = useState<'ALL' | 'QUOTE_SENT' | 'CLAIMED' | 'CONFIRMED'>('ALL');
   const [isExporting, setIsExporting] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
 
   // 1. Fetch Raw Leads Feed
   const fetchMetaLeads = async () => {
@@ -174,40 +173,7 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, currentEmployee }
     }
   };
 
-  // 3. Simulate Lead Ingestion (Domestic or International)
-  const handleSimulateLead = async (type: 'DOMESTIC' | 'INTERNATIONAL') => {
-    setIsSimulating(true);
-    const toastId = toast.loading(`Simulating ${type === 'INTERNATIONAL' ? 'Dubai VIP (Abroad)' : 'Mumbai HNW (India)'} Meta ad lead...`);
-
-    try {
-      const token = localStorage.getItem('team_auth_token') || localStorage.getItem('teamToken') || localStorage.getItem('token') || '';
-      const portalKey = localStorage.getItem('kashmir_portal_key') || '';
-
-      const res = await fetch(`${API_BASE_URL}/sales/meta-leads/simulate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(portalKey ? { 'x-portal-key': portalKey } : {})
-        },
-        body: JSON.stringify({ type })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(data.message || 'Lead ingested & auto-quoted!', { id: toastId });
-        fetchMetaLeads();
-      } else {
-        throw new Error('Simulation failed');
-      }
-    } catch (err: any) {
-      toast.error('Simulation notice: ' + (err.message || 'Server error'), { id: toastId });
-    } finally {
-      setIsSimulating(false);
-    }
-  };
-
-  // 4. Quick WhatsApp Proposal Dispatch
+  // 3. Quick WhatsApp Proposal Dispatch
   const handleSendWhatsAppProposal = (lead: MetaLead) => {
     const cleanPhone = (lead.phone || '').replace(/[^0-9]/g, '');
     const clientName = lead.customerName || 'Valued Guest';
@@ -271,9 +237,9 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, currentEmployee }
             </p>
           </div>
 
-          {/* 1-Click Export & Simulation Action Deck */}
+          {/* 1-Click Export & Refresh Action Deck */}
           <div className="flex items-center gap-2.5 flex-wrap w-full lg:w-auto">
-            {/* 1-Click Export CSV (Option B) */}
+            {/* 1-Click Export CSV */}
             <Button
               onClick={handleExportCSV}
               disabled={isExporting}
@@ -281,30 +247,6 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, currentEmployee }
             >
               <Download className={cn("w-4 h-4", isExporting && "animate-bounce")} />
               <span>Export Raw CSV (Excel)</span>
-            </Button>
-
-            {/* Test Domestic Lead */}
-            <Button
-              onClick={() => handleSimulateLead('DOMESTIC')}
-              disabled={isSimulating}
-              variant="outline"
-              size="sm"
-              className="h-10 px-3 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-xs flex items-center gap-1.5"
-              title="Simulate inbound Mumbai/Delhi India lead"
-            >
-              <span>🇮🇳 Test India</span>
-            </Button>
-
-            {/* Test International Lead */}
-            <Button
-              onClick={() => handleSimulateLead('INTERNATIONAL')}
-              disabled={isSimulating}
-              variant="outline"
-              size="sm"
-              className="h-10 px-3 rounded-xl border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-semibold text-xs flex items-center gap-1.5"
-              title="Simulate inbound Dubai/London International lead"
-            >
-              <span>✈️ Test Abroad</span>
             </Button>
 
             {/* Refresh */}
@@ -431,18 +373,9 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, currentEmployee }
         <div className="p-16 text-center text-slate-400 bg-[#0F141C]/50 rounded-2xl border border-white/5">
           <Globe className="w-10 h-10 text-slate-500 mx-auto mb-3 opacity-60" />
           <h3 className="text-base font-bold text-white mb-1">No Leads Matching Filters</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto mb-4">
-            Try adjusting your search criteria or tap "Test India" or "Test Abroad" above to simulate an incoming Meta ad lead.
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
+            Try adjusting your search criteria, or wait for incoming Instagram &amp; Facebook ad leads via your live Meta webhook.
           </p>
-          <div className="flex items-center justify-center gap-2">
-            <Button
-              onClick={() => handleSimulateLead('DOMESTIC')}
-              size="sm"
-              className="bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs rounded-xl"
-            >
-              Simulate Sample Lead
-            </Button>
-          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
