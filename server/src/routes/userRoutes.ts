@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getAllUsers, getUserStats, createTeamMember, deleteUser, updateUser } from '../controllers/userController';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ const router = Router();
  *       200:
  *         description: List of all users
  */
-router.get('/', authenticateToken, getAllUsers);
+router.get('/', authenticateToken, authorizeRoles('admin', 'operations'), getAllUsers);
 
 /**
  * @swagger
@@ -30,7 +31,7 @@ router.get('/', authenticateToken, getAllUsers);
  *       200:
  *         description: User statistics
  */
-router.get('/stats', authenticateToken, getUserStats);
+router.get('/stats', authenticateToken, authorizeRoles('admin', 'operations', 'finance'), getUserStats);
 
 /**
  * @swagger
@@ -41,7 +42,7 @@ router.get('/stats', authenticateToken, getUserStats);
  *     security:
  *       - bearerAuth: []
  */
-router.post('/team', authenticateToken, createTeamMember);
+router.post('/team', authenticateToken, authorizeRoles('admin'), createTeamMember);
 
 /**
  * @swagger
@@ -52,7 +53,7 @@ router.post('/team', authenticateToken, createTeamMember);
  *     security:
  *       - bearerAuth: []
  */
-router.patch('/:id', authenticateToken, updateUser);
+router.patch('/:id', authenticateToken, authorizeRoles('admin'), updateUser);
 
 /**
  * @swagger
@@ -63,6 +64,6 @@ router.patch('/:id', authenticateToken, updateUser);
  *     security:
  *       - bearerAuth: []
  */
-router.delete('/:id', authenticateToken, deleteUser);
+router.delete('/:id', authenticateToken, authorizeRoles('admin'), deleteUser);
 
 export default router;

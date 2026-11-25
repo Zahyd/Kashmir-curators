@@ -21,4 +21,15 @@ export const DEFAULT_SOCKET_OPTIONS = {
   reconnectionDelay: 2000,
   timeout: 10000,
   autoConnect: !isSearchBot,
+  auth: (cb: (data: Record<string, string>) => void) => {
+    try {
+      const token =
+        localStorage.getItem('teamToken') ||
+        localStorage.getItem('auth_token') ||
+        '';
+      cb(token ? { token } : {});
+    } catch {
+      cb({});
+    }
+  },
 };

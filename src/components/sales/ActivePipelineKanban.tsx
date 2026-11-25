@@ -351,8 +351,14 @@ export const ActivePipelineKanban: React.FC<ActivePipelineKanbanProps> = ({
 
       {/* 2. Driver Handoff Modal */}
       {confirmedModalDeal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#0F141C] border border-emerald-500/40 rounded-2xl sm:rounded-3xl p-6 max-w-md w-full shadow-2xl shadow-emerald-950/40 text-center animate-in zoom-in-95">
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setConfirmedModalDeal(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#0F141C] border border-emerald-500/40 rounded-2xl sm:rounded-3xl p-5 sm:p-6 max-w-md w-full max-h-[90dvh] overflow-y-auto shadow-2xl shadow-emerald-950/40 text-center animate-in zoom-in-95"
+          >
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto mb-4">
               <Car className="w-7 h-7" />
             </div>

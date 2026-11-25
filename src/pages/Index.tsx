@@ -46,7 +46,7 @@ const Index = () => {
         return <HeroSection key="hero" />;
       case 'radar':
         return (
-          <div key="radar" className="relative z-20 -mt-6">
+          <div key="radar" className="relative z-20">
             <DynamicCurationTicker />
             <TravelStatusWidget />
           </div>

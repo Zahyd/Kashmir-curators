@@ -229,6 +229,15 @@ export const updateOrganization = async (req: TenantRequest, res: Response): Pro
       return res.status(404).json({ error: 'Organization not found' });
     }
 
+    const userRole = String(req.user?.role || '').toLowerCase();
+    const isPlatformAdmin = ['admin', 'operations'].includes(userRole);
+    if (!isPlatformAdmin && req.user?.id) {
+      const dbUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { organizationId: true } });
+      if (dbUser?.organizationId !== id) {
+        return res.status(403).json({ error: 'Forbidden: You can only update your own organization' });
+      }
+    }
+
     const updateData: any = {};
     if (name !== undefined) updateData.name = name.trim();
     if (type !== undefined) updateData.type = String(type).toUpperCase();

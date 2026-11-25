@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 
 const router = Router();
 
 // GET /api/audit-logs - Fetch paginated audit trail
-router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, authorizeRoles('admin', 'operations', 'finance'), async (req: AuthRequest, res: Response) => {
   try {
     const p = prisma as any;
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
@@ -94,7 +95,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/audit-logs - Record an administrative audit event
-router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateToken, authorizeRoles('admin', 'operations', 'finance', 'sales', 'marketing'), async (req: AuthRequest, res: Response) => {
   try {
     const p = prisma as any;
     const { action, details, module, status = 'SUCCESS' } = req.body;

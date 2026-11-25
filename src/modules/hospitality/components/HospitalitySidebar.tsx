@@ -345,7 +345,7 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
                 <span>Menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-72 bg-card border-r border-border">
+            <SheetContent side="left" className="p-0 w-[88vw] sm:w-72 bg-card border-r border-border">
               <NavContent collapsed={false} />
             </SheetContent>
           </Sheet>
@@ -354,7 +354,7 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
 
       {/* Desktop Sidebar (Collapsible with smooth transition) */}
       <aside 
-        className={`hidden lg:flex border-r border-border/60 bg-card/60 backdrop-blur-xl flex-col shrink-0 min-h-[calc(100vh-5rem)] transition-all duration-300 ease-in-out sticky top-20 self-start max-h-[calc(100vh-5rem)] ${
+        className={`hidden lg:flex border-r border-border/60 bg-card/60 backdrop-blur-xl flex-col shrink-0 min-h-[calc(100dvh-5rem)] transition-all duration-300 ease-in-out sticky top-20 self-start max-h-[calc(100dvh-5rem)] ${
           isCollapsed ? 'w-20' : 'w-72'
         }`}
       >
@@ -362,7 +362,7 @@ export const HospitalitySidebar: React.FC<HospitalitySidebarProps> = ({
       </aside>
 
       {/* Mobile Bottom Quick-Navigation Bar (Sticky at bottom on phones/tablets) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-border/80 dark:border-slate-800 px-3 py-1 flex items-center justify-around shadow-2xl">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-border/80 dark:border-slate-800 px-3 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-2xl">
         {[
           { id: 'overview' as HospitalityTab, label: 'Overview', icon: LayoutDashboard },
           { id: 'reception' as HospitalityTab, label: 'Reception', icon: Building2 },

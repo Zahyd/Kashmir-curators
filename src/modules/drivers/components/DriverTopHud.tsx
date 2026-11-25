@@ -45,7 +45,7 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
   return (
     <>
       {/* Top Floating Glassmorphic HUD Bar */}
-      <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between gap-2 pointer-events-none">
+      <div className="absolute top-[max(1rem,env(safe-area-inset-top))] left-3 right-3 sm:left-4 sm:right-4 z-30 flex items-center justify-between gap-2 pointer-events-none">
         {/* Left: Menu Burger Trigger & Vehicle Pill */}
         <div className="flex items-center gap-2 pointer-events-auto">
           <button
@@ -133,8 +133,14 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
       {/* 1. Expandable Earnings & Payout Popover Modal */}
       {/* ---------------------------------------------------------------------- */}
       {showEarningsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-3xl bg-[#0F141C] border border-amber-500/30 p-6 shadow-2xl text-white space-y-5">
+        <div
+          onClick={() => setShowEarningsModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-3xl bg-[#0F141C] border border-amber-500/30 p-5 sm:p-6 shadow-2xl text-white space-y-5"
+          >
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
@@ -198,8 +204,14 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
       {/* 2. Safety Shield & SOS Emergency Trigger Modal */}
       {/* ---------------------------------------------------------------------- */}
       {showSosModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-3xl bg-[#0F141C] border border-rose-500/40 p-6 shadow-2xl text-white space-y-4">
+        <div
+          onClick={() => setShowSosModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-3xl bg-[#0F141C] border border-rose-500/40 p-5 sm:p-6 shadow-2xl text-white space-y-4"
+          >
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
@@ -258,8 +270,14 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
       {/* 3. Tangmarg Snow-Chain Highway Advisory Modal */}
       {/* ---------------------------------------------------------------------- */}
       {showAdvisoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-3xl bg-[#0F141C] border border-sky-500/30 p-6 shadow-2xl text-white space-y-4">
+        <div
+          onClick={() => setShowAdvisoryModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-3xl bg-[#0F141C] border border-sky-500/30 p-5 sm:p-6 shadow-2xl text-white space-y-4"
+          >
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">

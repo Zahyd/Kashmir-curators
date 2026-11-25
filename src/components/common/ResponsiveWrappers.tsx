@@ -1,7 +1,6 @@
 import React, { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { RESPONSIVE_TOKENS } from '@/lib/responsive';
-import { useResponsive } from '@/hooks/useResponsive';
 
 interface ResponsiveWrapperProps {
   children: ReactNode;
@@ -102,6 +101,23 @@ export function ResponsiveGrid({
 
   return (
     <div className={cn(gridClasses, className)}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Responsive horizontal scroll container for wide tables on mobile & tablet viewports
+ */
+export function ResponsiveTableWrapper({ children, className }: ResponsiveWrapperProps) {
+  return (
+    <div
+      className={cn(
+        "relative w-full overflow-x-auto overscroll-x-contain custom-scrollbar",
+        className
+      )}
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
       {children}
     </div>
   );

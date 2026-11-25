@@ -9,7 +9,8 @@
     "typecheck": "node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --noEmit",
     "start": "node dist/src/index.js",
     "seed": "ts-node prisma/seed.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node -r ts-node/register/transpile-only --test __tests__/*.test.ts",
+    "test:coverage": "node --experimental-test-coverage -r ts-node/register/transpile-only --test __tests__/*.test.ts"
   },
   "keywords": [],
   "author": "",

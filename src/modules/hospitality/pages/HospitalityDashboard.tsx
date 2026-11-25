@@ -57,6 +57,7 @@ import { EmployeeAttendanceDesk } from '../components/EmployeeAttendanceDesk';
 import NotificationBell from '@/components/admin/NotificationBell';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 interface HotelItem {
   id: string;
@@ -140,7 +141,7 @@ export const HospitalityDashboard: React.FC = () => {
     if (teamLogout) teamLogout();
     if (logout) logout();
     toast.success('Signed out of Hospitality Desk successfully.');
-    navigate('/login');
+    navigate('/auth');
   };
 
   // Property list & Selected Property
@@ -282,11 +283,13 @@ export const HospitalityDashboard: React.FC = () => {
             </Button>
           </div>
 
-          <HotelReceptionPortal 
-            selectedHotelId="ALL" 
-            onSwitchProperty={setSelectedHotelId}
-            isExternalPartnerMode={true}
-          />
+          <ErrorBoundary variant="panel">
+            <HotelReceptionPortal 
+              selectedHotelId="ALL" 
+              onSwitchProperty={setSelectedHotelId}
+              isExternalPartnerMode={true}
+            />
+          </ErrorBoundary>
         </div>
 
         <Footer />
@@ -298,7 +301,7 @@ export const HospitalityDashboard: React.FC = () => {
   // INTERNAL EMPLOYEE OPERATIONS DASHBOARD (Unified Workspace)
   // -------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-background flex flex-col selection:bg-amber-500 selection:text-black">
+    <div className="min-h-[100dvh] bg-background flex flex-col overflow-x-hidden selection:bg-amber-500 selection:text-black">
       <Navbar />
 
       {!isUnlocked ? (
@@ -367,10 +370,10 @@ export const HospitalityDashboard: React.FC = () => {
 
                   {/* Property Selector */}
                   {hotelsList.length > 0 && (
-                    <div className="flex items-center gap-1.5 bg-background/90 border border-border/80 rounded-2xl px-2.5 py-1 shadow-sm hover:border-amber-500/40 transition-colors">
+                    <div className="flex items-center gap-1.5 bg-background/90 border border-border/80 rounded-2xl px-2.5 py-1 shadow-sm hover:border-amber-500/40 transition-colors w-full sm:w-auto min-w-0">
                       <Building2 className="w-4 h-4 text-amber-500 shrink-0" />
                       <Select value={selectedHotelId} onValueChange={(val) => setSelectedHotelId(val)}>
-                        <SelectTrigger className="h-8 border-0 bg-transparent text-xs font-bold w-44 sm:w-56 focus:ring-0 p-0 text-foreground">
+                        <SelectTrigger className="h-8 border-0 bg-transparent text-xs font-bold w-full sm:w-56 focus:ring-0 p-0 text-foreground">
                           <SelectValue placeholder="Select Property..." />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border-border text-foreground">
@@ -442,6 +445,7 @@ export const HospitalityDashboard: React.FC = () => {
             </div>
 
             {/* TAB 0: UNIFIED OPERATIONS DASHBOARD (OVERVIEW) */}
+            <ErrorBoundary variant="panel">
             {activeTab === 'overview' && (
               <div className="space-y-6 animate-fade-in">
                 <UnifiedOperationsWorkspace
@@ -526,6 +530,7 @@ export const HospitalityDashboard: React.FC = () => {
                 />
               </div>
             )}
+            </ErrorBoundary>
           </main>
         </div>
       )}

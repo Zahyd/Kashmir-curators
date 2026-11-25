@@ -426,9 +426,9 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto bg-card border-border/60 p-0 shadow-2xl flex flex-col">
+      <SheetContent hideCloseButton className="w-full sm:max-w-3xl overflow-y-auto bg-card border-border/60 p-0 shadow-2xl flex flex-col">
         {/* Top Header Bar */}
-        <div className="sticky top-0 z-20 bg-card/95 backdrop-blur-xl border-b border-border/60 px-6 py-4 flex items-center justify-between gap-4">
+        <div className="sticky top-0 z-20 bg-card/95 backdrop-blur-xl border-b border-border/60 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-mono text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
@@ -490,10 +490,10 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
         )}
 
         {/* Quick Stage Progression Bar */}
-        <div className="px-6 py-3 bg-muted/20 border-b border-border/40 flex items-center justify-between gap-3 text-xs">
+        <div className="px-4 sm:px-6 py-3 bg-muted/20 border-b border-border/40 flex items-center justify-between gap-3 text-xs">
           <span className="text-muted-foreground font-semibold shrink-0">Stage Pipeline:</span>
           <Select value={lead.leadStage || 'NEW_LEAD'} onValueChange={handleStageChange}>
-            <SelectTrigger className="h-8 max-w-[220px] rounded-lg text-xs bg-card border-border/60">
+            <SelectTrigger className="h-8 max-w-[200px] sm:max-w-[220px] rounded-lg text-xs bg-card border-border/60">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -507,19 +507,19 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
         </div>
 
         {/* Tabbed Drawer Body */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col p-6">
-          <TabsList className="grid grid-cols-5 w-full bg-muted/40 p-1 rounded-xl mb-5">
-            <TabsTrigger value="profile" className="text-xs font-semibold py-1.5 rounded-lg">Profile</TabsTrigger>
-            <TabsTrigger value="copilot" className="text-xs font-semibold py-1.5 rounded-lg flex items-center gap-1">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col p-4 sm:p-6">
+          <TabsList className="flex w-full overflow-x-auto no-scrollbar sm:grid sm:grid-cols-5 bg-muted/40 p-1 rounded-xl mb-5 gap-1">
+            <TabsTrigger value="profile" className="text-xs font-semibold py-1.5 px-3 shrink-0 rounded-lg">Profile</TabsTrigger>
+            <TabsTrigger value="copilot" className="text-xs font-semibold py-1.5 px-3 shrink-0 rounded-lg flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-amber-500" />
               <span>AI Copilot</span>
             </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="text-xs font-semibold py-1.5 rounded-lg flex items-center gap-1">
+            <TabsTrigger value="whatsapp" className="text-xs font-semibold py-1.5 px-3 shrink-0 rounded-lg flex items-center gap-1">
               <MessageCircle className="w-3 h-3 text-emerald-500" />
               <span>WhatsApp</span>
             </TabsTrigger>
-            <TabsTrigger value="timeline" className="text-xs font-semibold py-1.5 rounded-lg">Timeline</TabsTrigger>
-            <TabsTrigger value="notes" className="text-xs font-semibold py-1.5 rounded-lg">Notes ({notes.length})</TabsTrigger>
+            <TabsTrigger value="timeline" className="text-xs font-semibold py-1.5 px-3 shrink-0 rounded-lg">Timeline</TabsTrigger>
+            <TabsTrigger value="notes" className="text-xs font-semibold py-1.5 px-3 shrink-0 rounded-lg">Notes ({notes.length})</TabsTrigger>
           </TabsList>
 
           {/* TAB 1: TRAVELER PROFILE */}

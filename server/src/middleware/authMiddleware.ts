@@ -4,17 +4,19 @@ import prisma from '../lib/prisma';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// In production, only cryptographically certified secrets from the environment are permitted
-const JWT_SECRETS = (isProduction
-  ? [process.env.JWT_SECRET, process.env.BETTER_AUTH_SECRET]
-  : [
-      process.env.JWT_SECRET,
-      process.env.BETTER_AUTH_SECRET,
-      'kashmir_curators_secret_2026',
-      'kashmir_curators_secret_2026_super_secure_key',
-      'your_super_secret_key'
-    ]
-).filter(Boolean) as string[];
+// SECURITY: Only cryptographically certified secrets from the environment are permitted
+const JWT_SECRETS = [process.env.JWT_SECRET, process.env.BETTER_AUTH_SECRET].filter(Boolean) as string[];
+
+const mapPortalRole = (portalType: string): string => {
+  const map: Record<string, string> = {
+    HOSPITALITY: 'hospitality',
+    SALES: 'sales',
+    DRIVER: 'driver',
+    OPERATIONS: 'operations',
+    VENDOR: 'supplier',
+  };
+  return map[String(portalType).toUpperCase()] || 'hospitality';
+};
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -58,8 +60,8 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
         where: { accessKey: normalizedKey }
       });
 
-      // Auto-provision standard initial development/operations keys if missing
-      if (!keyRecord && normalizedKey === 'KC-HOSP-ALPHA1') {
+      // SECURITY: Auto-provisioning dev fallback key is strictly disabled in production
+      if (!isProduction && !keyRecord && normalizedKey === 'KC-HOSP-ALPHA1') {
         keyRecord = await p.portalAccessKey.upsert({
           where: { accessKey: 'KC-HOSP-ALPHA1' },
           update: { status: 'ACTIVE' },
@@ -80,7 +82,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
           id: keyRecord.id,
           accessKey: keyRecord.accessKey,
           name: keyRecord.assignedName,
-          role: 'hospitality',
+          role: mapPortalRole(keyRecord.portalType),
           portalType: keyRecord.portalType,
           propertyScope: keyRecord.propertyScope || 'ALL'
         };
@@ -122,11 +124,11 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
   }
 
-  // 4. JWT Verification across known secrets
+  // 4. JWT Verification across known secrets (restricted to HS256)
   for (const candidate of candidates) {
     for (const secret of JWT_SECRETS) {
       try {
-        const decoded = jwt.verify(candidate, secret) as any;
+        const decoded = jwt.verify(candidate, secret, { algorithms: ['HS256'] }) as any;
         if (decoded) {
           req.user = decoded;
           return next();

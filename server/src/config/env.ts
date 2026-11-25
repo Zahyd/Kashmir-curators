@@ -6,11 +6,13 @@
 export interface EnvSchema {
   PORT: number;
   DATABASE_URL: string;
+  JWT_SECRET: string;
+  BETTER_AUTH_SECRET: string;
   GOOGLE_SPREADSHEET_ID: string;
   GOOGLE_CREDS_JSON?: string;
   GOOGLE_CLIENT_ID?: string;
   GMAIL_USER?: string;
-  GMAIL_PASS?: string;
+  GMAIL_APP_PASSWORD?: string;
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_VERIFY_TOKEN: string;
@@ -44,14 +46,16 @@ export function validateEnv(): EnvSchema {
   const config: EnvSchema = {
     PORT: getEnvNumber('PORT', 5000),
     DATABASE_URL: getEnvString('DATABASE_URL'),
+    JWT_SECRET: getEnvString('JWT_SECRET'),
+    BETTER_AUTH_SECRET: getEnvString('BETTER_AUTH_SECRET'),
     GOOGLE_SPREADSHEET_ID: getEnvString('GOOGLE_SPREADSHEET_ID', '', false),
     GOOGLE_CREDS_JSON: getEnvString('GOOGLE_CREDS_JSON', '', false),
     GOOGLE_CLIENT_ID: getEnvString('GOOGLE_CLIENT_ID', '', false),
     GMAIL_USER: getEnvString('GMAIL_USER', '', false),
-    GMAIL_PASS: getEnvString('GMAIL_PASS', '', false),
+    GMAIL_APP_PASSWORD: getEnvString('GMAIL_APP_PASSWORD', '', false),
     WHATSAPP_ACCESS_TOKEN: getEnvString('WHATSAPP_ACCESS_TOKEN', '', false),
     WHATSAPP_PHONE_NUMBER_ID: getEnvString('WHATSAPP_PHONE_NUMBER_ID', '', false),
-    WHATSAPP_VERIFY_TOKEN: getEnvString('WHATSAPP_VERIFY_TOKEN', 'kashmir_connect_verify_token'),
+    WHATSAPP_VERIFY_TOKEN: getEnvString('WHATSAPP_VERIFY_TOKEN', 'kashmir_connect_verify_token', false),
     OTP_DELIVERY_METHOD: getEnvString('OTP_DELIVERY_METHOD', 'META_WHATSAPP', false),
     TWILIO_WHATSAPP_NUMBER: getEnvString('TWILIO_WHATSAPP_NUMBER', '+14155238886', false),
   };

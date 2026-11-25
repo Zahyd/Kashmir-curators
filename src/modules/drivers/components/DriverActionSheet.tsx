@@ -176,7 +176,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
   return (
     <>
       {/* Floating Bottom Container */}
-      <div className="absolute bottom-4 left-4 right-4 z-30 max-w-lg mx-auto pointer-events-auto">
+      <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-3 right-3 sm:left-4 sm:right-4 z-30 max-w-lg mx-auto pointer-events-auto">
         {/* ================================================================== */}
         {/* STATE 1: OFFLINE (Iconic Pulsing Centered GO Button)               */}
         {/* ================================================================== */}
@@ -350,27 +350,27 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2 pt-1">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={onDeclineOffer}
-                    className="h-12 rounded-2xl bg-white/5 hover:bg-white/10 border-white/10 text-white/60 hover:text-white font-bold text-xs uppercase"
+                    className="h-12 rounded-2xl bg-white/5 hover:bg-white/10 border-white/10 text-white/60 hover:text-white font-bold text-[11px] sm:text-xs uppercase px-2"
                   >
                     Decline
                   </Button>
                   <Button
                     type="button"
                     onClick={() => setShowCounterModal(true)}
-                    className="h-12 rounded-2xl bg-[#1A2230] hover:bg-[#232E40] border border-amber-500/40 text-amber-300 font-bold text-xs uppercase flex items-center justify-center gap-1"
+                    className="h-12 rounded-2xl bg-[#1A2230] hover:bg-[#232E40] border border-amber-500/40 text-amber-300 font-bold text-[11px] sm:text-xs uppercase flex items-center justify-center gap-1 px-2"
                   >
-                    <Tag className="w-3.5 h-3.5" />
-                    <span>Counter Offer</span>
+                    <Tag className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Counter</span>
                   </Button>
                   <Button
                     type="button"
                     onClick={onAcceptOffer}
-                    className="h-12 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 font-black text-xs uppercase tracking-wider shadow-xl shadow-emerald-500/20"
+                    className="h-12 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 font-black text-[11px] sm:text-xs uppercase tracking-wider shadow-xl shadow-emerald-500/20 px-2"
                   >
                     Accept Trip
                   </Button>
@@ -492,8 +492,14 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
       {/* Tourist Security PIN Authentication Modal                          */}
       {/* ------------------------------------------------------------------ */}
       {showPinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-sm rounded-3xl bg-[#0F141C] border border-amber-500/40 p-6 shadow-2xl text-white space-y-4">
+        <div
+          onClick={() => setShowPinModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-3xl bg-[#0F141C] border border-amber-500/40 p-5 sm:p-6 shadow-2xl text-white space-y-4"
+          >
             <div className="text-center space-y-1">
               <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-2">
                 <KeyRound className="w-6 h-6" />
@@ -550,8 +556,14 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
       {/* Driver Counter-Offer Modal (InDrive Style Fair Bidding)            */}
       {/* ------------------------------------------------------------------ */}
       {showCounterModal && activeTrip && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-[#0F141C] border border-amber-500/40 p-6 shadow-2xl text-white space-y-5">
+        <div
+          onClick={() => setShowCounterModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl bg-[#0F141C] border border-amber-500/40 p-5 sm:p-6 shadow-2xl text-white space-y-5"
+          >
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>

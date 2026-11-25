@@ -1692,7 +1692,7 @@ export default function Profile() {
               </div>
 
               {/* Item Details Table */}
-              <div className="bg-black/35 rounded-2xl border border-white/5 overflow-hidden">
+              <div className="bg-black/35 rounded-2xl border border-white/5 overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead>
                     <tr className="bg-white/5 text-[9px] font-black uppercase text-white/40 tracking-wider">

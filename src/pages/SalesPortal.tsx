@@ -56,6 +56,8 @@ import WorkLog from '@/components/sales/WorkLog';
 import SelectionRequired from '@/components/sales/SelectionRequired';
 import MobileSalesBottomBar from '@/components/sales/MobileSalesBottomBar';
 import MetaLeadsHub from '@/components/sales/MetaLeadsHub';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
+import PageLoading from '@/components/layout/PageLoading';
 
 type PortalTab = 
   | 'dashboard' 
@@ -186,12 +188,11 @@ export default function SalesPortal() {
 
   if (isTeamLoading || !isTeamAuthenticated || !teamUser) {
     return (
-      <div className="min-h-screen bg-[#07090E] flex items-center justify-center text-slate-400">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium">Authenticating Sales Concierge...</p>
-        </div>
-      </div>
+      <PageLoading
+        fullScreen
+        message="Authenticating Sales Concierge..."
+        className="bg-[#07090E] text-slate-300"
+      />
     );
   }
 
@@ -209,7 +210,7 @@ export default function SalesPortal() {
   const unclaimedCount = inquiries.filter(i => !i.assignedTo && i.status !== 'Lost' && i.status !== 'Booked').length;
 
   return (
-    <div className="min-h-screen bg-[#07090E] text-white flex flex-col lg:flex-row font-sans">
+    <div className="min-h-[100dvh] bg-[#07090E] text-white flex flex-col lg:flex-row font-sans overflow-x-hidden">
       {/* Mobile Top Header (Touch-optimized, notch-aware) */}
       <header className="lg:hidden sticky top-0 z-40 bg-[#0F141C]/95 backdrop-blur-2xl border-b border-white/10 px-3.5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2.5">
@@ -264,14 +265,14 @@ export default function SalesPortal() {
       {/* Mobile Drawer Backdrop */}
       {isSidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity animate-in fade-in duration-200"
+          className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[65] transition-opacity animate-in fade-in duration-200"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar - FIXED OVERFLOW WITH PROPER SCROLLING AND STICKY FOOTER */}
       <aside className={cn(
-        "w-72 sm:w-80 max-w-[85vw] h-screen fixed left-0 top-0 bg-[#07090E] border-r border-white/10 flex flex-col z-50 transition-all duration-300 shadow-2xl overflow-hidden",
+        "w-72 sm:w-80 lg:w-72 max-w-[85vw] h-[100dvh] fixed left-0 top-0 bg-[#07090E] border-r border-white/10 flex flex-col z-[70] lg:z-40 transition-all duration-300 shadow-2xl overflow-hidden",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* 1. Header (Compact, Non-Clipping) */}
@@ -409,8 +410,9 @@ export default function SalesPortal() {
       </aside>
 
       {/* Main Workspace Area */}
-      <main className="flex-1 lg:ml-72 flex flex-col min-h-screen">
+      <main className="flex-1 min-w-0 lg:ml-72 flex flex-col min-h-[100dvh]">
         <div className="p-3 sm:p-6 lg:p-8 pt-4 lg:pt-8 pb-28 lg:pb-8 max-w-[1600px] w-full mx-auto space-y-6">
+          <ErrorBoundary variant="panel">
 
           {/* TAB 1: EXECUTIVE COMMAND DASHBOARD */}
           {activeTab === 'dashboard' && (
@@ -670,6 +672,7 @@ export default function SalesPortal() {
             </div>
           )}
 
+          </ErrorBoundary>
         </div>
       </main>
 

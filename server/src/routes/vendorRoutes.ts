@@ -13,6 +13,7 @@ import {
   getVendorDashboardStats
 } from '../controllers/vendorController';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 
 const router = Router();
 
@@ -22,13 +23,13 @@ router.post('/onboard', onboardVendor);
 
 // Authenticated vendor operations
 router.post('/register', authenticateToken, registerVendor);
-router.get('/my-listings', authenticateToken, getMyListings);
-router.post('/listings', authenticateToken, createListing);
-router.patch('/listings/:id', authenticateToken, updateListing);
-router.delete('/listings/:id', authenticateToken, deleteListing);
-router.get('/bookings', authenticateToken, getVendorBookings);
-router.post('/payout-request', authenticateToken, requestVendorPayout);
-router.post('/report-disruption', authenticateToken, reportGroundDisruption);
-router.get('/stats', authenticateToken, getVendorDashboardStats);
+router.get('/my-listings', authenticateToken, authorizeRoles('admin', 'operations', 'supplier'), getMyListings);
+router.post('/listings', authenticateToken, authorizeRoles('admin', 'operations', 'supplier'), createListing);
+router.patch('/listings/:id', authenticateToken, authorizeRoles('admin', 'operations', 'supplier'), updateListing);
+router.delete('/listings/:id', authenticateToken, authorizeRoles('admin', 'operations', 'supplier'), deleteListing);
+router.get('/bookings', authenticateToken, authorizeRoles('admin', 'operations', 'supplier'), getVendorBookings);
+router.post('/payout-request', authenticateToken, authorizeRoles('admin', 'operations', 'supplier'), requestVendorPayout);
+router.post('/report-disruption', authenticateToken, authorizeRoles('admin', 'operations', 'supplier'), reportGroundDisruption);
+router.get('/stats', authenticateToken, authorizeRoles('admin', 'operations', 'supplier'), getVendorDashboardStats);
 
 export default router;

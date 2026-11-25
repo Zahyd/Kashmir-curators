@@ -216,6 +216,15 @@ export const updateBookingStatus = async (req: any, res: Response) => {
   const { status, details, totalAmount, bookingDate, itemName } = req.body;
   
   try {
+    const existing = await prisma.booking.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    const isStaff = ['admin', 'operations', 'sales'].includes(String(req.user?.role || '').toLowerCase());
+    if (existing.userId !== req.user?.id && !isStaff) {
+      return res.status(403).json({ error: 'Forbidden: You are not authorized to modify this booking' });
+    }
+
     const updateData: any = {};
     if (status !== undefined) updateData.status = status;
     if (details !== undefined) {
@@ -290,9 +299,18 @@ export const updateBookingStatus = async (req: any, res: Response) => {
   }
 };
 
-export const deleteBooking = async (req: Request, res: Response) => {
+export const deleteBooking = async (req: any, res: Response) => {
   const { id } = req.params;
   try {
+    const existing = await prisma.booking.findUnique({ where: { id: id as string } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    const isStaff = ['admin', 'operations', 'sales'].includes(String(req.user?.role || '').toLowerCase());
+    if (existing.userId !== req.user?.id && !isStaff) {
+      return res.status(403).json({ error: 'Forbidden: You are not authorized to delete this booking' });
+    }
+
     const booking = await prisma.booking.delete({
       where: { id: id as string }
     });

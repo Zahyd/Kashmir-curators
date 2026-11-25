@@ -5,9 +5,9 @@ import { bookingAutomationService } from '../services/bookingAutomationService';
 import { notificationService } from '../services/notificationService';
 const Stripe = require('stripe');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51OwWnLSCR60f1Jt1k8D4S8aX5433N0QoU6JkS7m1W3N0tO...', {
-  apiVersion: '2024-06-20'
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' })
+  : null;
 
 const getActiveUPIConfig = async () => {
   let businessVPA = process.env.BUSINESS_UPI_VPA || "thekashmircurators@okaxis";
@@ -35,22 +35,27 @@ const getActiveUPIConfig = async () => {
 export const handleRazorpayWebhook = async (req: Request, res: Response) => {
   try {
     const signature = req.headers['x-razorpay-signature'] as string;
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'kashmir_connect_webhook_secret_2026';
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
     const isSimulation = req.headers['x-simulation-mode'] === 'true' && process.env.NODE_ENV === 'development';
 
     // 1. Verify cryptographic signature if not in development simulation mode
     if (!isSimulation) {
+      if (!webhookSecret) {
+        return res.status(503).json({ error: 'Razorpay webhook verification is not configured on server' });
+      }
       if (!signature) {
         return res.status(400).json({ error: 'Signature header is missing' });
       }
-      
-      const rawBody = JSON.stringify(req.body);
+
+      const rawBody = (req as any).rawBody ? (req as any).rawBody : JSON.stringify(req.body);
       const expectedSignature = crypto
         .createHmac('sha256', webhookSecret)
         .update(rawBody)
         .digest('hex');
 
-      if (signature !== expectedSignature) {
+      const sigBuf = Buffer.from(signature, 'utf8');
+      const expBuf = Buffer.from(expectedSignature, 'utf8');
+      if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
         console.warn('Razorpay signature verification failed');
         return res.status(400).json({ error: 'Invalid webhook signature' });
       }
@@ -453,7 +458,7 @@ export const getPaymentRequestDetails = async (req: Request, res: Response) => {
     }
 
     let razorpayOrderId = ledger.orderId;
-    const razorpayKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_TC6hJeqiMJD6a5';
+    const razorpayKeyId = process.env.RAZORPAY_KEY_ID || '';
     const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 
     // Generate active Razorpay order on the fly if needed
@@ -531,6 +536,10 @@ export const createStripeCheckoutSession = async (req: Request, res: Response) =
       return res.status(400).json({ error: 'Invalid advance payment amount' });
     }
 
+    if (!stripe) {
+      return res.status(503).json({ error: 'Stripe payment gateway is not configured on server' });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -569,14 +578,17 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
   const p = prisma as any;
 
+  if (!stripe || !endpointSecret) {
+    return res.status(503).json({ error: 'Stripe webhook verification is not configured on server' });
+  }
+  if (!sig) {
+    return res.status(400).json({ error: 'Missing stripe-signature header' });
+  }
+
   let event: any;
 
   try {
-    if (endpointSecret && sig) {
-      event = stripe.webhooks.constructEvent(req.body, sig as string, endpointSecret);
-    } else {
-      event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    }
+    event = stripe.webhooks.constructEvent(req.body, sig as string, endpointSecret);
   } catch (err: any) {
     console.error(`[Stripe Webhook] Verification failed:`, err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -764,7 +776,7 @@ export const createSubscriptionOrder = async (req: any, res: Response) => {
     return res.status(400).json({ error: 'Invalid subscription plan selected' });
   }
 
-  const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_TC6hJeqiMJD6a5';
+  const keyId = process.env.RAZORPAY_KEY_ID || '';
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
   let razorpayOrderId = `ORDER_SUB_${Date.now()}`;

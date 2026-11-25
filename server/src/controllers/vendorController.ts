@@ -3,7 +3,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET!;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set.');
+  process.exit(1);
+}
 
 /**
  * Public Onboarding endpoint for new Vendors / Suppliers
@@ -28,29 +32,30 @@ export const onboardVendor = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Company name, phone, and email are required.' });
     }
 
-    // 1. Check if user exists or create new supplier user
+    // 1. Check if user exists — NEVER overwrite an existing user's role or mint a JWT without auth
     let user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user) {
-      const defaultPassword = password || `KashmirVendor@${phone.slice(-4)}`;
-      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-
-      user = await prisma.user.create({
-        data: {
-          name: contactPerson || companyName,
-          email,
-          phone,
-          password: hashedPassword,
-          role: 'supplier'
-        }
-      });
-    } else {
-      // Elevate existing user to supplier role
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { role: 'supplier' }
+    if (user) {
+      return res.status(409).json({
+        error: 'An account with this email already exists. Please sign in first and register as a partner from your authenticated session.'
       });
     }
+
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ error: 'A password of at least 6 characters is required for vendor onboarding.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(String(password), 10);
+
+    user = await prisma.user.create({
+      data: {
+        name: contactPerson || companyName,
+        email,
+        phone,
+        password: hashedPassword,
+        role: 'supplier'
+      }
+    });
 
     // 2. Create or update Supplier profile
     let supplier = await prisma.supplier.findFirst({
@@ -96,7 +101,7 @@ export const onboardVendor = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, name: user.name, role: user.role },
       JWT_SECRET,
-      { expiresIn: '14d' }
+      { expiresIn: '14d', algorithm: 'HS256' }
     );
 
     res.status(201).json({
@@ -288,6 +293,14 @@ export const updateListing = async (req: any, res: Response) => {
     const id = String(req.params.id || '');
     if (!id) return res.status(400).json({ error: 'Listing ID is required' });
 
+    const existing = await prisma.vendorListing.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Listing not found' });
+
+    const isStaff = ['admin', 'operations'].includes(String(req.user?.role || '').toLowerCase());
+    if (existing.vendorId !== req.user?.id && !isStaff) {
+      return res.status(403).json({ error: 'Forbidden: You do not own this listing' });
+    }
+
     const {
       title,
       description,
@@ -309,7 +322,7 @@ export const updateListing = async (req: any, res: Response) => {
           blackoutDates: typeof blackoutDates === 'string' ? blackoutDates : JSON.stringify(blackoutDates)
         } : {}),
         ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
-        ...(verificationStatus !== undefined ? { verificationStatus: String(verificationStatus) } : {})
+        ...(verificationStatus !== undefined && isStaff ? { verificationStatus: String(verificationStatus) } : {})
       }
     });
 
@@ -327,6 +340,14 @@ export const deleteListing = async (req: any, res: Response) => {
   try {
     const id = String(req.params.id || '');
     if (!id) return res.status(400).json({ error: 'Listing ID is required' });
+
+    const existing = await prisma.vendorListing.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Listing not found' });
+
+    const isStaff = ['admin', 'operations'].includes(String(req.user?.role || '').toLowerCase());
+    if (existing.vendorId !== req.user?.id && !isStaff) {
+      return res.status(403).json({ error: 'Forbidden: You do not own this listing' });
+    }
 
     await prisma.vendorListing.delete({
       where: { id }

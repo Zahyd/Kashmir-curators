@@ -8,6 +8,7 @@ import {
   getOrganizationStats
 } from '../controllers/organizationController';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 import { tenantMiddleware } from '../middleware/tenantMiddleware';
 
 const router = Router();
@@ -22,7 +23,7 @@ router.get('/:id', getOrganizationById);
 router.get('/:id/stats', getOrganizationStats);
 
 // Protected mutation routes
-router.post('/', authenticateToken, createOrganization);
-router.patch('/:id', authenticateToken, updateOrganization);
+router.post('/', authenticateToken, authorizeRoles('admin', 'operations', 'agent', 'hospitality', 'supplier'), createOrganization);
+router.patch('/:id', authenticateToken, authorizeRoles('admin', 'operations', 'agent', 'hospitality', 'supplier'), updateOrganization);
 
 export default router;

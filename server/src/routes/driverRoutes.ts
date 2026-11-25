@@ -1,9 +1,20 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 import { io } from '../index';
 
 const router = Router();
+const driverOrOps = authorizeRoles('admin', 'operations', 'driver');
+const adminOrOps = authorizeRoles('admin', 'operations');
+
+// Bridge query-string JWT for browser EventSource SSE connections (which cannot send Authorization headers)
+const sseQueryTokenBridge = (req: Request, _res: Response, next: NextFunction) => {
+  if (!req.headers.authorization && typeof req.query.token === 'string' && req.query.token.trim()) {
+    req.headers.authorization = `Bearer ${req.query.token.trim()}`;
+  }
+  next();
+};
 
 // In-memory active SSE clients for live driver telemetry & dispatches
 const sseClients: Set<Response> = new Set();
@@ -55,11 +66,10 @@ const DEFAULT_RATE_CARD = {
 // ---------------------------------------------------------------------------
 // 1. SSE Real-Time Stream for Uber Dispatch Cockpit
 // ---------------------------------------------------------------------------
-router.get('/stream', (req: Request, res: Response) => {
+router.get('/stream', sseQueryTokenBridge, authenticateToken, driverOrOps, (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
 
   // Send initial ping
   res.write(`event: connected\ndata: ${JSON.stringify({ status: 'STREAM_CONNECTED', timestamp: new Date().toISOString() })}\n\n`);
@@ -74,7 +84,7 @@ router.get('/stream', (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 2. Initial Cockpit State (Driver Profile, Active Vehicle, Live Telemetry)
 // ---------------------------------------------------------------------------
-router.get('/cockpit-state', async (req: Request, res: Response) => {
+router.get('/cockpit-state', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
 
@@ -161,7 +171,7 @@ router.get('/cockpit-state', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 3. Fetch Real Active Assigned Trip from Neon Database
 // ---------------------------------------------------------------------------
-router.get('/active-trip', async (req: Request, res: Response) => {
+router.get('/active-trip', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const reservation = await prisma.cabReservation.findFirst({
       where: {
@@ -226,7 +236,7 @@ router.get('/active-trip', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 4. Update Driver's Custom Rate Card & Tariffs in Neon DB
 // ---------------------------------------------------------------------------
-router.post('/rate-card', async (req: Request, res: Response) => {
+router.post('/rate-card', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const { vehicleId, rateCard } = req.body;
 
@@ -270,7 +280,7 @@ router.post('/rate-card', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 5. Driver Counter-Offer / Fare Proposal (InDrive Style Bidding)
 // ---------------------------------------------------------------------------
-router.post('/bookings/:id/counter-offer', async (req: Request, res: Response) => {
+router.post('/bookings/:id/counter-offer', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const { proposedFare, reason = 'Snow chains required above Tangmarg Checkpost' } = req.body;
@@ -325,7 +335,7 @@ router.post('/bookings/:id/counter-offer', async (req: Request, res: Response) =
 // ---------------------------------------------------------------------------
 // 6. Register New Vehicle in Driver Fleet (Tourist Union Verification Pipeline)
 // ---------------------------------------------------------------------------
-router.post('/vehicles', async (req: Request, res: Response) => {
+router.post('/vehicles', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const {
       model,
@@ -450,7 +460,7 @@ router.post('/vehicles', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 7. Admin Authentication & Approval Endpoint for Tourist Union Vehicles
 // ---------------------------------------------------------------------------
-router.post('/vehicles/:id/authenticate', authenticateToken, async (req: Request, res: Response) => {
+router.post('/vehicles/:id/authenticate', authenticateToken, adminOrOps, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const { action, remarks } = req.body; // 'APPROVE' or 'REJECT'
@@ -557,7 +567,7 @@ router.post('/vehicles/:id/authenticate', authenticateToken, async (req: Request
 // ---------------------------------------------------------------------------
 // 8. Fetch Pending Vehicles in Verification Pipeline (for Admin & Pipeline HUD)
 // ---------------------------------------------------------------------------
-router.get('/vehicles/pending-verification', authenticateToken, async (req: Request, res: Response) => {
+router.get('/vehicles/pending-verification', authenticateToken, adminOrOps, async (req: Request, res: Response) => {
   try {
     const cabs = await prisma.cab.findMany({
       orderBy: { createdAt: 'desc' },
@@ -600,7 +610,7 @@ router.get('/vehicles/pending-verification', authenticateToken, async (req: Requ
 // ---------------------------------------------------------------------------
 // 7. Atomic Ride Offer Acceptance
 // ---------------------------------------------------------------------------
-router.post('/bookings/:id/accept', async (req: Request, res: Response) => {
+router.post('/bookings/:id/accept', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const { driverName = 'Zahid Chauffeur', driverPhone = '+91 99066 88123', vehiclePlate = 'JK-01-AX-9942' } = req.body;
@@ -648,7 +658,7 @@ router.post('/bookings/:id/accept', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 8. Verify 4-Digit Tourist Security PIN (e.g. KC-77)
 // ---------------------------------------------------------------------------
-router.post('/bookings/:id/verify-pin', async (req: Request, res: Response) => {
+router.post('/bookings/:id/verify-pin', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const { pin, expectedPin = 'KC-77' } = req.body;
 
@@ -672,7 +682,7 @@ router.post('/bookings/:id/verify-pin', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 9. Transition Trip Lifecycle (ARRIVED -> STARTED -> COMPLETED)
 // ---------------------------------------------------------------------------
-router.post('/bookings/:id/transition', async (req: Request, res: Response) => {
+router.post('/bookings/:id/transition', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const { stage } = req.body; // 'ARRIVED' | 'STARTED' | 'COMPLETED'
@@ -720,7 +730,7 @@ router.post('/bookings/:id/transition', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 10. Instant UPI Payout Request
 // ---------------------------------------------------------------------------
-router.post('/payout', async (req: Request, res: Response) => {
+router.post('/payout', authenticateToken, driverOrOps, async (req: Request, res: Response) => {
   try {
     const { amount = 4500, upiId = 'kashmir.driver@okaxis' } = req.body;
 
@@ -753,7 +763,7 @@ router.post('/payout', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 11. Real-Time Chauffeur Fleet Dispatch Trigger (Socket.IO + Cockpit Channel)
 // ---------------------------------------------------------------------------
-router.post('/dispatch-trip', async (req: Request, res: Response) => {
+router.post('/dispatch-trip', authenticateToken, adminOrOps, async (req: Request, res: Response) => {
   try {
     const {
       tripId = `KC-TRIP-${Math.floor(1000 + Math.random() * 9000)}`,

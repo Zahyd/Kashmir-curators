@@ -15,22 +15,24 @@ import {
   triggerDirectSearchNudge
 } from '../controllers/inquiryController';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 
 const router = Router();
+const crmRoles = authorizeRoles('admin', 'operations', 'sales', 'marketing');
 
 // Public Lead Capture Engine Routes (Frictionless, No Auth Wall)
 router.post('/quick-capture', captureQuickLead);
 router.patch('/:id/enrich', enrichLeadProfile);
 router.post('/callback-request', requestInstantCallback);
 router.post('/track-search', trackCustomerSearchIntent);
-router.get('/search-intents', authenticateToken, getCustomerSearchIntents);
-router.post('/search-intents/:id/nudge-now', authenticateToken, triggerDirectSearchNudge);
+router.get('/search-intents', authenticateToken, crmRoles, getCustomerSearchIntents);
+router.post('/search-intents/:id/nudge-now', authenticateToken, crmRoles, triggerDirectSearchNudge);
 
 router.get('/public/:id', getPublicInquiryItinerary);
-router.get('/', authenticateToken, getInquiries);
-router.patch('/:id', authenticateToken, updateInquiry);
-router.delete('/:id', authenticateToken, deleteInquiry);
-router.post('/:id/send-proposal', authenticateToken, sendProposal);
+router.get('/', authenticateToken, crmRoles, getInquiries);
+router.patch('/:id', authenticateToken, crmRoles, updateInquiry);
+router.delete('/:id', authenticateToken, authorizeRoles('admin', 'operations', 'sales'), deleteInquiry);
+router.post('/:id/send-proposal', authenticateToken, crmRoles, sendProposal);
 router.post('/quote', getDynamicQuote);
 
 /**

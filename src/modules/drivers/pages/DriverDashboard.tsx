@@ -19,6 +19,7 @@ import { DriverMapCockpit } from '../components/DriverMapCockpit';
 import { DriverTopHud } from '../components/DriverTopHud';
 import { DriverActionSheet } from '../components/DriverActionSheet';
 import { DriverDrawer } from '../components/DriverDrawer';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 // Default initial fleet vehicles
 const INITIAL_VEHICLES: DriverVehicle[] = [
@@ -138,8 +139,16 @@ const SAMPLE_HOTEL_TRIP: DriverTrip = {
 };
 
 export const DriverDashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const navigate = useNavigate();
+
+  const getDriverAuthHeaders = (includeJson = false): Record<string, string> => {
+    const authToken = token || localStorage.getItem('auth_token') || localStorage.getItem('teamToken') || '';
+    return {
+      ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    };
+  };
 
   // Core Driver Cockpit State Machine
   const [dutyState, setDutyState] = useState<DriverDutyState>('OFFLINE');
@@ -177,9 +186,10 @@ export const DriverDashboard: React.FC = () => {
   useEffect(() => {
     const fetchCockpitState = async () => {
       try {
+        const authHeaders = getDriverAuthHeaders();
         const [stateRes, tripRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/driver/cockpit-state`),
-          fetch(`${API_BASE_URL}/driver/active-trip`).catch(() => null)
+          fetch(`${API_BASE_URL}/driver/cockpit-state`, { headers: authHeaders }),
+          fetch(`${API_BASE_URL}/driver/active-trip`, { headers: authHeaders }).catch(() => null)
         ]);
 
         if (stateRes && stateRes.ok) {
@@ -223,7 +233,11 @@ export const DriverDashboard: React.FC = () => {
     // SSE Stream setup
     let eventSource: EventSource | null = null;
     try {
-      eventSource = new EventSource(`${API_BASE_URL}/driver/stream`);
+      const streamToken = token || localStorage.getItem('auth_token') || localStorage.getItem('teamToken') || '';
+      const streamUrl = streamToken
+        ? `${API_BASE_URL}/driver/stream?token=${encodeURIComponent(streamToken)}`
+        : `${API_BASE_URL}/driver/stream`;
+      eventSource = new EventSource(streamUrl);
       eventSource.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
@@ -347,7 +361,7 @@ export const DriverDashboard: React.FC = () => {
     try {
       await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/accept`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getDriverAuthHeaders(true),
         body: JSON.stringify({
           driverName: user?.name || 'Zahid Chauffeur',
           vehiclePlate: activeVehicle.plateNumber
@@ -384,7 +398,7 @@ export const DriverDashboard: React.FC = () => {
 
       await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/transition`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getDriverAuthHeaders(true),
         body: JSON.stringify({ stage: stageMap[nextStage] })
       });
     } catch {}
@@ -427,7 +441,7 @@ export const DriverDashboard: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/verify-pin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getDriverAuthHeaders(true),
         body: JSON.stringify({
           pin: enteredPin,
           expectedPin: activeTrip.securityPin
@@ -449,7 +463,7 @@ export const DriverDashboard: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/driver/vehicles`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getDriverAuthHeaders(true),
         body: JSON.stringify(vehData)
       });
 
@@ -499,7 +513,7 @@ export const DriverDashboard: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/driver/payout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getDriverAuthHeaders(true),
         body: JSON.stringify({
           amount: earnings.todayTotal,
           upiId: earnings.upiId
@@ -528,7 +542,7 @@ export const DriverDashboard: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/driver/rate-card`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getDriverAuthHeaders(true),
         body: JSON.stringify({ vehicleId, rateCard })
       });
 
@@ -551,7 +565,7 @@ export const DriverDashboard: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/driver/bookings/${tripId}/counter-offer`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getDriverAuthHeaders(true),
         body: JSON.stringify({ proposedFare, reason })
       });
 
@@ -593,7 +607,8 @@ export const DriverDashboard: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#07090E] select-none text-white font-sans">
+    <ErrorBoundary variant="panel" title="Driver Cockpit Interrupted">
+      <div className="fixed inset-0 w-full h-[100dvh] overflow-hidden bg-[#07090E] select-none text-white font-sans">
       {/* 1. Underlying Tactical Canvas Map (Full Bleed 100vh x 100vw) */}
       <DriverMapCockpit
         dutyState={dutyState}
@@ -665,7 +680,8 @@ export const DriverDashboard: React.FC = () => {
         onLogout={handleLogout}
         onExitToHome={handleExitToHome}
       />
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 

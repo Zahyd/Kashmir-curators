@@ -158,7 +158,7 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, o
       )}
 
       <aside className={cn(
-        "w-72 sm:w-80 max-w-[85vw] h-screen fixed left-0 top-0 bg-[#070b0e]/98 lg:bg-[#070b0e]/95 backdrop-blur-3xl border-r border-white/10 flex flex-col z-[70] lg:z-50 transition-all duration-300 shadow-2xl shadow-black/90",
+        "w-72 sm:w-80 lg:w-72 max-w-[85vw] h-[100dvh] fixed left-0 top-0 bg-[#070b0e]/98 lg:bg-[#070b0e]/95 backdrop-blur-3xl border-r border-white/10 flex flex-col z-[70] lg:z-50 transition-all duration-300 shadow-2xl shadow-black/90",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Top Horizon Glow */}

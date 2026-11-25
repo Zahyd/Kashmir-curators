@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileSpreadsheet, 
   MapPin, 
@@ -38,6 +38,15 @@ export const QuoteBuilderModal: React.FC<QuoteBuilderModalProps> = ({
   const [phone, setPhone] = useState(leadData?.phone || '');
   const [duration, setDuration] = useState(leadData?.duration || '5 Nights / 6 Days');
   const [travelers, setTravelers] = useState(leadData?.travelers || '2 Adults');
+
+  useEffect(() => {
+    if (isOpen) {
+      setCustomerName(leadData?.customerName || 'Valued Traveler');
+      setPhone(leadData?.phone || '');
+      setDuration(leadData?.duration || '5 Nights / 6 Days');
+      setTravelers(leadData?.travelers || '2 Adults');
+    }
+  }, [isOpen, leadData]);
   
   // Customization parameters
   const [hotelTier, setHotelTier] = useState('4_STAR');

@@ -12,6 +12,11 @@ export interface DestinationItem {
   image: string;
   tagline: string;
   desc: string;
+  altitude?: string;
+  driveTime?: string;
+  bestSeason?: string;
+  startingPriceInr?: number;
+  highlights?: string[];
   colSpan?: string;
   rowSpan?: string;
   isActive?: boolean;
@@ -71,7 +76,12 @@ export const DEFAULT_DESTINATIONS: DestinationItem[] = [
     name: 'Srinagar',
     image: srinagarImg,
     tagline: 'The City of Eternal Lakes',
-    desc: 'Venice of the East, where luxury floats on silent waters.',
+    desc: 'Venice of the East, where cedarwood heritage houseboats float on mirror-still Dal & Nigeen waters.',
+    altitude: '1,585m',
+    driveTime: '20 min from SXR',
+    bestSeason: 'Year-Round',
+    startingPriceInr: 18500,
+    highlights: ['Nigeen Cedar Houseboats', 'Private Sunset Shikara', 'Mughal Heritage Gardens'],
     colSpan: 'col-span-1 md:col-span-2',
     rowSpan: 'row-span-1 md:row-span-2',
     isActive: true
@@ -81,7 +91,12 @@ export const DEFAULT_DESTINATIONS: DestinationItem[] = [
     name: 'Gulmarg',
     image: gulmargImg,
     tagline: 'The Alpine Sanctuary',
-    desc: 'World-class peaks and pristine winter elegance.',
+    desc: 'Asia’s premier powder ski destination with Apharwat Gondola Phase 2 & pine-clad luxury chalets.',
+    altitude: '2,650m',
+    driveTime: '1.5 hrs from SXR',
+    bestSeason: 'Dec – May & Jul',
+    startingPriceInr: 26500,
+    highlights: ['Gondola Ph 1 & 2 Fast-Track', '4x4 Snow-Chain Fleet', 'Ski-In Boutique Chalets'],
     colSpan: 'col-span-1 md:col-span-2',
     rowSpan: 'row-span-1',
     isActive: true
@@ -91,18 +106,43 @@ export const DEFAULT_DESTINATIONS: DestinationItem[] = [
     name: 'Pahalgam',
     image: pahalgamImg,
     tagline: 'The Valley of Quietude',
-    desc: 'Serene riverbanks and ancient pine-scented air.',
+    desc: 'Emerald Lidder riverbanks, Betaab cinema meadows, and private riverside pine estates.',
+    altitude: '2,130m',
+    driveTime: '2.5 hrs from SXR',
+    bestSeason: 'Mar – Nov',
+    startingPriceInr: 22000,
+    highlights: ['Aru & Betaab Valleys', 'Lidder Riverside Cottages', 'Pampore Saffron En-route'],
     colSpan: 'col-span-1 md:col-span-1',
     rowSpan: 'row-span-1',
     isActive: true
   },
   {
     id: 'dest-4',
-    name: 'Sonmarg',
+    name: 'Sonamarg',
     image: 'https://images.unsplash.com/photo-1595932594611-6beec02f61aa?w=800',
     tagline: 'The Meadow of Gold',
-    desc: 'Where glaciers meet the sky in a golden embrace.',
+    desc: 'Towering Himalayan glaciers, Thajiwas alpine trails, and high-altitude Sindh river valleys.',
+    altitude: '2,730m',
+    driveTime: '2.5 hrs from SXR',
+    bestSeason: 'Apr – Oct',
+    startingPriceInr: 23500,
+    highlights: ['Thajiwas Glacier Trail', 'Zero Point Zojila Corridor', 'Sindh Riverfront Camps'],
     colSpan: 'col-span-1 md:col-span-1',
+    rowSpan: 'row-span-1',
+    isActive: true
+  },
+  {
+    id: 'dest-5',
+    name: 'Doodhpathri',
+    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=900',
+    tagline: 'The Valley of Milk',
+    desc: 'Untouched velvety meadows, crystal Shaliganga streams, and crowd-free alpine serenity.',
+    altitude: '2,730m',
+    driveTime: '1.5 hrs from SXR',
+    bestSeason: 'Apr – Nov',
+    startingPriceInr: 19500,
+    highlights: ['Shaliganga Stream Picnics', 'Diskhal Alpine Ridge', 'Zero-Crowd Pine Meadows'],
+    colSpan: 'col-span-1 md:col-span-2',
     rowSpan: 'row-span-1',
     isActive: true
   }

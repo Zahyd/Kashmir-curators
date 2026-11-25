@@ -1,11 +1,17 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import prisma from '../lib/prisma';
 import { notificationService } from '../services/notificationService';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
+// SECURITY: JWT_SECRET is mandatory — server crashes at startup if missing (enforced by env.ts)
+const JWT_SECRET = process.env.JWT_SECRET!;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set. Server cannot start securely.');
+  process.exit(1);
+}
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const register = async (req: Request, res: Response) => {
@@ -134,8 +140,8 @@ export const teamSendOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ error: `Access Denied: No registered email address found for ${user.name}` });
     }
 
-    // 2. Generate a secure, high-entropy 6-digit OTP code
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // 2. Generate a cryptographically secure 6-digit OTP code
+    const generatedOtp = crypto.randomInt(100000, 999999).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
 
     // 3. Store or overwrite the verification session directly in the database Verification model
@@ -173,14 +179,18 @@ export const teamSendOtp = async (req: Request, res: Response) => {
 
     const emailSent = await notificationService.sendCustomerEmail(targetEmail, emailSubject, emailHtml);
 
-    // Log the generated OTP securely inside the server console for debugging
-    console.log('\n======================================================');
-    console.log(`🏔️ KASHMIR CONNECT - SECURITY ACCESS OTP DISPATCHED (EMAIL):`);
-    console.log(`  - Employee: ${user.name} (${code.toUpperCase()})`);
-    console.log(`  - Target Email Destination: ${targetEmail}`);
-    console.log(`  - Generated Access Code (stored in DB): ${generatedOtp}`);
-    console.log(`  - Mail Sent Status: ${emailSent ? 'SUCCESS' : 'FAILED / SIMULATION'}`);
-    console.log('======================================================\n');
+    // SECURITY: Only log OTP in non-production environments for debugging
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n======================================================');
+      console.log(`🏔️ KASHMIR CONNECT - SECURITY ACCESS OTP DISPATCHED (EMAIL):`);
+      console.log(`  - Employee: ${user.name} (${code.toUpperCase()})`);
+      console.log(`  - Target Email Destination: ${targetEmail}`);
+      console.log(`  - Generated Access Code (stored in DB): ${generatedOtp}`);
+      console.log(`  - Mail Sent Status: ${emailSent ? 'SUCCESS' : 'FAILED / SIMULATION'}`);
+      console.log('======================================================\n');
+    } else {
+      console.log(`[OTP] Dispatched to ${code.toUpperCase()} via email. Sent: ${emailSent}`);
+    }
 
     // Return the response with masked email address
     const emailParts = targetEmail.split('@');
@@ -188,13 +198,15 @@ export const teamSendOtp = async (req: Request, res: Response) => {
     const maskedPrefix = prefix.length > 3 ? prefix.slice(0, 3) + '*******' : prefix.slice(0, 1) + '*******';
     const maskedEmail = maskedPrefix + '@' + emailParts[1];
     
+    // SECURITY: Never return the OTP in the response — even if email fails
     return res.json({
       success: true,
       email: maskedEmail,
       phone: maskedEmail, // Maintain compatibility if frontend utilizes 'phone' variable
-      ...(emailSent ? {} : { otp: generatedOtp }), // Only return code in local simulation mode
       simulated: !emailSent,
-      message: `OTP successfully sent to your registered email ${maskedEmail}`
+      message: emailSent
+        ? `OTP successfully sent to your registered email ${maskedEmail}`
+        : `OTP delivery failed. Please check your email configuration or contact admin.`
     });
 
   } catch (error: any) {
@@ -227,8 +239,8 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Security verification code has expired. Please request a new one.' });
     }
 
-    // 3. Enforce code equivalence (real live database check)
-    if (otp !== record.value && otp !== '123456') {
+    // 3. Enforce code equivalence (real live database check) — NO master OTP bypass
+    if (otp !== record.value) {
       return res.status(400).json({ error: 'Invalid verification OTP code' });
     }
 
@@ -281,10 +293,24 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * SECURITY: teamLogin is a legacy passwordless endpoint.
+ * Strictly disabled in production (must use OTP verification via /team-send-otp & /team-verify-otp).
+ * Allowed only in development/test environments for local/automated test harnesses.
+ */
 export const teamLogin = async (req: Request, res: Response) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({
+      error: 'Passwordless team login is disabled in production. Please authenticate using OTP verification.'
+    });
+  }
+
   const { code } = req.body;
-  
-  // Detect role from code (matching frontend logic for consistency)
+
+  if (!code || typeof code !== 'string' || code.trim().length < 3) {
+    return res.status(400).json({ error: 'Valid employee code is required' });
+  }
+
   const detectRole = (c: string) => {
     const upper = c.toUpperCase();
     if (upper.startsWith('ADMIN')) return 'admin';
@@ -300,7 +326,6 @@ export const teamLogin = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Invalid employee code' });
   }
 
-  // Look up or establish real user in database
   let dbUser = await prisma.user.findFirst({
     where: { employeeCode: code.toUpperCase() }
   });
@@ -319,11 +344,10 @@ export const teamLogin = async (req: Request, res: Response) => {
     });
   }
 
-  // Generate a system-level token with real user ID
   const token = jwt.sign(
     { id: dbUser.id, email: dbUser.email, role: dbUser.role, code: dbUser.employeeCode },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: '24h', algorithm: 'HS256' }
   );
 
   res.json({
@@ -363,24 +387,9 @@ export const updateProfile = async (req: any, res: Response) => {
       currentUser = await prisma.user.findUnique({ where: { employeeCode: extractedCode } });
     }
 
-    // Fallback: If still not found, create or upsert
+    // SECURITY: If user cannot be resolved, reject — never auto-create with admin role
     if (!currentUser) {
-      const targetCode = userCode || (rawUserId ? rawUserId.replace('system-', '') : 'ADMIN001');
-      const targetEmail = (email && email.trim()) || userEmail || `${targetCode.toLowerCase()}@thekashmircurators.com`;
-      currentUser = await prisma.user.upsert({
-        where: { email: targetEmail },
-        update: {
-          employeeCode: targetCode.toUpperCase(),
-          role: req.user?.role || 'admin'
-        },
-        create: {
-          email: targetEmail,
-          name: name || 'Zahid Riyaz',
-          employeeCode: targetCode.toUpperCase(),
-          role: req.user?.role || 'admin',
-          phone: phone || null
-        }
-      });
+      return res.status(404).json({ error: 'User account not found. Cannot update profile for unregistered user.' });
     }
 
     const userId = currentUser.id;
@@ -442,23 +451,61 @@ export const updateProfile = async (req: any, res: Response) => {
   }
 };
 
+/**
+ * SECURITY: googleLogin now requires a valid Google credential token.
+ * It verifies the token server-side before minting a JWT.
+ * Plain { email, name } payloads are NO LONGER accepted.
+ */
 export const googleLogin = async (req: Request, res: Response) => {
-  const { email, name, image } = req.body;
+  const { credentialToken, accessToken, email: rawEmail, name: rawName, image } = req.body;
 
-  if (!email || !name) {
-    return res.status(400).json({ error: 'Email and name are required' });
+  // Require at least one verifiable Google token
+  if (!credentialToken && !accessToken) {
+    return res.status(400).json({ error: 'A valid Google credential token or access token is required.' });
   }
 
   try {
+    let email = '';
+    let name = '';
+    let picture = '';
+
+    if (accessToken) {
+      // Verify via Google UserInfo API
+      const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+      if (!response.ok) {
+        return res.status(401).json({ error: 'Invalid Google access token' });
+      }
+      const data = await response.json();
+      email = data.email;
+      name = data.name;
+      picture = data.picture || '';
+    } else {
+      // Verify via google-auth-library (ID Token flow)
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credentialToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        return res.status(401).json({ error: 'Invalid Google ID token' });
+      }
+      email = payload.email;
+      name = payload.name || rawName || '';
+      picture = payload.picture || '';
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: 'Failed to retrieve email from Google token' });
+    }
+
     let user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
-      // Create user if they don't exist
       user = await prisma.user.create({
         data: {
           email,
-          name,
-          image: image || null,
+          name: name || rawName || email.split('@')[0],
+          image: picture || image || null,
           role: 'user'
         }
       });
@@ -467,15 +514,15 @@ export const googleLogin = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '7d', algorithm: 'HS256' }
     );
 
     res.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, phone: user.phone || undefined },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, phone: user.phone || undefined, image: user.image },
       token
     });
-  } catch (error) {
-    console.error('Google login error:', error);
+  } catch (error: any) {
+    console.error('Google login error:', error.message || error);
     res.status(500).json({ error: 'Google login failed' });
   }
 };

@@ -11,6 +11,7 @@ Sentry.init({
 });
 import express from 'express';
 import cors from 'cors';
+import jwt from 'jsonwebtoken';
 import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -72,22 +73,25 @@ const allowedOrigins = [
   'http://localhost:3000'
 ];
 
+const isAllowedOrigin = (origin?: string): boolean => {
+  if (!origin) return true;
+  return (
+    allowedOrigins.includes(origin) ||
+    /^https:\/\/(kashmir-curators|kashmir-connect)(-[a-z0-9-]+)?\.vercel\.app$/i.test(origin) ||
+    /^https:\/\/(www\.)?(the)?kashmircurators\.com$/i.test(origin)
+  );
+};
+
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps, server-to-server, search bots)
-    if (!origin) return callback(null, true);
-    if (
-      allowedOrigins.includes(origin) ||
-      origin.endsWith('.vercel.app') ||
-      origin.includes('kashmir-curators')
-    ) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
-    return callback(null, true);
+    return callback(new Error('Origin not allowed by CORS'), false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-tenant-id', 'x-organization-id', 'x-portal-key']
 };
 
 const app = express();
@@ -95,7 +99,10 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
-      callback(null, true);
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Origin not allowed by Socket.IO CORS'), false);
     },
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     credentials: true
@@ -149,18 +156,14 @@ app.use(
   })
 );
 
-// Apply rate limiting to all requests (generous threshold with bot exemption)
+// Apply rate limiting to all requests (only health check exempted; no User-Agent spoofing bypass)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 2000, // Generous limit for modern interactive SPA browsing
   message: 'Too many requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
-    // Exempt verified crawlers and health check routes from rate limits
-    const ua = req.get('User-Agent') || '';
-    return /Googlebot|Google-InspectionTool|bingbot|Baiduspider|DuckDuckBot|YandexBot|Lighthouse/i.test(ua) || req.path === '/health-check';
-  }
+  skip: (req) => req.path === '/health-check'
 });
 app.use(limiter);
 
@@ -175,26 +178,100 @@ app.use((req, res, next) => {
 // Stripe webhook needs raw body parser
 app.post('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({
+  limit: '50mb',
+  verify: (req: any, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(requestCorrelationMiddleware);
 app.use(tenantMiddleware);
 
+// Socket.IO Authentication Handshake Middleware
+io.use(async (socket, next) => {
+  try {
+    const authToken = socket.handshake.auth?.token as string | undefined;
+    const authHeader = (socket.handshake.headers?.authorization as string | undefined) || '';
+    const portalKey = (socket.handshake.headers?.['x-portal-key'] as string | undefined) || '';
+    let token = authToken || (authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : authHeader.trim());
+
+    if (token === 'null' || token === 'undefined') token = '';
+
+    if (token) {
+      const secrets = [process.env.JWT_SECRET, process.env.BETTER_AUTH_SECRET].filter(Boolean) as string[];
+      for (const secret of secrets) {
+        try {
+          const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as any;
+          if (decoded) {
+            socket.data.user = decoded;
+            return next();
+          }
+        } catch {}
+      }
+
+      // Check Better Auth session token
+      const session = await (prisma as any).session.findUnique({
+        where: { token },
+        include: { user: true }
+      }).catch(() => null);
+      if (session?.user && new Date(session.expiresAt) > new Date()) {
+        socket.data.user = {
+          id: session.user.id,
+          email: session.user.email,
+          role: session.user.role,
+          organizationId: session.user.organizationId
+        };
+        return next();
+      }
+    }
+
+    if (portalKey && portalKey.toUpperCase().startsWith('KC-')) {
+      const keyRec = await (prisma as any).portalAccessKey.findUnique({
+        where: { accessKey: portalKey.trim().toUpperCase() }
+      }).catch(() => null);
+      if (keyRec && keyRec.status === 'ACTIVE') {
+        socket.data.user = {
+          id: keyRec.id,
+          role: 'hospitality',
+          portalType: keyRec.portalType
+        };
+        return next();
+      }
+    }
+
+    // Public anonymous sockets may connect ONLY for public broadcasts; privileged rooms require socket.data.user
+    return next();
+  } catch (err) {
+    return next();
+  }
+});
+
 // Socket.io Connection Matrix for Real-Time Travel OS Operational Desks
 io.on('connection', (socket) => {
+  const socketUser = socket.data.user;
+  const userRole = String(socketUser?.role || '').toLowerCase();
+  const isStaff = ['admin', 'operations', 'sales', 'finance', 'marketing'].includes(userRole);
+
   // Direct user personal channel
   socket.on('join-user', (userId: string) => {
-    if (userId) socket.join(`user-${userId}`);
+    if (userId && socketUser && (socketUser.id === userId || isStaff)) {
+      socket.join(`user-${userId}`);
+    }
   });
 
-  // Admin central oversight room
+  // Admin central oversight room (staff only)
   socket.on('join-admin', () => {
-    socket.join('admin-room');
+    if (socketUser && isStaff) {
+      socket.join('admin-room');
+    }
   });
 
-  // Tenant / Organization operational desk (B2B Agency, Hotel Operator, Fleet Provider)
+  // Tenant / Organization operational desk (tenant member or platform admin/ops only)
   socket.on('join-tenant', (tenantId: string) => {
-    if (tenantId) socket.join(`tenant-${tenantId}`);
+    if (tenantId && socketUser && (socketUser.organizationId === tenantId || ['admin', 'operations'].includes(userRole))) {
+      socket.join(`tenant-${tenantId}`);
+    }
   });
 
   socket.on('leave-tenant', (tenantId: string) => {
@@ -203,7 +280,9 @@ io.on('connection', (socket) => {
 
   // Hotel CRS Reception Operational Desk
   socket.on('join-hotel', (hotelId: string) => {
-    if (hotelId) socket.join(`hotel-${hotelId}`);
+    if (hotelId && socketUser && ['admin', 'operations', 'hospitality', 'supplier'].includes(userRole)) {
+      socket.join(`hotel-${hotelId}`);
+    }
   });
 
   socket.on('leave-hotel', (hotelId: string) => {
@@ -212,16 +291,31 @@ io.on('connection', (socket) => {
 
   // Chauffeur / Driver Cockpit & Fleet Dispatch Desk
   socket.on('join-driver', (driverId: string) => {
-    if (driverId) socket.join(`driver-${driverId}`);
+    if (driverId && socketUser && ['admin', 'operations', 'driver'].includes(userRole)) {
+      socket.join(`driver-${driverId}`);
+    }
   });
 
   socket.on('leave-driver', (driverId: string) => {
     if (driverId) socket.leave(`driver-${driverId}`);
   });
 
-  // Generic room join/leave (for backwards compatibility across client dashboards)
+  // Generic room join/leave with authorization boundaries
   socket.on('join-room', (room: string) => {
-    if (room) socket.join(room);
+    if (!room || typeof room !== 'string') return;
+    if (room.startsWith('payment-')) {
+      socket.join(room);
+    } else if (room === 'admin-room') {
+      if (socketUser && isStaff) socket.join(room);
+    } else if (room.startsWith('tenant-')) {
+      const tId = room.slice(7);
+      if (socketUser && (socketUser.organizationId === tId || ['admin', 'operations'].includes(userRole))) socket.join(room);
+    } else if (room.startsWith('user-')) {
+      const uId = room.slice(5);
+      if (socketUser && (socketUser.id === uId || isStaff)) socket.join(room);
+    } else if (socketUser) {
+      socket.join(room);
+    }
   });
 
   socket.on('leave-room', (room: string) => {
@@ -240,7 +334,24 @@ app.use((req: any, res, next) => {
   next();
 });
 
-// Dedicated Image Proxy Endpoint to bypass browser CORS limits when exporting PDFs
+const ALLOWED_IMAGE_PROXY_HOSTS = new Set([
+  'res.cloudinary.com',
+  'images.unsplash.com',
+  'api.qrserver.com',
+  'lh3.googleusercontent.com',
+  'images.pexels.com'
+]);
+
+const isPrivateOrLocalHost = (hostname: string): boolean => {
+  const lower = hostname.toLowerCase();
+  if (lower === 'localhost' || lower.endsWith('.local') || lower.endsWith('.internal')) return true;
+  if (lower.startsWith('[') || /^::1$/.test(lower)) return true;
+  // Reject IPv4 literals altogether on proxy allowlist
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(lower)) return true;
+  return false;
+};
+
+// Dedicated Image Proxy Endpoint (SSRF-hardened with strict HTTPS host allowlist)
 app.get('/api/proxy-image', async (req, res) => {
   try {
     const imageUrl = req.query.url as string;
@@ -248,21 +359,37 @@ app.get('/api/proxy-image', async (req, res) => {
       return res.status(400).json({ error: 'URL parameter is required' });
     }
 
-    const response = await fetch(imageUrl);
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(imageUrl);
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    if (parsedUrl.protocol !== 'https:' || isPrivateOrLocalHost(parsedUrl.hostname) || !ALLOWED_IMAGE_PROXY_HOSTS.has(parsedUrl.hostname.toLowerCase())) {
+      return res.status(403).json({ error: 'Image host is not in the permitted allowlist' });
+    }
+
+    const response = await fetch(parsedUrl.toString(), {
+      redirect: 'error',
+      signal: AbortSignal.timeout(8000)
+    });
     if (!response.ok) {
       return res.status(response.status).json({ error: 'Failed to fetch image' });
     }
 
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.toLowerCase().startsWith('image/')) {
+      return res.status(415).json({ error: 'Target resource is not a valid image' });
+    }
+
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     res.send(buffer);
   } catch (error: any) {
     console.error('Image proxy error:', error.message);
-    res.status(500).json({ error: 'Failed to proxy image: ' + error.message });
+    res.status(500).json({ error: 'Failed to proxy image' });
   }
 });
 

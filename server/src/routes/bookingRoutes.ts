@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createBooking, getMyBookings, updateBookingStatus, getAllBookings, deleteBooking, getRecentBookings } from '../controllers/bookingController';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.post('/', authenticateToken, createBooking);
  *       200:
  *         description: List of all bookings
  */
-router.get('/', authenticateToken, getAllBookings);
+router.get('/', authenticateToken, authorizeRoles('admin', 'operations', 'sales', 'finance'), getAllBookings);
 
 /**
  * @swagger

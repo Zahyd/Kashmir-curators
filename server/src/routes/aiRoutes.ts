@@ -5,29 +5,12 @@ import { aiGatewayService } from '../services/aiGatewayService';
 import { AICopilotService } from '../services/aiCopilotService';
 import { WeatherService } from '../services/weatherService';
 import { conciergeAgentCrmService } from '../services/conciergeAgentCrmService';
-import { AIConciergeAgentService } from '../services/aiConciergeAgentService';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { authorizeRoles } from '../middleware/roleMiddleware';
 
 const router = Router();
 const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
 const geminiClient = geminiKey ? new GoogleGenAI({ apiKey: geminiKey }) : null;
-
-// Autonomous AI Concierge Chat (WhatsApp / Instagram / Webhook Simulator)
-router.post('/concierge-chat', async (req: Request, res: Response) => {
-  try {
-    const { phone = '+919103798448', message } = req.body;
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({ error: 'Message text is required' });
-    }
-
-    const io = (req as any).io;
-    const result = await AIConciergeAgentService.processInboundMessage(phone, message, io);
-    res.json(result);
-  } catch (error: any) {
-    console.error('AI Concierge Chat error:', error);
-    res.status(500).json({ error: 'Failed to process AI chat message: ' + error.message });
-  }
-});
 
 // Public / Agent Itinerary Generator
 router.post('/curate', async (req: Request, res: Response) => {
@@ -114,7 +97,7 @@ Return ONLY a valid JSON object matching:
 });
 
 // AI Copilot: Comprehensive Lead Analysis & Explainable Scoring
-router.post('/copilot/analyze-lead', authenticateToken, async (req: Request, res: Response) => {
+router.post('/copilot/analyze-lead', authenticateToken, authorizeRoles('admin', 'operations', 'sales'), async (req: Request, res: Response) => {
   const { inquiryId } = req.body;
   if (!inquiryId) return res.status(400).json({ error: 'inquiryId is required' });
 
@@ -128,7 +111,7 @@ router.post('/copilot/analyze-lead', authenticateToken, async (req: Request, res
 });
 
 // AI Copilot: Contextual Sales Reply Generator (Human-in-the-Loop)
-router.post('/copilot/suggest-reply', authenticateToken, async (req: Request, res: Response) => {
+router.post('/copilot/suggest-reply', authenticateToken, authorizeRoles('admin', 'operations', 'sales'), async (req: Request, res: Response) => {
   const { inquiryId, channel = 'WHATSAPP', goal = 'GREETING_INQUIRY', customNotes } = req.body;
   if (!inquiryId) return res.status(400).json({ error: 'inquiryId is required' });
 
@@ -142,7 +125,7 @@ router.post('/copilot/suggest-reply', authenticateToken, async (req: Request, re
 });
 
 // AI Copilot: Inventory Suggestions from authorized Hotels & Cabs
-router.post('/copilot/recommend-inventory', authenticateToken, async (req: Request, res: Response) => {
+router.post('/copilot/recommend-inventory', authenticateToken, authorizeRoles('admin', 'operations', 'sales'), async (req: Request, res: Response) => {
   const { inquiryId } = req.body;
   if (!inquiryId) return res.status(400).json({ error: 'inquiryId is required' });
 
@@ -156,7 +139,7 @@ router.post('/copilot/recommend-inventory', authenticateToken, async (req: Reque
 });
 
 // AI Copilot: Lead Conversation & Notes Summary
-router.post('/copilot/summarize-lead', authenticateToken, async (req: Request, res: Response) => {
+router.post('/copilot/summarize-lead', authenticateToken, authorizeRoles('admin', 'operations', 'sales'), async (req: Request, res: Response) => {
   const { inquiryId } = req.body;
   if (!inquiryId) return res.status(400).json({ error: 'inquiryId is required' });
 

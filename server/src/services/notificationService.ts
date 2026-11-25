@@ -2,8 +2,10 @@ import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import prisma from '../lib/prisma';
 
-// Configure the Resend client
-const resend = new Resend(process.env.RESEND_API_KEY || 're_mock_key_123');
+// Configure the Resend client (only when real API key is provided)
+const resend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_mock_key_123'
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 // Configure Nodemailer transporter (Gmail SMTP)
 const transporter = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD && process.env.GMAIL_APP_PASSWORD !== 'your_16_char_app_password'
@@ -81,7 +83,7 @@ export const notificationService = {
     }
 
     // 3. Fallback to Resend if Gmail did not succeed
-    if (!success && process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_mock_key_123') {
+    if (!success && resend) {
       try {
         const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
         console.log(`[Resend] Dispatching ${emailType} to ${to}...`);
@@ -110,7 +112,7 @@ export const notificationService = {
     }
 
     // 4. Fallback simulation mode if neither provider is active
-    if (!success && !transporter && (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 're_mock_key_123')) {
+    if (!success && !transporter && !resend) {
       provider = 'SIMULATION';
       messageId = `sim-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
       status = 'SENT';

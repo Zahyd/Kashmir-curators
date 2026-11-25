@@ -518,7 +518,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
       />
 
       {/* Slide-out Drawer Panel */}
-      <div className="relative w-full max-w-sm sm:max-w-md h-full bg-[#07090E] border-r border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col z-10 animate-in slide-in-from-left duration-250 text-white">
+      <div className="relative w-full max-w-[92vw] sm:max-w-md h-[100dvh] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] bg-[#07090E] border-r border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col z-10 animate-in slide-in-from-left duration-250 text-white">
         {/* Drawer Header */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#0F141C] to-[#07090E]">
           <div className="flex items-center gap-3">
@@ -1055,7 +1055,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
       {/* ---------------------------------------------------------------------- */}
       {showRegisterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl bg-[#0F141C] border border-amber-500/40 p-6 shadow-2xl text-white space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg rounded-3xl bg-[#0F141C] border border-amber-500/40 p-4 sm:p-6 shadow-2xl text-white space-y-4 max-h-[90dvh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5">
@@ -1159,7 +1159,7 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                     </button>
 
                     {isModelDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1.5 w-[190%] sm:w-[460px] max-w-[460px] rounded-2xl bg-[#0B0F17]/98 backdrop-blur-2xl border border-amber-500/40 p-2 shadow-[0_20px_60px_rgba(0,0,0,0.95)] z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-72 overflow-y-auto">
+                      <div className="absolute top-full left-0 mt-1.5 w-[calc(100vw-4rem)] sm:w-[460px] max-w-[460px] rounded-2xl bg-[#0B0F17]/98 backdrop-blur-2xl border border-amber-500/40 p-2 shadow-[0_20px_60px_rgba(0,0,0,0.95)] z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-72 overflow-y-auto">
                         <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-400/80 border-b border-white/5 pb-1.5 flex items-center justify-between">
                           <span>Select Commercial Vehicle Model</span>
                           <span className="text-white/40">7 Fleet Options</span>

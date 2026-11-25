@@ -40,6 +40,8 @@ import { CustomDomainCard } from '../components/CustomDomainCard';
 import { SupplierCreditCard } from '../components/SupplierCreditCard';
 import ItineraryBuilder from '@/components/sales/ItineraryBuilder';
 import { useRazorpay } from '@/hooks/useRazorpay';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
+import PageLoading from '@/components/layout/PageLoading';
 
 export const AgentDashboard: React.FC = () => {
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -182,12 +184,10 @@ export const AgentDashboard: React.FC = () => {
   // Auth Guard: If still checking session, render luxury loading state
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-          <p className="text-sm font-semibold text-muted-foreground">Connecting to Kashmir B2B DMC Network...</p>
-        </div>
-      </div>
+      <PageLoading
+        fullScreen
+        message="Connecting to Kashmir B2B DMC Network..."
+      />
     );
   }
 
@@ -402,11 +402,11 @@ export const AgentDashboard: React.FC = () => {
   const displayCompanyName = agencyBranding?.agencyName || agentProfile?.companyName || user?.name || 'Registered Travel Partner';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col selection:bg-amber-500 selection:text-black">
+    <div className="min-h-[100dvh] bg-background flex flex-col overflow-x-hidden selection:bg-amber-500 selection:text-black">
       <Navbar />
 
       {/* Top spacing to completely clear the fixed floating navbar */}
-      <div className="flex-1 flex flex-col lg:flex-row pt-24 sm:pt-28">
+      <div className="flex-1 flex flex-col lg:flex-row pt-20 sm:pt-24">
         {/* Dedicated Agent Sidebar with real agent metadata */}
         <AgentSidebar
           activeTab={activeTab}
@@ -418,7 +418,8 @@ export const AgentDashboard: React.FC = () => {
         />
 
         {/* Main Content Workspace */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+        <main className="flex-1 min-w-0 p-3.5 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+          <ErrorBoundary variant="panel">
           {/* Top Bar with Quick Actions */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/50 pb-5">
             <div>
@@ -694,6 +695,7 @@ export const AgentDashboard: React.FC = () => {
               </Card>
             </div>
           )}
+          </ErrorBoundary>
         </main>
       </div>
 

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Send, Loader2, Sparkles, Phone, ArrowRight, 
-  CheckCircle2, Building2, Compass, ShieldCheck 
+import {
+  Send, Loader2, ArrowRight, CheckCircle2,
+  Building2, Compass, ShieldCheck, BedDouble, Car
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,18 +15,20 @@ export default function UnifiedClosingCta() {
   const [contactForm, setContactForm] = useState({
     name: '',
     phoneOrEmail: '',
-    message: ''
+    message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const title = closingCta?.title || 'Ready to Experience Paradise?';
-  const subtitle = closingCta?.subtitle || 'Speak with a Senior Kashmir Destination Specialist or request a bespoke itinerary within 30 minutes.';
+  const subtitle =
+    closingCta?.subtitle ||
+    'Speak with a Senior Kashmir Destination Specialist or request a bespoke itinerary within 30 minutes.';
   const buttonText = closingCta?.buttonText || 'Request Private Consultation';
   const points = closingCta?.points || [
     'Contracted direct ground net rates',
     'Complimentary airport concierge meet & greet',
-    '100% weather & disruption flexible cancellation'
+    '100% weather & disruption flexible cancellation',
   ];
 
   const handleQuickLead = async (e: React.FormEvent) => {
@@ -48,8 +50,8 @@ export default function UnifiedClosingCta() {
           phone: !isEmail ? contactForm.phoneOrEmail : 'Not Provided',
           intentQuery: contactForm.message || 'Consultation Request from Landing Page',
           sourceCta: 'UNIFIED_CLOSING_CTA',
-          notes: contactForm.message
-        })
+          notes: contactForm.message,
+        }),
       });
 
       if (res.ok) {
@@ -59,7 +61,7 @@ export default function UnifiedClosingCta() {
       } else {
         toast.error('Failed to submit consultation request. Please try again.');
       }
-    } catch (err) {
+    } catch {
       toast.error('Network error. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -67,16 +69,14 @@ export default function UnifiedClosingCta() {
   };
 
   return (
-    <section className="py-24 bg-[#0a0f12] text-white relative overflow-hidden">
-      {/* Decorative Blur Backgrounds */}
+    <section className="py-16 md:py-24 bg-[#070b0f] text-white relative overflow-hidden">
       <div className="absolute top-1/2 left-10 w-[450px] h-[450px] bg-amber-500/10 blur-[150px] -translate-y-1/2 pointer-events-none rounded-full" />
       <div className="absolute top-1/2 right-10 w-[450px] h-[450px] bg-emerald-500/10 blur-[150px] -translate-y-1/2 pointer-events-none rounded-full" />
 
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch max-w-6xl mx-auto">
-          
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
           {/* Card 1: For Direct Travelers / Tourists */}
-          <div className="p-8 md:p-12 rounded-[2.5rem] bg-white/[0.04] border border-white/10 flex flex-col justify-between relative overflow-hidden shadow-2xl">
+          <div className="p-7 sm:p-10 md:p-12 rounded-[2.5rem] bg-white/[0.04] border border-white/10 flex flex-col justify-between relative overflow-hidden shadow-2xl">
             <div className="relative z-10">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-400 text-xs font-bold uppercase tracking-wider mb-6">
                 <Compass className="w-3.5 h-3.5" />
@@ -96,32 +96,32 @@ export default function UnifiedClosingCta() {
                   </span>
                 )}
               </h3>
-              <p className="text-white/60 text-sm md:text-base leading-relaxed mb-8">
-                {subtitle}
-              </p>
+              <p className="text-white/65 text-sm md:text-base leading-relaxed mb-7">{subtitle}</p>
 
               {isSubmitted ? (
                 <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center animate-fade-in">
                   <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
                   <h4 className="font-bold text-white text-base">Consultation Reserved</h4>
-                  <p className="text-xs text-white/60 mt-1">Our curator will reach out shortly with customized recommendations.</p>
+                  <p className="text-xs text-white/60 mt-1">
+                    Our curator will reach out shortly with customized recommendations.
+                  </p>
                 </div>
               ) : (
                 <form onSubmit={handleQuickLead} className="space-y-3">
                   <Input
                     placeholder="Your Full Name"
                     value={contactForm.name}
-                    onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="bg-black/40 border-white/10 text-white placeholder:text-white/40 rounded-xl h-12 text-sm focus:border-amber-400"
+                    onChange={(e) => setContactForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className="bg-black/40 border-white/15 text-white placeholder:text-white/40 rounded-xl h-12 text-sm focus:border-amber-400"
                   />
                   <Input
                     placeholder="WhatsApp Phone or Email"
                     value={contactForm.phoneOrEmail}
-                    onChange={(e) => setContactForm(prev => ({ ...prev, phoneOrEmail: e.target.value }))}
-                    className="bg-black/40 border-white/10 text-white placeholder:text-white/40 rounded-xl h-12 text-sm focus:border-amber-400"
+                    onChange={(e) => setContactForm((prev) => ({ ...prev, phoneOrEmail: e.target.value }))}
+                    className="bg-black/40 border-white/15 text-white placeholder:text-white/40 rounded-xl h-12 text-sm focus:border-amber-400"
                   />
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isSubmitting}
                     className="w-full h-12 bg-amber-400 hover:bg-amber-300 text-black font-black uppercase text-xs rounded-xl transition-all shadow-lg shadow-amber-400/20"
                   >
@@ -132,32 +132,34 @@ export default function UnifiedClosingCta() {
               )}
             </div>
 
-            <div className="pt-8 mt-8 border-t border-white/5 flex items-center justify-between text-xs text-white/40">
-              <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-emerald-400" /> 100% Local Kashmir DMC</span>
+            <div className="pt-7 mt-7 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-white/50">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> 100% Local Kashmir DMC
+              </span>
               <Link to="/planner" className="text-amber-400 hover:underline font-bold flex items-center gap-1">
                 Custom Trip Planner <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
 
-          {/* Card 2: For Travel Agents & B2B Partners */}
-          <div className="p-8 md:p-12 rounded-[2.5rem] bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-amber-400/25 flex flex-col justify-between relative overflow-hidden shadow-2xl">
+          {/* Card 2: For Travel Agencies, Hoteliers & Cab Fleet Owners */}
+          <div className="p-7 sm:p-10 md:p-12 rounded-[2.5rem] bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-amber-400/25 flex flex-col justify-between relative overflow-hidden shadow-2xl">
             <div className="relative z-10">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-400/15 border border-emerald-400/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-6">
                 <Building2 className="w-3.5 h-3.5" />
-                <span>For Travel Agents & DMCs</span>
+                <span>For Agencies, Hotels & Fleets</span>
               </div>
               <h3 className="font-display text-3xl md:text-4xl font-black text-white leading-tight mb-4">
-                Grow Your Agency With <br />
+                Scale On Kashmir’s <br />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-amber-300">
-                  Kashmir Ground Operations
+                  Unified Travel Operating System
                 </span>
               </h3>
-              <p className="text-white/60 text-sm md:text-base leading-relaxed mb-8">
-                Outstation travel agent? Access contracted B2B net rates for luxury houseboats, 4x4 snow cabs, and offbeat estates. Build white-label branded PDF quotes and protect your travelers with 24/7 ground SOS.
+              <p className="text-white/65 text-sm md:text-base leading-relaxed mb-6">
+                Whether you are an outstation travel agency, a Dal Lake houseboat or alpine hotelier, or a 4x4 snow fleet owner — plug directly into verified demand and real-time ground telemetry.
               </p>
 
-              <div className="space-y-3.5 mb-8">
+              <div className="space-y-3 mb-7">
                 {points.map((pt: string, idx: number) => (
                   <div key={idx} className="flex items-start gap-3 text-xs text-white/80">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -166,25 +168,35 @@ export default function UnifiedClosingCta() {
                 ))}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button asChild className="flex-1 h-12 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase text-xs rounded-xl shadow-lg shadow-emerald-500/20">
-                  <Link to="/agent" className="flex items-center justify-center gap-2">
-                    <span>Enter Agent Workspace</span>
-                    <ArrowRight className="w-4 h-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <Button asChild className="h-11 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase text-[11px] rounded-xl shadow-lg shadow-emerald-500/20">
+                  <Link to="/agent" className="flex items-center justify-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Agencies</span>
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="border-white/20 hover:bg-white/10 text-white font-bold h-12 text-xs rounded-xl">
-                  <Link to="/agent?action=register">Register Agency</Link>
+                <Button asChild variant="outline" className="border-white/20 hover:bg-white/10 text-white font-bold h-11 text-[11px] uppercase rounded-xl">
+                  <Link to="/hospitality" className="flex items-center justify-center gap-1.5">
+                    <BedDouble className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Hoteliers</span>
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="border-white/20 hover:bg-white/10 text-white font-bold h-11 text-[11px] uppercase rounded-xl">
+                  <Link to="/driver" className="flex items-center justify-center gap-1.5">
+                    <Car className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Fleet OS</span>
+                  </Link>
                 </Button>
               </div>
             </div>
 
-            <div className="pt-8 mt-8 border-t border-white/5 flex items-center justify-between text-xs text-white/40">
-              <span>Instant Verification for Tour Operators</span>
+            <div className="pt-7 mt-7 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-white/50">
+              <Link to="/vendor" className="text-emerald-400 hover:underline font-bold">
+                Register Property or Fleet →
+              </Link>
               <span className="text-emerald-400 font-mono font-bold">400+ Active B2B Partners</span>
             </div>
           </div>
-
         </div>
       </div>
     </section>

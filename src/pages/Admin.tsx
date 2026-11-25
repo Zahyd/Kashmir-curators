@@ -27,7 +27,6 @@ import {
   ChevronDown,
   Wallet,
   LayoutGrid,
-  Loader2,
   UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,6 +49,7 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import MobilePortalNav from '@/components/layout/MobilePortalNav';
 import MobilePortalBottomBar from '@/components/layout/MobilePortalBottomBar';
 import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
+import { PageLoading, DashboardSkeleton } from '@/components/layout/PageLoading';
 import { AdminCommandPalette } from '@/components/admin/AdminCommandPalette';
 import { DirectorAiCopilot } from '@/components/admin/DirectorAiCopilot';
 
@@ -81,13 +81,6 @@ const CMSAuditLogs = lazy(() => import('@/components/admin/CMSAuditLogs'));
 const CMSSettings = lazy(() => import('@/components/admin/CMSSettings'));
 const CMSPortalKeys = lazy(() => import('@/components/admin/CMSPortalKeys'));
 const CMSAttendance = lazy(() => import('@/components/admin/CMSAttendance'));
-
-const ModuleSkeleton = () => (
-  <div className="min-h-[420px] rounded-3xl bg-[#0a0f14]/80 border border-white/10 p-8 flex flex-col items-center justify-center gap-3 text-white/50">
-    <Loader2 className="w-7 h-7 text-amber-400 animate-spin" />
-    <p className="text-xs font-mono uppercase tracking-widest">Loading Live OS Module...</p>
-  </div>
-);
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -173,7 +166,11 @@ export default function Admin() {
     }
   }, [systemEvents.length]);
 
-  if (isTeamLoading || !isTeamAuthenticated || !canAccessAdmin) {
+  if (isTeamLoading) {
+    return <PageLoading fullScreen message="Authenticating Command HQ..." className="bg-[#070b0e] text-slate-100" />;
+  }
+
+  if (!isTeamAuthenticated || !canAccessAdmin) {
     return null;
   }
 
@@ -870,7 +867,7 @@ export default function Admin() {
         {/* Content Container with Suspense Code-Splitting */}
         <main className="p-3 sm:p-6 lg:p-8 pt-20 lg:pt-8 pb-28 lg:pb-8 max-w-7xl mx-auto w-full min-w-0">
           <AdminErrorBoundary>
-            <Suspense fallback={<ModuleSkeleton />}>
+            <Suspense fallback={<DashboardSkeleton message="Loading Live OS Module..." className="bg-[#0a0f14]/80 border-white/10" />}>
               {renderContent()}
             </Suspense>
           </AdminErrorBoundary>

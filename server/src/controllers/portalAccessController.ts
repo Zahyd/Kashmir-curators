@@ -4,7 +4,23 @@ import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/authMiddleware';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
+// SECURITY: JWT_SECRET is mandatory — fail fast if unconfigured
+const JWT_SECRET = process.env.JWT_SECRET!;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set.');
+  process.exit(1);
+}
+
+const mapPortalRole = (portalType: string): string => {
+  const map: Record<string, string> = {
+    HOSPITALITY: 'hospitality',
+    SALES: 'sales',
+    DRIVER: 'driver',
+    OPERATIONS: 'operations',
+    VENDOR: 'supplier',
+  };
+  return map[String(portalType).toUpperCase()] || 'hospitality';
+};
 
 // Format unique key by portal prefix
 const generateKeyCode = (portalType: string): string => {
@@ -36,7 +52,8 @@ export const verifyPortalAccess = async (req: Request, res: Response) => {
       where: { accessKey: trimmedKey }
     });
 
-    if (!keyRecord && trimmedKey === 'KC-HOSP-ALPHA1') {
+    // SECURITY: Auto-provisioning default dev key is strictly disabled in production
+    if (process.env.NODE_ENV !== 'production' && !keyRecord && trimmedKey === 'KC-HOSP-ALPHA1') {
       keyRecord = await p.portalAccessKey.upsert({
         where: { accessKey: 'KC-HOSP-ALPHA1' },
         update: { status: 'ACTIVE' },
@@ -95,12 +112,12 @@ export const verifyPortalAccess = async (req: Request, res: Response) => {
         id: updated.id,
         accessKey: updated.accessKey,
         name: updated.assignedName,
-        role: 'hospitality',
+        role: mapPortalRole(updated.portalType),
         portalType: updated.portalType,
         propertyScope: updated.propertyScope || 'ALL'
       },
       JWT_SECRET,
-      { expiresIn: '30d' }
+      { expiresIn: '30d', algorithm: 'HS256' }
     );
 
     res.json({

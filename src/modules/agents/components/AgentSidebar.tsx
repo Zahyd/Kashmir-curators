@@ -188,25 +188,25 @@ export const AgentSidebar: React.FC<AgentSidebarProps> = ({
   return (
     <>
       {/* Mobile Top Navbar with Hamburger */}
-      <div className="lg:hidden flex items-center justify-between p-4 bg-card border-b border-border sticky top-0 z-30">
-        <div>
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-card/95 backdrop-blur-md border-b border-border sticky top-0 z-30">
+        <div className="min-w-0 pr-2">
           <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Agent CRM</span>
           <h3 className="font-bold text-foreground text-sm line-clamp-1">{companyName || 'Travel Partner'}</h3>
         </div>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="rounded-xl">
+            <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 shrink-0" aria-label="Open B2B menu">
               <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-80">
+          <SheetContent side="left" className="p-0 w-[88vw] sm:w-80">
             <NavContent />
           </SheetContent>
         </Sheet>
       </div>
 
       {/* Desktop Persistent Sidebar */}
-      <aside className="hidden lg:block w-72 shrink-0 border-r border-border/70 bg-card h-[calc(100vh-4rem)] sticky top-16 shadow-sm overflow-hidden">
+      <aside className="hidden lg:block w-72 shrink-0 border-r border-border/70 bg-card h-[calc(100dvh-6rem)] sticky top-24 shadow-sm overflow-hidden">
         <NavContent />
       </aside>
     </>
