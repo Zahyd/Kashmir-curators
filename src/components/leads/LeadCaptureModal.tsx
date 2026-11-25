@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, Sparkles, Phone, Mail, User, CalendarDays, MapPin, Compass, 
-  ArrowRight, CheckCircle2, MessageCircle, Loader2, Users, Bed, Car, 
-  Flame, Mountain, Heart, Shield, Clock, HelpCircle, ChevronRight
+  X, Sparkles, Phone, Mail, User, CalendarDays, Compass, 
+  ArrowRight, CheckCircle2, MessageCircle, Loader2, Users, Car, 
+  Flame, Mountain, Heart, ChevronRight, ChevronDown, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -198,584 +198,619 @@ export default function LeadCaptureModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-2.5 sm:p-6">
       {/* Frosted Glass Dark Overlay */}
       <div 
-        className="fixed inset-0 bg-[#070b0e]/80 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
+        className="fixed inset-0 bg-[#05080d]/80 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
         onClick={closeLeadModal}
       />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-2xl bg-white dark:bg-[#0c1216] border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden text-[#111439] dark:text-white my-auto max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-300">
-        
-        {/* Subtle Ambient Glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Close Button */}
-        <button
-          onClick={closeLeadModal}
-          className="absolute top-6 right-6 w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 hover:text-[#111439] dark:hover:text-white transition-all hover:scale-105 active:scale-95 z-20"
-        >
-          <X className="w-4 h-4" />
-        </button>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lead-modal-title"
+        className="relative w-full max-w-[96vw] sm:max-w-2xl bg-white dark:bg-[#0B1016] border border-slate-200/90 dark:border-white/12 rounded-2xl sm:rounded-3xl shadow-[0_24px_80px_-16px_rgba(0,0,0,0.65)] z-10 overflow-hidden text-[#111439] dark:text-slate-100 max-h-[92dvh] sm:max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200"
+      >
+        {/* Subtle Top Gold Accent Line & Ambient Glow */}
+        <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-amber-500/80 to-transparent shrink-0" />
+        <div className="absolute top-0 right-0 w-56 h-56 bg-amber-500/[0.08] rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-56 h-56 bg-sky-500/[0.06] rounded-full blur-3xl pointer-events-none" />
 
         {/* Progress Tracker Header */}
-        <div className="px-5 sm:px-8 pt-6 sm:pt-8 pb-3 sm:pb-4 border-b border-slate-100 dark:border-white/5 relative z-10 shrink-0">
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[9px] font-black uppercase tracking-widest">
-              <Sparkles className="w-3 h-3" />
-              {step === 4 ? 'VIP Concierge Confirmed' : `Stage ${step} of 3 • Progressive Curation`}
-            </div>
-            {createdLead?.leadId && (
-              <span className="font-mono text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-lg border border-amber-500/20">
-                {createdLead.leadId}
-              </span>
-            )}
-          </div>
-          
-          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-[#111439] dark:text-white">
-            {getModalTitle()}
-          </h2>
-          <p className="text-xs text-[#4A5568] dark:text-white/60 mt-1">
-            {step === 1 && "Start your journey. Provide your contact below and our smart engine will tailor the perfect package."}
-            {step === 2 && "Configure party size, travel duration, arrival hub, and comfort preference."}
-            {step === 3 && "Fine-tune transportation fleet and offbeat territory exploration."}
-            {step === 4 && "Your custom itinerary and senior local curator have been assigned."}
-          </p>
+        <div className="px-4 sm:px-7 pt-4 sm:pt-6 pb-3.5 sm:pb-4 border-b border-slate-100 dark:border-white/8 bg-slate-50/60 dark:bg-white/[0.015] relative z-10 shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/12 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-[0.14em]">
+                  <Sparkles className="w-3 h-3 shrink-0" />
+                  <span>{step === 4 ? 'VIP Concierge Confirmed' : `Stage ${step} of 3 • Progressive Curation`}</span>
+                </div>
+                {createdLead?.leadId && (
+                  <span className="font-mono text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-md border border-amber-500/25">
+                    {createdLead.leadId}
+                  </span>
+                )}
+              </div>
 
-          {/* Progress Bar */}
-          <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden mt-4">
-            <div 
-              className="h-full bg-gradient-to-r from-amber-500 to-[#111439] dark:to-amber-300 transition-all duration-500 rounded-full"
-              style={{ width: `${(step / 4) * 100}%` }}
-            />
+              <div>
+                <h2
+                  id="lead-modal-title"
+                  className="text-xl sm:text-2xl font-black uppercase tracking-tight text-[#111439] dark:text-white leading-tight"
+                >
+                  {getModalTitle()}
+                </h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                  {step === 1 && "Provide your contact details below and our curation engine will craft a tailored Kashmir package."}
+                  {step === 2 && "Configure party size, duration, arrival hub, and comfort preferences."}
+                  {step === 3 && "Fine-tune chauffeur fleet and offbeat valley exploration."}
+                  {step === 4 && "Your custom itinerary and senior local curator have been assigned."}
+                </p>
+              </div>
+            </div>
+
+            {/* Close Button (inline-safe on mobile, never overlaps title) */}
+            <button
+              type="button"
+              onClick={closeLeadModal}
+              aria-label="Close trip planner"
+              className="w-9 h-9 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-all shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Segmented Progress Bar */}
+          <div className="grid grid-cols-4 gap-1.5 mt-3.5">
+            {[1, 2, 3, 4].map((idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-500",
+                  idx <= step
+                    ? "bg-gradient-to-r from-amber-500 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.35)]"
+                    : "bg-slate-200/80 dark:bg-white/10"
+                )}
+              />
+            ))}
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* STAGE 1: Frictionless 10-Second Quick Lead Capture */}
-        {/* ========================================================================= */}
-        {step === 1 && (
-          <form onSubmit={handleQuickSubmit} className="p-5 sm:p-8 space-y-4 sm:space-y-6 relative z-10 animate-fade-in overflow-y-auto max-h-[calc(92vh-120px)]">
-            <div className="space-y-4">
-              {/* Intent Selector Quick Pills */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                  What is your primary travel goal?
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    'Kashmir Honeymoon Package',
-                    'North Kashmir Offbeat Places',
-                    'Family Holiday Vacation',
-                    'Gulmarg Snow & Ski Adventure',
-                    'Custom Scenic Tour'
-                  ].map(intent => (
-                    <button
-                      key={intent}
-                      type="button"
-                      onClick={() => setQuickForm({ ...quickForm, intent })}
-                      className={cn(
-                        "px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 border",
-                        quickForm.intent === intent
-                          ? "bg-[#111439] text-white border-[#111439] dark:bg-amber-400 dark:text-black dark:border-amber-400 shadow-md scale-[1.02]"
-                          : "bg-slate-50 dark:bg-white/5 text-[#4A5568] dark:text-white/70 border-slate-200 dark:border-white/10 hover:border-slate-300"
-                      )}
-                    >
-                      {intent}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Name & Phone Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                    Your Name
+        {/* Scrollable Body for All 4 Stages */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10">
+          {/* ========================================================================= */}
+          {/* STAGE 1: Frictionless 10-Second Quick Lead Capture */}
+          {/* ========================================================================= */}
+          {step === 1 && (
+            <form onSubmit={handleQuickSubmit} className="p-4 sm:p-7 space-y-5 animate-fade-in">
+              <div className="space-y-4">
+                {/* Intent Selector Quick Pills */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    What is your primary travel goal?
                   </label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                      placeholder="e.g. Rahul Sharma"
-                      value={quickForm.name}
-                      onChange={e => setQuickForm({ ...quickForm, name: e.target.value })}
-                      className="h-12 pl-11 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-[#111439] dark:text-white focus:bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60 flex items-center justify-between">
-                    <span>WhatsApp / Phone</span>
-                    <span className="text-amber-600 font-bold">*Required</span>
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
-                    <Input
-                      type="tel"
-                      required
-                      placeholder="+91 98765 43210"
-                      value={quickForm.phone}
-                      onChange={e => setQuickForm({ ...quickForm, phone: e.target.value })}
-                      className="h-12 pl-11 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-xs font-black text-[#111439] dark:text-white focus:bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Email & Tentative Window */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                    Email Address (Optional)
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                      type="email"
-                      placeholder="rahul@example.com"
-                      value={quickForm.email}
-                      onChange={e => setQuickForm({ ...quickForm, email: e.target.value })}
-                      className="h-12 pl-11 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-[#111439] dark:text-white focus:bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                    When are you traveling?
-                  </label>
-                  <div className="relative">
-                    <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
-                    <select
-                      value={quickForm.travelMonth}
-                      onChange={e => setQuickForm({ ...quickForm, travelMonth: e.target.value })}
-                      className="w-full h-12 pl-11 pr-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-[#111439] dark:text-white focus:outline-none focus:bg-white cursor-pointer"
-                    >
-                      <option value="Immediate (< 15 Days)">Immediate (Next 15 Days)</option>
-                      <option value="Next 30 Days">Next 30 Days (Prime Season)</option>
-                      <option value="Next 2-3 Months">In 2 - 3 Months</option>
-                      <option value="Winter Snow (Dec - Feb)">Winter Snow Season (Dec - Feb)</option>
-                      <option value="Spring Tulip Bloom (Mar - Apr)">Spring Tulip Bloom (Mar - Apr)</option>
-                      <option value="Summer (May - Jul)">Summer Vacation (May - Jul)</option>
-                      <option value="Autumn Maple (Sep - Nov)">Autumn Gold (Sep - Nov)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Submit Action */}
-            <div className="pt-2">
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full h-14 rounded-2xl bg-[#111439] hover:bg-[#1a205a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-black font-black text-xs uppercase tracking-widest shadow-xl shadow-[#111439]/20 transition-all duration-300 hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <span>Generate My Custom Package & Lead ID</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
-              <p className="text-center text-[10px] text-slate-400 dark:text-white/40 mt-3">
-                🔒 Zero spam guarantee. A unique lead will be generated with a senior local Kashmiri curator.
-              </p>
-            </div>
-          </form>
-        )}
-
-        {/* ========================================================================= */}
-        {/* STAGE 2: Progressive Profiling — Duration, Party Size & Comfort */}
-        {/* ========================================================================= */}
-        {step === 2 && (
-          <div className="p-8 space-y-6 relative z-10 animate-fade-in">
-            <div className="space-y-6">
-              
-              {/* Adults & Children Counters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-between">
-                  <div>
-                    <span className="block text-xs font-black uppercase tracking-wider text-[#111439] dark:text-white">Adults</span>
-                    <span className="text-[10px] text-slate-400">Ages 12+</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setProfileForm(p => ({ ...p, adultsCount: Math.max(1, p.adultsCount - 1) }))}
-                      className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/20 bg-white dark:bg-black flex items-center justify-center font-black text-sm"
-                    >
-                      -
-                    </button>
-                    <span className="text-base font-black w-5 text-center">{profileForm.adultsCount}</span>
-                    <button
-                      type="button"
-                      onClick={() => setProfileForm(p => ({ ...p, adultsCount: Math.min(20, p.adultsCount + 1) }))}
-                      className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/20 bg-white dark:bg-black flex items-center justify-center font-black text-sm"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-between">
-                  <div>
-                    <span className="block text-xs font-black uppercase tracking-wider text-[#111439] dark:text-white">Children</span>
-                    <span className="text-[10px] text-slate-400">Below 12 years</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setProfileForm(p => ({ ...p, childrenCount: Math.max(0, p.childrenCount - 1) }))}
-                      className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/20 bg-white dark:bg-black flex items-center justify-center font-black text-sm"
-                    >
-                      -
-                    </button>
-                    <span className="text-base font-black w-5 text-center">{profileForm.childrenCount}</span>
-                    <button
-                      type="button"
-                      onClick={() => setProfileForm(p => ({ ...p, childrenCount: Math.min(10, p.childrenCount + 1) }))}
-                      className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/20 bg-white dark:bg-black flex items-center justify-center font-black text-sm"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Number of Nights & Arrival Hub */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                    Number of Nights
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[3, 5, 7, 9].map(n => (
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    {[
+                      'Kashmir Honeymoon Package',
+                      'North Kashmir Offbeat Places',
+                      'Family Holiday Vacation',
+                      'Gulmarg Snow & Ski Adventure',
+                      'Custom Scenic Tour'
+                    ].map(intent => (
                       <button
-                        key={n}
+                        key={intent}
                         type="button"
-                        onClick={() => setProfileForm({ ...profileForm, nightsCount: n })}
+                        onClick={() => setQuickForm({ ...quickForm, intent })}
                         className={cn(
-                          "py-3 rounded-xl text-xs font-black transition-all border text-center",
-                          profileForm.nightsCount === n
-                            ? "bg-[#111439] text-white border-[#111439] dark:bg-amber-400 dark:text-black"
-                            : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:border-slate-300"
+                          "px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-200 border text-left",
+                          quickForm.intent === intent
+                            ? "bg-[#111439] text-white border-[#111439] dark:bg-amber-400 dark:text-slate-950 dark:border-amber-400 shadow-sm font-bold"
+                            : "bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:border-amber-400/50 hover:bg-slate-100 dark:hover:bg-white/[0.08]"
                         )}
                       >
-                        {n}N / {n + 1}D
+                        {intent}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                    Arrival City / Transit Hub
-                  </label>
-                  <select
-                    value={profileForm.arrivalCity}
-                    onChange={e => setProfileForm({ ...profileForm, arrivalCity: e.target.value })}
-                    className="w-full h-12 px-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-[#111439] dark:text-white focus:outline-none focus:bg-white cursor-pointer"
-                  >
-                    {ARRIVAL_CITIES.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                {/* Name & Phone Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      Your Name
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                      <Input
+                        placeholder="e.g. Rahul Sharma"
+                        value={quickForm.name}
+                        onChange={e => setQuickForm({ ...quickForm, name: e.target.value })}
+                        className="h-11 sm:h-12 pl-10 bg-slate-50 dark:bg-[#121923] border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-amber-500/30 focus-visible:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      <span>WhatsApp / Phone</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-bold tracking-wider">*Required</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500 pointer-events-none" />
+                      <Input
+                        type="tel"
+                        required
+                        placeholder="+91 98765 43210"
+                        value={quickForm.phone}
+                        onChange={e => setQuickForm({ ...quickForm, phone: e.target.value })}
+                        className="h-11 sm:h-12 pl-10 bg-slate-50 dark:bg-[#121923] border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-xs font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-amber-500/30 focus-visible:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email & Tentative Window */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      Email Address (Optional)
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                      <Input
+                        type="email"
+                        placeholder="rahul@example.com"
+                        value={quickForm.email}
+                        onChange={e => setQuickForm({ ...quickForm, email: e.target.value })}
+                        className="h-11 sm:h-12 pl-10 bg-slate-50 dark:bg-[#121923] border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-amber-500/30 focus-visible:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      When are you traveling?
+                    </label>
+                    <div className="relative">
+                      <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500 pointer-events-none" />
+                      <select
+                        value={quickForm.travelMonth}
+                        onChange={e => setQuickForm({ ...quickForm, travelMonth: e.target.value })}
+                        className="w-full h-11 sm:h-12 pl-10 pr-9 appearance-none bg-slate-50 dark:bg-[#121923] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 cursor-pointer dark:[&>option]:bg-[#0F1620] dark:[&>option]:text-white"
+                      >
+                        <option value="Immediate (< 15 Days)">Immediate (Next 15 Days)</option>
+                        <option value="Next 30 Days">Next 30 Days (Prime Season)</option>
+                        <option value="Next 2-3 Months">In 2 - 3 Months</option>
+                        <option value="Winter Snow (Dec - Feb)">Winter Snow Season (Dec - Feb)</option>
+                        <option value="Spring Tulip Bloom (Mar - Apr)">Spring Tulip Bloom (Mar - Apr)</option>
+                        <option value="Summer (May - Jul)">Summer Vacation (May - Jul)</option>
+                        <option value="Autumn Maple (Sep - Nov)">Autumn Gold (Sep - Nov)</option>
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Travel Style */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                  Preferred Travel Style
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {TRAVEL_STYLES.map(style => {
-                    const active = profileForm.travelStyle === style.id;
-                    const Icon = style.icon;
-                    return (
+              {/* Submit Action */}
+              <div className="pt-1 border-t border-slate-100 dark:border-white/5">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full h-auto min-h-[3.25rem] sm:min-h-[3.5rem] py-3.5 px-4 sm:px-6 rounded-2xl bg-gradient-to-r from-[#111439] to-[#1d235e] hover:from-[#181d4f] hover:to-[#262e75] dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-300 dark:hover:to-amber-400 text-white dark:text-slate-950 font-black text-[11px] sm:text-xs uppercase tracking-[0.08em] sm:tracking-[0.14em] whitespace-normal text-center leading-snug shadow-lg shadow-amber-500/15 transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+                  ) : (
+                    <>
+                      <span className="break-words">Generate Custom Package &amp; Lead ID</span>
+                      <ArrowRight className="w-4 h-4 shrink-0" />
+                    </>
+                  )}
+                </Button>
+                <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500 dark:text-slate-400 mt-3 leading-relaxed">
+                  <Lock className="w-3 h-3 text-amber-500 shrink-0" />
+                  <span>Zero spam guarantee. Instant assignment to a senior local Kashmiri curator.</span>
+                </p>
+              </div>
+            </form>
+          )}
+
+          {/* ========================================================================= */}
+          {/* STAGE 2: Progressive Profiling — Duration, Party Size & Comfort */}
+          {/* ========================================================================= */}
+          {step === 2 && (
+            <div className="p-4 sm:p-7 space-y-5 animate-fade-in">
+              <div className="space-y-5">
+                {/* Adults & Children Counters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#121923] border border-slate-200 dark:border-white/10 flex items-center justify-between">
+                    <div>
+                      <span className="block text-xs font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Adults</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Ages 12+</span>
+                    </div>
+                    <div className="flex items-center gap-3">
                       <button
-                        key={style.id}
                         type="button"
-                        onClick={() => setProfileForm({ ...profileForm, travelStyle: style.id })}
+                        onClick={() => setProfileForm(p => ({ ...p, adultsCount: Math.max(1, p.adultsCount - 1) }))}
+                        className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-white/5 hover:border-amber-500/50 flex items-center justify-center font-bold text-sm transition-colors"
+                      >
+                        -
+                      </button>
+                      <span className="text-base font-black w-5 text-center tabular-nums">{profileForm.adultsCount}</span>
+                      <button
+                        type="button"
+                        onClick={() => setProfileForm(p => ({ ...p, adultsCount: Math.min(20, p.adultsCount + 1) }))}
+                        className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-white/5 hover:border-amber-500/50 flex items-center justify-center font-bold text-sm transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#121923] border border-slate-200 dark:border-white/10 flex items-center justify-between">
+                    <div>
+                      <span className="block text-xs font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Children</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Below 12 years</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setProfileForm(p => ({ ...p, childrenCount: Math.max(0, p.childrenCount - 1) }))}
+                        className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-white/5 hover:border-amber-500/50 flex items-center justify-center font-bold text-sm transition-colors"
+                      >
+                        -
+                      </button>
+                      <span className="text-base font-black w-5 text-center tabular-nums">{profileForm.childrenCount}</span>
+                      <button
+                        type="button"
+                        onClick={() => setProfileForm(p => ({ ...p, childrenCount: Math.min(10, p.childrenCount + 1) }))}
+                        className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-white/5 hover:border-amber-500/50 flex items-center justify-center font-bold text-sm transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Number of Nights & Arrival Hub */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      Number of Nights
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[3, 5, 7, 9].map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setProfileForm({ ...profileForm, nightsCount: n })}
+                          className={cn(
+                            "py-2.5 px-1 rounded-xl text-[11px] font-bold transition-all border text-center",
+                            profileForm.nightsCount === n
+                              ? "bg-[#111439] text-white border-[#111439] dark:bg-amber-400 dark:text-slate-950 dark:border-amber-400 shadow-sm"
+                              : "bg-slate-50 dark:bg-[#121923] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-amber-400/50"
+                          )}
+                        >
+                          {n}N / {n + 1}D
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      Arrival City / Transit Hub
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={profileForm.arrivalCity}
+                        onChange={e => setProfileForm({ ...profileForm, arrivalCity: e.target.value })}
+                        className="w-full h-11 px-3.5 pr-9 appearance-none bg-slate-50 dark:bg-[#121923] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 cursor-pointer dark:[&>option]:bg-[#0F1620] dark:[&>option]:text-white"
+                      >
+                        {ARRIVAL_CITIES.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Travel Style */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Preferred Travel Style
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {TRAVEL_STYLES.map(style => {
+                      const active = profileForm.travelStyle === style.id;
+                      const Icon = style.icon;
+                      return (
+                        <button
+                          key={style.id}
+                          type="button"
+                          onClick={() => setProfileForm({ ...profileForm, travelStyle: style.id })}
+                          className={cn(
+                            "p-3 rounded-2xl border text-left flex items-start gap-3 transition-all",
+                            active
+                              ? "border-[#111439] bg-[#111439]/5 dark:border-amber-400 dark:bg-amber-400/10 shadow-sm"
+                              : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121923] hover:border-amber-400/40"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+                            active ? "bg-[#111439] text-white dark:bg-amber-400 dark:text-slate-950" : "bg-white dark:bg-white/10 text-amber-500"
+                          )}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-extrabold uppercase text-slate-900 dark:text-white leading-tight">{style.label}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{style.desc}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Budget Tier */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Expected Budget Range
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {BUDGET_RANGES.map(b => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setProfileForm({ ...profileForm, budgetRange: b.id })}
                         className={cn(
-                          "p-3 rounded-2xl border text-left flex items-start gap-3 transition-all",
-                          active
+                          "p-3 rounded-xl border text-left transition-all",
+                          profileForm.budgetRange === b.id
                             ? "border-[#111439] bg-[#111439]/5 dark:border-amber-400 dark:bg-amber-400/10 shadow-sm"
-                            : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:border-slate-300"
+                            : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121923] hover:border-amber-400/40"
                         )}
                       >
-                        <div className={cn(
-                          "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5",
-                          active ? "bg-[#111439] text-white dark:bg-amber-400 dark:text-black" : "bg-white dark:bg-white/10 text-amber-600"
-                        )}>
-                          <Icon className="w-4 h-4" />
-                        </div>
+                        <p className="text-xs font-extrabold uppercase text-slate-900 dark:text-white">{b.label}</p>
+                        <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">{b.desc}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{b.star}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 Actions */}
+              <div className="flex items-center gap-2.5 sm:gap-3 pt-2 border-t border-slate-100 dark:border-white/5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep(1)}
+                  className="h-12 px-4 sm:px-6 rounded-xl border-slate-200 dark:border-white/10 text-xs font-bold uppercase shrink-0"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="flex-1 min-w-0 h-auto min-h-[3rem] py-3 px-4 rounded-xl bg-[#111439] hover:bg-[#1c225a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-slate-950 font-black text-[11px] sm:text-xs uppercase tracking-[0.08em] sm:tracking-widest whitespace-normal text-center leading-snug shadow-lg flex items-center justify-center gap-2"
+                >
+                  <span>Continue to Offbeat &amp; Transport</span>
+                  <ChevronRight className="w-4 h-4 shrink-0" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* STAGE 3: Offbeat Desires, Transportation & Past Visits */}
+          {/* ========================================================================= */}
+          {step === 3 && (
+            <div className="p-4 sm:p-7 space-y-5 animate-fade-in">
+              <div className="space-y-5">
+                {/* Offbeat Destinations Question */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Include offbeat Kashmir destinations?
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {OFFBEAT_OPTIONS.map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setProfileForm({ ...profileForm, wantOffbeat: opt.id })}
+                        className={cn(
+                          "p-3 rounded-xl border text-left transition-all",
+                          profileForm.wantOffbeat === opt.id
+                            ? "border-[#111439] bg-[#111439]/5 dark:border-amber-400 dark:bg-amber-400/10 shadow-sm"
+                            : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121923] hover:border-amber-400/40"
+                        )}
+                      >
+                        <p className="text-xs font-extrabold uppercase text-slate-900 dark:text-white">{opt.label}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{opt.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Transportation Preference */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Dedicated Transportation Preference
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {TRANSPORT_OPTIONS.map(trans => (
+                      <button
+                        key={trans.id}
+                        type="button"
+                        onClick={() => setProfileForm({ ...profileForm, transportPreference: trans.id })}
+                        className={cn(
+                          "p-3 rounded-xl border text-left flex items-start gap-3 transition-all",
+                          profileForm.transportPreference === trans.id
+                            ? "border-[#111439] bg-[#111439]/5 dark:border-amber-400 dark:bg-amber-400/10 shadow-sm"
+                            : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121923] hover:border-amber-400/40"
+                        )}
+                      >
+                        <Car className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                         <div className="min-w-0">
-                          <p className="text-xs font-black uppercase text-[#111439] dark:text-white leading-tight">{style.label}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-white/40 mt-0.5 truncate">{style.desc}</p>
+                          <p className="text-xs font-extrabold uppercase text-slate-900 dark:text-white leading-tight">{trans.label}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{trans.desc}</p>
                         </div>
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                </div>
+
+                {/* Past Visits & Accommodation */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      Have you visited Kashmir before?
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={profileForm.placesVisited}
+                        onChange={e => setProfileForm({ ...profileForm, placesVisited: e.target.value })}
+                        className="w-full h-11 px-3.5 pr-9 appearance-none bg-slate-50 dark:bg-[#121923] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 cursor-pointer dark:[&>option]:bg-[#0F1620] dark:[&>option]:text-white"
+                      >
+                        <option value="First Time in Kashmir">First Time in Kashmir</option>
+                        <option value="Visited Srinagar & Gulmarg Before">Visited Srinagar &amp; Gulmarg Before</option>
+                        <option value="Frequent Kashmir Traveler">Frequent Kashmir Traveler</option>
+                        <option value="Visited Only Ladakh / Jammu">Visited Ladakh or Jammu Only</option>
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      Preferred Accommodation Class
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={profileForm.preferredAccommodation}
+                        onChange={e => setProfileForm({ ...profileForm, preferredAccommodation: e.target.value })}
+                        className="w-full h-11 px-3.5 pr-9 appearance-none bg-slate-50 dark:bg-[#121923] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 cursor-pointer dark:[&>option]:bg-[#0F1620] dark:[&>option]:text-white"
+                      >
+                        <option value="4-Star Boutique & Heritage Houseboat">4-Star Boutique + Heritage Houseboat</option>
+                        <option value="5-Star Ultra Luxury (Khyber / Taj / Lalit)">5-Star Ultra Luxury (Khyber / Taj)</option>
+                        <option value="3-Star Comfort Chalets">3-Star Comfort Chalets</option>
+                        <option value="Luxury Alpine Houseboats Only">Luxury Alpine Houseboats Only</option>
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Budget Tier */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                  Expected Budget Range
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {BUDGET_RANGES.map(b => (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => setProfileForm({ ...profileForm, budgetRange: b.id })}
-                      className={cn(
-                        "p-3 rounded-xl border text-left transition-all",
-                        profileForm.budgetRange === b.id
-                          ? "border-[#111439] bg-[#111439]/5 dark:border-amber-400 dark:bg-amber-400/10 shadow-sm"
-                          : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:border-slate-300"
-                      )}
-                    >
-                      <p className="text-xs font-black uppercase text-[#111439] dark:text-white">{b.label}</p>
-                      <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{b.desc}</p>
-                      <p className="text-[9px] text-slate-400 dark:text-white/40 mt-0.5">{b.star}</p>
-                    </button>
-                  ))}
-                </div>
+              {/* Step 3 Actions */}
+              <div className="flex items-center gap-2.5 sm:gap-3 pt-2 border-t border-slate-100 dark:border-white/5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep(2)}
+                  className="h-12 px-4 sm:px-6 rounded-xl border-slate-200 dark:border-white/10 text-xs font-bold uppercase shrink-0"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleEnrichSubmit}
+                  className="flex-1 min-w-0 h-auto min-h-[3rem] py-3 px-4 rounded-xl bg-[#111439] hover:bg-[#1c225a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-slate-950 font-black text-[11px] sm:text-xs uppercase tracking-[0.08em] sm:tracking-widest whitespace-normal text-center leading-snug shadow-lg flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  ) : (
+                    <>
+                      <span>Complete Custom Curation</span>
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
+          )}
 
-            {/* Step 2 Actions */}
-            <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep(1)}
-                className="h-12 px-6 rounded-xl border-slate-200 dark:border-white/10 text-xs font-black uppercase"
-              >
-                Back
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setStep(3)}
-                className="flex-1 h-12 rounded-xl bg-[#111439] hover:bg-[#1c225a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-black font-black text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2"
-              >
-                <span>Continue to Offbeat & Transport</span>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* STAGE 3: Offbeat Desires, Transportation & Past Visits */}
-        {/* ========================================================================= */}
-        {step === 3 && (
-          <div className="p-8 space-y-6 relative z-10 animate-fade-in">
-            <div className="space-y-6">
-              
-              {/* Offbeat Destinations Question */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                  Do you want to include offbeat Kashmir destinations?
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {OFFBEAT_OPTIONS.map(opt => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setProfileForm({ ...profileForm, wantOffbeat: opt.id })}
-                      className={cn(
-                        "p-3 rounded-xl border text-left transition-all",
-                        profileForm.wantOffbeat === opt.id
-                          ? "border-[#111439] bg-[#111439]/5 dark:border-amber-400 dark:bg-amber-400/10 shadow-sm"
-                          : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:border-slate-300"
-                      )}
-                    >
-                      <p className="text-xs font-black uppercase text-[#111439] dark:text-white">{opt.label}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-white/40 mt-0.5">{opt.desc}</p>
-                    </button>
-                  ))}
-                </div>
+          {/* ========================================================================= */}
+          {/* STAGE 4: Confirmation & Instant WhatsApp / Local Expert Hand-Off */}
+          {/* ========================================================================= */}
+          {step === 4 && (
+            <div className="p-5 sm:p-8 text-center space-y-5 animate-fade-in">
+              {/* Animated Celebration Badge */}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-500 animate-in zoom-in-50 duration-500 shadow-xl shadow-emerald-500/10">
+                <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10" />
               </div>
 
-              {/* Transportation Preference */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                  Dedicated Transportation Preference
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {TRANSPORT_OPTIONS.map(trans => (
-                    <button
-                      key={trans.id}
-                      type="button"
-                      onClick={() => setProfileForm({ ...profileForm, transportPreference: trans.id })}
-                      className={cn(
-                        "p-3 rounded-xl border text-left flex items-start gap-3 transition-all",
-                        profileForm.transportPreference === trans.id
-                          ? "border-[#111439] bg-[#111439]/5 dark:border-amber-400 dark:bg-amber-400/10 shadow-sm"
-                          : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:border-slate-300"
-                      )}
-                    >
-                      <Car className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-black uppercase text-[#111439] dark:text-white leading-tight">{trans.label}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-white/40 mt-0.5 truncate">{trans.desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Past Visits & Accommodation */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                    Have you visited Kashmir before?
-                  </label>
-                  <select
-                    value={profileForm.placesVisited}
-                    onChange={e => setProfileForm({ ...profileForm, placesVisited: e.target.value })}
-                    className="w-full h-12 px-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-[#111439] dark:text-white focus:outline-none focus:bg-white cursor-pointer"
-                  >
-                    <option value="First Time in Kashmir">First Time in Kashmir</option>
-                    <option value="Visited Srinagar & Gulmarg Before">Visited Srinagar & Gulmarg Before</option>
-                    <option value="Frequent Kashmir Traveler">Frequent Kashmir Traveler</option>
-                    <option value="Visited Only Ladakh / Jammu">Visited Ladakh or Jammu Only</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">
-                    Preferred Accommodation Class
-                  </label>
-                  <select
-                    value={profileForm.preferredAccommodation}
-                    onChange={e => setProfileForm({ ...profileForm, preferredAccommodation: e.target.value })}
-                    className="w-full h-12 px-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-[#111439] dark:text-white focus:outline-none focus:bg-white cursor-pointer"
-                  >
-                    <option value="4-Star Boutique & Heritage Houseboat">4-Star Boutique + Heritage Houseboat</option>
-                    <option value="5-Star Ultra Luxury (Khyber / Taj / Lalit)">5-Star Ultra Luxury (Khyber / Taj)</option>
-                    <option value="3-Star Comfort Chalets">3-Star Comfort Chalets</option>
-                    <option value="Luxury Alpine Houseboats Only">Luxury Alpine Houseboats Only</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3 Actions */}
-            <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep(2)}
-                className="h-12 px-6 rounded-xl border-slate-200 dark:border-white/10 text-xs font-black uppercase"
-              >
-                Back
-              </Button>
-              <Button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleEnrichSubmit}
-                className="flex-1 h-12 rounded-xl bg-[#111439] hover:bg-[#1c225a] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-black font-black text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>Complete Custom Curation</span>
-                    <CheckCircle2 className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* STAGE 4: Confirmation & Instant WhatsApp / Local Expert Hand-Off */}
-        {/* ========================================================================= */}
-        {step === 4 && (
-          <div className="p-8 text-center space-y-6 relative z-10 animate-fade-in">
-            {/* Animated Celebration Badge */}
-            <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-600 animate-in zoom-in-50 duration-500 shadow-xl shadow-emerald-500/10">
-              <CheckCircle2 className="w-10 h-10" />
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">
-                Lead Registered Successfully
-              </span>
-              <h3 className="text-3xl font-black uppercase tracking-tight text-[#111439] dark:text-white">
-                Bespoke Curation <span className="text-amber-600 dark:text-amber-400">Initiated</span>
-              </h3>
-              <p className="text-xs text-[#4A5568] dark:text-white/60 max-w-md mx-auto leading-relaxed">
-                Your travel profile has been algorithmically scored and prioritized with our senior ground operations team.
-              </p>
-            </div>
-
-            {/* Lead Summary Ticket */}
-            <div className="p-6 rounded-3xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-left max-w-md mx-auto space-y-3 shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">Unique Lead ID</span>
-                <span className="font-mono text-sm font-black text-[#111439] dark:text-white bg-white dark:bg-black px-3 py-1 rounded-lg border border-slate-200 dark:border-white/10">
-                  {createdLead?.leadId || 'KC-2026-ACTIVE'}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-400">
+                  Lead Registered Successfully
                 </span>
+                <h3 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                  Bespoke Curation <span className="text-amber-600 dark:text-amber-400">Initiated</span>
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Your travel profile has been scored and prioritized with our senior ground operations team.
+                </p>
               </div>
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">Category Segment</span>
-                <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400">
-                  {(createdLead?.leadCategory || 'BESPOKE_KASHMIR_TOUR').replace(/_/g, ' ')}
-                </span>
+
+              {/* Lead Summary Ticket */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#121923] border border-slate-200 dark:border-white/10 text-left max-w-md mx-auto space-y-3 shadow-sm">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-white/10 pb-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Unique Lead ID</span>
+                  <span className="font-mono text-xs sm:text-sm font-black text-slate-900 dark:text-white bg-white dark:bg-black/60 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10">
+                    {createdLead?.leadId || 'KC-2026-ACTIVE'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-white/10 pb-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Category Segment</span>
+                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 text-right">
+                    {(createdLead?.leadCategory || 'BESPOKE_KASHMIR_TOUR').replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-white/10 pb-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Lead Score</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">
+                    <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
+                    {createdLead?.leadScore || 85}/100 ({createdLead?.sentiment || 'Hot'})
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Assigned Expert</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    Kashmir Senior Concierge
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">Lead Score</span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-black">
-                  <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  {createdLead?.leadScore || 85}/100 ({createdLead?.sentiment || 'Hot'} Priority)
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#4A5568] dark:text-white/60">Assigned Expert</span>
-                <span className="text-xs font-bold text-[#111439] dark:text-white">
-                  Kashmir Senior Concierge
-                </span>
+
+              {/* Direct WhatsApp Call to Action */}
+              <div className="space-y-2.5 pt-1 max-w-md mx-auto">
+                <a
+                  href={`https://wa.me/919103798448?text=${encodeURIComponent(
+                    `Hello Kashmir Curators! I just created my travel profile with Lead ID: ${createdLead?.leadId || 'NEW'}. Category: ${(createdLead?.leadCategory || '').replace(/_/g, ' ')}. Please connect me with my assigned local expert.`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full h-12 sm:h-14 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-[#25D366]/20 transition-all active:scale-95 flex items-center justify-center gap-2.5"
+                >
+                  <MessageCircle className="w-5 h-5 fill-white text-transparent shrink-0" />
+                  <span>Chat on WhatsApp with Lead ID</span>
+                </a>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeLeadModal}
+                  className="w-full text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                >
+                  Done &amp; Return to Website
+                </Button>
               </div>
             </div>
-
-            {/* Direct WhatsApp Call to Action */}
-            <div className="space-y-3 pt-2 max-w-md mx-auto">
-              <a
-                href={`https://wa.me/919103798448?text=${encodeURIComponent(
-                  `Hello Kashmir Curators! I just created my travel profile with Lead ID: ${createdLead?.leadId || 'NEW'}. Category: ${(createdLead?.leadCategory || '').replace(/_/g, ' ')}. Please connect me with my assigned local expert.`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full h-14 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-[#25D366]/20 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
-              >
-                <MessageCircle className="w-5 h-5 fill-white text-transparent" />
-                <span>Chat on WhatsApp with Lead ID</span>
-              </a>
-
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={closeLeadModal}
-                className="w-full text-xs font-black uppercase tracking-widest text-slate-500 hover:text-[#111439] dark:hover:text-white"
-              >
-                Done & Return to Website
-              </Button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

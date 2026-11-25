@@ -112,43 +112,52 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out px-3 sm:px-6 md:px-8 pointer-events-none',
-        scrolled ? 'py-2 sm:py-3' : 'py-3 sm:py-5',
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out px-2.5 sm:px-4 xl:px-6 pointer-events-none',
+        scrolled ? 'py-2 sm:py-3' : 'py-3 sm:py-4',
         isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       )}
     >
       <div
         className={cn(
-          'container mx-auto px-4 sm:px-6 transition-all duration-500 pointer-events-auto border',
+          'max-w-[1440px] w-full mx-auto px-3 sm:px-4 xl:px-5 transition-all duration-500 pointer-events-auto border overflow-hidden',
           isOpen ? 'rounded-3xl shadow-2xl' : 'rounded-full shadow-lg',
           scrolled
-            ? 'bg-white/95 dark:bg-[#07090E]/92 backdrop-blur-2xl border-slate-200/80 dark:border-white/10 shadow-slate-900/10 dark:shadow-black/50 py-2 sm:py-2.5'
-            : 'bg-white/90 dark:bg-[#07090E]/85 backdrop-blur-xl border-slate-200/70 dark:border-white/10 shadow-slate-900/5 dark:shadow-black/40 py-2.5 sm:py-3'
+            ? 'bg-white/95 dark:bg-[#07090E]/92 backdrop-blur-2xl border-slate-200/80 dark:border-white/10 shadow-slate-900/10 dark:shadow-black/50 py-2'
+            : 'bg-white/90 dark:bg-[#07090E]/85 backdrop-blur-xl border-slate-200/70 dark:border-white/10 shadow-slate-900/5 dark:shadow-black/40 py-2.5'
         )}
       >
-        <div className="flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center justify-between gap-2 xl:gap-3 min-w-0">
           {/* 1. Left: Brand Logo */}
           <Link to="/" className="flex items-center group shrink-0">
             <Logo
               isDarkBg={isDark}
-              className="h-8 sm:h-9 md:h-10 w-auto transition-transform duration-300 group-hover:scale-105"
+              className="h-8 xl:h-9 w-auto transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
 
           {/* 2. Center: Navigation Links & B2B Travel OS Dropdown */}
-          <div className="hidden lg:flex items-center gap-5 xl:gap-7">
+          <div className="hidden lg:flex items-center gap-3 xl:gap-4 2xl:gap-5 min-w-0">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
                 className={cn(
-                  'text-[11px] font-bold uppercase tracking-[0.16em] transition-all duration-300 relative py-1.5 flex items-center gap-1.5 group/link whitespace-nowrap',
+                  'text-[10.5px] xl:text-[11px] font-bold uppercase tracking-[0.08em] xl:tracking-[0.11em] transition-all duration-300 relative py-1.5 flex items-center gap-1.5 group/link whitespace-nowrap shrink-0',
                   isActive(link.href)
                     ? 'text-amber-600 dark:text-amber-400 font-extrabold'
                     : 'text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-white'
                 )}
               >
-                <span>{link.label}</span>
+                <span>
+                  {link.href === '/hotels' ? (
+                    <>
+                      <span className="xl:hidden">Stays</span>
+                      <span className="hidden xl:inline">{link.label}</span>
+                    </>
+                  ) : (
+                    link.label
+                  )}
+                </span>
                 {link.isLive && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[8px] font-mono font-bold border border-emerald-500/25">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -170,15 +179,15 @@ export default function Navbar() {
                 <button
                   type="button"
                   className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap',
+                    'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0',
                     isB2BRoute
                       ? 'bg-amber-500 text-black border-amber-500 font-extrabold shadow-sm'
                       : 'border-slate-200 dark:border-white/15 bg-slate-50/80 dark:bg-white/[0.04] text-slate-700 dark:text-slate-200 hover:border-amber-400/50 hover:bg-amber-500/10'
                   )}
                 >
-                  <Building2 className={cn('w-3 h-3', isB2BRoute ? 'text-black' : 'text-amber-500')} />
+                  <Building2 className={cn('w-3 h-3 shrink-0', isB2BRoute ? 'text-black' : 'text-amber-500')} />
                   <span>Partner OS</span>
-                  <ChevronDown className="w-3 h-3 opacity-70" />
+                  <ChevronDown className="w-3 h-3 opacity-70 shrink-0" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -222,17 +231,17 @@ export default function Navbar() {
           </div>
 
           {/* 3. Right Action Hub */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 xl:gap-2 shrink-0">
             {/* Live Currency Selector (Desktop) */}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   aria-label="Select display currency"
-                  className="hidden md:inline-flex items-center gap-1.5 h-8 sm:h-9 px-2.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100/80 dark:bg-white/5 text-slate-800 dark:text-white hover:border-amber-400/50 transition-all text-[10px] font-mono font-bold"
+                  className="hidden md:inline-flex items-center gap-1 h-8 xl:h-9 px-2 xl:px-2.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100/80 dark:bg-white/5 text-slate-800 dark:text-white hover:border-amber-400/50 transition-all text-[10px] font-mono font-bold whitespace-nowrap"
                   title="Switch live pricing currency"
                 >
-                  <Globe className="w-3 h-3 text-amber-500" />
+                  <Globe className="w-3 h-3 text-amber-500 shrink-0" />
                   <span>{config.code}</span>
                   <span className="text-slate-400 dark:text-white/40">{config.symbol.trim()}</span>
                 </button>
@@ -272,20 +281,20 @@ export default function Navbar() {
             {/* AI Trip Curator Pill */}
             <button
               onClick={() => setAiCuratorOpen(true)}
-              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-all shadow-sm"
+              className="hidden xl:flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-all shadow-sm whitespace-nowrap"
               title="Launch AI Trip Curator"
             >
-              <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
+              <Sparkles className="w-3 h-3 text-amber-500 animate-pulse shrink-0" />
               <span>AI Curator</span>
             </button>
 
             {/* Concierge Callback */}
             <button
               onClick={() => openCallbackModal({ sourceCta: 'NAVBAR_EXPERT' })}
-              className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+              className="hidden 2xl:flex items-center gap-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors whitespace-nowrap"
               title="Request Concierge Callback"
             >
-              <Headphones className="w-3.5 h-3.5 text-amber-500" />
+              <Headphones className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <span>Concierge</span>
             </button>
 
@@ -297,7 +306,7 @@ export default function Navbar() {
               onClick={toggleTheme}
               title={isDark ? 'Switch to Daylight Mode' : 'Switch to Night Mode'}
               aria-label="Toggle theme"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-amber-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-all hover:scale-105 active:scale-95 shadow-sm shrink-0"
+              className="w-8 h-8 xl:w-9 xl:h-9 rounded-full flex items-center justify-center border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-amber-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-all hover:scale-105 active:scale-95 shadow-sm shrink-0"
             >
               {isDark ? (
                 <Sun className="w-3.5 h-3.5 text-amber-400" />
@@ -436,9 +445,9 @@ export default function Navbar() {
             {/* Primary CTA */}
             <Button
               onClick={() => openLeadModal({ sourceCta: 'PLAN_MY_TRIP_NAVBAR' })}
-              className="hidden sm:inline-flex h-9 sm:h-10 px-5 sm:px-6 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-[11px] uppercase tracking-wider shadow-md shadow-amber-500/20 hover:shadow-amber-500/35 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] items-center gap-1.5 shrink-0"
+              className="hidden sm:inline-flex h-8 xl:h-9 px-3.5 xl:px-4 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-[10.5px] xl:text-[11px] uppercase tracking-wider shadow-md shadow-amber-500/20 hover:shadow-amber-500/35 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] items-center gap-1.5 shrink-0 whitespace-nowrap"
             >
-              <Sparkles className="w-3.5 h-3.5 fill-black" />
+              <Sparkles className="w-3.5 h-3.5 fill-black shrink-0" />
               <span>Curate Trip</span>
             </Button>
 
