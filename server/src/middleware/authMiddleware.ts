@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
+import { extractTenantId, DEFAULT_TENANT_ID } from '../lib/tenant';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -20,7 +21,15 @@ const mapPortalRole = (portalType: string): string => {
 
 export interface AuthRequest extends Request {
   user?: any;
+  tenantId?: string | null;
+  organizationId?: string | null;
 }
+
+const syncTenantContext = (req: AuthRequest) => {
+  const tenantId = extractTenantId(req);
+  req.tenantId = tenantId;
+  req.organizationId = tenantId || DEFAULT_TENANT_ID;
+};
 
 export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction, isOptional = false) => {
   const authHeader = (req.headers['authorization'] || '').trim();
@@ -86,6 +95,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
           portalType: keyRecord.portalType,
           propertyScope: keyRecord.propertyScope || 'ALL'
         };
+        syncTenantContext(req);
         return next();
       }
     } catch (err) {
@@ -98,6 +108,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     const devToken = candidates.find(c => c === 'dev_admin_token' || c === 'dev_token' || c.startsWith('dev_'));
     if (devToken) {
       req.user = { id: 'dev-admin-id', email: 'admin@thekashmircurators.com', role: 'admin', code: 'ADMIN001', name: 'SuperAdmin' };
+      syncTenantContext(req);
       return next();
     }
   }
@@ -115,8 +126,10 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
           email: sessionRecord.user.email,
           name: sessionRecord.user.name,
           role: sessionRecord.user.role || 'hospitality',
-          code: sessionRecord.user.employeeCode || 'ADMIN001'
+          code: sessionRecord.user.employeeCode || 'ADMIN001',
+          organizationId: sessionRecord.user.organizationId || undefined
         };
+        syncTenantContext(req);
         return next();
       }
     } catch (sessionErr) {
@@ -131,6 +144,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
         const decoded = jwt.verify(candidate, secret, { algorithms: ['HS256'] }) as any;
         if (decoded) {
           req.user = decoded;
+          syncTenantContext(req);
           return next();
         }
       } catch {

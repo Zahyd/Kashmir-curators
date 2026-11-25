@@ -7,9 +7,10 @@ import { CRMService } from '../services/crmService';
 import { bookingAutomationService } from '../services/bookingAutomationService';
 import { LeadScoringService } from '../services/leadScoringService';
 import { emailQueueService } from '../services/emailQueueService';
+import { withStrictTenantScope, resolveWriteTenantId } from '../lib/tenant';
 
 
-export const getInquiries = async (req: Request, res: Response) => {
+export const getInquiries = async (req: any, res: Response) => {
   try {
     const p = prisma as any;
     const { assignedTo, status } = req.query;
@@ -18,7 +19,7 @@ export const getInquiries = async (req: Request, res: Response) => {
     if (status) where.status = status as string;
  
     const inquiries = await p.inquiry.findMany({
-      where,
+      where: withStrictTenantScope(where, req.tenantId),
       orderBy: { createdAt: 'desc' }
     });
     res.json(inquiries);
@@ -64,7 +65,8 @@ export const createInquiry = async (req: Request, res: Response) => {
         priority: scoreResult.priority,
         sourceCta: sourceCta || 'DIRECT_INQUIRY',
         scoringBreakdown: JSON.stringify(scoreResult.scoringBreakdown),
-        profileCompleteness: 40
+        profileCompleteness: 40,
+        organizationId: resolveWriteTenantId(req)
       }
     });
 
@@ -163,7 +165,8 @@ export const captureQuickLead = async (req: Request, res: Response) => {
         travelStartDate: travelStartDate ? new Date(travelStartDate) : null,
         scoringBreakdown: JSON.stringify(scoreResult.scoringBreakdown),
         profileCompleteness: 35,
-        notes: notes || null
+        notes: notes || null,
+        organizationId: resolveWriteTenantId(req)
       }
     });
 

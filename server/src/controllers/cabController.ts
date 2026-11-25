@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { whatsappService } from '../services/whatsappService';
+import { withTenantScope, withStrictTenantScope, resolveWriteTenantId } from '../lib/tenant';
 
 const safeParse = (str: any) => {
   if (!str || typeof str !== 'string') return str || [];
@@ -11,11 +12,12 @@ const safeParse = (str: any) => {
   }
 };
 
-export const getCabs = async (req: Request, res: Response) => {
+export const getCabs = async (req: any, res: Response) => {
   try {
     const { all } = req.query;
+    const baseWhere = all === 'true' ? {} : { isActive: true };
     const cabs = await prisma.cab.findMany({
-      where: all === 'true' ? {} : { isActive: true },
+      where: withTenantScope(baseWhere, req.tenantId),
       orderBy: { id: 'desc' }
     });
     
@@ -43,7 +45,8 @@ export const createCab = async (req: any, res: Response) => {
       basePrice: Number(basePrice),
       image: image || '',
       features: JSON.stringify(Array.isArray(features) ? features : []),
-      isActive: isActive !== undefined ? Boolean(isActive) : true
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
+      organizationId: resolveWriteTenantId(req)
     };
     
     const cab = await prisma.cab.create({ data });
@@ -175,11 +178,12 @@ const getOrCreateFleetOperationsDoc = async () => {
   return { doc, data };
 };
 
-export const getOperationsData = async (req: Request, res: Response) => {
+export const getOperationsData = async (req: any, res: Response) => {
   try {
     const { data } = await getOrCreateFleetOperationsDoc();
     
     const bookings = await prisma.booking.findMany({
+      where: withStrictTenantScope({}, req.tenantId),
       include: {
         user: {
           select: {

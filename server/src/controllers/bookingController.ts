@@ -1,9 +1,11 @@
 import prisma from '../lib/prisma';
 import { Request, Response } from 'express';
+import { withStrictTenantScope, canAccessTenantRecord, resolveWriteTenantId } from '../lib/tenant';
 
-export const getAllBookings = async (req: Request, res: Response) => {
+export const getAllBookings = async (req: any, res: Response) => {
   try {
     const bookings = await prisma.booking.findMany({
+      where: withStrictTenantScope({}, req.tenantId),
       include: {
         user: {
           select: {
@@ -145,7 +147,8 @@ export const createBooking = async (req: any, res: Response) => {
         bookingDate: new Date(bookingDate),
         totalAmount: Number(totalAmount) || 0,
         details: typeof details === 'string' ? details : JSON.stringify(details || {}),
-        status: 'confirmed'
+        status: 'confirmed',
+        organizationId: resolveWriteTenantId(req)
       }
     });
 
@@ -221,7 +224,7 @@ export const updateBookingStatus = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Booking not found' });
     }
     const isStaff = ['admin', 'operations', 'sales'].includes(String(req.user?.role || '').toLowerCase());
-    if (existing.userId !== req.user?.id && !isStaff) {
+    if ((existing.userId !== req.user?.id && !isStaff) || !canAccessTenantRecord(req, existing.organizationId)) {
       return res.status(403).json({ error: 'Forbidden: You are not authorized to modify this booking' });
     }
 
@@ -307,7 +310,7 @@ export const deleteBooking = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Booking not found' });
     }
     const isStaff = ['admin', 'operations', 'sales'].includes(String(req.user?.role || '').toLowerCase());
-    if (existing.userId !== req.user?.id && !isStaff) {
+    if ((existing.userId !== req.user?.id && !isStaff) || !canAccessTenantRecord(req, existing.organizationId)) {
       return res.status(403).json({ error: 'Forbidden: You are not authorized to delete this booking' });
     }
 

@@ -33,7 +33,7 @@ export const register = async (req: Request, res: Response) => {
       }
     });
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId || undefined }, JWT_SECRET, { expiresIn: '7d', algorithm: 'HS256' });
     
     // Asynchronously synchronize user account into Neon Hosted Better Auth
     const neonAuthUrl = process.env.NEON_AUTH_BASE_URL || 'https://ep-purple-shadow-ao7lc51d.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth';
@@ -71,7 +71,7 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId || undefined }, JWT_SECRET, { expiresIn: '7d', algorithm: 'HS256' });
     
     res.json({ 
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -269,9 +269,9 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
 
     // 6. Generate the authenticated JWT session with full identity
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, code: user.employeeCode },
+      { id: user.id, email: user.email, role: user.role, code: user.employeeCode, organizationId: (user as any).organizationId || undefined },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '24h', algorithm: 'HS256' }
     );
 
     res.json({
@@ -512,7 +512,7 @@ export const googleLogin = async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId || undefined },
       JWT_SECRET,
       { expiresIn: '7d', algorithm: 'HS256' }
     );
@@ -582,9 +582,9 @@ export const googleRealtimeLogin = async (req: Request, res: Response) => {
 
     // 4. Issue local JWT session
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId || undefined },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '7d', algorithm: 'HS256' }
     );
 
     res.json({

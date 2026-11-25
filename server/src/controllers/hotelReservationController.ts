@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { notificationService } from '../services/notificationService';
+import { withStrictTenantScope, canAccessTenantRecord, resolveWriteTenantId } from '../lib/tenant';
 
 // Helper to compute nights between check-in and check-out
 const calculateNights = (checkInStr: string, checkOutStr: string): number => {
@@ -99,7 +100,7 @@ export const getReservations = async (req: AuthRequest, res: Response) => {
     }
 
     const reservations = await p.hotelReservation.findMany({
-      where,
+      where: withStrictTenantScope(where, req.tenantId),
       include: {
         hotel: true,
         inquiry: true,
@@ -140,7 +141,7 @@ export const getHospitalityKpis = async (req: AuthRequest, res: Response) => {
   try {
     const p = prisma as any;
     const { hotelId } = req.query;
-    const scopedFilter: any = {};
+    const scopedFilter: any = withStrictTenantScope({}, req.tenantId);
     if (hotelId && hotelId !== 'ALL') {
       scopedFilter.hotelId = String(hotelId);
     }
@@ -294,6 +295,9 @@ export const getReservationById = async (req: AuthRequest, res: Response) => {
 
     if (!reservation) {
       return res.status(404).json({ error: 'Reservation not found' });
+    }
+    if (!canAccessTenantRecord(req, reservation.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant reservation access denied' });
     }
 
     const hasConflict = await checkDuplicateConflict(
@@ -481,7 +485,8 @@ export const createReservation = async (req: AuthRequest, res: Response) => {
         receptionContact,
         receptionEmail,
         receptionPhone,
-        auditLogs
+        auditLogs,
+        organizationId: resolveWriteTenantId(req)
       },
       include: {
         hotel: true,
@@ -547,6 +552,9 @@ export const updateReservation = async (req: AuthRequest, res: Response) => {
 
     const existing = await p.hotelReservation.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+    if (!canAccessTenantRecord(req, existing.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant reservation modification denied' });
+    }
 
     const updateData: any = {};
     const logEntries = [];
@@ -668,6 +676,9 @@ export const confirmReservation = async (req: AuthRequest, res: Response) => {
 
     const existing = await p.hotelReservation.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+    if (!canAccessTenantRecord(req, existing.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant reservation modification denied' });
+    }
 
     let history = [];
     try {
@@ -809,6 +820,9 @@ export const deleteReservation = async (req: AuthRequest, res: Response) => {
       include: { hotel: true }
     });
     if (!existing) return res.status(404).json({ error: 'Reservation not found' });
+    if (!canAccessTenantRecord(req, existing.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant reservation deletion denied' });
+    }
 
     // Free up any room linked to this reservation
     try {

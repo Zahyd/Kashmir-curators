@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import prisma from '../lib/prisma';
 import { io } from '../index';
+import { withStrictTenantScope, canAccessTenantRecord } from '../lib/tenant';
 
 // Helper: Normalize phone to 10 digits for duplicate matching
 function normalizePhone(phone: string): string {
@@ -92,7 +93,7 @@ export const getCRMLeads = async (req: AuthRequest, res: Response) => {
     }
 
     const inquiries = await prisma.inquiry.findMany({
-      where,
+      where: withStrictTenantScope(where, req.tenantId),
       include: {
         _count: {
           select: {
@@ -160,6 +161,9 @@ export const getLeadDetail = async (req: AuthRequest, res: Response) => {
     if (!lead) {
       return res.status(404).json({ error: 'Lead not found' });
     }
+    if (!canAccessTenantRecord(req, lead.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant lead access denied' });
+    }
 
     res.json(lead);
   } catch (error) {
@@ -180,6 +184,9 @@ export const updateLeadStage = async (req: AuthRequest, res: Response) => {
     const inquiry = await prisma.inquiry.findUnique({ where: { id: id as string } });
     if (!inquiry) {
       return res.status(404).json({ error: 'Lead not found' });
+    }
+    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant lead update denied' });
     }
 
     // Map leadStage to legacy status value for cross-compatibility
@@ -680,6 +687,7 @@ export const assignLead = async (req: AuthRequest, res: Response) => {
 export const getCRMBIMetrics = async (req: AuthRequest, res: Response) => {
   try {
     const allInquiries = await prisma.inquiry.findMany({
+      where: withStrictTenantScope({}, req.tenantId),
       select: {
         id: true,
         leadStage: true,

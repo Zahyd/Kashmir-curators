@@ -7,14 +7,14 @@ import {
   updateOrganization,
   getOrganizationStats
 } from '../controllers/organizationController';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken, optionalAuthenticate } from '../middleware/authMiddleware';
 import { authorizeRoles } from '../middleware/roleMiddleware';
 import { tenantMiddleware } from '../middleware/tenantMiddleware';
 
 const router = Router();
 
-// Apply tenant context resolution
-router.use(tenantMiddleware);
+// Authenticate optionally BEFORE tenant resolution so req.user is populated for extractTenantId
+router.use(optionalAuthenticate, tenantMiddleware);
 
 // Public / Authenticated read routes
 router.get('/current', getCurrentOrganization);

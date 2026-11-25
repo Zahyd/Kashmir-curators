@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { withTenantScope, resolveWriteTenantId } from '../lib/tenant';
 
 const safeParse = (str: any) => {
   if (!str || typeof str !== 'string') return str || [];
@@ -23,11 +24,12 @@ const stringifyHotel = (data: any) => {
   return result;
 };
 
-export const getHotels = async (req: Request, res: Response) => {
+export const getHotels = async (req: any, res: Response) => {
   try {
     const { all } = req.query;
+    const baseWhere = all === 'true' ? {} : { isActive: true };
     const hotels = await prisma.hotel.findMany({
-      where: all === 'true' ? {} : { isActive: true },
+      where: withTenantScope(baseWhere, req.tenantId),
       orderBy: { createdAt: 'desc' }
     });
     res.json(hotels.map(parseHotel));
@@ -68,7 +70,8 @@ export const createHotel = async (req: any, res: Response) => {
       contactPhone: contactPhone ? String(contactPhone) : null,
       paymentTerms: paymentTerms ? String(paymentTerms) : null,
       commissionStructure: commissionStructure ? String(commissionStructure) : null,
-      seasonalPricing: seasonalPricing ? String(seasonalPricing) : null
+      seasonalPricing: seasonalPricing ? String(seasonalPricing) : null,
+      organizationId: resolveWriteTenantId(req)
     };
 
     const hotel = await prisma.hotel.create({ data });

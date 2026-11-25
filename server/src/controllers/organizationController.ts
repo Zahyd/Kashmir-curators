@@ -97,14 +97,22 @@ export const getCurrentOrganization = async (req: TenantRequest, res: Response):
 export const getOrganizationById = async (req: TenantRequest, res: Response): Promise<any> => {
   try {
     const id = String(req.params.id);
+    const userRole = String(req.user?.role || '').toLowerCase();
+    const isPrivilegedViewer =
+      ['admin', 'operations'].includes(userRole) ||
+      (req.user?.organizationId && req.user.organizationId === id);
 
     const org = await prisma.organization.findUnique({
       where: { id },
       include: {
-        users: {
-          select: { id: true, name: true, email: true, role: true, isOnline: true },
-          take: 20
-        },
+        ...(isPrivilegedViewer
+          ? {
+              users: {
+                select: { id: true, name: true, email: true, role: true, isOnline: true },
+                take: 20
+              }
+            }
+          : {}),
         hotels: {
           select: { id: true, name: true, location: true, starRating: true, isActive: true },
           take: 20
@@ -130,7 +138,16 @@ export const getOrganizationById = async (req: TenantRequest, res: Response): Pr
       return res.status(404).json({ error: 'Organization not found' });
     }
 
-    res.json({ organization: org });
+    const sanitizedOrg = isPrivilegedViewer
+      ? org
+      : {
+          ...org,
+          email: undefined,
+          phone: undefined,
+          settings: undefined
+        };
+
+    res.json({ organization: sanitizedOrg });
   } catch (error: any) {
     console.error('getOrganizationById error:', error.message);
     res.status(500).json({ error: 'Failed to retrieve organization' });

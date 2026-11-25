@@ -5,6 +5,7 @@ import { startTestServer, resetTestState, inMemoryPrisma, ioEvents, TestServerHa
 import {
   extractTenantId,
   withTenantScope,
+  withStrictTenantScope,
   ensureDefaultOrganization,
   DEFAULT_TENANT_ID,
 } from '../src/lib/tenant';
@@ -175,5 +176,52 @@ describe('Multi-Tenant Organization Isolation, Scoping & Real-Time Tenant Routin
       body: { status: 'confirmed' },
     });
     assert.ok(ioEvents.some((e) => e.room === `tenant-${orgId}` && e.event === 'booking-updated'));
+  });
+
+  it('blocks x-tenant-id header spoofing by tenant-bound users and isolates operational PII queries', async () => {
+    const orgA = await inMemoryPrisma.organization.create({
+      data: { name: 'Alpha Tours', slug: 'alpha-tours', type: 'AGENCY', email: 'secret@alpha.com', phone: '9999999999' },
+    });
+    const orgB = await inMemoryPrisma.organization.create({
+      data: { name: 'Beta Travels', slug: 'beta-travels', type: 'AGENCY' },
+    });
+
+    // Tenant-bound agent in orgA attempting to spoof x-tenant-id: orgB gets locked to orgA
+    assert.equal(
+      extractTenantId({ headers: { 'x-tenant-id': orgB.id }, user: { role: 'agent', organizationId: orgA.id } } as any),
+      orgA.id
+    );
+
+    // Strict PII scoping excludes legacy null-tenant rows for third-party tenants
+    await inMemoryPrisma.inquiry.create({
+      data: { customerName: 'Org A Lead', email: 'a@test.com', phone: '111', destination: 'Gulmarg', duration: '3D', travelers: '2', budget: '30k', accommodation: '4*', organizationId: orgA.id },
+    });
+    await inMemoryPrisma.inquiry.create({
+      data: { customerName: 'Org B Lead', email: 'b@test.com', phone: '222', destination: 'Pahalgam', duration: '3D', travelers: '2', budget: '30k', accommodation: '4*', organizationId: orgB.id },
+    });
+    await inMemoryPrisma.inquiry.create({
+      data: { customerName: 'Platform Legacy Lead', email: 'legacy@test.com', phone: '333', destination: 'Srinagar', duration: '3D', travelers: '2', budget: '30k', accommodation: '4*', organizationId: null },
+    });
+
+    const strictOrgARows = await inMemoryPrisma.inquiry.findMany({
+      where: withStrictTenantScope({}, orgA.id),
+    });
+    assert.equal(strictOrgARows.length, 1);
+    assert.equal(strictOrgARows[0].customerName, 'Org A Lead');
+
+    // End-to-end API: orgA sales user cannot fetch or mutate orgB lead even with spoofed header
+    const salesAToken = makeToken('sales', 'sales-org-a', { organizationId: orgA.id, email: 'salesA@alpha.com' });
+    const orgBLead = await inMemoryPrisma.inquiry.findFirst({ where: { organizationId: orgB.id } });
+    const crossRead = await srv.request('GET', `/api/crm/leads/${orgBLead.id}`, {
+      token: salesAToken,
+      headers: { 'x-tenant-id': orgB.id },
+    });
+    assert.equal(crossRead.status, 403);
+
+    // Unauthenticated GET /api/organizations/:id redacts email & phone
+    const pubOrg = await srv.request('GET', `/api/organizations/${orgA.id}`);
+    assert.equal(pubOrg.status, 200);
+    assert.equal(pubOrg.body.organization.email, undefined);
+    assert.equal(pubOrg.body.organization.phone, undefined);
   });
 });
