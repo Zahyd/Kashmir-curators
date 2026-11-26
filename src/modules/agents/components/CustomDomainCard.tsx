@@ -1,90 +1,120 @@
-import React, { useState } from 'react';
-import { 
-  Globe, 
-  ShieldCheck, 
-  ExternalLink, 
-  Sparkles, 
-  Crown, 
-  CheckCircle2, 
-  Clock, 
-  RefreshCw, 
-  Copy, 
-  Check, 
-  AlertCircle,
-  Lock,
-  ArrowRight
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Globe,
+  ShieldCheck,
+  ExternalLink,
+  Sparkles,
+  Crown,
+  CheckCircle2,
+  Clock,
+  RefreshCw,
+  Copy,
+  Check,
+  AlertCircle
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { agentApi, AgentDomainStatus, getErrMsg } from '../lib/agentApi';
 
 interface CustomDomainCardProps {
   isEnterprise: boolean;
   onOpenUpgradeModal: () => void;
   agencyName?: string;
+  refreshTrigger?: number;
 }
 
 export const CustomDomainCard: React.FC<CustomDomainCardProps> = ({
   isEnterprise = false,
   onOpenUpgradeModal,
-  agencyName = 'Chinar Holidays'
+  refreshTrigger = 0
 }) => {
-  const [domain, setDomain] = useState(() => {
-    return localStorage.getItem('agency_custom_domain') || `quotes.${agencyName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'youragency'}.com`;
-  });
+  const { token } = useAuth();
+  const [domain, setDomain] = useState('');
+  const [statusData, setStatusData] = useState<AgentDomainStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [status, setStatus] = useState<'VERIFIED' | 'PENDING' | 'NOT_CONFIGURED'>(() => {
-    return localStorage.getItem('agency_domain_status') as any || 'VERIFIED';
-  });
   const [copiedTarget, setCopiedTarget] = useState(false);
 
+  const loadDomain = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await agentApi.getDomain(token);
+      setStatusData(res);
+      if (res.domain) setDomain(res.domain);
+    } catch {
+      // Keep default state
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadDomain();
+  }, [loadDomain, refreshTrigger]);
+
+  const cnameTarget = statusData?.cnameTarget || 'cname.kashmircurators.vercel.app';
+  const currentStatus = statusData?.status || 'NOT_CONFIGURED';
+
   const handleCopyTarget = () => {
-    navigator.clipboard.writeText('cname.kashmircurators.vercel.app');
+    navigator.clipboard.writeText(cnameTarget);
     setCopiedTarget(true);
     toast.success('CNAME Target copied to clipboard');
     setTimeout(() => setCopiedTarget(false), 2000);
   };
 
-  const handleSaveDomain = (e: React.FormEvent) => {
+  const handleSaveDomain = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEnterprise) {
       onOpenUpgradeModal();
       return;
     }
 
-    if (!domain.includes('.')) {
-      toast.error('Please enter a valid domain format (e.g. quotes.youragency.com)');
-      return;
-    }
-
-    setIsVerifying(true);
-    setTimeout(() => {
-      localStorage.setItem('agency_custom_domain', domain);
-      localStorage.setItem('agency_domain_status', 'VERIFIED');
-      setStatus('VERIFIED');
-      setIsVerifying(false);
-      toast.success('Custom Domain Configured & SSL Active!', {
-        description: `Client proposal links will now resolve via https://${domain}/itinerary/:id`
+    try {
+      setIsSaving(true);
+      const res = await agentApi.updateDomain(domain, token);
+      setStatusData(res);
+      setDomain(res.domain);
+      toast.success('Custom domain saved in Organization database', {
+        description: 'Add the CNAME record below, then click Verify DNS.'
       });
-    }, 1200);
+    } catch (err: unknown) {
+      toast.error(getErrMsg(err, 'Failed to save custom domain'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleCheckDns = () => {
-    setIsVerifying(true);
-    setTimeout(() => {
+  const handleCheckDns = async () => {
+    if (!domain.trim()) {
+      toast.error('Save a custom domain first');
+      return;
+    }
+    try {
+      setIsVerifying(true);
+      const res = await agentApi.verifyDomain(domain, token);
+      setStatusData(res);
+      if (res.status === 'VERIFIED') {
+        toast.success('DNS CNAME verified successfully!');
+      } else {
+        toast.info('DNS check complete', {
+          description: res.lastError || `Waiting for CNAME -> ${cnameTarget}`
+        });
+      }
+    } catch (err: unknown) {
+      toast.error(getErrMsg(err, 'DNS verification failed'));
+    } finally {
       setIsVerifying(false);
-      toast.success('DNS Resolution Verified', {
-        description: `CNAME record successfully points to cname.kashmircurators.vercel.app`
-      });
-    }, 1000);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Enterprise Gate Banner */}
       {!isEnterprise ? (
         <div className="bg-gradient-to-r from-purple-500/15 via-indigo-500/10 to-transparent p-6 rounded-3xl border border-purple-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -97,13 +127,13 @@ export const CustomDomainCard: React.FC<CustomDomainCardProps> = ({
                 <Badge className="bg-purple-500 text-white font-bold text-[10px]">Enterprise Only</Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
-                Host all customer proposal links, live itineraries, and voucher portals under your own branded domain (e.g. <code>quotes.youragency.com</code>) with automatic TLS certificate issuance.
+                Host customer proposal links and itinerary portals under your own branded domain (e.g. <code>quotes.youragency.com</code>).
               </p>
             </div>
           </div>
           <Button
             onClick={onOpenUpgradeModal}
-            className="rounded-2xl text-xs font-bold gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shrink-0 shadow-lg shadow-purple-500/20"
+            className="rounded-2xl text-xs font-bold gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shrink-0 shadow-lg shadow-purple-500/20"
           >
             <Crown className="w-4 h-4" />
             <span>Upgrade to Enterprise</span>
@@ -117,19 +147,24 @@ export const CustomDomainCard: React.FC<CustomDomainCardProps> = ({
                 <Globe className="w-5 h-5" />
               </div>
               <h2 className="text-xl font-bold text-foreground">Custom Domain & Client Portal</h2>
-              <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-xs font-bold flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                SSL Active
+              <Badge
+                className={
+                  currentStatus === 'VERIFIED'
+                    ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-xs font-bold flex items-center gap-1'
+                    : 'bg-amber-500/15 text-amber-500 border-amber-500/30 text-xs font-bold flex items-center gap-1'
+                }
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                {currentStatus}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground max-w-xl">
-              Deliver 100% white-labeled proposals directly under your primary agency website address.
+              Persisted in Organization settings with live DNS CNAME verification.
             </p>
           </div>
         </div>
       )}
 
-      {/* Domain Configuration Form */}
       <Card className="rounded-3xl border border-border/70 p-6 bg-card space-y-5">
         <form onSubmit={handleSaveDomain} className="space-y-4">
           <div className="space-y-2">
@@ -142,7 +177,7 @@ export const CustomDomainCard: React.FC<CustomDomainCardProps> = ({
                 <Input
                   value={domain}
                   onChange={(e) => setDomain(e.target.value.toLowerCase().trim())}
-                  placeholder="quotes.youragency.com"
+                  placeholder={loading ? 'Loading...' : 'quotes.youragency.com'}
                   className="pl-20 h-11 rounded-2xl text-xs font-mono"
                   disabled={!isEnterprise}
                 />
@@ -150,105 +185,93 @@ export const CustomDomainCard: React.FC<CustomDomainCardProps> = ({
 
               <Button
                 type="submit"
-                disabled={isVerifying || !isEnterprise}
+                disabled={isSaving || !isEnterprise}
                 className="rounded-2xl text-xs font-bold gap-2 h-11 px-5 shadow-sm shrink-0"
               >
-                {isVerifying ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Verifying...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Save & Provision SSL</span>
-                  </>
-                )}
+                {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <span>{isSaving ? 'Saving...' : 'Save Custom Domain'}</span>
               </Button>
             </div>
           </div>
         </form>
 
-        {/* DNS Configuration Instructions */}
         <div className="bg-muted/40 p-5 rounded-2xl border border-border/50 space-y-3">
           <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
             <Clock className="w-3.5 h-3.5 text-primary" />
-            <span>DNS Configuration Instructions</span>
+            <span>DNS Configuration</span>
           </h4>
-          <p className="text-xs text-muted-foreground">
-            In your DNS registrar (GoDaddy, Cloudflare, Namecheap, Google Domains), add the following CNAME record:
-          </p>
-
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
             <div className="bg-card p-3 rounded-xl border border-border/60">
               <span className="text-[10px] text-muted-foreground uppercase font-bold">Record Type</span>
               <p className="font-mono font-bold text-foreground mt-0.5">CNAME</p>
             </div>
-
             <div className="bg-card p-3 rounded-xl border border-border/60">
               <span className="text-[10px] text-muted-foreground uppercase font-bold">Host / Name</span>
-              <p className="font-mono font-bold text-foreground mt-0.5">quotes</p>
+              <p className="font-mono font-bold text-foreground mt-0.5">
+                {domain.includes('.') ? domain.split('.')[0] : 'quotes'}
+              </p>
             </div>
-
             <div className="bg-card p-3 rounded-xl border border-border/60 flex items-center justify-between">
-              <div>
+              <div className="min-w-0">
                 <span className="text-[10px] text-muted-foreground uppercase font-bold">Target Value</span>
-                <p className="font-mono font-bold text-foreground mt-0.5 truncate max-w-[150px]">
-                  cname.kashmircurators.vercel.app
-                </p>
+                <p className="font-mono font-bold text-foreground mt-0.5 truncate">{cnameTarget}</p>
               </div>
               <button
                 type="button"
                 onClick={handleCopyTarget}
-                className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition"
-                title="Copy Target"
+                className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition shrink-0"
               >
                 {copiedTarget ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
 
-          <div className="pt-2 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                SSL Provisioning: Automated Let's Encrypt TLS
-              </span>
+          {statusData?.lastError && (
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{statusData.lastError}</span>
             </div>
+          )}
 
+          <div className="pt-2 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {statusData?.lastCheckedAt
+                ? `Last verified: ${new Date(statusData.lastCheckedAt).toLocaleString()}`
+                : 'Not checked yet'}
+            </span>
             <Button
               variant="outline"
               size="sm"
               onClick={handleCheckDns}
-              disabled={isVerifying}
+              disabled={isVerifying || !domain}
               className="rounded-xl text-xs h-8 px-3"
             >
               <RefreshCw className={`w-3 h-3 mr-1.5 ${isVerifying ? 'animate-spin' : ''}`} />
-              <span>Verify DNS Health</span>
+              <span>Verify DNS</span>
             </Button>
           </div>
         </div>
 
-        {/* Live Proposal URL Preview */}
-        <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 truncate">
-            <Sparkles className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-muted-foreground">Example Client Proposal Link:</span>
-            <span className="font-mono font-bold text-foreground truncate">
-              https://{domain}/itinerary/KC-GULMARG-8942
-            </span>
+        {domain && (
+          <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 truncate">
+              <Sparkles className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-muted-foreground">Proposal URL:</span>
+              <span className="font-mono font-bold text-foreground truncate">
+                https://{domain}/itinerary/&lt;inquiryId&gt;
+              </span>
+            </div>
+            <a
+              href={`https://${domain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-primary hover:underline font-bold shrink-0"
+            >
+              <span>Open Host</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
-
-          <a
-            href={`https://${domain}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-primary hover:underline font-bold shrink-0"
-          >
-            <span>Preview Portal</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
+        )}
       </Card>
     </div>
   );

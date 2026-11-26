@@ -24,6 +24,9 @@ interface Profile {
   email: string;
   role: string;
   phone?: string;
+  image?: string;
+  employeeCode?: string;
+  organizationId?: string;
   uploadedDocuments?: string;
 }
 
@@ -147,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = await response.json();
         setUser(userData);
         fetchBookings(authToken);
-        fetchInquiries(authToken);
+        fetchInquiries(authToken, userData?.role);
       } else {
         logout();
       }
@@ -186,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(data.token);
         localStorage.setItem('auth_token', data.token);
         fetchBookings(data.token);
-        fetchInquiries(data.token);
+        fetchInquiries(data.token, data.user?.role);
         return { success: true };
       } else {
         return { success: false, error: data.error };
@@ -210,7 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(data.token);
         localStorage.setItem('auth_token', data.token);
         fetchBookings(data.token);
-        fetchInquiries(data.token);
+        fetchInquiries(data.token, data.user?.role);
         return { success: true };
       } else {
         return { success: false, error: data.error };
@@ -234,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(data.token);
         localStorage.setItem('auth_token', data.token);
         fetchBookings(data.token);
-        fetchInquiries(data.token);
+        fetchInquiries(data.token, data.user?.role);
         return { success: true };
       } else {
         return { success: false, error: data.error };
@@ -358,14 +361,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentToken) fetchBookings(currentToken);
   };
 
-  const fetchInquiries = async (authToken: string) => {
+  const fetchInquiries = async (authToken: string, roleOverride?: string) => {
     try {
+      const effectiveRole = String(roleOverride || user?.role || '').toLowerCase();
+      if (effectiveRole === 'agent') {
+        const res = await fetch(`${API_URL}/crm/leads`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setInquiries(Array.isArray(data) ? data : []);
+        }
+        return;
+      }
+      if (!['admin', 'operations', 'sales', 'marketing'].includes(effectiveRole)) {
+        return;
+      }
       const response = await fetch(`${API_URL}/inquiries`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
       if (response.ok) {
         const data = await response.json();
-        // Filter by current user email since schema doesn't have userId
         const userEmail = user?.email || (await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json())).email;
         setInquiries(data.filter((i: any) => i.email === userEmail));
       }

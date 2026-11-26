@@ -33,6 +33,7 @@ interface LicenseVerificationCardProps {
     association: string;
     gstin: string;
     officeAddress: string;
+    file?: File | null;
   }) => Promise<void>;
 }
 
@@ -51,6 +52,8 @@ export const LicenseVerificationCard: React.FC<LicenseVerificationCardProps> = (
     gstin: '',
     officeAddress: ''
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -62,10 +65,10 @@ export const LicenseVerificationCard: React.FC<LicenseVerificationCardProps> = (
     }
     try {
       setIsSubmitting(true);
-      await onSubmitVerification(formData);
+      await onSubmitVerification({ ...formData, file: selectedFile });
       toast.success('Accreditation application submitted successfully!');
-    } catch (err: any) {
-      toast.error(err.message || 'Submission failed');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error && err.message ? err.message : 'Submission failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -261,11 +264,26 @@ export const LicenseVerificationCard: React.FC<LicenseVerificationCardProps> = (
                   <div className="p-4 bg-muted/40 rounded-2xl border border-dashed border-border/80 flex flex-col items-center justify-center text-center p-6 space-y-2">
                     <Upload className="w-8 h-8 text-primary/60" />
                     <div>
-                      <p className="text-xs font-semibold text-foreground">Upload Tourism Certificate / GST Doc</p>
+                      <p className="text-xs font-semibold text-foreground">
+                        {selectedFile ? selectedFile.name : 'Upload Tourism Certificate / GST Doc'}
+                      </p>
                       <p className="text-[11px] text-muted-foreground">PDF, PNG or JPG (Max 5MB)</p>
                     </div>
-                    <Button type="button" variant="outline" size="sm" className="rounded-xl text-xs">
-                      Select Documents
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      className="hidden"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded-xl text-xs"
+                    >
+                      {selectedFile ? 'Change Document' : 'Select Documents'}
                     </Button>
                   </div>
 

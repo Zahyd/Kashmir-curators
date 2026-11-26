@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { 
-  getCRMLeads, 
+  getCRMLeads,
+  createCRMLead, 
   getLeadDetail, 
   updateLeadStage,
   addLeadNote,
@@ -25,6 +26,7 @@ router.use(authenticateToken, authorizeRoles('admin', 'operations', 'sales', 'ma
 
 // Lead pipeline & details
 router.get('/leads', getCRMLeads);
+router.post('/leads', createCRMLead);
 router.get('/leads/:id', getLeadDetail);
 router.patch('/leads/:id', updateLeadStage);
 router.patch('/leads/:id/stage', updateLeadStage);

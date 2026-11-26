@@ -103,10 +103,12 @@ export const getInquiries = async (req: any, res: Response) => {
 };
 
 export const createInquiry = async (req: Request, res: Response) => {
-  const { customerName, email, phone, destination, duration, travelers, budget, accommodation, userId, flightDetails, sourceCta } = req.body;
+  const { customerName, email, phone, destination, duration, travelers, budget, accommodation, userId, agentId, flightDetails, sourceCta } = req.body;
   
   try {
     const p = prisma as any;
+    const reqUser = (req as any).user;
+    const resolvedAgentId = agentId || (reqUser?.role === 'agent' ? reqUser.id : null);
     const leadId = await LeadScoringService.generateLeadId();
     const scoreResult = LeadScoringService.calculateScore({
       destination: destination || 'Kashmir',
@@ -120,6 +122,7 @@ export const createInquiry = async (req: Request, res: Response) => {
       data: {
         leadId,
         userId: userId || null,
+        agentId: resolvedAgentId || null,
         customerName: customerName || 'Valued Guest',
         email: email || `${leadId.toLowerCase()}@guest.kashmirconnect.com`,
         phone: phone || 'Not Provided',
@@ -169,7 +172,13 @@ export const createInquiry = async (req: Request, res: Response) => {
         createdAt: new Date().toISOString()
       });
     }
-    realtimeBus.publish('NEW_INQUIRY', finalInquiry, { io: (req as any).io, tenantId: inquiryTenantId });
+    const inquiryTargetUserIds = [finalInquiry.agentId, finalInquiry.userId]
+      .filter((v): v is string => Boolean(v && typeof v === 'string'));
+    realtimeBus.publish('NEW_INQUIRY', finalInquiry, {
+      io: (req as any).io,
+      tenantId: inquiryTenantId,
+      userIds: inquiryTargetUserIds.length > 0 ? inquiryTargetUserIds : undefined
+    });
     realtimeBus.publish(
       'new-system-event',
       {
@@ -178,7 +187,11 @@ export const createInquiry = async (req: Request, res: Response) => {
         inquiry: finalInquiry,
         message: `New Lead: ${finalInquiry.leadId} (${finalInquiry.customerName}) [${finalInquiry.leadCategory}]`
       },
-      { io: (req as any).io, tenantId: inquiryTenantId }
+      {
+        io: (req as any).io,
+        tenantId: inquiryTenantId,
+        userIds: inquiryTargetUserIds.length > 0 ? inquiryTargetUserIds : undefined
+      }
     );
 
     res.status(201).json(finalInquiry);

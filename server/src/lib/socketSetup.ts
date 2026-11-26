@@ -103,9 +103,21 @@ export function configureSocketServer(io: any) {
     const socketUser = socket.data.user;
     const userRole = String(socketUser?.role || '').toLowerCase();
     const isStaff = Boolean(socketUser && STAFF_ROLES.has(userRole));
+    const isAgent = Boolean(socketUser && userRole === 'agent');
     const platformPrivileged = Boolean(socketUser && isPrivilegedPlatformRole(socketUser));
     const userTenantId = socketUser?.organizationId || (isStaff ? DEFAULT_TENANT_ID : null);
     const isDefaultTenantStaff = isStaff && (!socketUser?.organizationId || socketUser.organizationId === DEFAULT_TENANT_ID);
+
+    if (socketUser?.id) {
+      socket.join(`user-${socketUser.id}`);
+      if (isAgent) {
+        socket.join(`agent-${socketUser.id}`);
+        if (socketUser.organizationId && socketUser.organizationId !== DEFAULT_TENANT_ID) {
+          socket.join(`tenant-${socketUser.organizationId}`);
+          socket.join(`agent-org-${socketUser.organizationId}`);
+        }
+      }
+    }
 
     if (isStaff && socketUser) {
       realtimeBus.trackSocketConnect(socketUser);
@@ -199,11 +211,39 @@ export function configureSocketServer(io: any) {
         (socketUser.organizationId === tenantId || platformPrivileged)
       ) {
         socket.join(`tenant-${tenantId}`);
-        socket.join(`sales-${tenantId}`);
+        if (isStaff) {
+          socket.join(`sales-${tenantId}`);
+        }
         cb?.({ ok: true, room: `tenant-${tenantId}` });
       } else {
         cb?.({ ok: false, error: 'Cross-tenant room denied' });
       }
+    });
+
+    // B2B Agent Command Desk channel (agent/admin/ops; never exposes platform sales/admin rooms to external agents)
+    socket.on('join-agent', (cb?: (res: any) => void) => {
+      if (!socketUser || (!isAgent && !isStaff)) {
+        return cb?.({ ok: false, error: 'Agent authorization required' });
+      }
+      const joinedRooms: string[] = [];
+      if (socketUser.id) {
+        socket.join(`user-${socketUser.id}`);
+        socket.join(`agent-${socketUser.id}`);
+        joinedRooms.push(`user-${socketUser.id}`, `agent-${socketUser.id}`);
+      }
+      if (socketUser.organizationId && socketUser.organizationId !== DEFAULT_TENANT_ID) {
+        socket.join(`tenant-${socketUser.organizationId}`);
+        socket.join(`agent-org-${socketUser.organizationId}`);
+        joinedRooms.push(`tenant-${socketUser.organizationId}`, `agent-org-${socketUser.organizationId}`);
+      }
+      return cb?.({
+        ok: true,
+        connected: true,
+        rooms: joinedRooms,
+        userId: socketUser.id,
+        organizationId: socketUser.organizationId || null,
+        serverTime: new Date().toISOString(),
+      });
     });
 
     socket.on('leave-tenant', (tenantId: string) => {
@@ -319,21 +359,35 @@ export function configureSocketServer(io: any) {
       }
     });
 
-    // Notification Acknowledgement via WebSocket (strictly tenant-scoped)
+    // Notification Acknowledgement via WebSocket (strictly tenant/agent-scoped)
     socket.on('notification:ack', async (payload: { notificationId?: string; markAll?: boolean }, cb?: (res: any) => void) => {
-      if (!isStaff || !socketUser) {
+      if ((!isStaff && !isAgent) || !socketUser) {
         return cb?.({ ok: false, error: 'Unauthorized' });
       }
       try {
         const p = prisma as any;
         const fakeReq = { user: socketUser, tenantId: socketUser.organizationId || (platformPrivileged ? null : DEFAULT_TENANT_ID), headers: {} } as any;
-        const tenantFilter = buildNotificationTenantWhere(fakeReq);
+        const tenantFilter = isAgent
+          ? {
+              OR: [
+                ...(socketUser.id ? [{ userId: String(socketUser.id) }] : []),
+                ...(socketUser.organizationId && socketUser.organizationId !== DEFAULT_TENANT_ID
+                  ? [{ userId: `tenant:${socketUser.organizationId}` }]
+                  : []),
+              ],
+            }
+          : buildNotificationTenantWhere(fakeReq);
+        const agentTargetUserIds = isAgent && socketUser.id ? [String(socketUser.id)] : undefined;
 
         if (payload?.markAll) {
+          if (isAgent && (!tenantFilter.OR || tenantFilter.OR.length === 0)) {
+            return cb?.({ ok: true, markAll: true });
+          }
           await p.notification.updateMany({ where: { ...tenantFilter, read: false }, data: { read: true } });
           realtimeBus.publish('notification:acked', { markAll: true, by: socketUser.employeeCode || socketUser.email }, {
             io,
             tenantId: userTenantId,
+            userIds: agentTargetUserIds,
           });
           return cb?.({ ok: true, markAll: true });
         }
@@ -343,7 +397,14 @@ export function configureSocketServer(io: any) {
           if (!existing) {
             return cb?.({ ok: false, error: 'Notification not found' });
           }
-          if (!canAccessNotificationRecord(fakeReq, existing.userId)) {
+          const allowedForAgent =
+            (socketUser.id && String(existing.userId) === String(socketUser.id)) ||
+            Boolean(
+              socketUser.organizationId &&
+              socketUser.organizationId !== DEFAULT_TENANT_ID &&
+              String(existing.userId) === `tenant:${socketUser.organizationId}`
+            );
+          if (isAgent ? !allowedForAgent : !canAccessNotificationRecord(fakeReq, existing.userId)) {
             return cb?.({ ok: false, error: 'Cross-tenant notification ack denied' });
           }
           await p.notification.update({
@@ -353,7 +414,7 @@ export function configureSocketServer(io: any) {
           realtimeBus.publish(
             'notification:acked',
             { notificationId: payload.notificationId, by: socketUser.employeeCode || socketUser.email },
-            { io, tenantId: userTenantId }
+            { io, tenantId: userTenantId, userIds: agentTargetUserIds }
           );
           return cb?.({ ok: true, notificationId: payload.notificationId });
         }

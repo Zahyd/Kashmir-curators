@@ -1,145 +1,100 @@
-import React, { useState } from 'react';
-import { 
-  Code2, 
-  Key, 
-  Copy, 
-  Check, 
-  Sparkles, 
-  Crown, 
-  Terminal, 
-  Layers, 
-  FileCode, 
-  RefreshCw, 
-  ExternalLink,
-  ShieldAlert,
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Code2,
+  Key,
+  Copy,
+  Check,
+  Crown,
+  Terminal,
+  RefreshCw,
   Building,
   Car,
-  Package
+  Package,
+  AlertCircle
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api';
+import { agentApi, getErrMsg } from '../lib/agentApi';
 
 interface EnterpriseApiGatewayProps {
   isEnterprise: boolean;
   onOpenUpgradeModal: () => void;
   agencyCode?: string;
+  refreshTrigger?: number;
 }
 
 export const EnterpriseApiGateway: React.FC<EnterpriseApiGatewayProps> = ({
   isEnterprise = false,
   onOpenUpgradeModal,
-  agencyCode = 'KCB2B-ALPHA'
+  agencyCode = 'AGT-PENDING',
+  refreshTrigger = 0
 }) => {
-  const [apiKey, setApiKey] = useState(() => {
-    return localStorage.getItem('b2b_api_key') || `kcb2b_live_${agencyCode.toLowerCase()}_98f419c82`;
-  });
+  const { token } = useAuth();
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [format, setFormat] = useState<'JSON' | 'XML'>('JSON');
+  const [format, setFormat] = useState<'json' | 'xml'>('json');
   const [activeEndpoint, setActiveEndpoint] = useState<'hotels' | 'cabs' | 'packages'>('hotels');
-  const [isTesting, setIsTesting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [payloadPreview, setPayloadPreview] = useState<string>('');
+
+  const loadFeed = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await agentApi.getApiFeed({ category: activeEndpoint, format }, token);
+      setApiKey(data.apiKey || null);
+      setPayloadPreview(
+        format === 'xml'
+          ? data.xml || ''
+          : JSON.stringify(data.json, null, 2)
+      );
+    } catch (err: unknown) {
+      setError(getErrMsg(err, 'Failed to query live inventory feed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [activeEndpoint, format, token]);
+
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed, refreshTrigger]);
 
   const handleCopyKey = () => {
+    if (!apiKey) {
+      toast.info('Generate an Enterprise API key first.');
+      return;
+    }
     navigator.clipboard.writeText(apiKey);
     setCopied(true);
     toast.success('B2B API Key copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRegenerateKey = () => {
+  const handleRegenerateKey = async () => {
     if (!isEnterprise) {
       onOpenUpgradeModal();
       return;
     }
-    const newKey = `kcb2b_live_${agencyCode.toLowerCase()}_${Math.random().toString(36).substring(2, 11)}`;
-    setApiKey(newKey);
-    localStorage.setItem('b2b_api_key', newKey);
-    toast.success('B2B API Key Regenerated. Update your production connections.');
-  };
-
-  const sampleHotelJson = {
-    status: 'success',
-    timestamp: new Date().toISOString(),
-    currency: 'INR',
-    tier: 'WHOLESALE_NET_B2B',
-    inventoryCount: 3,
-    hotels: [
-      {
-        id: 'KC-HTL-GUL01',
-        name: 'The Highland Chalet & Alpine Spa',
-        location: 'Gulmarg Gondola Base',
-        b2bNetRate: 18500,
-        retailMrp: 26000,
-        availableRooms: 4,
-        amenities: ['Central Heating 24/7', 'Ski Locker', 'Gondola Priority Desk'],
-        season: 'Winter Ski Season'
-      },
-      {
-        id: 'KC-HTL-NIG02',
-        name: 'Nigeen Lake Royal Cedar Houseboat',
-        location: 'Nigeen Lake (Quiet Corridor), Srinagar',
-        b2bNetRate: 6500,
-        retailMrp: 9800,
-        availableRooms: 6,
-        amenities: ['Bukhari Wood Heating', 'Shikara Crossings Included', 'Kahwa on Arrival'],
-        season: 'Year-Round Luxury'
-      }
-    ]
-  };
-
-  const sampleHotelXml = `<?xml version="1.0" encoding="UTF-8"?>
-<KashmirCuratorsB2BFeed version="2.0" timestamp="${new Date().toISOString()}">
-  <Header>
-    <AgencyCode>${agencyCode}</AgencyCode>
-    <RateType>WHOLESALE_NET_CONTRACT</RateType>
-    <Currency>INR</Currency>
-  </Header>
-  <Inventory category="HOTELS">
-    <Property id="KC-HTL-GUL01" name="The Highland Chalet &amp; Alpine Spa" location="Gulmarg">
-      <NetRate currency="INR">18500</NetRate>
-      <RetailMrp currency="INR">26000</RetailMrp>
-      <AvailableRooms>4</AvailableRooms>
-      <HeatingType>Central Radiator 24/7</HeatingType>
-    </Property>
-    <Property id="KC-HTL-NIG02" name="Nigeen Lake Royal Cedar Houseboat" location="Srinagar">
-      <NetRate currency="INR">6500</NetRate>
-      <RetailMrp currency="INR">9800</RetailMrp>
-      <AvailableRooms>6</AvailableRooms>
-      <HeatingType>Traditional Bukhari &amp; Heated Mattresses</HeatingType>
-    </Property>
-  </Inventory>
-</KashmirCuratorsB2BFeed>`;
-
-  const sampleCabJson = {
-    status: 'success',
-    vehicleCategory: 'COMMERCIAL_TOURIST_FLEET',
-    fleet: [
-      {
-        class: 'INNOVA_CRYSTA',
-        driverUnion: 'J&K Taxi Union Srinagar #104',
-        mountainSpec: 'Snow Chains Equipped',
-        paxCapacity: 6,
-        luggageCapacity: 4,
-        airportTransferNetRate: 2850,
-        dailyChauffeurNetRate: 4500
-      },
-      {
-        class: 'FORTUNER_4X4',
-        driverUnion: 'Gulmarg Mountain Chauffeur Union',
-        mountainSpec: '4x4 Low-Gear AWD + Snow Chains',
-        paxCapacity: 6,
-        luggageCapacity: 4,
-        airportTransferNetRate: 5500,
-        dailyChauffeurNetRate: 8500
-      }
-    ]
+    try {
+      setRegenerating(true);
+      const res = await agentApi.regenerateApiKey(token);
+      setApiKey(res.apiKey);
+      toast.success('Live B2B API Key provisioned & saved to database.');
+    } catch (err: unknown) {
+      toast.error(getErrMsg(err, 'Failed to provision API key'));
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Enterprise Gate Banner */}
       {!isEnterprise ? (
         <div className="bg-gradient-to-r from-purple-500/15 via-indigo-500/10 to-transparent p-6 rounded-3xl border border-purple-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -152,13 +107,13 @@ export const EnterpriseApiGateway: React.FC<EnterpriseApiGatewayProps> = ({
                 <Badge className="bg-purple-500 text-white font-bold text-[10px]">Enterprise Only</Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
-                Direct machine-to-machine inventory feed connecting your OTA website, custom booking engine, or agency ERP directly to live Kashmir 5-star hotel allotments and commercial 4x4 cab dispatches.
+                Connect your booking engine to live PostgreSQL Kashmir hotel, cab, and package tariffs. Upgrade to Enterprise to provision production API keys.
               </p>
             </div>
           </div>
           <Button
             onClick={onOpenUpgradeModal}
-            className="rounded-2xl text-xs font-bold gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shrink-0 shadow-lg shadow-purple-500/20"
+            className="rounded-2xl text-xs font-bold gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shrink-0 shadow-lg shadow-purple-500/20"
           >
             <Crown className="w-4 h-4" />
             <span>Upgrade to Enterprise Network</span>
@@ -173,36 +128,39 @@ export const EnterpriseApiGateway: React.FC<EnterpriseApiGatewayProps> = ({
               </div>
               <h2 className="text-xl font-bold text-foreground">Direct B2B XML/REST Inventory Feed</h2>
               <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-xs font-bold">
-                Live & Active
+                Live PostgreSQL Feed ({agencyCode})
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground max-w-xl">
-              Distribute real-time Kashmir inventory with live wholesale net tariffs directly to your agency portal or ERP via REST JSON or OTA XML.
+              Live wholesale tariffs pulled directly from PostgreSQL Hotel, Cab, and Package tables.
             </p>
           </div>
         </div>
       )}
 
-      {/* API Key Management Strip */}
+      {/* API Key Strip */}
       <Card className="rounded-3xl border border-border/70 p-6 bg-card space-y-4">
         <CardTitle className="text-sm font-bold flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Key className="w-4 h-4 text-primary" />
-            <span>Live Production B2B API Key</span>
+            <span>Persisted Production B2B Key</span>
           </div>
           <span className="text-xs text-muted-foreground font-normal">
-            Bearer authentication required on all endpoint calls
+            Bearer JWT or Enterprise Key
           </span>
         </CardTitle>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="flex-1 bg-muted/60 p-3 rounded-2xl border border-border/60 font-mono text-xs flex items-center justify-between overflow-x-auto text-foreground">
-            <span className="truncate">{apiKey}</span>
+            <span className="truncate">
+              {apiKey || (isEnterprise ? 'No key provisioned yet — click Generate Key' : 'Requires Enterprise plan')}
+            </span>
           </div>
 
           <Button
             variant="outline"
             onClick={handleCopyKey}
+            disabled={!apiKey}
             className="rounded-xl text-xs font-semibold gap-1.5 h-11 px-4 shrink-0"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -212,123 +170,96 @@ export const EnterpriseApiGateway: React.FC<EnterpriseApiGatewayProps> = ({
           <Button
             variant="ghost"
             onClick={handleRegenerateKey}
+            disabled={regenerating}
             className="rounded-xl text-xs font-medium gap-1.5 h-11 text-muted-foreground hover:text-foreground shrink-0"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Regenerate</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? 'animate-spin' : ''}`} />
+            <span>{apiKey ? 'Regenerate' : 'Generate Key'}</span>
           </Button>
         </div>
       </Card>
 
-      {/* Interactive API Explorer & Endpoint Catalog */}
+      {/* Live Endpoint Preview */}
       <Card className="rounded-3xl border border-border/70 p-6 bg-card space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border/50">
           <div>
             <h3 className="font-bold text-base text-foreground flex items-center gap-2">
               <Terminal className="w-4 h-4 text-primary" />
-              API Feed Endpoints & Live Responses
+              Live Database Feed Inspector
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Select an endpoint to inspect request headers and preview output formats.
+              Queries `/api/agents/api-feed` directly against live PostgreSQL inventory.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-muted/60 p-1 rounded-xl border border-border/50 text-xs">
-            <button
-              onClick={() => setFormat('JSON')}
-              className={`px-3 py-1 rounded-lg font-bold transition ${
-                format === 'JSON' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              REST (JSON)
-            </button>
-            <button
-              onClick={() => setFormat('XML')}
-              className={`px-3 py-1 rounded-lg font-bold transition ${
-                format === 'XML' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              OTA (XML)
-            </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/50 text-xs">
+              <button
+                onClick={() => setFormat('json')}
+                className={`px-3 py-1 rounded-lg font-bold transition ${
+                  format === 'json' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                REST (JSON)
+              </button>
+              <button
+                onClick={() => setFormat('xml')}
+                className={`px-3 py-1 rounded-lg font-bold transition ${
+                  format === 'xml' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                OTA (XML)
+              </button>
+            </div>
+            <Button size="icon" variant="outline" onClick={loadFeed} disabled={loading} className="rounded-xl h-8 w-8">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </div>
 
-        {/* Endpoint Selector Buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button
-            onClick={() => setActiveEndpoint('hotels')}
-            className={`p-3.5 rounded-2xl border text-left transition flex items-center gap-3 ${
-              activeEndpoint === 'hotels'
-                ? 'border-primary bg-primary/5 text-foreground'
-                : 'border-border/60 hover:border-border text-muted-foreground'
-            }`}
-          >
-            <Building className="w-4 h-4 text-primary shrink-0" />
-            <div>
-              <p className="font-bold text-xs">/api/b2b/inventory/hotels</p>
-              <p className="text-[10px] text-muted-foreground">5-Star Resorts & Houseboats</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveEndpoint('cabs')}
-            className={`p-3.5 rounded-2xl border text-left transition flex items-center gap-3 ${
-              activeEndpoint === 'cabs'
-                ? 'border-primary bg-primary/5 text-foreground'
-                : 'border-border/60 hover:border-border text-muted-foreground'
-            }`}
-          >
-            <Car className="w-4 h-4 text-emerald-500 shrink-0" />
-            <div>
-              <p className="font-bold text-xs">/api/b2b/inventory/cabs</p>
-              <p className="text-[10px] text-muted-foreground">4x4 Mountain Fleet & Transfers</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveEndpoint('packages')}
-            className={`p-3.5 rounded-2xl border text-left transition flex items-center gap-3 ${
-              activeEndpoint === 'packages'
-                ? 'border-primary bg-primary/5 text-foreground'
-                : 'border-border/60 hover:border-border text-muted-foreground'
-            }`}
-          >
-            <Package className="w-4 h-4 text-amber-500 shrink-0" />
-            <div>
-              <p className="font-bold text-xs">/api/b2b/inventory/packages</p>
-              <p className="text-[10px] text-muted-foreground">Wholesale Packaged Circuits</p>
-            </div>
-          </button>
+          {[
+            { id: 'hotels' as const, label: 'Hotels & Houseboats', icon: Building },
+            { id: 'cabs' as const, label: 'Fleet & Transfers', icon: Car },
+            { id: 'packages' as const, label: 'Packaged Circuits', icon: Package }
+          ].map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveEndpoint(cat.id)}
+                className={`p-3.5 rounded-2xl border text-left transition flex items-center gap-3 ${
+                  activeEndpoint === cat.id
+                    ? 'border-primary bg-primary/5 text-foreground'
+                    : 'border-border/60 hover:border-border text-muted-foreground'
+                }`}
+              >
+                <Icon className="w-4 h-4 text-primary shrink-0" />
+                <div>
+                  <p className="font-bold text-xs">/api/agents/api-feed?category={cat.id}</p>
+                  <p className="text-[10px] text-muted-foreground">{cat.label}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
-        {/* cURL Snippet */}
         <div className="bg-slate-950 text-slate-200 p-4 rounded-2xl font-mono text-xs overflow-x-auto space-y-2 border border-slate-800">
-          <div className="flex items-center justify-between text-slate-400 text-[10px] border-b border-slate-800 pb-2">
-            <span>HTTP GET REQUEST</span>
-            <span>Content-Type: {format === 'JSON' ? 'application/json' : 'application/xml'}</span>
-          </div>
           <code>
-            curl -X GET "https://kashmir-curators.vercel.app/api/b2b/inventory/{activeEndpoint}?format={format.toLowerCase()}" \<br />
-            &nbsp;&nbsp;-H "Authorization: Bearer {apiKey}" \<br />
-            &nbsp;&nbsp;-H "Accept: {format === 'JSON' ? 'application/json' : 'application/xml'}"
+            curl -X GET "{API_BASE_URL}/agents/api-feed?category={activeEndpoint}&format={format}" -H "Authorization: Bearer &lt;YOUR_TOKEN&gt;"
           </code>
         </div>
 
-        {/* Response Payload Viewer */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="font-semibold">Live Response Payload ({format}):</span>
-            <span className="text-[11px] text-emerald-500 font-medium">Status: 200 OK</span>
+        {error ? (
+          <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/5 text-xs text-rose-500 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
           </div>
-
+        ) : (
           <pre className="bg-slate-950 text-emerald-400 p-4 rounded-2xl font-mono text-xs overflow-x-auto max-h-72 border border-slate-800">
-            {format === 'XML' 
-              ? sampleHotelXml 
-              : activeEndpoint === 'cabs' 
-                ? JSON.stringify(sampleCabJson, null, 2) 
-                : JSON.stringify(sampleHotelJson, null, 2)}
+            {loading ? 'Loading live database inventory feed...' : payloadPreview}
           </pre>
-        </div>
+        )}
       </Card>
     </div>
   );
