@@ -3,12 +3,88 @@ import { AuthRequest } from '../middleware/authMiddleware';
 import prisma from '../lib/prisma';
 import { io } from '../index';
 import { realtimeBus } from '../lib/realtimeBus';
-import { withStrictTenantScope, canAccessTenantRecord, buildTenantNotificationUserId } from '../lib/tenant';
+import { LeadScoringService } from '../services/leadScoringService';
+import {
+  DEFAULT_TENANT_ID,
+  withStrictTenantScope,
+  canAccessTenantRecord,
+  resolveWriteTenantId,
+  buildTenantNotificationUserId
+} from '../lib/tenant';
 
 // Helper: Normalize phone to 10 digits for duplicate matching
 function normalizePhone(phone: string): string {
   const digits = (phone || '').replace(/[^0-9]/g, '');
   return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+function getLeadValueINR(inq: { netPrice?: number | null; budget?: string | number | null }): number {
+  if (inq.netPrice && Number(inq.netPrice) > 0) return Number(inq.netPrice);
+  const digits = String(inq.budget || '').replace(/[^0-9]/g, '');
+  if (!digits) return 0;
+  const parsed = parseInt(digits, 10);
+  return isNaN(parsed) || parsed < 500 ? 0 : parsed;
+}
+
+function buildCrmRoleWhere(req: AuthRequest, assignedToFilter?: unknown): Record<string, any> {
+  const role = String(req.user?.role || '').toLowerCase();
+  const userEmail = req.user?.email;
+  const employeeCode = req.user?.employeeCode || (req.user as any)?.code;
+
+  if (role === 'admin' || role === 'operations' || role === 'finance' || role === 'marketing') {
+    if (assignedToFilter && assignedToFilter !== 'ALL') {
+      return { assignedTo: String(assignedToFilter) };
+    }
+    return {};
+  }
+
+  if (role === 'agent') {
+    const orClauses: any[] = [];
+    if (req.user?.id) orClauses.push({ agentId: req.user.id }, { userId: req.user.id });
+    if (userEmail) orClauses.push({ assignedTo: userEmail });
+    if (employeeCode) orClauses.push({ assignedTo: employeeCode });
+    return orClauses.length > 0 ? { OR: orClauses } : { id: '__no_matching_agent__' };
+  }
+
+  const orClauses: any[] = [];
+  if (userEmail) {
+    orClauses.push({ assignedTo: userEmail }, { email: userEmail });
+  }
+  if (employeeCode) {
+    orClauses.push({ assignedTo: employeeCode });
+  }
+  return orClauses.length > 0 ? { OR: orClauses } : { id: '__no_matching_assignee__' };
+}
+
+function canAgentAccessLead(req: AuthRequest, lead: any): boolean {
+  if (!canAccessTenantRecord(req, lead?.organizationId)) {
+    return false;
+  }
+  const role = String(req.user?.role || '').toLowerCase();
+  if (role !== 'agent') {
+    return true;
+  }
+  const userId = String(req.user?.id || '');
+  const userEmail = String(req.user?.email || '').toLowerCase();
+  const empCode = String(req.user?.employeeCode || (req.user as any)?.code || '').toLowerCase();
+  const assignedTo = String(lead?.assignedTo || '').toLowerCase();
+  const orgId = (req.user as any)?.organizationId;
+
+  if (userId && (lead?.agentId === userId || lead?.userId === userId)) return true;
+  if (userEmail && assignedTo === userEmail) return true;
+  if (empCode && assignedTo === empCode) return true;
+  if (orgId && orgId !== DEFAULT_TENANT_ID && lead?.organizationId === orgId) return true;
+  return false;
+}
+
+function collectLeadTargetUserIds(lead: any, extraIds: Array<string | null | undefined> = []): string[] | undefined {
+  const unique = new Set<string>();
+  for (const id of [lead?.agentId, lead?.userId, ...extraIds]) {
+    if (id && typeof id === 'string') {
+      unique.add(id);
+    }
+  }
+  return unique.size > 0 ? Array.from(unique) : undefined;
 }
 
 /**
@@ -17,16 +93,12 @@ function normalizePhone(phone: string): string {
  */
 export const getCRMLeads = async (req: AuthRequest, res: Response) => {
   try {
-    const role = req.user?.role;
-    const userEmail = req.user?.email;
-    const employeeCode = req.user?.employeeCode || (req.user as any)?.code;
-
-    const { 
-      stage, 
-      category, 
-      priority, 
-      sentiment, 
-      search, 
+    const {
+      stage,
+      category,
+      priority,
+      sentiment,
+      search,
       assignedTo,
       startDate,
       endDate,
@@ -35,34 +107,7 @@ export const getCRMLeads = async (req: AuthRequest, res: Response) => {
       limit
     } = req.query;
 
-    const where: any = {};
-
-    // Role-based visibility
-    if (role === 'admin' || role === 'operations' || role === 'finance' || role === 'marketing') {
-      if (assignedTo && assignedTo !== 'ALL') {
-        where.assignedTo = assignedTo as string;
-      }
-    } else if (role === 'agent') {
-      // B2B agent sees their own agency inquiries + assigned leads
-      const orClauses: any[] = [{ agentId: req.user?.id }];
-      if (userEmail) orClauses.push({ assignedTo: userEmail });
-      if (employeeCode) orClauses.push({ assignedTo: employeeCode });
-      where.OR = orClauses;
-    } else {
-      // Standard sales executive sees assigned leads + unassigned queue filter when requested
-      const orClauses: any[] = [];
-      if (userEmail) {
-        orClauses.push({ assignedTo: userEmail }, { email: userEmail });
-      }
-      if (employeeCode) {
-        orClauses.push({ assignedTo: employeeCode });
-      }
-      if (orClauses.length > 0) {
-        where.OR = orClauses;
-      } else {
-        where.id = '__no_matching_assignee__';
-      }
-    }
+    const where: any = buildCrmRoleWhere(req, assignedTo);
 
     if (stage && stage !== 'ALL') {
       where.leadStage = stage as string;
@@ -197,7 +242,7 @@ export const getLeadDetail = async (req: AuthRequest, res: Response) => {
     if (!lead) {
       return res.status(404).json({ error: 'Lead not found' });
     }
-    if (!canAccessTenantRecord(req, lead.organizationId)) {
+    if (!canAgentAccessLead(req, lead)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant lead access denied' });
     }
 
@@ -209,19 +254,185 @@ export const getLeadDetail = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * POST /api/crm/leads
+ * Creates a persisted traveler inquiry directly from the CRM or B2B Agent Desk
+ * and broadcasts scoped real-time creation events immediately.
+ */
+export const createCRMLead = async (req: AuthRequest, res: Response) => {
+  try {
+    const {
+      customerName,
+      email,
+      phone,
+      destination,
+      duration,
+      travelers,
+      adultsCount,
+      childrenCount,
+      budget,
+      netPrice,
+      accommodation,
+      priority,
+      assignedTo,
+      notes,
+      sourceCta,
+      leadStage
+    } = req.body || {};
+
+    if (!customerName || !String(customerName).trim()) {
+      return res.status(400).json({ error: 'Customer name is required' });
+    }
+
+    const p = prisma as any;
+    const role = String(req.user?.role || '').toLowerCase();
+    const isAgentUser = role === 'agent';
+    const adults = Math.max(1, parseInt(String(adultsCount || '2'), 10) || 2);
+    const children = Math.max(0, parseInt(String(childrenCount || '0'), 10) || 0);
+    const parsedNetPrice = netPrice !== undefined && !isNaN(Number(netPrice)) ? Number(netPrice) : 0;
+
+    const leadId = await LeadScoringService.generateLeadId();
+    const scoreResult = LeadScoringService.calculateScore({
+      destination: destination || 'Kashmir',
+      budgetRange: budget ? String(budget) : undefined,
+      preferredAccommodation: accommodation || undefined,
+      adultsCount: adults,
+      childrenCount: children,
+      sourceCta: sourceCta || (isAgentUser ? 'B2B_AGENT_DESK' : 'CRM_DESK'),
+      profileCompleteness: 70
+    });
+
+    const organizationId = resolveWriteTenantId(req);
+    const normalizedStage = String(leadStage || 'NEW_LEAD').trim().toUpperCase();
+    const statusMap: Record<string, string> = {
+      NEW_LEAD: 'New',
+      CLAIMED: 'Pending Curation',
+      FOLLOW_UP: 'Pending Curation',
+      QUOTE_SENT: 'Ready for Review',
+      NEGOTIATION: 'Ready for Review',
+      PAYMENT_PENDING: 'Ready for Review',
+      CONFIRMED: 'Booked',
+      COMPLETED: 'Booked',
+      CANCELLED: 'Lost',
+      LOST: 'Lost'
+    };
+
+    const assignee =
+      assignedTo !== undefined && assignedTo !== null
+        ? String(assignedTo).trim() || null
+        : isAgentUser
+          ? (req.user?.employeeCode || req.user?.email || null)
+          : null;
+
+    const created = await p.inquiry.create({
+      data: {
+        leadId,
+        agentId: isAgentUser ? String(req.user?.id) : req.body?.agentId ? String(req.body.agentId) : null,
+        organizationId,
+        customerName: String(customerName).trim(),
+        email: email && String(email).trim() ? String(email).trim() : `${leadId.toLowerCase()}@guest.kashmirconnect.com`,
+        phone: phone && String(phone).trim() ? String(phone).trim() : 'Not Provided',
+        destination: destination && String(destination).trim() ? String(destination).trim() : 'Kashmir',
+        duration: duration && String(duration).trim() ? String(duration).trim() : '6 Days',
+        travelers: travelers ? String(travelers) : `${adults} Adults${children > 0 ? `, ${children} Kids` : ''}`,
+        adultsCount: adults,
+        childrenCount: children,
+        budget: budget ? String(budget) : parsedNetPrice > 0 ? `₹${parsedNetPrice.toLocaleString('en-IN')}` : 'Luxury',
+        netPrice: parsedNetPrice,
+        accommodation: accommodation || '4-Star Boutique',
+        preferredAccommodation: accommodation || '4-Star Boutique',
+        status: statusMap[normalizedStage] || 'New',
+        leadStage: normalizedStage,
+        leadScore: scoreResult.totalScore,
+        leadCategory: scoreResult.category,
+        sentiment: scoreResult.sentiment,
+        priority: priority || scoreResult.priority,
+        assignedTo: assignee,
+        notes: notes ? String(notes).trim() : null,
+        sourceCta: sourceCta || (isAgentUser ? 'B2B_AGENT_DESK' : 'CRM_DESK'),
+        scoringBreakdown: JSON.stringify(scoreResult.scoringBreakdown),
+        profileCompleteness: 70
+      }
+    });
+
+    const performer = req.user?.name || req.user?.email || 'Partner Agent';
+    const activity = await p.leadActivity.create({
+      data: {
+        inquiryId: created.id,
+        type: 'LEAD_CREATED',
+        title: `Lead registered by ${performer}`,
+        description: `Created itinerary lead for ${created.destination} (${created.duration})`,
+        performedBy: performer
+      }
+    });
+
+    const notification = await p.notification
+      .create({
+        data: {
+          userId: created.agentId || buildTenantNotificationUserId(organizationId),
+          title: 'New Travel Inquiry',
+          message: `${created.customerName} (${created.destination}) added to pipeline`,
+          type: 'inquiry',
+          priority: 'medium',
+          link: isAgentUser ? '/agent' : `/sales/portal?tab=live-leads&inquiryId=${created.id}`,
+          read: false
+        }
+      })
+      .catch(() => null);
+
+    const ioRef = (req as any).io || io;
+    const targetUserIds = collectLeadTargetUserIds(created);
+
+    realtimeBus.publish('NEW_INQUIRY', created, { io: ioRef, tenantId: organizationId, userIds: targetUserIds });
+    realtimeBus.publish(
+      'lead-updated',
+      {
+        inquiryId: created.id,
+        customerName: created.customerName,
+        newStage: created.leadStage,
+        updatedLead: created,
+        organizationId
+      },
+      { io: ioRef, tenantId: organizationId, userIds: targetUserIds }
+    );
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: created }, {
+      io: ioRef,
+      tenantId: organizationId,
+      userIds: targetUserIds
+    });
+    realtimeBus.publish(
+      'new-system-event',
+      {
+        type: 'CREATE',
+        message: `New Lead: ${created.customerName} interested in ${created.destination}`,
+        booking: { ...created, entityType: 'inquiry' },
+        inquiry: created,
+        notification,
+        timestamp: new Date().toISOString()
+      },
+      { io: ioRef, tenantId: organizationId, userIds: targetUserIds }
+    );
+
+    res.status(201).json(created);
+  } catch (error) {
+    console.error('createCRMLead error:', error);
+    res.status(500).json({ error: 'Failed to create CRM lead' });
+  }
+};
+
+/**
  * PATCH /api/crm/leads/:id/stage
  * Drag & Drop or manual Kanban stage update with atomic activity logging & Socket broadcast
  */
 export const updateLeadStage = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { leadStage, priority, assignedTo, budget, destination, duration, sentiment } = req.body;
+  const { leadStage, priority, assignedTo, budget, destination, duration, sentiment, netPrice } = req.body;
 
   try {
     const inquiry = await prisma.inquiry.findUnique({ where: { id: id as string } });
     if (!inquiry) {
       return res.status(404).json({ error: 'Lead not found' });
     }
-    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+    if (!canAgentAccessLead(req, inquiry)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant lead update denied' });
     }
 
@@ -230,10 +441,14 @@ export const updateLeadStage = async (req: AuthRequest, res: Response) => {
     if (leadStage) {
       switch (leadStage) {
         case 'NEW_LEAD': status = 'New'; break;
+        case 'CLAIMED':
         case 'FOLLOW_UP': status = 'Pending Curation'; break;
-        case 'QUOTE_SENT': status = 'Ready for Review'; break;
-        case 'NEGOTIATION': status = 'Ready for Review'; break;
-        case 'CONFIRMED': status = 'Booked'; break;
+        case 'QUOTE_SENT':
+        case 'NEGOTIATION':
+        case 'PAYMENT_PENDING': status = 'Ready for Review'; break;
+        case 'CONFIRMED':
+        case 'COMPLETED': status = 'Booked'; break;
+        case 'LOST':
         case 'CANCELLED': status = 'Lost'; break;
         default: status = inquiry.status;
       }
@@ -242,7 +457,7 @@ export const updateLeadStage = async (req: AuthRequest, res: Response) => {
     const previousStage = inquiry.leadStage;
 
     // Use transaction to ensure inquiry update, activity log, and audit log commit together
-    const [updated] = await prisma.$transaction([
+    const [updated, activity] = await prisma.$transaction([
       prisma.inquiry.update({
         where: { id: id as string },
         data: {
@@ -251,6 +466,7 @@ export const updateLeadStage = async (req: AuthRequest, res: Response) => {
           priority: priority || undefined,
           assignedTo: assignedTo || undefined,
           budget: budget || undefined,
+          netPrice: netPrice !== undefined && !isNaN(Number(netPrice)) ? Number(netPrice) : undefined,
           destination: destination || undefined,
           duration: duration || undefined,
           sentiment: sentiment || undefined,
@@ -286,26 +502,28 @@ export const updateLeadStage = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    // Real-time synchronization via tenant-scoped RealtimeBus (no global PII leaks)
+    // Real-time synchronization via tenant/agent-scoped RealtimeBus (no global PII leaks)
     const ioRef = (req as any).io || io;
     const tenantId = (updated as any).organizationId || (req.user as any)?.organizationId || null;
+    const targetUserIds = collectLeadTargetUserIds(updated);
     const leadPayload = {
       inquiryId: id,
       customerName: updated.customerName,
-      newStage: leadStage,
+      newStage: leadStage || updated.leadStage,
       updatedLead: updated,
       organizationId: tenantId
     };
 
-    realtimeBus.publish('lead-updated', leadPayload, { io: ioRef, tenantId });
-    realtimeBus.publish('STAGE_UPDATED', { leadId: id, stage: leadStage, lead: updated }, { io: ioRef, tenantId });
+    realtimeBus.publish('lead-updated', leadPayload, { io: ioRef, tenantId, userIds: targetUserIds });
+    realtimeBus.publish('STAGE_UPDATED', { leadId: id, stage: leadStage || updated.leadStage, lead: updated }, { io: ioRef, tenantId, userIds: targetUserIds });
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updated }, { io: ioRef, tenantId, userIds: targetUserIds });
     realtimeBus.publish('new-system-event', {
       type: 'LEAD_STAGE_UPDATED',
       inquiry: updated,
       booking: { ...updated, entityType: 'inquiry' },
-      message: `${updated.customerName} transitioned to ${leadStage?.replace(/_/g, ' ')}`,
+      message: `${updated.customerName} transitioned to ${(leadStage || updated.leadStage)?.replace(/_/g, ' ')}`,
       timestamp: new Date().toISOString()
-    }, { io: ioRef, tenantId });
+    }, { io: ioRef, tenantId, userIds: targetUserIds });
 
     res.json(updated);
   } catch (error) {
@@ -329,10 +547,10 @@ export const addLeadNote = async (req: AuthRequest, res: Response) => {
   try {
     const inquiry = await prisma.inquiry.findUnique({
       where: { id: id as string },
-      select: { id: true, organizationId: true, customerName: true }
+      select: { id: true, organizationId: true, customerName: true, agentId: true, userId: true, assignedTo: true }
     });
     if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
-    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+    if (!canAgentAccessLead(req, inquiry)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant lead note access denied' });
     }
 
@@ -361,13 +579,16 @@ export const addLeadNote = async (req: AuthRequest, res: Response) => {
     ]);
 
     const ioRef = (req as any).io || io;
+    const targetUserIds = collectLeadTargetUserIds(inquiry);
     realtimeBus.publish('lead-note-added', { inquiryId: id, note, organizationId: inquiry.organizationId }, {
       io: ioRef,
-      tenantId: inquiry.organizationId
+      tenantId: inquiry.organizationId,
+      userIds: targetUserIds
     });
     realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry }, {
       io: ioRef,
-      tenantId: inquiry.organizationId
+      tenantId: inquiry.organizationId,
+      userIds: targetUserIds
     });
 
     res.status(201).json(note);
@@ -386,10 +607,10 @@ export const getLeadNotes = async (req: AuthRequest, res: Response) => {
   try {
     const inquiry = await prisma.inquiry.findUnique({
       where: { id: id as string },
-      select: { id: true, organizationId: true }
+      select: { id: true, organizationId: true, agentId: true, userId: true, assignedTo: true }
     });
     if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
-    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+    if (!canAgentAccessLead(req, inquiry)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant lead notes access denied' });
     }
 
@@ -444,10 +665,10 @@ export const getLeadReminders = async (req: AuthRequest, res: Response) => {
   try {
     const inquiry = await prisma.inquiry.findUnique({
       where: { id: id as string },
-      select: { id: true, organizationId: true }
+      select: { id: true, organizationId: true, agentId: true, userId: true, assignedTo: true }
     });
     if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
-    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+    if (!canAgentAccessLead(req, inquiry)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant lead reminders access denied' });
     }
 
@@ -477,10 +698,10 @@ export const createReminder = async (req: AuthRequest, res: Response) => {
   try {
     const inquiry = await prisma.inquiry.findUnique({
       where: { id: id as string },
-      select: { id: true, organizationId: true, customerName: true }
+      select: { id: true, organizationId: true, customerName: true, agentId: true, userId: true, assignedTo: true }
     });
     if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
-    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+    if (!canAgentAccessLead(req, inquiry)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant lead reminder access denied' });
     }
 
@@ -518,13 +739,16 @@ export const createReminder = async (req: AuthRequest, res: Response) => {
     ]);
 
     const ioRef = (req as any).io || io;
+    const targetUserIds = collectLeadTargetUserIds(inquiry);
     realtimeBus.publish('reminder-scheduled', { inquiryId: id, reminder, organizationId: inquiry.organizationId }, {
       io: ioRef,
-      tenantId: inquiry.organizationId
+      tenantId: inquiry.organizationId,
+      userIds: targetUserIds
     });
     realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry }, {
       io: ioRef,
-      tenantId: inquiry.organizationId
+      tenantId: inquiry.organizationId,
+      userIds: targetUserIds
     });
 
     res.status(201).json(reminder);
@@ -551,9 +775,9 @@ export const updateReminder = async (req: AuthRequest, res: Response) => {
 
     const inquiry = await prisma.inquiry.findUnique({
       where: { id: existing.inquiryId },
-      select: { organizationId: true }
+      select: { id: true, organizationId: true, agentId: true, userId: true, assignedTo: true }
     });
-    if (inquiry && !canAccessTenantRecord(req, inquiry.organizationId)) {
+    if (inquiry && !canAgentAccessLead(req, inquiry)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant reminder update denied' });
     }
 
@@ -578,6 +802,14 @@ export const updateReminder = async (req: AuthRequest, res: Response) => {
         }
       });
     }
+
+    const ioRef = (req as any).io || io;
+    const targetUserIds = collectLeadTargetUserIds(inquiry);
+    realtimeBus.publish('reminder-updated', { inquiryId: existing.inquiryId, reminder: updated }, {
+      io: ioRef,
+      tenantId: inquiry?.organizationId || null,
+      userIds: targetUserIds
+    });
 
     res.json(updated);
   } catch (error) {
@@ -654,7 +886,7 @@ export const checkDuplicateLeads = async (req: AuthRequest, res: Response) => {
   try {
     const current = await prisma.inquiry.findUnique({ where: { id: id as string } });
     if (!current) return res.status(404).json({ error: 'Lead not found' });
-    if (!canAccessTenantRecord(req, current.organizationId)) {
+    if (!canAgentAccessLead(req, current)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant duplicate check denied' });
     }
 
@@ -669,15 +901,18 @@ export const checkDuplicateLeads = async (req: AuthRequest, res: Response) => {
       return res.json({ count: 0, hasDuplicates: false, duplicates: [] });
     }
 
-    // Look for matching phone (last 10 digits) or matching email within tenant, excluding self
+    // Look for matching phone (last 10 digits) or matching email within tenant & role scope, excluding self
+    const roleFilter = buildCrmRoleWhere(req);
+    const dupBaseWhere: any = {
+      ...roleFilter,
+      id: { not: current.id },
+      AND: [
+        ...(Array.isArray((roleFilter as any).AND) ? (roleFilter as any).AND : []),
+        { OR: matchConditions }
+      ]
+    };
     const potentialDuplicates = await prisma.inquiry.findMany({
-      where: withStrictTenantScope(
-        {
-          id: { not: current.id },
-          OR: matchConditions
-        },
-        req.tenantId
-      ),
+      where: withStrictTenantScope(dupBaseWhere, req.tenantId),
       select: {
         id: true,
         leadId: true,
@@ -721,7 +956,7 @@ export const mergeDuplicateLead = async (req: AuthRequest, res: Response) => {
     if (!master || !duplicate) {
       return res.status(404).json({ error: 'One or both leads not found' });
     }
-    if (!canAccessTenantRecord(req, master.organizationId) || !canAccessTenantRecord(req, duplicate.organizationId)) {
+    if (!canAgentAccessLead(req, master) || !canAgentAccessLead(req, duplicate)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant lead merge denied' });
     }
 
@@ -781,7 +1016,7 @@ export const assignLead = async (req: AuthRequest, res: Response) => {
   try {
     const inquiry = await prisma.inquiry.findUnique({ where: { id: id as string } });
     if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
-    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+    if (!canAgentAccessLead(req, inquiry)) {
       return res.status(403).json({ error: 'Forbidden: Cross-tenant lead assignment denied' });
     }
 
@@ -819,6 +1054,7 @@ export const assignLead = async (req: AuthRequest, res: Response) => {
 
     const ioRef = (req as any).io || io;
     const tenantId = (inquiry as any).organizationId || (req.user as any)?.organizationId || null;
+    const targetUserIds = collectLeadTargetUserIds(updated);
     realtimeBus.publish('lead-assigned', {
       inquiryId: id,
       assignedTo: agentEmail,
@@ -827,16 +1063,16 @@ export const assignLead = async (req: AuthRequest, res: Response) => {
       destination: inquiry.destination,
       lead: updated,
       organizationId: tenantId
-    }, { io: ioRef, tenantId });
+    }, { io: ioRef, tenantId, userIds: targetUserIds });
 
-    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updated }, { io: ioRef, tenantId });
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updated }, { io: ioRef, tenantId, userIds: targetUserIds });
     realtimeBus.publish('new-system-event', {
       type: 'LEAD_ASSIGNED',
       message: `${inquiry.customerName} assigned to ${agentName || agentEmail}`,
       booking: { ...updated, entityType: 'inquiry' },
       notification,
       timestamp: new Date().toISOString()
-    }, { io: ioRef, tenantId });
+    }, { io: ioRef, tenantId, userIds: targetUserIds });
 
     res.json(updated);
   } catch (error) {
@@ -848,15 +1084,18 @@ export const assignLead = async (req: AuthRequest, res: Response) => {
 /**
  * GET /api/crm/bi/metrics
  * Executive Business Intelligence & Sales Pipeline Analytics
+ * Strictly scoped by tenant AND agent ownership when caller role is 'agent'.
  */
 export const getCRMBIMetrics = async (req: AuthRequest, res: Response) => {
   try {
+    const roleWhere = buildCrmRoleWhere(req);
     const allInquiries = await prisma.inquiry.findMany({
-      where: withStrictTenantScope({}, req.tenantId),
+      where: withStrictTenantScope(roleWhere, req.tenantId),
       select: {
         id: true,
         leadStage: true,
         netPrice: true,
+        budget: true,
         destination: true,
         leadScore: true,
         sentiment: true,
@@ -872,25 +1111,28 @@ export const getCRMBIMetrics = async (req: AuthRequest, res: Response) => {
     let confirmedRevenue = 0;
     const stageCounts: Record<string, number> = {
       NEW_LEAD: 0,
+      CLAIMED: 0,
       FOLLOW_UP: 0,
       QUOTE_SENT: 0,
       NEGOTIATION: 0,
       PAYMENT_PENDING: 0,
       CONFIRMED: 0,
       COMPLETED: 0,
-      CANCELLED: 0
+      CANCELLED: 0,
+      LOST: 0
     };
     const destinationStats: Record<string, number> = {};
     const agentStats: Record<string, { total: number; confirmed: number; revenue: number }> = {};
 
     allInquiries.forEach(inq => {
-      const stage = inq.leadStage || 'NEW_LEAD';
+      const rawStage = String(inq.leadStage || 'NEW_LEAD').trim().toUpperCase();
+      const stage = rawStage === 'QUOTED' ? 'QUOTE_SENT' : rawStage;
       stageCounts[stage] = (stageCounts[stage] || 0) + 1;
 
-      const price = inq.netPrice || 0;
+      const price = getLeadValueINR(inq);
       if (stage === 'CONFIRMED' || stage === 'COMPLETED') {
         confirmedRevenue += price;
-      } else if (stage !== 'CANCELLED') {
+      } else if (stage !== 'CANCELLED' && stage !== 'LOST') {
         totalPipelineValue += price;
       }
 

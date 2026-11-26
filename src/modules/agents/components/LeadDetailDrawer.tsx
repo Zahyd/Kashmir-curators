@@ -46,6 +46,7 @@ interface LeadDetailDrawerProps {
   onClose: () => void;
   onUpdateLead: () => void;
   onOpenQuoteBuilder: (lead: any) => void;
+  realtimeVersion?: number;
 }
 
 export const STAGE_CONFIG: Record<string, { label: string; color: string }> = {
@@ -64,7 +65,8 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   open,
   onClose,
   onUpdateLead,
-  onOpenQuoteBuilder
+  onOpenQuoteBuilder,
+  realtimeVersion = 0
 }) => {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
@@ -138,7 +140,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
     if (open && leadId) {
       fetchLeadData();
     }
-  }, [open, leadId]);
+  }, [open, leadId, realtimeVersion]);
 
   // Trigger AI Copilot Analysis
   const handleRunAiAnalysis = async () => {

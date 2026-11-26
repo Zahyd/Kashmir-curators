@@ -74,7 +74,16 @@ export const login = async (req: Request, res: Response) => {
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId || undefined }, JWT_SECRET, { expiresIn: '7d', algorithm: 'HS256' });
     
     res.json({ 
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        phone: user.phone || undefined,
+        image: user.image || undefined,
+        employeeCode: (user as any).employeeCode || undefined,
+        organizationId: (user as any).organizationId || undefined
+      },
       token 
     });
   } catch (error) {
@@ -98,6 +107,9 @@ export const getMe = async (req: any, res: Response) => {
       name: user.name, 
       role: user.role,
       phone: user.phone,
+      image: user.image || undefined,
+      employeeCode: (user as any).employeeCode || undefined,
+      organizationId: (user as any).organizationId || undefined,
       uploadedDocuments: user.uploadedDocuments
     });
   } catch (error) {
@@ -518,7 +530,16 @@ export const googleLogin = async (req: Request, res: Response) => {
     );
 
     res.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, phone: user.phone || undefined, image: user.image },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        phone: user.phone || undefined,
+        image: user.image,
+        employeeCode: (user as any).employeeCode || undefined,
+        organizationId: (user as any).organizationId || undefined
+      },
       token
     });
   } catch (error: any) {
@@ -588,7 +609,16 @@ export const googleRealtimeLogin = async (req: Request, res: Response) => {
     );
 
     res.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, phone: user.phone || undefined, image: user.image },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        phone: user.phone || undefined,
+        image: user.image,
+        employeeCode: (user as any).employeeCode || undefined,
+        organizationId: (user as any).organizationId || undefined
+      },
       token
     });
   } catch (error: any) {

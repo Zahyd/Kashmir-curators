@@ -183,8 +183,18 @@ class RealtimeBus extends EventEmitter {
     };
   }
 
-  private canSseClientReceive(client: SalesSseClient, targetTenantId?: string | null): boolean {
+  private canSseClientReceive(client: SalesSseClient, targetTenantId?: string | null, targetUserIds?: string[]): boolean {
     const roleLower = String(client.role || '').toLowerCase();
+    if (roleLower === 'agent') {
+      if (Array.isArray(targetUserIds) && targetUserIds.includes(client.userId)) {
+        return true;
+      }
+      return Boolean(
+        client.tenantId &&
+        client.tenantId !== DEFAULT_TENANT_ID &&
+        targetTenantId === client.tenantId
+      );
+    }
     if ((roleLower === 'admin' || roleLower === 'operations') && !client.tenantId) {
       return true;
     }
@@ -224,7 +234,10 @@ class RealtimeBus extends EventEmitter {
 
       if (Array.isArray(options.userIds)) {
         for (const uid of options.userIds) {
-          if (uid) targetRooms.add(`user-${uid}`);
+          if (uid) {
+            targetRooms.add(`user-${uid}`);
+            targetRooms.add(`agent-${uid}`);
+          }
         }
       }
 
@@ -252,10 +265,10 @@ class RealtimeBus extends EventEmitter {
       }
     }
 
-    // Also deliver to authenticated SSE clients scoped to tenant
+    // Also deliver to authenticated SSE clients scoped to tenant or direct target users
     const sseFrame = `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
     for (const [clientId, client] of this.sseClients.entries()) {
-      if (!this.canSseClientReceive(client, tenantId)) continue;
+      if (!this.canSseClientReceive(client, tenantId, options.userIds)) continue;
       try {
         client.res.write(sseFrame);
       } catch {

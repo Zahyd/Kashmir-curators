@@ -238,6 +238,8 @@ export const notificationService = {
     }
 
     // 3. Emit real-time WebSockets via tenant-scoped RealtimeBus
+    const targetUserIds = [data?.agentId, data?.userId]
+      .filter((id): id is string => Boolean(id && typeof id === 'string'));
     realtimeBus.publish(
       'new-system-event',
       {
@@ -247,7 +249,7 @@ export const notificationService = {
         notification: savedNotification,
         timestamp: new Date().toISOString()
       },
-      { io, tenantId }
+      { io, tenantId, userIds: targetUserIds.length > 0 ? targetUserIds : undefined }
     );
 
     if (io) {

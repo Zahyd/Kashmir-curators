@@ -393,6 +393,7 @@ export const whatsappService = {
           });
         }
 
+        const waAgentId = (matchedInquiry as any)?.agentId ? String((matchedInquiry as any).agentId) : undefined;
         realtimeBus.publish(
           'whatsapp-message-received',
           {
@@ -401,7 +402,7 @@ export const whatsappService = {
             inquiryId: matchedInquiry?.id,
             timestamp: new Date().toISOString()
           },
-          { io, tenantId: (matchedInquiry as any)?.organizationId || null }
+          { io, tenantId: (matchedInquiry as any)?.organizationId || null, userIds: waAgentId ? [waAgentId] : undefined }
         );
       } catch (dbErr: any) {
         console.warn('Failed to persist inbound WhatsApp message to DB:', dbErr.message);

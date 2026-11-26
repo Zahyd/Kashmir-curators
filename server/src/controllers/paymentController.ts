@@ -954,13 +954,23 @@ export const verifySubscriptionPayment = async (req: any, res: Response) => {
       }
     }).catch((e: any) => console.warn('Ledger write notice:', e.message));
 
-    // 4. Broadcast websocket event
-    if ((req as any).io) {
-      (req as any).io.to('admin-room').emit('new-system-event', {
-        type: 'AGENT_SUBSCRIPTION_UPGRADED',
-        message: `Agent ${profile.companyName} upgraded to ${normalizedPlan} (${billingCycle || 'MONTHLY'})`
-      });
-    }
+    // 4. Broadcast tenant & user-scoped realtime events
+    const ioRef = (req as any).io;
+    const upgradeTenantId = (profile as any).organizationId || (req.user as any)?.organizationId || null;
+    realtimeBus.publish('agent-workspace-updated', {
+      userId,
+      organizationId: upgradeTenantId,
+      section: 'subscription',
+      plan: normalizedPlan,
+      billingCycle: billingCycle || 'MONTHLY',
+      profile
+    }, { io: ioRef, tenantId: upgradeTenantId, userIds: [String(userId)] });
+    realtimeBus.publish('new-system-event', {
+      type: 'AGENT_SUBSCRIPTION_UPGRADED',
+      message: `Agent ${profile.companyName} upgraded to ${normalizedPlan} (${billingCycle || 'MONTHLY'})`,
+      booking: { id: profile.id, userId, entityType: 'agent_subscription', plan: normalizedPlan },
+      timestamp: new Date().toISOString()
+    }, { io: ioRef, tenantId: upgradeTenantId, userIds: [String(userId)] });
 
     return res.status(200).json({
       success: true,
@@ -1191,6 +1201,8 @@ export const verifyManualPayment = async (req: Request, res: Response) => {
     ]);
 
     const tenantId = inquiry.organizationId || (req as any).tenantId || null;
+    const targetUserIds = [inquiry.agentId, inquiry.userId]
+      .filter((v): v is string => Boolean(v && typeof v === 'string'));
 
     const notification = await p.notification
       .create({
@@ -1214,16 +1226,16 @@ export const verifyManualPayment = async (req: Request, res: Response) => {
       ledgerEntry,
       lead: updatedInquiry,
       organizationId: tenantId
-    }, { io: (req as any).io, tenantId });
-    realtimeBus.publish('STAGE_UPDATED', { leadId: inquiryId, stage: nextStage, lead: updatedInquiry }, { io: (req as any).io, tenantId });
-    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updatedInquiry }, { io: (req as any).io, tenantId });
+    }, { io: (req as any).io, tenantId, userIds: targetUserIds });
+    realtimeBus.publish('STAGE_UPDATED', { leadId: inquiryId, stage: nextStage, lead: updatedInquiry }, { io: (req as any).io, tenantId, userIds: targetUserIds });
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updatedInquiry }, { io: (req as any).io, tenantId, userIds: targetUserIds });
     realtimeBus.publish('new-system-event', {
       type: 'PAYMENT',
       message: `Manual UTR ₹${parsedAmount.toLocaleString('en-IN')} recorded for ${inquiry.customerName} (${cleanUtr})`,
       booking: { ...updatedInquiry, entityType: 'inquiry' },
       notification,
       timestamp: new Date().toISOString()
-    }, { io: (req as any).io, tenantId });
+    }, { io: (req as any).io, tenantId, userIds: targetUserIds });
 
     res.status(201).json({
       success: true,

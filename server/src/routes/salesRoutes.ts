@@ -722,6 +722,8 @@ router.post('/leads/:id/claim', authenticateToken, authorizeRoles(...SALES_MUTAT
     });
 
     const tenantId = result.updatedLead?.organizationId || req.tenantId || null;
+    const claimTargetUserIds = [result.updatedLead?.agentId, result.updatedLead?.userId]
+      .filter((v): v is string => Boolean(v && typeof v === 'string'));
 
     realtimeBus.publish(
       'LEAD_CLAIMED',
@@ -731,13 +733,13 @@ router.post('/leads/:id/claim', authenticateToken, authorizeRoles(...SALES_MUTAT
         claimedByName: executiveName,
         lead: result.updatedLead,
       },
-      { io: req.io, tenantId }
+      { io: req.io, tenantId, userIds: claimTargetUserIds }
     );
 
     realtimeBus.publish(
       'ACTIVITY_LOGGED',
       { ...result.activity, inquiry: result.updatedLead },
-      { io: req.io, tenantId }
+      { io: req.io, tenantId, userIds: claimTargetUserIds }
     );
 
     realtimeBus.publish(
@@ -749,7 +751,7 @@ router.post('/leads/:id/claim', authenticateToken, authorizeRoles(...SALES_MUTAT
         notification: result.notification,
         timestamp: new Date().toISOString(),
       },
-      { io: req.io, tenantId }
+      { io: req.io, tenantId, userIds: claimTargetUserIds }
     );
 
     res.json({
@@ -899,6 +901,8 @@ router.patch('/leads/:id/stage', authenticateToken, authorizeRoles(...SALES_MUTA
     }
 
     const tenantId = updated.organizationId || req.tenantId || null;
+    const stageTargetUserIds = [updated.agentId, updated.userId]
+      .filter((v): v is string => Boolean(v && typeof v === 'string'));
 
     realtimeBus.publish(
       'LEAD_STAGE_UPDATED',
@@ -910,7 +914,19 @@ router.patch('/leads/:id/stage', authenticateToken, authorizeRoles(...SALES_MUTA
         performer,
         lead: updated,
       },
-      { io: req.io, tenantId }
+      { io: req.io, tenantId, userIds: stageTargetUserIds }
+    );
+
+    realtimeBus.publish(
+      'lead-updated',
+      {
+        inquiryId: id,
+        customerName: updated.customerName,
+        newStage: normalizedStage,
+        updatedLead: updated,
+        organizationId: tenantId,
+      },
+      { io: req.io, tenantId, userIds: stageTargetUserIds }
     );
 
     realtimeBus.publish(
@@ -923,16 +939,16 @@ router.patch('/leads/:id/stage', authenticateToken, authorizeRoles(...SALES_MUTA
         performer,
         lead: updated,
       },
-      { io: req.io, tenantId }
+      { io: req.io, tenantId, userIds: stageTargetUserIds }
     );
 
-    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updated }, { io: req.io, tenantId });
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updated }, { io: req.io, tenantId, userIds: stageTargetUserIds });
 
     if (normalizedStage === 'CONFIRMED') {
       realtimeBus.publish(
         'BOOKING_STATUS_UPDATED',
         { inquiryId: id, status: 'Booked', leadStage: 'CONFIRMED', lead: updated },
-        { io: req.io, tenantId }
+        { io: req.io, tenantId, userIds: stageTargetUserIds }
       );
     }
 
@@ -945,7 +961,7 @@ router.patch('/leads/:id/stage', authenticateToken, authorizeRoles(...SALES_MUTA
         notification,
         timestamp: new Date().toISOString(),
       },
-      { io: req.io, tenantId }
+      { io: req.io, tenantId, userIds: stageTargetUserIds }
     );
 
     res.json({
