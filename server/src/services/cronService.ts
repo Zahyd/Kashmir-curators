@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { notificationService } from './notificationService';
 import { WhatsAppWorkflowEngine } from './whatsappService';
 import { io } from '../index';
+import { realtimeBus } from '../lib/realtimeBus';
 
 class CronService {
   /**
@@ -172,14 +173,16 @@ class CronService {
         data: { status: 'OVERDUE' }
       });
 
-      if (io) {
-        io.emit('reminder-overdue', {
+      realtimeBus.publish(
+        'reminder-overdue',
+        {
           reminderId: rem.id,
           title: rem.title,
           customerName: rem.inquiry?.customerName,
           assignedTo: rem.assignedTo
-        });
-      }
+        },
+        { io, tenantId: (rem.inquiry as any)?.organizationId || null }
+      );
     }
   }
 

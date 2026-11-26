@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Users,
   Search,
@@ -13,7 +13,10 @@ import {
   FolderOpen,
   FileEdit,
   ShieldCheck,
-  CreditCard
+  CreditCard,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { salesApi, SalesInquiry, normalizeStageKey, getInquiryValueINR } from '@/lib/salesApi';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
 interface ClientDirectoryProps {
   onInspectClient?: (client: SalesInquiry) => void;
@@ -41,26 +45,60 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({
   onRefreshMetrics,
   refreshTrigger = 0
 }) => {
+  const { subscribeSalesEvent } = useTeamAuth();
   const [clients, setClients] = useState<SalesInquiry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<'ALL' | 'CONFIRMED' | 'ACTIVE' | 'LOST'>('ALL');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
+    setError(null);
     try {
-      const list = await salesApi.listInquiries();
-      setClients(list);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to load client directory');
+      const statusParam = stageFilter === 'CONFIRMED' ? 'Booked' : stageFilter === 'LOST' ? 'Lost' : undefined;
+      const data = await salesApi.listInquiriesPaginated({
+        page,
+        limit: 12,
+        search: searchTerm.trim() || undefined,
+        status: statusParam,
+        stageGroup: stageFilter === 'ACTIVE' ? 'ACTIVE' : undefined
+      });
+      setClients(data.items || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalCount(data.total || 0);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load client directory');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, searchTerm, stageFilter]);
 
   useEffect(() => {
-    fetchClients();
-  }, [refreshTrigger]);
+    const t = window.setTimeout(() => {
+      fetchClients();
+    }, 180);
+    return () => window.clearTimeout(t);
+  }, [fetchClients, refreshTrigger]);
+
+  useEffect(() => {
+    const unsub = subscribeSalesEvent((eventName) => {
+      if (
+        eventName === 'LEAD_CREATED' ||
+        eventName === 'NEW_INQUIRY' ||
+        eventName === 'LEAD_UPDATED' ||
+        eventName === 'LEAD_DELETED' ||
+        eventName === 'STAGE_UPDATED' ||
+        eventName === 'PAYMENT_CONFIRMED'
+      ) {
+        fetchClients();
+      }
+    });
+    return unsub;
+  }, [subscribeSalesEvent, fetchClients]);
 
   const handleWhatsApp = (client: SalesInquiry) => {
     const phone = (client.phone || '').replace(/[^0-9]/g, '');
@@ -88,8 +126,8 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({
         toast.success('Client marked Lost');
       }
       onRefreshMetrics?.();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update client');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update client');
     } finally {
       setBusyId(null);
     }
@@ -132,7 +170,7 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
               placeholder="Search name, phone, ID..."
               className="pl-8 bg-[#07090E] border-white/10 text-xs text-white placeholder:text-slate-500 h-9 rounded-lg w-full"
             />
@@ -143,7 +181,7 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({
               {(['ALL', 'ACTIVE', 'CONFIRMED', 'LOST'] as const).map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setStageFilter(tab)}
+                  onClick={() => { setStageFilter(tab); setPage(1); }}
                   className={`px-2.5 py-1 rounded font-medium transition text-[11px] ${
                     stageFilter === tab ? 'bg-amber-500 text-black font-bold' : 'text-slate-400 hover:text-white'
                   }`}
@@ -177,8 +215,27 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({
         </div>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-xs text-rose-300">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </span>
+          <Button size="sm" variant="outline" onClick={fetchClients} className="border-rose-500/30 text-rose-200 text-xs">
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Directory Grid */}
-      {filteredClients.length === 0 ? (
+      {loading && filteredClients.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-48 rounded-xl bg-[#0F141C]/60 border border-white/10 animate-pulse" />
+          ))}
+        </div>
+      ) : filteredClients.length === 0 ? (
         <div className="p-12 text-center bg-[#0F141C]/60 border border-white/10 rounded-xl text-slate-400">
           <Users className="w-8 h-8 mx-auto text-slate-500 mb-2 opacity-60" />
           <p className="text-sm font-semibold text-white">No clients matching current filter</p>
@@ -329,6 +386,35 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Server-Side Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-[#0F141C]/90 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-300">
+          <span>
+            Page <strong className="text-white">{page}</strong> of <strong className="text-white">{totalPages}</strong> • {totalCount} records
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="h-8 px-2.5 border-white/10 text-slate-200"
+            >
+              <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="h-8 px-2.5 border-white/10 text-slate-200"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

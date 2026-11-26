@@ -11,7 +11,6 @@ Sentry.init({
 });
 import express from 'express';
 import cors from 'cors';
-import jwt from 'jsonwebtoken';
 import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -19,6 +18,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
+import { configureSocketServer } from './lib/socketSetup';
+import { realtimeBus } from './lib/realtimeBus';
 import packageRoutes from './routes/packageRoutes';
 import hotelRoutes from './routes/hotelRoutes';
 import cabRoutes from './routes/cabRoutes';
@@ -97,6 +98,8 @@ const corsOptions: cors.CorsOptions = {
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
+  pingInterval: 20000,
+  pingTimeout: 10000,
   cors: {
     origin: (origin, callback) => {
       if (isAllowedOrigin(origin)) {
@@ -188,145 +191,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(requestCorrelationMiddleware);
 app.use(tenantMiddleware);
 
-// Socket.IO Authentication Handshake Middleware
-io.use(async (socket, next) => {
-  try {
-    const authToken = socket.handshake.auth?.token as string | undefined;
-    const authHeader = (socket.handshake.headers?.authorization as string | undefined) || '';
-    const portalKey = (socket.handshake.headers?.['x-portal-key'] as string | undefined) || '';
-    let token = authToken || (authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : authHeader.trim());
-
-    if (token === 'null' || token === 'undefined') token = '';
-
-    if (token) {
-      const secrets = [process.env.JWT_SECRET, process.env.BETTER_AUTH_SECRET].filter(Boolean) as string[];
-      for (const secret of secrets) {
-        try {
-          const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as any;
-          if (decoded) {
-            socket.data.user = decoded;
-            return next();
-          }
-        } catch {}
-      }
-
-      // Check Better Auth session token
-      const session = await (prisma as any).session.findUnique({
-        where: { token },
-        include: { user: true }
-      }).catch(() => null);
-      if (session?.user && new Date(session.expiresAt) > new Date()) {
-        socket.data.user = {
-          id: session.user.id,
-          email: session.user.email,
-          role: session.user.role,
-          organizationId: session.user.organizationId
-        };
-        return next();
-      }
-    }
-
-    if (portalKey && portalKey.toUpperCase().startsWith('KC-')) {
-      const keyRec = await (prisma as any).portalAccessKey.findUnique({
-        where: { accessKey: portalKey.trim().toUpperCase() }
-      }).catch(() => null);
-      if (keyRec && keyRec.status === 'ACTIVE') {
-        socket.data.user = {
-          id: keyRec.id,
-          role: 'hospitality',
-          portalType: keyRec.portalType
-        };
-        return next();
-      }
-    }
-
-    // Public anonymous sockets may connect ONLY for public broadcasts; privileged rooms require socket.data.user
-    return next();
-  } catch (err) {
-    return next();
-  }
-});
-
-// Socket.io Connection Matrix for Real-Time Travel OS Operational Desks
-io.on('connection', (socket) => {
-  const socketUser = socket.data.user;
-  const userRole = String(socketUser?.role || '').toLowerCase();
-  const isStaff = ['admin', 'operations', 'sales', 'finance', 'marketing'].includes(userRole);
-
-  // Direct user personal channel
-  socket.on('join-user', (userId: string) => {
-    if (userId && socketUser && (socketUser.id === userId || isStaff)) {
-      socket.join(`user-${userId}`);
-    }
-  });
-
-  // Admin central oversight room (staff only)
-  socket.on('join-admin', () => {
-    if (socketUser && isStaff) {
-      socket.join('admin-room');
-    }
-  });
-
-  // Tenant / Organization operational desk (tenant member or platform admin/ops only)
-  socket.on('join-tenant', (tenantId: string) => {
-    if (tenantId && socketUser && (socketUser.organizationId === tenantId || ['admin', 'operations'].includes(userRole))) {
-      socket.join(`tenant-${tenantId}`);
-    }
-  });
-
-  socket.on('leave-tenant', (tenantId: string) => {
-    if (tenantId) socket.leave(`tenant-${tenantId}`);
-  });
-
-  // Hotel CRS Reception Operational Desk
-  socket.on('join-hotel', (hotelId: string) => {
-    if (hotelId && socketUser && ['admin', 'operations', 'hospitality', 'supplier'].includes(userRole)) {
-      socket.join(`hotel-${hotelId}`);
-    }
-  });
-
-  socket.on('leave-hotel', (hotelId: string) => {
-    if (hotelId) socket.leave(`hotel-${hotelId}`);
-  });
-
-  // Chauffeur / Driver Cockpit & Fleet Dispatch Desk
-  socket.on('join-driver', (driverId: string) => {
-    if (driverId && socketUser && ['admin', 'operations', 'driver'].includes(userRole)) {
-      socket.join(`driver-${driverId}`);
-    }
-  });
-
-  socket.on('leave-driver', (driverId: string) => {
-    if (driverId) socket.leave(`driver-${driverId}`);
-  });
-
-  // Generic room join/leave with authorization boundaries
-  socket.on('join-room', (room: string) => {
-    if (!room || typeof room !== 'string') return;
-    if (room.startsWith('payment-')) {
-      socket.join(room);
-    } else if (room === 'admin-room') {
-      if (socketUser && isStaff) socket.join(room);
-    } else if (room.startsWith('tenant-')) {
-      const tId = room.slice(7);
-      if (socketUser && (socketUser.organizationId === tId || ['admin', 'operations'].includes(userRole))) socket.join(room);
-    } else if (room.startsWith('user-')) {
-      const uId = room.slice(5);
-      if (socketUser && (socketUser.id === uId || isStaff)) socket.join(room);
-    } else if (socketUser) {
-      socket.join(room);
-    }
-  });
-
-  socket.on('leave-room', (room: string) => {
-    if (room) socket.leave(room);
-  });
-
-  // Payment synchronization
-  socket.on('join-payment', (paymentId: string) => {
-    if (paymentId) socket.join(`payment-${paymentId}`);
-  });
-});
+// Configure authenticated, tenant-scoped Socket.IO server (with heartbeat, ack, and presence)
+configureSocketServer(io);
 
 // Middleware to attach io to request
 app.use((req: any, res, next) => {
@@ -461,9 +327,12 @@ emailQueueService.initQueue().catch((err: any) => {
   console.warn('[ServerBoot] Email queue background worker notice:', err.message);
 });
 
-// Ensure default multi-tenant organization foundation is provisioned
+// Ensure default multi-tenant organization foundation & optional Redis Pub/Sub are initialized
 ensureDefaultOrganization().catch((err: any) => {
   console.warn('[ServerBoot] Default tenant initialization notice:', err.message);
+});
+realtimeBus.initRedisPubSub().catch((err: any) => {
+  console.warn('[ServerBoot] RealtimeBus init notice:', err.message);
 });
 
 httpServer.listen(PORT, () => {

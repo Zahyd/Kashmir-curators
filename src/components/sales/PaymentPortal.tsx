@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   CreditCard,
   QrCode,
@@ -22,17 +22,17 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
-import { salesApi, getInquiryValueINR, PaymentLedgerItem } from '@/lib/salesApi';
+import { salesApi, getInquiryValueINR, PaymentLedgerItem, SalesInquiry, getErrorMessage } from '@/lib/salesApi';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
 interface PaymentPortalProps {
-  inquiry: any;
+  inquiry: SalesInquiry;
   onBack: () => void;
   onPaymentRecorded?: () => void;
 }
 
 export default function PaymentPortal({ inquiry, onBack, onPaymentRecorded }: PaymentPortalProps) {
-  const { systemEvents } = useTeamAuth();
+  const { subscribeSalesEvent } = useTeamAuth();
   const baseValue = getInquiryValueINR(inquiry || {});
 
   const [paymentType, setPaymentType] = useState<'deposit' | 'full'>('deposit');
@@ -53,47 +53,55 @@ export default function PaymentPortal({ inquiry, onBack, onPaymentRecorded }: Pa
   const [businessVPA, setBusinessVPA] = useState<string>('thekashmircurators@okaxis');
   const [merchantName, setMerchantName] = useState<string>('The Kashmir Curators');
 
-  const loadLedger = async () => {
+  const loadLedger = useCallback(async () => {
     if (!inquiry?.id) return;
     setLoadingLedger(true);
     try {
       const rows = await salesApi.getInquiryPayments(inquiry.id);
       setLedgerEntries(rows);
-      if (rows.some((r) => !r.description?.startsWith('Pending WhatsApp'))) {
+      if (rows.some((r) => r.type === 'CREDIT' && !r.description?.toLowerCase().startsWith('pending'))) {
         setPaymentStatus('success');
       }
-    } catch (err: any) {
-      console.warn('Could not load inquiry ledger:', err?.message);
+    } catch (err: unknown) {
+      console.warn('Could not load inquiry ledger:', getErrorMessage(err));
     } finally {
       setLoadingLedger(false);
     }
-  };
+  }, [inquiry?.id]);
 
   useEffect(() => {
     const val = getInquiryValueINR(inquiry || {});
     setAmount(val > 0 ? String(paymentType === 'deposit' ? Math.round(val * 0.3) : val) : '0');
-  }, [inquiry?.id, paymentType]);
+  }, [inquiry, paymentType]);
 
   useEffect(() => {
     loadLedger();
-  }, [inquiry?.id]);
+  }, [loadLedger]);
 
   useEffect(() => {
-    const latestEvent = systemEvents[0];
-    if (latestEvent && inquiry?.id) {
-      const isMatch =
-        (latestEvent.booking && String(latestEvent.booking.id) === String(inquiry.id)) ||
-        latestEvent.message.includes(inquiry.id);
-      if (isMatch) {
-        if (latestEvent.message.toLowerCase().includes('failed')) {
+    if (!inquiry?.id) return;
+    const unsub = subscribeSalesEvent((eventName, payload) => {
+      if (
+        eventName === 'PAYMENT_CONFIRMED' ||
+        eventName === 'PAYMENT_FAILED' ||
+        eventName === 'PAYMENT_LINK_CREATED'
+      ) {
+        const eventInquiryId =
+          payload?.inquiryId ||
+          payload?.lead?.id ||
+          payload?.booking?.id ||
+          '';
+        if (String(eventInquiryId) !== String(inquiry.id)) return;
+        if (eventName === 'PAYMENT_FAILED') {
           setPaymentStatus('failed');
         } else {
           setPaymentStatus('success');
           loadLedger();
         }
       }
-    }
-  }, [systemEvents, inquiry?.id]);
+    });
+    return unsub;
+  }, [subscribeSalesEvent, inquiry?.id, loadLedger]);
 
   useEffect(() => {
     const fetchPaymentSettings = async () => {
@@ -103,8 +111,11 @@ export default function PaymentPortal({ inquiry, onBack, onPaymentRecorded }: Pa
         const data = await res.json();
         const methods = data?.paymentSettings?.content?.methods;
         if (Array.isArray(methods)) {
-          const primaryUPI = methods.find((m: any) => m.type === 'upi' && m.isActive && m.isPrimary);
-          if (primaryUPI) {
+          const primaryUPI = methods.find(
+            (m: { type?: string; isActive?: boolean; isPrimary?: boolean; identifier?: string; name?: string; provider?: string }) =>
+              m.type === 'upi' && m.isActive && m.isPrimary
+          );
+          if (primaryUPI && primaryUPI.identifier) {
             setBusinessVPA(primaryUPI.identifier);
             setMerchantName(primaryUPI.name || primaryUPI.provider || 'The Kashmir Curators');
           }
@@ -148,8 +159,8 @@ export default function PaymentPortal({ inquiry, onBack, onPaymentRecorded }: Pa
       setShowScanner(true);
       toast.success('Payment link & QR scanner ready', { id: toastId });
       await loadLedger();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to generate Razorpay payment link', { id: toastId });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to generate Razorpay payment link'), { id: toastId });
     } finally {
       setIsGeneratingScanner(false);
     }
@@ -173,8 +184,8 @@ export default function PaymentPortal({ inquiry, onBack, onPaymentRecorded }: Pa
       const resData = await salesApi.sendWhatsAppScanner(inquiry.id, inquiry.phone, numAmt);
       toast.success(`Payment request dispatched (Ref: ${resData.paymentId})`);
       await loadLedger();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to dispatch WhatsApp payment request');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to dispatch WhatsApp payment request'));
     } finally {
       setIsSendingWhatsApp(false);
     }
@@ -209,15 +220,15 @@ export default function PaymentPortal({ inquiry, onBack, onPaymentRecorded }: Pa
       setPaymentStatus('success');
       await loadLedger();
       onPaymentRecorded?.();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to record payment UTR');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to record payment UTR'));
     } finally {
       setIsVerifying(false);
     }
   };
 
   const totalRecorded = ledgerEntries
-    .filter((l) => !l.description?.startsWith('Pending WhatsApp'))
+    .filter((l) => l.type === 'CREDIT' && !l.description?.toLowerCase().startsWith('pending'))
     .reduce((sum, l) => sum + (l.amount || 0), 0);
 
   return (

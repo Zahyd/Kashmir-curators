@@ -4,6 +4,7 @@ import {
   sendWhatsAppPaymentRequest, 
   getPaymentRequestDetails,
   getInquiryPayments,
+  getPaymentLedger,
   verifyManualPayment,
   createStripeCheckoutSession,
   createRazorpayPaymentLink,
@@ -16,6 +17,7 @@ import { authorizeRoles } from '../middleware/roleMiddleware';
 const router = Router();
 
 router.post('/webhook', handleRazorpayWebhook);
+router.get('/ledger', authenticateToken, authorizeRoles('admin', 'operations', 'sales', 'finance'), getPaymentLedger);
 router.post('/send-whatsapp-scanner', authenticateToken, authorizeRoles('admin', 'operations', 'sales'), sendWhatsAppPaymentRequest);
 router.get('/inquiry/:inquiryId', authenticateToken, authorizeRoles('admin', 'operations', 'sales', 'finance'), getInquiryPayments);
 router.post('/inquiry/:inquiryId/verify-manual', authenticateToken, authorizeRoles('admin', 'operations', 'sales', 'finance'), verifyManualPayment);

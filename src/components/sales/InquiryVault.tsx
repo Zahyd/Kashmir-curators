@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   FileText,
   Upload,
@@ -21,10 +21,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { salesApi, InquiryDocumentItem } from '@/lib/salesApi';
+import { salesApi, InquiryDocumentItem, SalesInquiry, getErrorMessage } from '@/lib/salesApi';
 
 interface InquiryVaultProps {
-  inquiry: any;
+  inquiry: SalesInquiry | null | undefined;
   onBack: () => void;
   onChanged?: () => void;
 }
@@ -55,22 +55,22 @@ export default function InquiryVault({ inquiry, onBack, onChanged }: InquiryVaul
   const [busyId, setBusyId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     if (!inquiry?.id) return;
     setLoading(true);
     try {
       const list = await salesApi.listDocuments(inquiry.id);
       setDocuments(list);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to load vault documents');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to load vault documents'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [inquiry?.id]);
 
   useEffect(() => {
     loadDocuments();
-  }, [inquiry?.id]);
+  }, [loadDocuments]);
 
   if (!inquiry) return null;
 
@@ -92,8 +92,8 @@ export default function InquiryVault({ inquiry, onBack, onChanged }: InquiryVaul
       setDocuments((prev) => [created, ...prev]);
       toast.success('Document uploaded & stored in Inquiry Vault', { id: toastId });
       onChanged?.();
-    } catch (err: any) {
-      toast.error(err?.message || 'Document upload failed', { id: toastId });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Document upload failed'), { id: toastId });
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -107,8 +107,8 @@ export default function InquiryVault({ inquiry, onBack, onChanged }: InquiryVaul
       setDocuments((prev) => prev.map((d) => (d.id === doc.id ? updated : d)));
       toast.success(`Document marked ${status.toLowerCase()}`);
       onChanged?.();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update status');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to update status'));
     } finally {
       setBusyId(null);
     }
@@ -122,8 +122,8 @@ export default function InquiryVault({ inquiry, onBack, onChanged }: InquiryVaul
       setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
       toast.success('Document removed from Vault');
       onChanged?.();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to delete document');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to delete document'));
     } finally {
       setBusyId(null);
     }

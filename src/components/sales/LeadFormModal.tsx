@@ -99,7 +99,7 @@ export default function LeadFormModal({
       const children = Math.max(0, parseInt(childrenCount, 10) || 0);
       const parsedNet = netPrice.trim() ? Number(netPrice) : undefined;
 
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         customerName: customerName.trim(),
         phone: phone.trim(),
         email: email.trim() || undefined,
@@ -130,8 +130,8 @@ export default function LeadFormModal({
       toast.success(isEditing ? 'Lead details updated' : 'New lead created in Sales OS');
       onSuccess(saved);
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to save lead');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save lead');
     } finally {
       setSaving(false);
     }

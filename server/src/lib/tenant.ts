@@ -221,3 +221,62 @@ export function resolveWriteTenantId(
   }
   return isPlatformPrivileged ? null : DEFAULT_TENANT_ID;
 }
+
+/**
+ * Encodes tenant scoping onto Notification.userId without altering schema.
+ * Non-default tenants tag notifications with `tenant:<orgId>`.
+ */
+export function buildTenantNotificationUserId(tenantId?: string | null): string | null {
+  if (tenantId && tenantId !== DEFAULT_TENANT_ID) {
+    return `tenant:${tenantId}`;
+  }
+  return null;
+}
+
+export function buildNotificationTenantWhere(req: Request & { user?: any; tenantId?: string | null }): Record<string, any> {
+  const userRole = String(req.user?.role || '').toLowerCase();
+  const effectiveTenantId = req.tenantId !== undefined ? req.tenantId : extractTenantId(req);
+
+  if ((userRole === 'admin' || userRole === 'operations') && !effectiveTenantId) {
+    return {};
+  }
+
+  const orClauses: any[] = [];
+  if (req.user?.id) {
+    orClauses.push({ userId: String(req.user.id) });
+  }
+
+  if (!effectiveTenantId || effectiveTenantId === DEFAULT_TENANT_ID) {
+    orClauses.push({ userId: null }, { userId: `tenant:${DEFAULT_TENANT_ID}` });
+  } else {
+    orClauses.push({ userId: `tenant:${effectiveTenantId}` });
+  }
+
+  return { OR: orClauses };
+}
+
+export function canAccessNotificationRecord(
+  req: Request & { user?: any; tenantId?: string | null },
+  notifUserId: string | null | undefined
+): boolean {
+  const userRole = String(req.user?.role || '').toLowerCase();
+  const effectiveTenantId = req.tenantId !== undefined ? req.tenantId : extractTenantId(req);
+
+  if ((userRole === 'admin' || userRole === 'operations') && !effectiveTenantId) {
+    return true;
+  }
+
+  if (notifUserId && req.user?.id && String(notifUserId) === String(req.user.id)) {
+    return true;
+  }
+
+  if (!notifUserId || notifUserId === `tenant:${DEFAULT_TENANT_ID}`) {
+    return !effectiveTenantId || effectiveTenantId === DEFAULT_TENANT_ID;
+  }
+
+  if (String(notifUserId).startsWith('tenant:')) {
+    return String(notifUserId) === `tenant:${effectiveTenantId}`;
+  }
+
+  return false;
+}

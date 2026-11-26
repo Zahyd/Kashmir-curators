@@ -74,6 +74,7 @@ import html2canvas from 'html2canvas';
 import { useHotels } from '@/hooks/useCMSData';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
+import { SalesInquiry, getErrorMessage, getSalesAuthToken } from '@/lib/salesApi';
 import { getRouteIntelligence, calculateTripLogistics } from '@/lib/kashmirRouteIntelligence';
 
 
@@ -110,8 +111,24 @@ export interface AgencyBranding {
   website?: string;
 }
 
+export interface BuilderInquiry extends SalesInquiry {
+  hotelCategory?: string;
+  roomPreference?: string;
+  specialNotes?: string;
+  flightDetails?: string;
+  travelStartDate?: string;
+  startDate?: string;
+  adults?: number;
+  children?: number;
+  country?: string;
+  source?: string;
+  originCountry?: string;
+  estimatedBudget?: number;
+  customPrice?: number;
+}
+
 export interface ItineraryBuilderProps {
-  inquiry: any;
+  inquiry: BuilderInquiry | null | undefined;
   onBack: () => void;
   agencyBranding?: AgencyBranding;
   planTier?: 'STARTER' | 'PRO_DMC' | 'ENTERPRISE' | string;
@@ -158,8 +175,6 @@ export default function ItineraryBuilder({
   planTier,
   agentPlan
 }: ItineraryBuilderProps) {
-  if (!inquiry) return null;
-
   // Resolve plan tier and white-label eligibility
   const effectivePlan = (
     planTier || 
@@ -192,14 +207,7 @@ export default function ItineraryBuilder({
   const brandTagline = effectiveBranding.agencyTagline || 'Luxury Travel Curators';
 
   // Unified token helper for agent and sales team auth
-  const getAuthToken = () => {
-    return (
-      localStorage.getItem('token') ||
-      localStorage.getItem('auth_token') ||
-      localStorage.getItem('teamToken') ||
-      ''
-    );
-  };
+  const getAuthToken = () => getSalesAuthToken();
 
   const { data: hotels } = useHotels();
   const [days, setDays] = useState<ItineraryDay[]>([]);
@@ -209,7 +217,7 @@ export default function ItineraryBuilder({
   const [showImageActions, setShowImageActions] = useState<number | null>(null);
   const [tempImageUrl, setTempImageUrl] = useState('');
   const [pax, setPax] = useState({ adults: 2, children: 0 });
-  const [proposalUrl, setProposalUrl] = useState(inquiry.proposalUrl || '');
+  const [proposalUrl, setProposalUrl] = useState(inquiry?.proposalUrl || '');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [advanceAmount, setAdvanceAmount] = useState('5000');
@@ -231,7 +239,7 @@ export default function ItineraryBuilder({
 
   // Load existing quote data if available
   useEffect(() => {
-    if (inquiry.quoteData) {
+    if (inquiry?.quoteData) {
       try {
         const parsed = JSON.parse(inquiry.quoteData);
         if (Array.isArray(parsed)) {
@@ -241,16 +249,17 @@ export default function ItineraryBuilder({
         console.error("Failed to parse existing quote data:", error);
       }
     }
-  }, [inquiry.quoteData]);
+  }, [inquiry?.quoteData]);
 
   // Initialize days based on inquiry duration
   useEffect(() => {
-    if (inquiry.quoteData) return; // Do not overwrite existing quote data
+    if (!inquiry || inquiry.quoteData) return; // Do not overwrite existing quote data
     
-    const duration = parseInt(inquiry.duration) || 3;
+    const duration = parseInt(String(inquiry.duration || ''), 10) || 3;
+    const baseDest = (inquiry.destination || 'Kashmir').split(',')[0];
     const initialDays = Array.from({ length: duration }, (_, i) => ({
       day: i + 1,
-      title: i === 0 ? 'Arrival in Srinagar' : i === duration - 1 ? 'Departure' : `Exploring ${inquiry.destination.split(',')[0]}`,
+      title: i === 0 ? 'Arrival in Srinagar' : i === duration - 1 ? 'Departure' : `Exploring ${baseDest}`,
       activities: '',
       hotelId: '',
       hotelName: '',
@@ -275,10 +284,12 @@ export default function ItineraryBuilder({
 
   // Auto-save draft to localStorage whenever days changes
   useEffect(() => {
-    if (days && days.length > 0) {
+    if (inquiry?.id && days && days.length > 0) {
       localStorage.setItem(`KC_DRAFT_ITINERARY_${inquiry.id}`, JSON.stringify(days));
     }
-  }, [days, inquiry.id]);
+  }, [days, inquiry?.id]);
+
+  if (!inquiry) return null;
 
   
   const loadTemplate = (templateType: 'flagship-6d' | 'romance-5d' | 'snow-4d') => {
@@ -633,8 +644,8 @@ export default function ItineraryBuilder({
 
         toast.success(`Day ${index + 1} elevated to Aman/Belmond standard!`, { id: toastId });
       }
-    } catch (error: any) {
-      console.warn('Enhance day notice:', error.message);
+    } catch (error: unknown) {
+      console.warn('Enhance day notice:', getErrorMessage(error));
       // Offline high-fidelity fallback
       const intel = getRouteIntelligence(days[index]?.title, days[index]?.activities, index + 1);
       const fallbackNarrative = `${days[index]?.activities ? `${days[index].activities}\n\n` : ''}Experience an exclusive morning guided excursion through whispering deodar pine forests accompanied by authentic Kashmiri saffron Kahwa. In the afternoon, savor panoramic Himalayan vistas followed by a private evening dining experience featuring traditional Wazwan delicacies beside the crackling fireplace.`;
@@ -749,14 +760,22 @@ ${signoff}`;
 
       if (response.ok) {
         const data = await response.json();
-        if (data.itinerary && Array.isArray(data.itinerary) && data.itinerary.length > 0) {
-          const mappedDays: ItineraryDay[] = data.itinerary.map((d: any, idx: number) => {
+        const rawDays = Array.isArray(data.days)
+          ? data.days
+          : Array.isArray(data.itinerary)
+            ? data.itinerary
+            : [];
+        if (rawDays.length > 0) {
+          const mappedDays: ItineraryDay[] = rawDays.map((d: { title?: string; activities?: string | string[]; description?: string }, idx: number) => {
             const isFirst = idx === 0;
             const defaultHotel = hotels && hotels.length > 0 ? hotels[idx % hotels.length] : null;
+            const activitiesText = Array.isArray(d.activities)
+              ? d.activities.join(' • ')
+              : d.activities || d.description || '';
             return {
               day: idx + 1,
               title: d.title || `Day ${idx + 1}: Kashmir Exploration`,
-              activities: d.activities || d.description || '',
+              activities: activitiesText,
               hotelId: defaultHotel?.id || (isFirst ? 'h-houseboat-1' : 'h-gulmarg-1'),
               hotelName: defaultHotel?.name || (isFirst ? 'Nigeen Royal Cedar Houseboat' : 'The Highland Chalet & Alpine Spa'),
               hotelImage: defaultHotel?.image || (isFirst ? 'https://images.unsplash.com/photo-1566837493203-d2d46e01a5d6?auto=format&fit=crop&q=80&w=800' : 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?auto=format&fit=crop&q=80&w=800'),
@@ -828,19 +847,19 @@ ${signoff}`;
     setDays(newDays);
   };
 
-  const handleUpdateDay = (index: number, field: keyof ItineraryDay, value: any) => {
+  const handleUpdateDay = (index: number, field: keyof ItineraryDay, value: string | number | boolean) => {
     const newDays = [...days];
     newDays[index] = { ...newDays[index], [field]: value };
     setDays(newDays);
   };
 
-  const selectHotel = (dayIndex: number, hotel: any) => {
+  const selectHotel = (dayIndex: number, hotel: { id: string; name: string; image?: string; pricePerNight?: number }) => {
     const newDays = [...days];
     newDays[dayIndex] = {
       ...newDays[dayIndex],
       hotelId: hotel.id,
       hotelName: hotel.name,
-      hotelImage: hotel.image,
+      hotelImage: hotel.image || '',
       hotelPrice: hotel.pricePerNight || 0
     };
     setDays(newDays);
@@ -937,6 +956,8 @@ ${signoff}`;
         },
         body: JSON.stringify({
           quoteData: JSON.stringify(days),
+          netPrice: totalCost,
+          budget: `₹${totalCost.toLocaleString('en-IN')}`,
           customPrice: totalCost,
           estimatedBudget: totalCost,
           status: 'Ready for Review'
@@ -959,6 +980,7 @@ ${signoff}`;
             duration: `${days.length} Days`,
             travelers: String(pax.adults + pax.children),
             budget: String(totalCost),
+            netPrice: totalCost,
             customPrice: totalCost,
             estimatedBudget: totalCost,
             accommodation: days[0]?.hotelName || 'Luxury Hotel',
@@ -995,9 +1017,9 @@ ${signoff}`;
       } else {
         throw new Error('Server rejected deletion request');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Delete inquiry curation error:', error);
-      toast.error(error.message || 'Failed to delete inquiry.', { id: toastId });
+      toast.error(getErrorMessage(error, 'Failed to delete inquiry.'), { id: toastId });
     } finally {
       setIsGenerating(false);
       setShowDeleteConfirm(false);
@@ -1028,9 +1050,9 @@ ${signoff}`;
       }
       setGeneratedLink(data.sessionUrl);
       toast.success('Razorpay payment link generated successfully!', { id: toastId });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error('Failed to create payment link: ' + err.message, { id: toastId });
+      toast.error('Failed to create payment link: ' + getErrorMessage(err), { id: toastId });
     } finally {
       setIsGeneratingLink(false);
     }
@@ -2024,8 +2046,8 @@ ${signoff}`;
                             toast.dismiss(toastId);
                             setProposalUrl(uploadData.url);
                             await handleUpdateProposal(uploadData.url);
-                          } catch (err: any) {
-                            toast.error(err?.message || 'Failed to upload PDF proposal', { id: toastId });
+                          } catch (err: unknown) {
+                            toast.error(getErrorMessage(err, 'Failed to upload PDF proposal'), { id: toastId });
                           } finally {
                             e.target.value = '';
                           }

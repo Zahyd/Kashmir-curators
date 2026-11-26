@@ -1,6 +1,8 @@
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import prisma from '../lib/prisma';
+import { realtimeBus } from '../lib/realtimeBus';
+import { buildTenantNotificationUserId } from '../lib/tenant';
 
 // Configure the Resend client (only when real API key is provided)
 const resend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_mock_key_123'
@@ -215,11 +217,13 @@ export const notificationService = {
     }
 
     // 2. Save notification to the database
+    const tenantId = data?.organizationId || null;
     let savedNotification = null;
     try {
       const p = prisma as any;
       savedNotification = await p.notification.create({
         data: {
+          userId: buildTenantNotificationUserId(tenantId),
           title,
           message,
           type: notificationType,
@@ -233,29 +237,32 @@ export const notificationService = {
       console.error('[NotificationService] Failed to persist alert to db:', dbErr.message);
     }
 
-    // 3. Emit real-time WebSockets
-    if (io) {
-      // Broadcast to the admin room for CRM updates
-      io.to('admin-room').emit('new-system-event', {
+    // 3. Emit real-time WebSockets via tenant-scoped RealtimeBus
+    realtimeBus.publish(
+      'new-system-event',
+      {
         type,
         message,
         booking: data,
         notification: savedNotification,
         timestamp: new Date().toISOString()
-      });
+      },
+      { io, tenantId }
+    );
 
+    if (io) {
       // If there's a specific user ID, broadcast to their personal room
       if (data && data.userId) {
         io.to(`user-${data.userId}`).emit(`${type.toLowerCase()}-updated`, { type, data });
       }
 
-      // Broadcast to everyone for live social proof / curation updates
+      // Broadcast sanitized non-PII teaser for public social proof / curation ticker
       if (type === 'CREATE' && data) {
         if (data.entityType === 'inquiry') {
           io.emit('new-live-curation', {
             id: data.id,
             message: `Expedition to ${data.destination || 'Kashmir'} curated`,
-            details: `${data.travelers || '2'} Travelers • for ${data.customerName || 'Explorer'}`,
+            details: `${data.travelers || '2'} Travelers • Custom Curation`,
             createdAt: data.createdAt || new Date()
           });
         } else if (data.entityType === 'booking') {
@@ -267,7 +274,7 @@ export const notificationService = {
           io.emit('new-live-curation', {
             id: data.id,
             message: `${data.type === 'package' ? 'Luxury package' : data.type === 'hotel' ? 'Premium hotel' : 'Chauffeur cab'} secured: ${data.itemName}`,
-            details: `${travelers} Guests from ${data.user?.name || 'Explorer'}`,
+            details: `${travelers} Guests • Verified Booking`,
             createdAt: data.createdAt || new Date()
           });
         }

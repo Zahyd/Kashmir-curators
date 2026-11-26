@@ -6,6 +6,7 @@ import {
   PointerSensor, 
   useSensor, 
   useSensors,
+  DragStartEvent,
   DragEndEvent
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates, rectSortingStrategy, SortableContext } from '@dnd-kit/sortable';
@@ -280,8 +281,8 @@ export function LeadBoard({ inquiries, onStatusChange, onEditLead }: LeadBoardPr
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragStart = (event: any) => {
-    setActiveId(event.active.id);
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {

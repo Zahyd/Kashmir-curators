@@ -11,17 +11,52 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api';
-import { salesApi } from '@/lib/salesApi';
+import { salesApi, SalesInquiry, getErrorMessage } from '@/lib/salesApi';
 import { cn } from '@/lib/utils';
 
 interface SelectionRequiredProps {
   title: string;
   description: string;
-  icon: any;
-  inquiries: any[];
-  onSelect: (inquiry: any) => void;
+  icon: React.ComponentType<{ className?: string }>;
+  mode?: 'builder' | 'vault' | 'payments' | 'generic';
+  includeBooked?: boolean;
+  inquiries: SalesInquiry[];
+  onSelect: (inquiry: SalesInquiry) => void;
   onCreated?: () => void;
-  teamUser?: any;
+  teamUser?: { code?: string; name?: string; role?: string } | null;
+}
+
+interface AiCurateDay {
+  title?: string;
+  location?: string;
+  activities?: string[] | string;
+  stayRecommendation?: string;
+  mealPlan?: string;
+}
+
+interface AiCurateResponse {
+  days?: AiCurateDay[];
+  recommendedVehicle?: string;
+}
+
+interface SynthesizedDay {
+  day: number;
+  title: string;
+  activities: string;
+  hotelId: string;
+  hotelName: string;
+  hotelImage: string;
+  transport: string;
+  roomType: string;
+  mealPlan: string;
+  bedCount: string;
+  hotelPrice: number;
+  transportPrice: number;
+  extraBedPrice: number;
+  hotelNetCost: number;
+  transportNetCost: number;
+  paxCount: string;
+  vendorStatus: 'confirmed';
 }
 
 // 4 Signature Master Templates for 1-Click Instant Studio Loading
@@ -76,8 +111,40 @@ const SIGNATURE_BLUEPRINTS = [
   }
 ];
 
-export default function SelectionRequired({ title, description, icon: Icon, inquiries, onSelect, onCreated, teamUser }: SelectionRequiredProps) {
-  const activeLeads = inquiries.filter(inq => inq.status !== 'Lost' && inq.status !== 'Booked');
+export default function SelectionRequired({
+  title,
+  description,
+  icon: Icon,
+  mode = 'builder',
+  includeBooked = false,
+  inquiries,
+  onSelect,
+  onCreated,
+  teamUser
+}: SelectionRequiredProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const showAiStudio = mode === 'builder';
+
+  const eligibleLeads = inquiries.filter((inq) => {
+    const status = String(inq.status || '');
+    const stage = String(inq.leadStage || '').toUpperCase();
+    if (status === 'Lost' || stage === 'LOST' || stage === 'CANCELLED') return false;
+    if (!includeBooked && mode === 'builder' && (status === 'Booked' || stage === 'CONFIRMED')) {
+      return false;
+    }
+    return true;
+  });
+
+  const activeLeads = eligibleLeads.filter((inq) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      String(inq.customerName || '').toLowerCase().includes(q) ||
+      String(inq.destination || '').toLowerCase().includes(q) ||
+      String(inq.phone || '').toLowerCase().includes(q) ||
+      String(inq.leadId || '').toLowerCase().includes(q)
+    );
+  });
 
   // AI Itinerary Studio Quick-Gen State
   const [aiDuration, setAiDuration] = useState('6 Days');
@@ -104,32 +171,35 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
   const handleAiAutoGenerate = async () => {
     setIsAiGenerating(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/ai/curate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          duration: aiDuration,
-          travelers: '2 Adults',
-          theme: aiTheme,
-          budgetTier: aiTier
-        })
-      });
-
-      let aiPackage: any = null;
-      if (res.ok) {
-        aiPackage = await res.json();
+      let aiPackage: AiCurateResponse | null = null;
+      try {
+        const res = await fetch(`${API_BASE_URL}/ai/curate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            duration: aiDuration,
+            travelers: '2 Adults',
+            theme: aiTheme,
+            budgetTier: aiTier
+          })
+        });
+        if (res.ok) {
+          aiPackage = (await res.json()) as AiCurateResponse;
+        }
+      } catch {
+        aiPackage = null;
       }
 
       const clientName = guestName.trim() || 'VIP Guest (AI Curated)';
 
       // Synthesize formatted day items for ItineraryBuilder
-      const durationNum = parseInt(aiDuration) || 6;
-      let synthesizedDays: any[] = [];
+      const durationNum = parseInt(aiDuration, 10) || 6;
+      let synthesizedDays: SynthesizedDay[] = [];
 
       if (aiPackage && Array.isArray(aiPackage.days) && aiPackage.days.length > 0) {
-        synthesizedDays = aiPackage.days.map((d: any, idx: number) => ({
+        synthesizedDays = aiPackage.days.map((d: AiCurateDay, idx: number) => ({
           day: idx + 1,
           title: d.title || `Day ${idx + 1}: ${d.location || 'Scenic Exploration'}`,
           activities: Array.isArray(d.activities) ? d.activities.join(' • ') : (d.activities || 'Curated sightseeing and private local experiences.'),
@@ -138,7 +208,7 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
           hotelImage: idx === 0 
             ? 'https://images.unsplash.com/photo-1566837493203-d2d46e01a5d6?auto=format&fit=crop&q=80&w=800'
             : 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&q=80&w=800',
-          transport: aiPackage.recommendedVehicle || 'Toyota Innova Crysta VIP',
+          transport: aiPackage?.recommendedVehicle || 'Toyota Innova Crysta VIP',
           roomType: 'Deluxe Heritage Room',
           mealPlan: d.mealPlan || 'MAP (Breakfast + Dinner)',
           bedCount: 'King Bed',
@@ -202,10 +272,9 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
       toast.success(`AI itinerary saved & loaded (${created.leadId || created.id.slice(0, 8)})`);
       onCreated?.();
       onSelect(updatedLead);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err?.message || 'AI Curate failed. Creating clean inquiry...');
-      await handleOpenBlankSandbox();
+      toast.error(getErrorMessage(err, 'Failed to create curated inquiry'));
     } finally {
       setIsAiGenerating(false);
     }
@@ -230,8 +299,8 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
       });
       onCreated?.();
       onSelect(created);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to initialize studio lead');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to initialize studio lead'));
     } finally {
       setIsAiGenerating(false);
     }
@@ -258,8 +327,8 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
       toast.success(`Loaded ${bp.title} into Itinerary Studio!`);
       onCreated?.();
       onSelect(created);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to launch blueprint');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to launch blueprint'));
     } finally {
       setIsAiGenerating(false);
     }
@@ -288,9 +357,9 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
       setIsCustomModalOpen(false);
       onCreated?.();
       onSelect(newInq);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error?.message || 'Failed to create customized package.');
+      toast.error(getErrorMessage(error, 'Failed to create customized package.'));
     } finally {
       setIsCreatingCustom(false);
     }
@@ -299,42 +368,46 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
   return (
     <div className="max-w-6xl mx-auto py-4 sm:py-8 md:py-12 animate-in fade-in duration-500 px-1 sm:px-4 space-y-6 sm:space-y-10">
       
-      {/* 1. Header Banner */}
+      {/* 1. Contextual Module Header Banner */}
       <div className="p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-br from-amber-500/10 via-white/[0.02] to-transparent border border-amber-400/20 shadow-2xl backdrop-blur-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5 sm:gap-6">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] font-black uppercase tracking-wider mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            <span>AI Autonomous Itinerary Studio</span>
+            {Icon ? <Icon className="w-3.5 h-3.5 text-amber-400" /> : <Sparkles className="w-3.5 h-3.5 text-amber-400" />}
+            <span>{showAiStudio ? 'AI Autonomous Itinerary Studio' : title}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-black text-white tracking-tight">
-            Curate Luxury Kashmir Itineraries
+            {showAiStudio ? 'Curate Luxury Kashmir Itineraries' : title}
           </h2>
           <p className="text-white/60 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-            Generate complete day-by-day itineraries in seconds with AI, select a pre-curated signature circuit, or build a bespoke quote for any lead in your pipeline.
+            {description || 'Select a traveler inquiry from your pipeline below to continue.'}
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto shrink-0">
-          <Button 
-            onClick={handleOpenBlankSandbox}
-            variant="outline"
-            className="w-full sm:w-auto h-11 px-5 rounded-xl sm:rounded-2xl border-white/20 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2"
-          >
-            <Compass className="w-4 h-4 text-amber-400" />
-            <span>Open Clean Studio</span>
-          </Button>
+        {showAiStudio && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto shrink-0">
+            <Button 
+              onClick={handleOpenBlankSandbox}
+              variant="outline"
+              className="w-full sm:w-auto h-11 px-5 rounded-xl sm:rounded-2xl border-white/20 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+            >
+              <Compass className="w-4 h-4 text-amber-400" />
+              <span>Open Clean Studio</span>
+            </Button>
 
-          <Button 
-            onClick={() => setIsCustomModalOpen(true)}
-            className="w-full sm:w-auto h-11 px-6 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Manual Custom Lead</span>
-          </Button>
-        </div>
+            <Button 
+              onClick={() => setIsCustomModalOpen(true)}
+              className="w-full sm:w-auto h-11 px-6 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Manual Custom Lead</span>
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* 2. AI INSTANT CURATION CONTROL MODULE */}
+      {/* 2. AI INSTANT CURATION CONTROL MODULE (Studio Mode Only) */}
+      {showAiStudio && (
+      <>
       <Card className="bg-[#0b1016]/90 border border-amber-500/30 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-black/60 relative overflow-hidden backdrop-blur-2xl">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 blur-3xl pointer-events-none" />
         
@@ -484,17 +557,30 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
           ))}
         </div>
       </div>
+      </>
+      )}
 
       {/* 4. ACTIVE PIPELINE LEADS (If Any Exist) */}
       <div className="space-y-4 pt-4">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+          <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-400" />
-            <span>Active Pipeline Deals</span>
-          </h3>
-          <Badge className="bg-white/5 text-white/50 border border-white/10 font-mono text-[10px]">
-            {activeLeads.length} Available
-          </Badge>
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest">
+              <span>{mode === 'payments' ? 'Select Inquiry for Payment Link' : mode === 'vault' ? 'Select Client Vault Folder' : 'Active Pipeline Deals'}</span>
+            </h3>
+            <Badge className="bg-white/5 text-white/50 border border-white/10 font-mono text-[10px]">
+              {activeLeads.length} Available
+            </Badge>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter leads by name or destination..."
+              className="h-8 pl-8 bg-white/5 border-white/10 text-white text-xs rounded-xl"
+            />
+          </div>
         </div>
 
         {activeLeads.length > 0 ? (
@@ -507,7 +593,7 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
               >
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-sm shrink-0">
-                    {inq.customerName.charAt(0)}
+                    {(inq.customerName || 'T').charAt(0)}
                   </div>
                   <div className="min-w-0">
                     <h4 className="font-bold text-white group-hover:text-amber-400 transition-colors truncate text-sm">
@@ -521,7 +607,7 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
 
                 <div className="flex items-center gap-3 shrink-0">
                   <Badge variant="outline" className="border-white/15 text-white/60 text-[9px] uppercase tracking-wider">
-                    {inq.status}
+                    {inq.leadStage || inq.status}
                   </Badge>
                   <Button variant="ghost" size="icon" className="w-9 h-9 rounded-xl text-white/40 group-hover:text-amber-400 group-hover:bg-amber-400/10">
                     <ArrowRight className="w-4 h-4" />
@@ -533,9 +619,11 @@ export default function SelectionRequired({ title, description, icon: Icon, inqu
         ) : (
           <Card className="bg-[#0b1016]/60 border border-dashed border-white/10 p-8 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
             <MessageSquare className="w-8 h-8 text-white/20 mb-1" />
-            <p className="text-white/60 text-xs font-semibold">Your personal active deal queue is clear.</p>
+            <p className="text-white/60 text-xs font-semibold">No matching inquiries in this view.</p>
             <p className="text-white/40 text-[11px] max-w-md">
-              Use the <span className="text-amber-400 font-bold">1-Click AI Copilot</span> above to instantly draft an itinerary, choose a signature circuit, or claim a fresh inquiry from the <span className="text-emerald-400 font-bold">Live Lead Queue</span>.
+              {showAiStudio
+                ? 'Use the 1-Click AI Copilot above to instantly draft an itinerary, choose a signature circuit, or claim a fresh inquiry from the Live Lead Queue.'
+                : 'Claim or create an inquiry from the Live Lead Queue or Client Directory to manage this workspace.'}
             </p>
           </Card>
         )}

@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { bookingAutomationService } from '../services/bookingAutomationService';
 import { notificationService } from '../services/notificationService';
+import { canAccessTenantRecord, withStrictTenantScope, buildTenantNotificationUserId } from '../lib/tenant';
+import { realtimeBus } from '../lib/realtimeBus';
 const Stripe = require('stripe');
 
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -88,20 +90,16 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
       return res.status(200).json({ status: 'ignored', reason: 'already_processed' });
     }
 
-    // 3. Find booking either via direct bookingId, inquiryId, or fallback to scanning details
+    // 3. Find booking either via direct bookingId, targeted inquiryId lookup, or orderId fallback (no full-table scan)
     let targetBooking = null;
     if (bookingId) {
       targetBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
     } else if (inquiryId) {
-      const allBookings = await prisma.booking.findMany();
-      targetBooking = allBookings.find(b => {
-        try {
-          const parsed = JSON.parse(b.details);
-          return parsed.inquiryId === inquiryId || parsed.inquiryId === String(inquiryId);
-        } catch {
-          return false;
+      targetBooking = await prisma.booking.findFirst({
+        where: {
+          details: { contains: String(inquiryId) }
         }
-      }) || null;
+      });
 
       if (!targetBooking) {
         // Create booking if none exists
@@ -110,6 +108,7 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
           targetBooking = await prisma.booking.create({
             data: {
               userId: inquiry.userId || 'SYSTEM_GUEST',
+              organizationId: inquiry.organizationId || null,
               type: 'package',
               itemName: `Kashmir Tour Package - ${inquiry.destination}`,
               bookingDate: new Date(),
@@ -162,7 +161,7 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
 
     // 4. Secure transaction ledger write and status synchronization in single atomic block
     const statusToSet = event === 'payment.failed' ? 'cancelled' : 'confirmed';
-    const description = event === 'payment.failed' ? 'Razorpay payment failed hook' : 'Razorpay payment captured captured hook';
+    const description = event === 'payment.failed' ? 'Razorpay payment failed hook' : 'Razorpay payment captured hook';
     const txType = event === 'payment.failed' ? 'DEBIT' : 'CREDIT';
 
     const result = await prisma.$transaction(async (tx) => {
@@ -209,41 +208,60 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
       }
     }
 
-    // Emit live web sockets to keep admin and user screens dynamically synchronized!
-    if (reqWithIo.io) {
+    // Emit live web sockets via scoped rooms & tenant RealtimeBus (no global PII leaks)
+    const ioRef = reqWithIo.io;
+    const tenantId = (result.updatedBooking as any)?.organizationId || null;
+
+    if (ioRef) {
       const socketPayload = { type: 'UPDATE', booking: result.updatedBooking };
-      reqWithIo.io.to(`user-${result.updatedBooking.userId}`).emit('booking-updated', socketPayload);
-      
-      const msg = event === 'payment.failed' 
-        ? `Payment Failed: Razorpay payment for ${result.updatedBooking.itemName} failed.`
-        : `Payment Received: ₹${amount.toLocaleString()} locked for ${result.updatedBooking.itemName}`;
-      
-      // Persist alert to database and broadcast to admin-room
+      ioRef.to(`user-${result.updatedBooking.userId}`).emit('booking-updated', socketPayload);
+    }
+
+    const msg = event === 'payment.failed' 
+      ? `Payment Failed: Razorpay payment for ${result.updatedBooking.itemName} failed.`
+      : `Payment Received: ₹${amount.toLocaleString()} locked for ${result.updatedBooking.itemName}`;
+    
+    // Persist alert to database and broadcast via scoped RealtimeBus
+    if (ioRef) {
       try {
         await notificationService.emitSystemEvent(
-          reqWithIo.io,
+          ioRef,
           event === 'payment.failed' ? 'ERROR' : 'PAYMENT',
           msg,
-          { ...result.updatedBooking, entityType: 'booking' }
+          { ...result.updatedBooking, organizationId: tenantId, entityType: 'booking' }
         );
       } catch (notifErr: any) {
         console.error('Failed to emit system event from webhook:', notifErr.message);
       }
+    }
 
-      // Notify the specific customer payment link room if payment was initiated from a payment request
-      if (paymentIdNotes) {
-        if (event === 'payment.failed') {
-          reqWithIo.io.to(`payment-${paymentIdNotes}`).emit('payment-failed', {
-            paymentId: paymentIdNotes,
-            reason: payload?.payment?.entity?.error_description || 'Payment failed'
-          });
-        } else {
-          reqWithIo.io.to(`payment-${paymentIdNotes}`).emit('payment-success', {
-            paymentId: paymentIdNotes,
-            amount,
-            status: 'confirmed'
-          });
-        }
+    realtimeBus.publish(
+      event === 'payment.failed' ? 'PAYMENT_FAILED' : 'PAYMENT_CONFIRMED',
+      {
+        bookingId: result.updatedBooking.id,
+        inquiryId: inquiryId || null,
+        paymentId,
+        amount,
+        status: result.updatedBooking.status,
+        booking: result.updatedBooking,
+        organizationId: tenantId,
+      },
+      { io: ioRef, tenantId }
+    );
+
+    // Notify the specific customer payment link room if payment was initiated from a payment request
+    if (ioRef && paymentIdNotes) {
+      if (event === 'payment.failed') {
+        ioRef.to(`payment-${paymentIdNotes}`).emit('payment-failed', {
+          paymentId: paymentIdNotes,
+          reason: payload?.payment?.entity?.error_description || 'Payment failed'
+        });
+      } else {
+        ioRef.to(`payment-${paymentIdNotes}`).emit('payment-success', {
+          paymentId: paymentIdNotes,
+          amount,
+          status: 'confirmed'
+        });
       }
     }
 
@@ -274,6 +292,9 @@ export const sendWhatsAppPaymentRequest = async (req: Request, res: Response) =>
 
     if (!inquiry) {
       return res.status(404).json({ error: 'Inquiry not found' });
+    }
+    if ((req as any).user && !canAccessTenantRecord(req as any, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant payment request denied' });
     }
 
     const customerName = inquiry.customerName || 'Valued Client';
@@ -356,14 +377,23 @@ export const sendWhatsAppPaymentRequest = async (req: Request, res: Response) =>
       console.error('Failed to send text request via WhatsApp:', wsErr.message);
     }
 
-    // 6. Broadcast event via WebSockets to open Admin Command Panels in real-time
+    // 6. Broadcast scoped event via RealtimeBus (no unauthenticated global emit)
     const reqWithIo = req as any;
-    if (reqWithIo.io) {
-      reqWithIo.io.emit('new-system-event', {
-        type: 'CREATE',
-        message: `Razorpay payment request of ₹${parseFloat(amount).toLocaleString()} sent to ${customerName} on WhatsApp. UTR: ${paymentId}`
-      });
-    }
+    const tenantId = inquiry.organizationId || reqWithIo.tenantId || null;
+    realtimeBus.publish('PAYMENT_LINK_CREATED', {
+      inquiryId,
+      paymentId,
+      amount: parseFloat(amount),
+      checkoutUrl,
+      customerName,
+      ledgerEntry,
+      organizationId: tenantId
+    }, { io: reqWithIo.io, tenantId });
+    realtimeBus.publish('new-system-event', {
+      type: 'CREATE',
+      message: `Payment request of ₹${parseFloat(amount).toLocaleString()} sent to ${customerName} on WhatsApp. Ref: ${paymentId}`,
+      timestamp: new Date().toISOString()
+    }, { io: reqWithIo.io, tenantId });
 
     return res.status(200).json({
       success: true,
@@ -707,6 +737,10 @@ export const createRazorpayPaymentLink = async (req: Request, res: Response) => 
     if (!inquiry) {
       return res.status(404).json({ error: 'Inquiry not found' });
     }
+    const reqUserRole = String((req as any).user?.role || '').toLowerCase();
+    if (['admin', 'operations', 'sales', 'finance', 'agent'].includes(reqUserRole) && !canAccessTenantRecord(req as any, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant payment link generation denied' });
+    }
 
     const finalAmount = Number(amount);
     if (isNaN(finalAmount) || finalAmount <= 0) {
@@ -720,6 +754,14 @@ export const createRazorpayPaymentLink = async (req: Request, res: Response) => 
     if (!keyId || !keySecret) {
       console.warn('[Razorpay] Keys not configured. Generating mock simulation payment link...');
       const mockLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/itinerary/${inquiry.id}?payment=success`;
+      realtimeBus.publish('PAYMENT_LINK_CREATED', {
+        inquiryId: inquiry.id,
+        amount: finalAmount,
+        checkoutUrl: mockLink,
+        customerName: inquiry.customerName,
+        isMock: true,
+        organizationId: inquiry.organizationId || null
+      }, { io: (req as any).io, tenantId: inquiry.organizationId || null });
       return res.json({ sessionUrl: mockLink, isMock: true });
     }
 
@@ -939,7 +981,16 @@ export const getInquiryPayments = async (req: Request, res: Response) => {
   }
 
   try {
-    const entries = await (prisma as any).transactionLedger.findMany({
+    const p = prisma as any;
+    const inquiry = await p.inquiry.findUnique({ where: { id: inquiryId } });
+    if (!inquiry) {
+      return res.status(404).json({ error: 'Inquiry not found' });
+    }
+    if (!canAccessTenantRecord(req as any, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant payment ledger access denied' });
+    }
+
+    const entries = await p.transactionLedger.findMany({
       where: { bookingId: inquiryId },
       orderBy: { createdAt: 'desc' }
     });
@@ -947,6 +998,131 @@ export const getInquiryPayments = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('getInquiryPayments error:', error);
     res.status(500).json({ error: 'Failed to fetch inquiry payments' });
+  }
+};
+
+export const getPaymentLedger = async (req: Request, res: Response) => {
+  try {
+    const p = prisma as any;
+    const tenantId = (req as any).tenantId;
+    const { search, status, page = '1', limit = '25' } = req.query;
+
+    const [inquiries, bookings] = await Promise.all([
+      p.inquiry.findMany({
+        where: withStrictTenantScope({}, tenantId),
+        select: {
+          id: true,
+          leadId: true,
+          customerName: true,
+          email: true,
+          phone: true,
+          destination: true,
+          leadStage: true,
+          status: true,
+          netPrice: true,
+          budget: true,
+          assignedTo: true
+        }
+      }),
+      p.booking.findMany({
+        where: withStrictTenantScope({}, tenantId),
+        select: { id: true, itemName: true, totalAmount: true, status: true, details: true }
+      })
+    ]);
+
+    const inquiryMap = new Map<string, any>();
+    inquiries.forEach((inq: any) => inquiryMap.set(inq.id, inq));
+
+    const bookingMap = new Map<string, any>();
+    bookings.forEach((b: any) => bookingMap.set(b.id, b));
+
+    const refIds = Array.from(new Set([...inquiries.map((i: any) => i.id), ...bookings.map((b: any) => b.id)]));
+
+    const rawEntries =
+      refIds.length > 0
+        ? await p.transactionLedger.findMany({
+            where: { bookingId: { in: refIds } },
+            orderBy: { createdAt: 'desc' }
+          })
+        : [];
+
+    const enriched = (rawEntries as any[]).map((entry) => {
+      let inq = inquiryMap.get(entry.bookingId) || null;
+      const bkg = bookingMap.get(entry.bookingId) || null;
+      if (!inq && bkg?.details) {
+        try {
+          const parsedDetails = typeof bkg.details === 'string' ? JSON.parse(bkg.details) : bkg.details;
+          if (parsedDetails?.inquiryId) {
+            inq = inquiryMap.get(parsedDetails.inquiryId) || null;
+          }
+        } catch {
+          // ignore malformed booking details JSON
+        }
+      }
+      const desc = String(entry.description || '');
+      const isPending = desc.toLowerCase().startsWith('pending');
+      const derivedStatus =
+        entry.type === 'DEBIT' ? 'FAILED' : isPending ? 'PENDING' : 'VERIFIED';
+
+      return {
+        ...entry,
+        derivedStatus,
+        inquiry: inq,
+        booking: bkg
+      };
+    });
+
+    const totalCollected = enriched
+      .filter((e) => e.derivedStatus === 'VERIFIED')
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const totalPendingAmount = enriched
+      .filter((e) => e.derivedStatus === 'PENDING')
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const verifiedCount = enriched.filter((e) => e.derivedStatus === 'VERIFIED').length;
+    const pendingCount = enriched.filter((e) => e.derivedStatus === 'PENDING').length;
+
+    const filtered = enriched.filter((e) => {
+      if (status && status !== 'ALL' && e.derivedStatus !== String(status).toUpperCase()) return false;
+      if (search && String(search).trim()) {
+        const q = String(search).trim().toLowerCase();
+        const haystack = [
+          e.paymentId,
+          e.orderId,
+          e.description,
+          e.inquiry?.customerName,
+          e.inquiry?.phone,
+          e.inquiry?.destination,
+          e.booking?.itemName
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const parsedPage = Math.max(1, parseInt(String(page), 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 25));
+    const items = filtered.slice((parsedPage - 1) * parsedLimit, parsedPage * parsedLimit);
+
+    res.json({
+      items,
+      total: filtered.length,
+      page: parsedPage,
+      limit: parsedLimit,
+      totalPages: Math.max(1, Math.ceil(filtered.length / parsedLimit)),
+      summary: {
+        totalCollected,
+        totalPendingAmount,
+        verifiedCount,
+        pendingCount,
+        totalTransactions: enriched.length
+      }
+    });
+  } catch (error: any) {
+    console.error('getPaymentLedger error:', error);
+    res.status(500).json({ error: 'Failed to fetch payment ledger' });
   }
 };
 
@@ -962,12 +1138,16 @@ export const verifyManualPayment = async (req: Request, res: Response) => {
   const cleanUtr = String(utrNumber).trim();
 
   try {
-    const inquiry = await (prisma as any).inquiry.findUnique({ where: { id: inquiryId } });
+    const p = prisma as any;
+    const inquiry = await p.inquiry.findUnique({ where: { id: inquiryId } });
     if (!inquiry) {
       return res.status(404).json({ error: 'Inquiry not found' });
     }
+    if (!canAccessTenantRecord(req as any, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant payment verification denied' });
+    }
 
-    const existingTx = await (prisma as any).transactionLedger.findUnique({
+    const existingTx = await p.transactionLedger.findUnique({
       where: { paymentId: cleanUtr }
     });
     if (existingTx) {
@@ -978,8 +1158,8 @@ export const verifyManualPayment = async (req: Request, res: Response) => {
     const nextStage = markConfirmed ? 'CONFIRMED' : 'PAYMENT_PENDING';
     const nextStatus = markConfirmed ? 'Booked' : 'Ready for Review';
 
-    const [ledgerEntry, updatedInquiry] = await (prisma as any).$transaction([
-      (prisma as any).transactionLedger.create({
+    const [ledgerEntry, updatedInquiry, activity] = await p.$transaction([
+      p.transactionLedger.create({
         data: {
           bookingId: inquiryId,
           amount: parsedAmount,
@@ -991,7 +1171,7 @@ export const verifyManualPayment = async (req: Request, res: Response) => {
             : `Manual UPI/Bank UTR recorded by ${performer} (${cleanUtr})`
         }
       }),
-      (prisma as any).inquiry.update({
+      p.inquiry.update({
         where: { id: inquiryId },
         data: {
           leadStage: nextStage,
@@ -999,7 +1179,7 @@ export const verifyManualPayment = async (req: Request, res: Response) => {
           lastContactedAt: new Date()
         }
       }),
-      (prisma as any).leadActivity.create({
+      p.leadActivity.create({
         data: {
           inquiryId,
           type: 'PAYMENT_CAPTURED',
@@ -1010,13 +1190,40 @@ export const verifyManualPayment = async (req: Request, res: Response) => {
       })
     ]);
 
-    if ((req as any).io) {
-      (req as any).io.to('admin-room').emit('new-system-event', {
-        type: 'PAYMENT',
-        message: `Manual UTR ₹${parsedAmount.toLocaleString('en-IN')} recorded for ${inquiry.customerName} (${cleanUtr})`,
-        booking: { ...updatedInquiry, entityType: 'inquiry' }
-      });
-    }
+    const tenantId = inquiry.organizationId || (req as any).tenantId || null;
+
+    const notification = await p.notification
+      .create({
+        data: {
+          userId: buildTenantNotificationUserId(tenantId),
+          title: markConfirmed ? 'Payment Confirmed' : 'Payment UTR Logged',
+          message: `₹${parsedAmount.toLocaleString('en-IN')} recorded for ${inquiry.customerName} (${cleanUtr})`,
+          type: 'payment',
+          priority: 'high',
+          link: `/sales/portal?tab=payments&inquiryId=${inquiryId}`,
+          read: false
+        }
+      })
+      .catch(() => null);
+
+    realtimeBus.publish('PAYMENT_CONFIRMED', {
+      inquiryId,
+      amount: parsedAmount,
+      utrNumber: cleanUtr,
+      markConfirmed,
+      ledgerEntry,
+      lead: updatedInquiry,
+      organizationId: tenantId
+    }, { io: (req as any).io, tenantId });
+    realtimeBus.publish('STAGE_UPDATED', { leadId: inquiryId, stage: nextStage, lead: updatedInquiry }, { io: (req as any).io, tenantId });
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updatedInquiry }, { io: (req as any).io, tenantId });
+    realtimeBus.publish('new-system-event', {
+      type: 'PAYMENT',
+      message: `Manual UTR ₹${parsedAmount.toLocaleString('en-IN')} recorded for ${inquiry.customerName} (${cleanUtr})`,
+      booking: { ...updatedInquiry, entityType: 'inquiry' },
+      notification,
+      timestamp: new Date().toISOString()
+    }, { io: (req as any).io, tenantId });
 
     res.status(201).json({
       success: true,

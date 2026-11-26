@@ -1,63 +1,90 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Users, 
   TrendingUp, 
   Clock, 
   AlertTriangle, 
   IndianRupee, 
-  Flame, 
   RefreshCw,
-  ShieldAlert,
-  Sparkles
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { salesApi } from '@/lib/salesApi';
+import { salesApi, getErrorMessage } from '@/lib/salesApi';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
 interface MetricsData {
   unclaimedCount: number;
   slaBreachedCount: number;
   activePipelineCount: number;
   activePipelineValue: number;
+  confirmedCount?: number;
+  confirmedRevenue?: number;
+  confirmedValue?: number;
   monthlyConversionRate: number;
   conversionDelta: number | null;
   avgResponseMinutes: number | null;
+  onlineStaffCount?: number;
 }
 
 interface SalesMetricsRibbonProps {
+  refreshSignal?: number;
   onRefreshNeeded?: () => void;
 }
 
-export const SalesMetricsRibbon: React.FC<SalesMetricsRibbonProps> = ({ onRefreshNeeded }) => {
+export const SalesMetricsRibbon: React.FC<SalesMetricsRibbonProps> = ({ refreshSignal = 0, onRefreshNeeded }) => {
+  const { subscribeSalesEvent, onlineStaffCodes } = useTeamAuth();
   const [metrics, setMetrics] = useState<MetricsData>({
     unclaimedCount: 0,
     slaBreachedCount: 0,
     activePipelineCount: 0,
     activePipelineValue: 0,
+    confirmedCount: 0,
+    confirmedRevenue: 0,
     monthlyConversionRate: 0,
     conversionDelta: null,
     avgResponseMinutes: null
   });
   const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     try {
       const data = await salesApi.getMetrics();
       setMetrics(data);
-      setLastUpdated(new Date());
-    } catch (err) {
-      console.warn('Failed to fetch sales metrics:', err);
+      setError(null);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Metrics unavailable'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 30000); // 30s auto-refresh
-    return () => clearInterval(interval);
-  }, []);
+  }, [fetchMetrics, refreshSignal]);
+
+  useEffect(() => {
+    const unsub = subscribeSalesEvent((eventName) => {
+      if (
+        eventName === 'NEW_INQUIRY' ||
+        eventName === 'LEAD_CREATED' ||
+        eventName === 'LEAD_CLAIMED' ||
+        eventName === 'LEAD_UPDATED' ||
+        eventName === 'LEAD_DELETED' ||
+        eventName === 'STAGE_UPDATED' ||
+        eventName === 'PAYMENT_CONFIRMED'
+      ) {
+        fetchMetrics();
+      }
+    });
+    const interval = window.setInterval(fetchMetrics, 45000);
+    return () => {
+      unsub();
+      window.clearInterval(interval);
+    };
+  }, [subscribeSalesEvent, fetchMetrics]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -123,9 +150,20 @@ export const SalesMetricsRibbon: React.FC<SalesMetricsRibbonProps> = ({ onRefres
             </div>
           </div>
         </div>
-        <div className="mt-2 text-[10px] sm:text-[11px] text-slate-400 flex items-center gap-1 truncate">
-          <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-          <span className="truncate">Active deals</span>
+        <div className="mt-2 text-[10px] sm:text-[11px] text-slate-400 flex items-center justify-between gap-1 truncate">
+          <span className="flex items-center gap-1 truncate">
+            <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+            <span className="truncate">
+              {(metrics.confirmedRevenue ?? metrics.confirmedValue)
+                ? `₹${Number(metrics.confirmedRevenue ?? metrics.confirmedValue).toLocaleString('en-IN')} booked`
+                : 'Active deals'}
+            </span>
+          </span>
+          {error && (
+            <button onClick={fetchMetrics} className="text-rose-400 underline text-[10px] shrink-0">
+              Retry
+            </button>
+          )}
         </div>
       </Card>
 
