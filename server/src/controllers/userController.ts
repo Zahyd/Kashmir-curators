@@ -1,9 +1,14 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { withStrictTenantScope, resolveWriteTenantId, canAccessTenantRecord } from '../lib/tenant';
+
+const isPrivilegedTeamManager = (user: any): boolean =>
+  ['admin', 'director'].includes(String(user?.role || '').toLowerCase());
 
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
+      where: withStrictTenantScope({}, (req as any).tenantId),
       select: {
         id: true,
         name: true,
@@ -67,10 +72,12 @@ export const getUserStats = async (req: Request, res: Response) => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
+    const tenantScope = withStrictTenantScope({}, (req as any).tenantId);
     const [totalUsers, activeTravelers, newThisMonth] = await Promise.all([
-      prisma.user.count(),
+      prisma.user.count({ where: tenantScope }),
       prisma.user.count({
         where: {
+          ...tenantScope,
           bookings: {
             some: {}
           }
@@ -78,6 +85,7 @@ export const getUserStats = async (req: Request, res: Response) => {
       }),
       prisma.user.count({
         where: {
+          ...tenantScope,
           createdAt: { gte: startOfMonth }
         }
       })
@@ -98,7 +106,7 @@ export const getUserStats = async (req: Request, res: Response) => {
 
 export const createTeamMember = async (req: Request, res: Response) => {
   const adminUser = (req as any).user;
-  if (!adminUser || adminUser.role !== 'admin') {
+  if (!isPrivilegedTeamManager(adminUser)) {
     return res.status(403).json({ error: 'Forbidden. Only administrators can create team members.' });
   }
 
@@ -119,7 +127,8 @@ export const createTeamMember = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'A team member with this Employee Code already exists' });
     }
 
-    const newTeamMember = await prisma.user.create({
+    const organizationId = resolveWriteTenantId(req as any);
+    const newTeamMember = await (prisma.user as any).create({
       data: {
         name,
         email,
@@ -127,7 +136,8 @@ export const createTeamMember = async (req: Request, res: Response) => {
         role: role.toLowerCase(),
         employeeCode: employeeCode.toUpperCase(),
         leadCapacity: leadCapacity ? parseInt(leadCapacity) : 5,
-        emailVerified: true
+        emailVerified: true,
+        organizationId
       }
     });
 
@@ -140,7 +150,7 @@ export const createTeamMember = async (req: Request, res: Response) => {
 
 export const deleteUser = async (req: Request, res: Response) => {
   const adminUser = (req as any).user;
-  if (!adminUser || adminUser.role !== 'admin') {
+  if (!isPrivilegedTeamManager(adminUser)) {
     return res.status(403).json({ error: 'Forbidden. Only administrators can remove profiles.' });
   }
 
@@ -151,6 +161,14 @@ export const deleteUser = async (req: Request, res: Response) => {
   }
 
   try {
+    const existing = await prisma.user.findUnique({ where: { id: id as string } });
+    if (!existing) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    if (!canAccessTenantRecord(req as any, (existing as any).organizationId)) {
+      return res.status(403).json({ error: 'Cross-tenant access denied' });
+    }
+
     await prisma.user.delete({
       where: { id: id as string }
     });
@@ -163,7 +181,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request, res: Response) => {
   const adminUser = (req as any).user;
-  if (!adminUser || adminUser.role !== 'admin') {
+  if (!isPrivilegedTeamManager(adminUser)) {
     return res.status(403).json({ error: 'Forbidden. Only administrators can update profiles.' });
   }
 
@@ -171,6 +189,14 @@ export const updateUser = async (req: Request, res: Response) => {
   const { name, phone, role, leadCapacity } = req.body;
 
   try {
+    const existing = await prisma.user.findUnique({ where: { id: id as string } });
+    if (!existing) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    if (!canAccessTenantRecord(req as any, (existing as any).organizationId)) {
+      return res.status(403).json({ error: 'Cross-tenant access denied' });
+    }
+
     const updated = await prisma.user.update({
       where: { id: id as string },
       data: {

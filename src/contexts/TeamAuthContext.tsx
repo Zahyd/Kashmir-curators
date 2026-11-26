@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 
-import { SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
+import { SOCKET_URL, DEFAULT_SOCKET_OPTIONS, isSearchBot } from '@/lib/api';
+import { SalesInquiry, SalesNotificationItem } from '@/lib/salesApi';
 
 export type TeamRole = 'admin' | 'operations' | 'sales' | 'marketing' | 'finance';
 
 export interface TeamUser {
+  id?: string;
   code: string;
   name: string;
   role: TeamRole;
@@ -14,14 +16,83 @@ export interface TeamUser {
   email?: string;
   phone?: string;
   image?: string;
+  organizationId?: string | null;
 }
 
 export interface SystemEvent {
-  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  type: 'CREATE' | 'UPDATE' | 'DELETE' | string;
   message: string;
-  booking?: any;
+  booking?: { id?: string; [key: string]: unknown } | null;
+  notification?: SalesNotificationItem | null;
   timestamp: string;
 }
+
+export interface StaffPresenceState {
+  code: string;
+  name?: string;
+  role?: string;
+  status: 'ONLINE' | 'ON_BREAK' | 'BUSY' | 'OFFLINE' | string;
+  lastSeenAt?: string;
+}
+
+export interface SalesEventPayload {
+  id?: string;
+  type?: string;
+  title?: string;
+  description?: string;
+  performedBy?: string | null;
+  createdAt?: string;
+  message?: string;
+  leadId?: string;
+  inquiryId?: string;
+  lead?: SalesInquiry;
+  inquiry?: { id?: string; [key: string]: unknown } | null;
+  booking?: { id?: string; [key: string]: unknown } | null;
+  notification?: SalesNotificationItem | null;
+  notificationId?: string;
+  markAll?: boolean;
+  all?: boolean;
+  claimedBy?: string;
+  claimedByName?: string;
+  employeeCode?: string;
+  code?: string;
+  employeeName?: string;
+  name?: string;
+  role?: string;
+  status?: string;
+  isOnline?: boolean;
+  timestamp?: string;
+  [key: string]: unknown;
+}
+
+export type SalesEventHandler = (eventName: string, payload?: SalesEventPayload) => void;
+
+const REALTIME_EVENTS = [
+  'new-system-event',
+  'NEW_INQUIRY',
+  'LEAD_CREATED',
+  'LEAD_CLAIMED',
+  'LEAD_UPDATED',
+  'LEAD_DELETED',
+  'STAGE_UPDATED',
+  'LEAD_STAGE_UPDATED',
+  'BOOKING_STATUS_UPDATED',
+  'lead-updated',
+  'lead-assigned',
+  'lead-note-added',
+  'reminder-scheduled',
+  'PAYMENT_CONFIRMED',
+  'PAYMENT_LINK_CREATED',
+  'PAYMENT_FAILED',
+  'ACTIVITY_LOGGED',
+  'DOCUMENT_UPLOADED',
+  'DOCUMENT_STATUS_UPDATED',
+  'EMPLOYEE_STATUS_CHANGED',
+  'employee-attendance-updated',
+  'employee-presence-refresh',
+  'presence:roster',
+  'notification:acked'
+] as const;
 
 // Permission map: what each role can access
 const ROLE_PERMISSIONS: Record<TeamRole, string[]> = {
@@ -92,11 +163,20 @@ interface TeamAuthContextType {
   isTeamAuthenticated: boolean;
   isTeamLoading: boolean;
   systemEvents: SystemEvent[];
+  eventCounter: number;
+  connectionStatus: 'connected' | 'reconnecting' | 'disconnected';
+  latencyMs: number | null;
+  onlineStaffCodes: string[];
+  staffPresenceMap: Record<string, StaffPresenceState>;
+  subscribeSalesEvent: (handler: SalesEventHandler) => () => void;
+  acknowledgeNotification: (notificationId: string) => void;
+  acknowledgeAllNotifications: () => void;
+  emitPresence: (status: 'ONLINE' | 'ON_BREAK' | 'BUSY' | 'OFFLINE') => void;
   teamLogin: (code: string) => Promise<{ success: boolean; error?: string }>;
   teamSendOtp: (code: string, phone?: string) => Promise<{ success: boolean; simulated?: boolean; otp?: string; phone?: string; error?: string }>;
   teamVerifyOtp: (code: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   teamLogout: () => void;
-  updateTeamProfile: (data: any) => Promise<{ success: boolean; error?: string }>;
+  updateTeamProfile: (data: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   hasPermission: (permission: string) => boolean;
   canAccessAdmin: boolean;
   canAccessSales: boolean;
@@ -129,39 +209,173 @@ function generateName(code: string, role: TeamRole): string {
 export function TeamAuthProvider({ children }: { children: ReactNode }) {
   const [teamUser, setTeamUser] = useState<TeamUser | null>(null);
   const [isTeamLoading, setIsTeamLoading] = useState(true);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [systemEvents, setSystemEvents] = useState<SystemEvent[]>([]);
+  const [eventCounter, setEventCounter] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [staffPresenceMap, setStaffPresenceMap] = useState<Record<string, StaffPresenceState>>({});
 
-  // Initialize socket when team user changes
-  useEffect(() => {
-    if (teamUser && !socket) {
-      const newSocket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
-      setSocket(newSocket);
+  const socketRef = useRef<Socket | null>(null);
+  const listenersRef = useRef<Set<SalesEventHandler>>(new Set());
 
-      newSocket.on('connect', () => {
-        console.log('Team connected to Admin WebSocket');
-        newSocket.emit('join-admin');
-      });
+  const subscribeSalesEvent = useCallback((handler: SalesEventHandler) => {
+    listenersRef.current.add(handler);
+    return () => {
+      listenersRef.current.delete(handler);
+    };
+  }, []);
 
-      newSocket.on('new-system-event', (data) => {
-        const event: SystemEvent = {
-          ...data,
-          timestamp: new Date().toISOString()
-        };
-        setSystemEvents(prev => [event, ...prev].slice(0, 50));
-        
-        toast.info(event.message, {
-          description: "System intelligence update received.",
-          icon: '📊'
-        });
-      });
-
-      return () => {
-        newSocket.disconnect();
-        setSocket(null);
-      };
+  const acknowledgeNotification = useCallback((notificationId: string) => {
+    if (socketRef.current?.connected && notificationId) {
+      socketRef.current.emit('notification:ack', { notificationId });
     }
-  }, [teamUser]);
+  }, []);
+
+  const acknowledgeAllNotifications = useCallback(() => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('notification:ack', { markAll: true });
+    }
+  }, []);
+
+  const emitPresence = useCallback((status: 'ONLINE' | 'ON_BREAK' | 'BUSY' | 'OFFLINE') => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('sales:presence', { isOnline: status === 'ONLINE' });
+    }
+  }, []);
+
+  // Stable Socket.IO connection tied to authenticated team member code/role (survives profile refreshes & reconnects)
+  const userKey = teamUser ? `${teamUser.code}:${teamUser.role}:${teamUser.organizationId || 'default'}` : '';
+  const userOrgId = teamUser?.organizationId || null;
+
+  useEffect(() => {
+    if (!userKey || isSearchBot) {
+      setConnectionStatus('disconnected');
+      setLatencyMs(null);
+      return;
+    }
+
+    setConnectionStatus('reconnecting');
+
+    const newSocket = io(SOCKET_URL, {
+      ...DEFAULT_SOCKET_OPTIONS,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 15000,
+    });
+    socketRef.current = newSocket;
+
+    const sendHeartbeat = () => {
+      if (!newSocket.connected) return;
+      const sentAt = Date.now();
+      newSocket.emit('heartbeat:ping', sentAt, (res?: { clientTs?: number }) => {
+        if (res && typeof res.clientTs === 'number') {
+          setLatencyMs(Math.max(1, Date.now() - res.clientTs));
+        }
+      });
+    };
+
+    const joinChannels = () => {
+      setConnectionStatus('connected');
+      newSocket.emit('join-admin');
+      newSocket.emit('join-sales', (res?: { presence?: Array<{ employeeCode?: string; userId?: string; name?: string; role?: string; lastSeenAt?: string }> }) => {
+        if (Array.isArray(res?.presence)) {
+          const nextMap: Record<string, StaffPresenceState> = {};
+          res.presence.forEach((p) => {
+            const c = p.employeeCode || p.userId;
+            if (c) {
+              nextMap[String(c)] = {
+                code: String(c),
+                name: p.name,
+                role: p.role,
+                status: 'ONLINE',
+                lastSeenAt: p.lastSeenAt,
+              };
+            }
+          });
+          setStaffPresenceMap((prev) => ({ ...prev, ...nextMap }));
+        }
+      });
+      if (userOrgId) {
+        newSocket.emit('join-tenant', userOrgId);
+      }
+      newSocket.emit('sales:presence', { isOnline: true });
+      sendHeartbeat();
+    };
+
+    newSocket.on('connect', joinChannels);
+    newSocket.io.on('reconnect_attempt', () => setConnectionStatus('reconnecting'));
+    newSocket.on('disconnect', () => setConnectionStatus('disconnected'));
+    newSocket.on('connect_error', () => setConnectionStatus('reconnecting'));
+    newSocket.on('heartbeat:pong', (res?: { clientTs?: number }) => {
+      if (res && typeof res.clientTs === 'number') {
+        setLatencyMs(Math.max(1, Date.now() - res.clientTs));
+      }
+    });
+
+    const handleRealtimeEvent = (eventName: string, data?: SalesEventPayload) => {
+      setEventCounter((c) => c + 1);
+
+      if (eventName === 'new-system-event' && data) {
+        const event: SystemEvent = {
+          type: String(data.type || 'UPDATE'),
+          message: String(data.message || ''),
+          booking: data.booking,
+          notification: data.notification,
+          timestamp: data.timestamp || new Date().toISOString()
+        };
+        setSystemEvents((prev) => [event, ...prev].slice(0, 50));
+
+        if (data.message) {
+          toast.info(data.message, {
+            description: 'Live Sales Command update received.',
+            icon: '⚡'
+          });
+        }
+      }
+
+      if (eventName === 'EMPLOYEE_STATUS_CHANGED' || eventName === 'employee-attendance-updated' || eventName === 'employee-presence-refresh') {
+        const code = data?.employeeCode || data?.code;
+        if (code) {
+          const derivedStatus =
+            data?.status || (data?.isOnline === false ? 'OFFLINE' : data?.isOnline === true ? 'ONLINE' : 'ONLINE');
+          setStaffPresenceMap((prev) => ({
+            ...prev,
+            [String(code)]: {
+              code: String(code),
+              name: data?.employeeName || data?.name || prev[String(code)]?.name,
+              role: data?.role || prev[String(code)]?.role,
+              status: derivedStatus,
+              lastSeenAt: data?.timestamp || new Date().toISOString(),
+            },
+          }));
+        }
+      }
+
+      listenersRef.current.forEach((handler) => {
+        try {
+          handler(eventName, data);
+        } catch {
+          // Isolate listener errors
+        }
+      });
+    };
+
+    REALTIME_EVENTS.forEach((evt) => {
+      newSocket.on(evt, (payload?: SalesEventPayload) => handleRealtimeEvent(evt, payload));
+    });
+
+    const hbTimer = window.setInterval(sendHeartbeat, 20000);
+
+    return () => {
+      window.clearInterval(hbTimer);
+      newSocket.disconnect();
+      if (socketRef.current === newSocket) {
+        socketRef.current = null;
+      }
+      setConnectionStatus('disconnected');
+    };
+  }, [userKey, userOrgId]);
 
   // Restore session on mount
   useEffect(() => {
@@ -202,9 +416,9 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('teamToken', token);
       
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         return { success: false, error: 'Login request timed out. Please try again.' };
       }
       return { success: false, error: 'Network error. Is the server running?' };
@@ -236,9 +450,9 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
         otp: data.otp,
         phone: data.phone
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         return { success: false, error: 'OTP request timed out. Please check your network connection.' };
       }
       return { success: false, error: 'Network error sending OTP. Is the server running?' };
@@ -271,9 +485,9 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('teamToken', token);
       
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         return { success: false, error: 'Verification request timed out. Please try again.' };
       }
       return { success: false, error: 'Network error verifying OTP.' };
@@ -281,14 +495,20 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const teamLogout = () => {
+    if (socketRef.current) {
+      socketRef.current.emit('sales:presence', { isOnline: false });
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
     setTeamUser(null);
-    if (socket) socket.disconnect();
+    setConnectionStatus('disconnected');
+    setLatencyMs(null);
     localStorage.removeItem('team_user');
     localStorage.removeItem('sales_user');
     localStorage.removeItem('teamToken');
   };
 
-  const updateTeamProfile = async (data: any): Promise<{ success: boolean; error?: string }> => {
+  const updateTeamProfile = async (data: Record<string, unknown>): Promise<{ success: boolean; error?: string }> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -314,9 +534,9 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       setTeamUser(resData.user);
       localStorage.setItem('team_user', JSON.stringify(resData.user));
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         return { success: false, error: 'Profile update timed out. Please try again.' };
       }
       return { success: false, error: 'Network error updating profile.' };
@@ -325,7 +545,8 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
 
   const hasPermission = (permission: string): boolean => {
     if (!teamUser) return false;
-    return ROLE_PERMISSIONS[teamUser.role].includes(permission);
+    const roleKey = String(teamUser.role || '').toLowerCase() as TeamRole;
+    return (ROLE_PERMISSIONS[roleKey] || []).includes(permission);
   };
 
   const canAccessAdmin = teamUser
@@ -336,12 +557,25 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
     ? teamUser.role === 'sales' || teamUser.role === 'admin'
     : false;
 
+  const onlineStaffCodes = Object.values(staffPresenceMap)
+    .filter((s) => s.status === 'ONLINE' || s.status === 'ON_BREAK')
+    .map((s) => s.code);
+
   return (
     <TeamAuthContext.Provider value={{
       teamUser,
       isTeamAuthenticated: !!teamUser,
       isTeamLoading,
       systemEvents,
+      eventCounter,
+      connectionStatus,
+      latencyMs,
+      onlineStaffCodes,
+      staffPresenceMap,
+      subscribeSalesEvent,
+      acknowledgeNotification,
+      acknowledgeAllNotifications,
+      emitPresence,
       teamLogin,
       teamSendOtp,
       teamVerifyOtp,

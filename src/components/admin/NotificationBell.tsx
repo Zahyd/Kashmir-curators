@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, Check, Search, ShieldAlert, Sparkles, Volume2, VolumeX, Trash2, UserCheck, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,11 +32,13 @@ export default function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const getAuthHeaders = (): Record<string, string> => {
+  const getAuthHeaders = useCallback((): Record<string, string> => {
     let portalKey = '';
     try {
       portalKey = JSON.parse(localStorage.getItem('hospitality_session') || '{}').accessKey || '';
-    } catch {}
+    } catch {
+      portalKey = '';
+    }
 
     const token = 
       localStorage.getItem('teamToken') || 
@@ -54,7 +56,22 @@ export default function NotificationBell() {
       headers['x-portal-key'] = portalKey;
     }
     return headers;
-  };
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/notifications?limit=50`, {
+        headers
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  }, [getAuthHeaders]);
 
   // Initialize sound alert
   useEffect(() => {
@@ -65,16 +82,22 @@ export default function NotificationBell() {
   // Fetch initial notifications
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
 
-  // Subscribe to real-time WebSockets for push alerts
+  // Subscribe to real-time WebSockets for push alerts with authenticated credentials
   useEffect(() => {
-    const socket = io(SOCKET_URL);
-    socket.emit('join-admin');
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
+    const joinRooms = () => {
+      socket.emit('join-admin');
+      socket.emit('join-sales');
+    };
+    socket.on('connect', joinRooms);
+    if (socket.connected) joinRooms();
 
-    socket.on('new-system-event', (data: any) => {
+    socket.on('new-system-event', (data: { notification?: DBNotification }) => {
       if (data?.notification) {
-        setNotifications(prev => [data.notification, ...prev.filter(n => n.id !== data.notification.id)]);
+        const notif = data.notification;
+        setNotifications(prev => [notif, ...prev.filter(n => n.id !== notif.id)]);
         
         // Play soft chime sound if enabled
         if (soundEnabled && audioRef.current) {
@@ -83,7 +106,7 @@ export default function NotificationBell() {
       }
     });
 
-    socket.on('employee-attendance-updated', (data: any) => {
+    socket.on('employee-attendance-updated', (data: { status?: string; employeeName?: string; employeeCode?: string; timestamp?: string }) => {
       // Create instant live in-memory notification if socket emits attendance
       const liveAlert: DBNotification = {
         id: `att-${Date.now()}`,
@@ -113,21 +136,6 @@ export default function NotificationBell() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const fetchNotifications = async () => {
-    try {
-      const headers = getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/notifications?limit=50`, {
-        headers
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.notifications || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch notifications:', err);
-    }
-  };
 
   const markAsRead = async (id: string) => {
     try {

@@ -3,6 +3,7 @@ import { googleSheetsService } from './googleSheetsService';
 import { notificationService } from './notificationService';
 import { CRMService } from './crmService';
 import { broadcastSalesEvent } from '../routes/salesRoutes';
+import { realtimeBus } from '../lib/realtimeBus';
 import { AIConciergeAgentService } from './aiConciergeAgentService';
 import env from '../config/env';
 
@@ -392,14 +393,16 @@ export const whatsappService = {
           });
         }
 
-        if (io) {
-          io.emit('whatsapp-message-received', {
+        realtimeBus.publish(
+          'whatsapp-message-received',
+          {
             phone: sender,
             text,
             inquiryId: matchedInquiry?.id,
             timestamp: new Date().toISOString()
-          });
-        }
+          },
+          { io, tenantId: (matchedInquiry as any)?.organizationId || null }
+        );
       } catch (dbErr: any) {
         console.warn('Failed to persist inbound WhatsApp message to DB:', dbErr.message);
       }
@@ -422,6 +425,7 @@ export const whatsappService = {
           customerName: matchedInquiry.customerName,
           phone: sender,
           assignedTo: matchedInquiry.assignedTo,
+          organizationId: (matchedInquiry as any).organizationId || null,
           message: text
         });
 

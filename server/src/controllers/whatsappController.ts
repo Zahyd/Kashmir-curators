@@ -4,6 +4,7 @@ import env from '../config/env';
 import prisma from '../lib/prisma';
 import { io } from '../index';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { realtimeBus } from '../lib/realtimeBus';
 
 /**
  * GET /api/whatsapp
@@ -165,10 +166,15 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<any>
       ] : [])
     ]);
 
-    // Broadcast message via WebSockets
-    if (io) {
-      io.emit('whatsapp-message-sent', savedMessage);
+    // Broadcast message via tenant-scoped RealtimeBus
+    let tenantId: string | null = (req as any).tenantId || null;
+    if (!tenantId && inquiryId) {
+      const inqOrg = await prisma.inquiry
+        .findUnique({ where: { id: inquiryId }, select: { organizationId: true } })
+        .catch(() => null);
+      tenantId = (inqOrg as any)?.organizationId || null;
     }
+    realtimeBus.publish('whatsapp-message-sent', savedMessage, { io, tenantId });
 
     res.status(201).json({ success: true, message: savedMessage });
   } catch (error: any) {

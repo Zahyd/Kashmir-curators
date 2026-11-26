@@ -180,6 +180,12 @@ export function createInMemoryPrisma() {
         return row.userId ? db.user.find((u) => u.id === row.userId) || null : null;
       case 'inquiry.activities':
         return db.leadActivity.filter((a) => a.inquiryId === row.id);
+      case 'leadActivity.inquiry':
+        return row.inquiryId ? db.inquiry.find((i) => i.id === row.inquiryId) || null : null;
+      case 'inquiryDocument.inquiry':
+        return row.inquiryId ? db.inquiry.find((i) => i.id === row.inquiryId) || null : null;
+      case 'inquiry.documents':
+        return db.inquiryDocument.filter((d) => d.inquiryId === row.id);
       case 'inquiry.internalNotes':
         return db.leadNote.filter((n) => n.inquiryId === row.id);
       case 'inquiry.reminders':

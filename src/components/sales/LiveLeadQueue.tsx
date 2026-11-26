@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Users,
   Clock,
@@ -13,7 +13,8 @@ import {
   Hotel,
   Plus,
   FolderOpen,
-  XCircle
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,8 +22,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { API_BASE_URL } from '@/lib/api';
 import { salesApi, SalesInquiry } from '@/lib/salesApi';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
 interface LiveLeadQueueProps {
   currentEmployee: {
@@ -47,67 +48,69 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
   canManage = false,
   refreshTrigger = 0
 }) => {
+  const { subscribeSalesEvent } = useTeamAuth();
   const [unclaimedLeads, setUnclaimedLeads] = useState<SalesInquiry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<'ALL' | 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
   const [conflictAlert, setConflictAlert] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
 
-  const fetchUnclaimedLeads = async () => {
+  const fetchUnclaimedLeads = useCallback(async () => {
+    setError(null);
     try {
-      const list = await salesApi.listInquiries();
-      const unclaimed = list.filter(
+      const data = await salesApi.listInquiriesPaginated({
+        unclaimedOnly: true,
+        search: searchTerm.trim() || undefined,
+        page: 1,
+        limit: 50
+      });
+      const unclaimed = (data.items || []).filter(
         (inq) =>
-          (!inq.assignedTo || inq.assignedTo.trim() === '') &&
+          (!inq.assignedTo || inq.assignedTo.trim() === '' || inq.assignedTo === 'Unassigned') &&
           !['Booked', 'Lost', 'Cancelled'].includes(inq.status) &&
           !['CONFIRMED', 'COMPLETED', 'CANCELLED', 'LOST'].includes(inq.leadStage || '')
       );
       setUnclaimedLeads(unclaimed);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to fetch live leads');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch live leads');
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm]);
 
   useEffect(() => {
-    fetchUnclaimedLeads();
+    const t = window.setTimeout(() => {
+      fetchUnclaimedLeads();
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [fetchUnclaimedLeads, refreshTrigger]);
 
-    let eventSource: EventSource | null = null;
-    try {
-      eventSource = new EventSource(`${API_BASE_URL}/sales/stream`);
-      eventSource.addEventListener('LEAD_CLAIMED', (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          setUnclaimedLeads((prev) => prev.filter((l) => l.id !== data.leadId));
-          if (data.claimedBy !== currentEmployee.code) {
-            toast.info(`Inquiry #${String(data.leadId).slice(0, 8)} claimed by ${data.claimedByName || data.claimedBy}`);
-          }
-          onRefreshMetrics?.();
-        } catch {
-          // Ignore malformed event
+  useEffect(() => {
+    const unsub = subscribeSalesEvent((eventName, data) => {
+      if (eventName === 'LEAD_CLAIMED') {
+        setUnclaimedLeads((prev) => prev.filter((l) => l.id !== data?.leadId));
+        if (data?.claimedBy && data.claimedBy !== currentEmployee.code) {
+          toast.info(`Inquiry #${String(data.leadId).slice(0, 8)} claimed by ${data.claimedByName || data.claimedBy}`);
         }
-      });
-
-      eventSource.addEventListener('NEW_INQUIRY', () => {
+        onRefreshMetrics?.();
+      } else if (eventName === 'NEW_INQUIRY' || eventName === 'LEAD_CREATED' || eventName === 'LEAD_DELETED' || eventName === 'LEAD_UPDATED') {
         fetchUnclaimedLeads();
         onRefreshMetrics?.();
-      });
-    } catch {
-      // Polling fallback active
-    }
+      }
+    });
 
-    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
-    const poller = setInterval(fetchUnclaimedLeads, 25000);
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+    const poller = window.setInterval(fetchUnclaimedLeads, 45000);
 
     return () => {
-      if (eventSource) eventSource.close();
-      clearInterval(timer);
-      clearInterval(poller);
+      unsub();
+      window.clearInterval(timer);
+      window.clearInterval(poller);
     };
-  }, [currentEmployee.code, refreshTrigger]);
+  }, [subscribeSalesEvent, currentEmployee.code, fetchUnclaimedLeads, onRefreshMetrics]);
 
   const handleAtomicClaim = async (lead: SalesInquiry) => {
     setClaimingId(lead.id);
@@ -118,8 +121,8 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
       setUnclaimedLeads((prev) => prev.filter((l) => l.id !== lead.id));
       onRefreshMetrics?.();
       onClaimLead(data.lead || { ...lead, assignedTo: currentEmployee.code, leadStage: 'CLAIMED' });
-    } catch (err: any) {
-      const msg = err?.message || 'Failed to claim lead';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to claim lead';
       if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('conflict')) {
         setConflictAlert(`Collision Avoided: Inquiry #${lead.id.slice(0, 8)} was claimed by another executive.`);
         setUnclaimedLeads((prev) => prev.filter((l) => l.id !== lead.id));
@@ -146,8 +149,8 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
       }
       setUnclaimedLeads((prev) => prev.filter((l) => l.id !== lead.id));
       onRefreshMetrics?.();
-    } catch (err: any) {
-      toast.error(err?.message || 'Action failed');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setClaimingId(null);
     }
@@ -238,7 +241,7 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
           <div className="flex items-center gap-2">
             <select
               value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value as any)}
+              onChange={(e) => setPriorityFilter(e.target.value as 'ALL' | 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW')}
               className="h-9 bg-[#07090E] border border-white/10 rounded-lg px-2.5 text-xs text-slate-200"
             >
               <option value="ALL">All SLA</option>
@@ -268,7 +271,23 @@ export const LiveLeadQueue: React.FC<LiveLeadQueueProps> = ({
       </div>
 
       {/* Queue List */}
-      {loading && unclaimedLeads.length === 0 ? (
+      {error && unclaimedLeads.length === 0 ? (
+        <div className="p-8 text-center text-rose-300 bg-rose-500/10 rounded-xl border border-rose-500/30 space-y-2">
+          <AlertCircle className="w-7 h-7 mx-auto text-rose-400" />
+          <p className="text-sm font-semibold">{error}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setLoading(true);
+              fetchUnclaimedLeads();
+            }}
+            className="border-rose-400/40 text-rose-200 hover:bg-rose-500/20 text-xs"
+          >
+            Retry Sync
+          </Button>
+        </div>
+      ) : loading && unclaimedLeads.length === 0 ? (
         <div className="p-12 text-center text-slate-400 bg-[#0F141C]/60 rounded-xl border border-white/10">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto text-amber-400 mb-2" />
           <p className="text-xs">Connecting to live sales stream...</p>

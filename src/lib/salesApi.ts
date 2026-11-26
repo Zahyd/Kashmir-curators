@@ -4,6 +4,7 @@ export function getSalesAuthToken(): string {
   return (
     localStorage.getItem('teamToken') ||
     localStorage.getItem('team_auth_token') ||
+    localStorage.getItem('auth_token') ||
     localStorage.getItem('token') ||
     ''
   );
@@ -25,7 +26,13 @@ export function getSalesAuthHeaders(isMultipart = false): Record<string, string>
   return headers;
 }
 
-async function apiJson<T = any>(path: string, init: RequestInit = {}, isMultipart = false): Promise<T> {
+export function getErrorMessage(err: unknown, fallback = 'Request failed'): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === 'string' && err.trim()) return err;
+  return fallback;
+}
+
+async function apiJson<T = unknown>(path: string, init: RequestInit = {}, isMultipart = false): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
@@ -69,10 +76,91 @@ export interface SalesInquiry {
   proposalUrl?: string | null;
   sourceCta?: string | null;
   notes?: string | null;
+  specialNotes?: string | null;
+  hotelCategory?: string | null;
+  roomPreference?: string | null;
+  flightDetails?: string | null;
+  travelStartDate?: string | null;
+  intentQuery?: string | null;
   lastContactedAt?: string | null;
   nextFollowUpDate?: string | null;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface SalesLeadDetail extends SalesInquiry {
+  activities?: LeadActivityItem[];
+  leadNotes?: LeadNoteItem[];
+  reminders?: LeadReminderItem[];
+  whatsappMessages?: Array<{
+    id: string;
+    direction?: string;
+    content: string;
+    createdAt: string;
+    senderName?: string | null;
+  }>;
+  documents?: InquiryDocumentItem[];
+}
+
+export interface LivePresenceMember {
+  id: string;
+  employeeCode: string;
+  employeeName: string;
+  role: string;
+  portalType?: string;
+  loginAt?: string;
+  lastActivityAt?: string;
+  isOnBreak: boolean;
+  breakMinutes?: number;
+  assignedDesk?: string | null;
+  totalWorkMinutes?: number;
+  status?: string;
+  activeReservationsCount?: number;
+}
+
+export interface AttendanceHistoryEntry {
+  id: string;
+  employeeCode?: string;
+  employeeName?: string;
+  role?: string;
+  date: string;
+  firstLoginAt: string;
+  lastLogoutAt?: string | null;
+  totalWorkMinutes: number;
+  totalBreakMinutes: number;
+  status: string;
+  shiftName: string;
+}
+
+export interface MetaLeadItem extends SalesInquiry {
+  source?: string | null;
+  metaFormName?: string | null;
+  metaCampaignId?: string | null;
+  originCountry?: string | null;
+  geo: {
+    origin: 'DOMESTIC' | 'INTERNATIONAL';
+    countryCode: string;
+    countryName: string;
+    flag: string;
+    currency: string;
+    currencySymbol: string;
+    localTimeFormatted: string;
+    isCallSafe: boolean;
+  };
+  valINR: number;
+  convertedVal: number;
+  convertedDisplay: string;
+}
+
+export interface SalesNotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  priority: string;
+  link?: string | null;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface LeadActivityItem {
@@ -221,17 +309,29 @@ export function getInquiryValueINR(inq: Partial<SalesInquiry>): number {
 
 export const salesApi = {
   // Metrics & Inquiries
-  getMetrics: () => apiJson('/sales/metrics'),
+  getMetrics: () => apiJson<{
+    unclaimedCount: number;
+    slaBreachedCount: number;
+    activePipelineCount: number;
+    activePipelineValue: number;
+    confirmedCount?: number;
+    confirmedRevenue?: number;
+    monthlyConversionRate: number;
+    conversionDelta: number | null;
+    avgResponseMinutes: number | null;
+    onlineStaffCount?: number;
+    unreadNotificationsCount?: number;
+  }>('/sales/metrics'),
   listInquiries: async (): Promise<SalesInquiry[]> => {
-    const data = await apiJson<any>('/inquiries');
+    const data = await apiJson<SalesInquiry[] | { inquiries?: SalesInquiry[] }>('/inquiries');
     return Array.isArray(data) ? data : data?.inquiries || [];
   },
-  createLead: (payload: Record<string, any>) =>
+  createLead: (payload: Record<string, unknown>) =>
     apiJson<SalesInquiry>('/sales/leads', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
-  updateLead: (id: string, payload: Record<string, any>) =>
+  updateLead: (id: string, payload: Record<string, unknown>) =>
     apiJson<SalesInquiry>(`/inquiries/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
@@ -252,7 +352,7 @@ export const salesApi = {
     }),
 
   // CRM Detail, Notes, Reminders, Assignment, Duplicates
-  getLeadDetail: (id: string) => apiJson<any>(`/crm/leads/${id}`),
+  getLeadDetail: (id: string) => apiJson<SalesLeadDetail>(`/crm/leads/${id}`),
   assignLead: (id: string, agentEmail: string, agentName?: string) =>
     apiJson<SalesInquiry>(`/crm/leads/${id}/assign`, {
       method: 'POST',
@@ -368,6 +468,143 @@ export const salesApi = {
   toggleBreak: () => apiJson<{ success: boolean; isOnBreak: boolean; message: string }>('/attendance/break', { method: 'POST', body: JSON.stringify({}) }),
   clockOut: () => apiJson<{ success: boolean; message: string }>('/attendance/clock-out', { method: 'POST', body: JSON.stringify({}) }),
   getMyAttendance: () => apiJson<AttendanceStatusResponse>('/attendance/my'),
-  getLivePresence: () => apiJson<{ presenceList: any[]; totalActive: number; totalOnBreak: number; totalOnline: number }>('/attendance/live-presence'),
-  getAttendanceReports: () => apiJson<any[]>('/attendance/reports')
+  getLivePresence: () => apiJson<{ presenceList: LivePresenceMember[]; totalActive: number; totalOnBreak: number; totalOnline: number }>('/attendance/live-presence'),
+  getAttendanceReports: () => apiJson<AttendanceHistoryEntry[]>('/attendance/reports'),
+
+  // Sales Portal 2.0 Analytics, Global Vault, Ledger, Activity Timeline, Search & Notifications
+  listInquiriesPaginated: (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    stage?: string;
+    stageGroup?: string;
+    status?: string;
+    priority?: string;
+    assignedTo?: string;
+    unclaimedOnly?: boolean;
+  } = {}) => {
+    const qs = new URLSearchParams({ paginated: 'true' });
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    return apiJson<{ items: SalesInquiry[]; total: number; page: number; limit: number; totalPages: number }>(
+      `/inquiries?${qs.toString()}`
+    );
+  },
+
+  getAnalytics: () =>
+    apiJson<{
+      summary: {
+        totalLeads: number;
+        confirmedCount: number;
+        confirmedRevenueINR: number;
+        activePipelineValueINR: number;
+        totalCollectedINR: number;
+        avgDealValueINR: number;
+        conversionRatePct: number;
+      };
+      monthlySeries: Array<{ key: string; month: string; leads: number; confirmed: number; revenue: number; collected: number }>;
+      stageDistribution: Array<{ stage: string; count: number; valueINR: number }>;
+      topDestinations: Array<{ destination: string; count: number; valueINR: number }>;
+      sourceBreakdown: Array<{ source: string; count: number }>;
+      conciergeLeaderboard: Array<{ code: string; name: string; totalLeads: number; confirmed: number; revenueINR: number; isOnline: boolean; conversionRatePct: number }>;
+    }>('/sales/analytics'),
+
+  getActivities: (params: { page?: number; limit?: number; type?: string; inquiryId?: string } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    return apiJson<{
+      activities: Array<LeadActivityItem & { inquiry?: { id: string; leadId?: string; customerName: string; destination?: string; leadStage?: string } | null }>;
+      pagination: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/sales/activities${qs.toString() ? `?${qs.toString()}` : ''}`);
+  },
+
+  globalSearch: (q: string) =>
+    apiJson<{
+      leads: SalesInquiry[];
+      documents: Array<InquiryDocumentItem & { inquiry?: { id: string; customerName: string; leadId?: string } | null }>;
+      payments: Array<PaymentLedgerItem & { inquiry?: { id: string; customerName: string; leadId?: string } | null }>;
+    }>(`/sales/search?q=${encodeURIComponent(q)}`),
+
+  listAllDocuments: (params: { page?: number; limit?: number; status?: string; category?: string; search?: string } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    return apiJson<{
+      documents: Array<InquiryDocumentItem & { inquiry?: { id: string; leadId?: string; customerName: string; destination?: string; leadStage?: string } | null }>;
+      summary: { total: number; verified: number; pending: number; rejected: number; totalBytes: number };
+      pagination: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/sales/documents${qs.toString() ? `?${qs.toString()}` : ''}`);
+  },
+
+  getPaymentLedger: (params: { page?: number; limit?: number; status?: string; search?: string } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    return apiJson<{
+      items: Array<
+        PaymentLedgerItem & {
+          derivedStatus: 'VERIFIED' | 'PENDING' | 'FAILED';
+          inquiry?: SalesInquiry | null;
+          booking?: { id: string; itemName: string; totalAmount: number; status: string } | null;
+        }
+      >;
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+      summary: {
+        totalCollected: number;
+        totalPendingAmount: number;
+        verifiedCount: number;
+        pendingCount: number;
+        totalTransactions: number;
+      };
+    }>(`/payments/ledger${qs.toString() ? `?${qs.toString()}` : ''}`);
+  },
+
+  getNotifications: (params: { unreadOnly?: boolean; priority?: string; search?: string; page?: number; limit?: number } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    return apiJson<{
+      notifications: Array<{ id: string; title: string; message: string; type: string; priority: string; link?: string | null; read: boolean; createdAt: string }>;
+      unreadCount: number;
+      pagination: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/notifications${qs.toString() ? `?${qs.toString()}` : ''}`);
+  },
+
+  markNotificationRead: (id: string) =>
+    apiJson<{ success: boolean; notification: SalesNotificationItem }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+
+  markAllNotificationsRead: () =>
+    apiJson<{ success: boolean }>('/notifications/read-all', { method: 'POST' }),
+
+  listMetaLeads: (params: { origin?: string; search?: string; stage?: string; page?: number; limit?: number } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    return apiJson<{
+      success: boolean;
+      total: number;
+      domesticCount: number;
+      internationalCount: number;
+      totalPipelineINR: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+      leads: MetaLeadItem[];
+    }>(`/webhooks/meta-leads/leads${qs.toString() ? `?${qs.toString()}` : ''}`);
+  },
+
+  getMetaTelemetry: () => apiJson<Record<string, unknown>>('/webhooks/meta-leads/telemetry'),
+
+  getRealtimeHealth: () =>
+    apiJson<{ instanceId: string; pubsubMode: string; sseClients: number; connectedStaffUsers: number }>('/sales/realtime/health'),
 };

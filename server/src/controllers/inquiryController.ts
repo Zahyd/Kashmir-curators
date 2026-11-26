@@ -7,19 +7,91 @@ import { CRMService } from '../services/crmService';
 import { bookingAutomationService } from '../services/bookingAutomationService';
 import { LeadScoringService } from '../services/leadScoringService';
 import { emailQueueService } from '../services/emailQueueService';
-import { withStrictTenantScope, resolveWriteTenantId } from '../lib/tenant';
+import { withStrictTenantScope, resolveWriteTenantId, canAccessTenantRecord } from '../lib/tenant';
+import { realtimeBus } from '../lib/realtimeBus';
 
 
 export const getInquiries = async (req: any, res: Response) => {
   try {
     const p = prisma as any;
-    const { assignedTo, status } = req.query;
+    const {
+      assignedTo,
+      status,
+      stage,
+      stageGroup,
+      priority,
+      search,
+      unclaimedOnly,
+      paginated,
+      page,
+      limit
+    } = req.query;
     const where: any = {};
-    if (assignedTo) where.assignedTo = assignedTo as string;
-    if (status) where.status = status as string;
- 
+    if (assignedTo && assignedTo !== 'ALL') where.assignedTo = assignedTo as string;
+    if (status && status !== 'ALL') where.status = status as string;
+    if (stage && stage !== 'ALL') {
+      where.leadStage = String(stage).toUpperCase();
+    } else if (String(stageGroup || '').toUpperCase() === 'ACTIVE') {
+      where.leadStage = {
+        in: ['NEW_LEAD', 'CLAIMED', 'FOLLOW_UP', 'QUOTE_SENT', 'QUOTED', 'NEGOTIATION', 'PAYMENT_PENDING']
+      };
+    }
+    if (priority && priority !== 'ALL') where.priority = String(priority);
+
+    if (String(unclaimedOnly || '').toLowerCase() === 'true') {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { assignedTo: null },
+            { assignedTo: '' },
+            { assignedTo: 'Unassigned' }
+          ]
+        }
+      ];
+    }
+
+    if (search && String(search).trim()) {
+      const q = String(search).trim();
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { customerName: { contains: q, mode: 'insensitive' } },
+            { email: { contains: q, mode: 'insensitive' } },
+            { phone: { contains: q } },
+            { destination: { contains: q, mode: 'insensitive' } },
+            { leadId: { contains: q, mode: 'insensitive' } }
+          ]
+        }
+      ];
+    }
+
+    const scopedWhere = withStrictTenantScope(where, req.tenantId);
+
+    if (String(paginated || '').toLowerCase() === 'true') {
+      const parsedPage = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+      const parsedLimit = Math.min(100, Math.max(1, parseInt(String(limit || '25'), 10) || 25));
+      const [total, items] = await Promise.all([
+        p.inquiry.count({ where: scopedWhere }),
+        p.inquiry.findMany({
+          where: scopedWhere,
+          orderBy: { createdAt: 'desc' },
+          skip: (parsedPage - 1) * parsedLimit,
+          take: parsedLimit
+        })
+      ]);
+      return res.json({
+        items,
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages: Math.max(1, Math.ceil(total / parsedLimit))
+      });
+    }
+
     const inquiries = await p.inquiry.findMany({
-      where: withStrictTenantScope(where, req.tenantId),
+      where: scopedWhere,
       orderBy: { createdAt: 'desc' }
     });
     res.json(inquiries);
@@ -87,21 +159,27 @@ export const createInquiry = async (req: Request, res: Response) => {
       console.error('[crmService] Round-Robin assignment failure:', routeErr.message);
     }
 
+    const inquiryTenantId = finalInquiry.organizationId || resolveWriteTenantId(req) || null;
     if ((req as any).io) {
       (req as any).io.emit('new-live-curation', {
         id: finalInquiry.id,
         leadId: finalInquiry.leadId,
-        message: `${finalInquiry.customerName} just requested a custom itinerary`,
+        message: `A traveler just requested a custom itinerary`,
         details: `${finalInquiry.destination} • Score: ${finalInquiry.leadScore}/100`,
         createdAt: new Date().toISOString()
       });
-      (req as any).io.to('admin-room').emit('new-system-event', {
+    }
+    realtimeBus.publish('NEW_INQUIRY', finalInquiry, { io: (req as any).io, tenantId: inquiryTenantId });
+    realtimeBus.publish(
+      'new-system-event',
+      {
         type: 'LEAD_CAPTURED',
         leadId: finalInquiry.leadId,
         inquiry: finalInquiry,
         message: `New Lead: ${finalInquiry.leadId} (${finalInquiry.customerName}) [${finalInquiry.leadCategory}]`
-      });
-    }
+      },
+      { io: (req as any).io, tenantId: inquiryTenantId }
+    );
 
     res.status(201).json(finalInquiry);
   } catch (error) {
@@ -187,21 +265,27 @@ export const captureQuickLead = async (req: Request, res: Response) => {
       console.warn('Non-blocking notification/sheet error:', notifErr.message);
     }
 
+    const quickTenantId = finalInquiry.organizationId || resolveWriteTenantId(req) || null;
     if ((req as any).io) {
       (req as any).io.emit('new-live-curation', {
         id: finalInquiry.id,
         leadId: finalInquiry.leadId,
-        message: `${finalInquiry.customerName} just planned an itinerary`,
+        message: `A traveler just planned an itinerary`,
         details: `${finalInquiry.destination} • Score: ${finalInquiry.leadScore}/100`,
         createdAt: new Date().toISOString()
       });
-      (req as any).io.to('admin-room').emit('new-system-event', {
+    }
+    realtimeBus.publish('NEW_INQUIRY', finalInquiry, { io: (req as any).io, tenantId: quickTenantId });
+    realtimeBus.publish(
+      'new-system-event',
+      {
         type: 'NEW_LEAD_CAPTURED',
         leadId: finalInquiry.leadId,
         inquiry: finalInquiry,
         message: `New Lead: ${finalInquiry.leadId} (${finalInquiry.customerName}) [${finalInquiry.leadCategory}]`
-      });
-    }
+      },
+      { io: (req as any).io, tenantId: quickTenantId }
+    );
 
     // Schedule an automated AI remarketing follow-up nudge if the lead drops off
     try {
@@ -314,14 +398,18 @@ export const enrichLeadProfile = async (req: Request, res: Response) => {
       }
     });
 
-    if ((req as any).io) {
-      (req as any).io.to('admin-room').emit('new-system-event', {
+    const enrichedTenantId = updated.organizationId || resolveWriteTenantId(req) || null;
+    realtimeBus.publish('LEAD_UPDATED', updated, { io: (req as any).io, tenantId: enrichedTenantId });
+    realtimeBus.publish(
+      'new-system-event',
+      {
         type: 'LEAD_ENRICHED',
         leadId: updated.leadId,
         inquiry: updated,
         message: `Lead ${updated.leadId} enriched! New Score: ${updated.leadScore}/100 (${updated.sentiment})`
-      });
-    }
+      },
+      { io: (req as any).io, tenantId: enrichedTenantId }
+    );
 
     res.json({
       success: true,
@@ -352,6 +440,7 @@ export const requestInstantCallback = async (req: Request, res: Response) => {
       profileCompleteness: 50
     });
 
+    const callbackTenantId = resolveWriteTenantId(req);
     const inquiry = await p.inquiry.create({
       data: {
         leadId,
@@ -373,7 +462,8 @@ export const requestInstantCallback = async (req: Request, res: Response) => {
         intentQuery: intentQuery || 'Immediate phone consultation requested',
         notes: `Preferred Callback Window: ${preferredTime || 'As soon as possible'}. ${notes ? `Client Note: ${notes}` : ''}`,
         scoringBreakdown: JSON.stringify(scoreResult.scoringBreakdown),
-        profileCompleteness: 60
+        profileCompleteness: 60,
+        organizationId: callbackTenantId
       }
     });
 
@@ -387,13 +477,8 @@ export const requestInstantCallback = async (req: Request, res: Response) => {
       console.error('[crmService] Round-Robin assignment error:', routeErr.message);
     }
 
+    const cbTenant = finalInquiry.organizationId || callbackTenantId || null;
     if ((req as any).io) {
-      (req as any).io.to('admin-room').emit('new-system-event', {
-        type: 'URGENT_CALLBACK',
-        leadId: finalInquiry.leadId,
-        inquiry: finalInquiry,
-        message: `🔥 URGENT CALLBACK: ${finalInquiry.customerName} (${finalInquiry.phone}) requested a call!`
-      });
       (req as any).io.emit('new-live-curation', {
         id: finalInquiry.id,
         leadId: finalInquiry.leadId,
@@ -402,6 +487,17 @@ export const requestInstantCallback = async (req: Request, res: Response) => {
         createdAt: new Date().toISOString()
       });
     }
+    realtimeBus.publish('NEW_INQUIRY', finalInquiry, { io: (req as any).io, tenantId: cbTenant });
+    realtimeBus.publish(
+      'new-system-event',
+      {
+        type: 'URGENT_CALLBACK',
+        leadId: finalInquiry.leadId,
+        inquiry: finalInquiry,
+        message: `🔥 URGENT CALLBACK: ${finalInquiry.customerName} (${finalInquiry.phone}) requested a call!`
+      },
+      { io: (req as any).io, tenantId: cbTenant }
+    );
 
     res.status(201).json({
       success: true,
@@ -464,6 +560,16 @@ export const updateInquiry = async (req: Request, res: Response) => {
       leadStage
     } = req.body;
 
+    const existing = await p.inquiry.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Inquiry not found' });
+    }
+    if (!canAccessTenantRecord(req as any, existing.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant inquiry update denied' });
+    }
+
     // Handle lead stage transitions through the automation engine
     if (leadStage !== undefined) {
       const transitioned = await bookingAutomationService.handleStageTransition(req.params.id as string, String(leadStage), (req as any).io);
@@ -489,7 +595,10 @@ export const updateInquiry = async (req: Request, res: Response) => {
     if (travelers !== undefined) data.travelers = String(travelers);
     if (budget !== undefined) data.budget = String(budget);
     if (accommodation !== undefined) data.accommodation = String(accommodation);
-    if (netPrice !== undefined && !isNaN(Number(netPrice))) data.netPrice = Number(netPrice);
+    const resolvedPrice = netPrice !== undefined ? netPrice : (req.body.customPrice !== undefined ? req.body.customPrice : req.body.estimatedBudget);
+    if (resolvedPrice !== undefined && !isNaN(Number(resolvedPrice)) && Number(resolvedPrice) >= 0) {
+      data.netPrice = Number(resolvedPrice);
+    }
     if (adultsCount !== undefined && !isNaN(Number(adultsCount))) data.adultsCount = Number(adultsCount);
     if (childrenCount !== undefined && !isNaN(Number(childrenCount))) data.childrenCount = Number(childrenCount);
     if (arrivalCity !== undefined) data.arrivalCity = arrivalCity ? String(arrivalCity) : null;
@@ -501,7 +610,7 @@ export const updateInquiry = async (req: Request, res: Response) => {
       data
     });
 
-    await p.leadActivity.create({
+    const activity = await p.leadActivity.create({
       data: {
         inquiryId: inquiry.id,
         type: 'PROFILE_UPDATED',
@@ -509,15 +618,22 @@ export const updateInquiry = async (req: Request, res: Response) => {
         description: `Updated by ${(req as any).user?.name || (req as any).user?.employeeCode || 'Staff'}`,
         performedBy: (req as any).user?.employeeCode || (req as any).user?.name || 'System'
       }
-    }).catch(() => {});
+    }).catch(() => null);
 
-    if (req.io) {
-      req.io.to('admin-room').emit('new-system-event', {
-        type: 'UPDATE',
-        message: `Inquiry ${inquiry.id} updated by ${req.user?.name || 'System'}`,
-        booking: { ...inquiry, entityType: 'inquiry' }
-      });
+    const tenantId = inquiry.organizationId || (req as any).tenantId || null;
+    realtimeBus.publish('LEAD_UPDATED', { leadId: inquiry.id, lead: inquiry, organizationId: tenantId }, {
+      io: (req as any).io,
+      tenantId
+    });
+    if (activity) {
+      realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry }, { io: (req as any).io, tenantId });
     }
+    realtimeBus.publish('new-system-event', {
+      type: 'UPDATE',
+      message: `Inquiry ${inquiry.customerName || inquiry.id} updated by ${(req as any).user?.name || 'System'}`,
+      booking: { ...inquiry, entityType: 'inquiry' },
+      timestamp: new Date().toISOString()
+    }, { io: (req as any).io, tenantId });
 
     res.json(inquiry);
   } catch (error: any) {
@@ -532,6 +648,13 @@ export const updateInquiry = async (req: Request, res: Response) => {
 export const sendProposal = async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
+    const existing = await p.inquiry.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Inquiry not found' });
+    }
+    if (!canAccessTenantRecord(req as any, existing.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant proposal dispatch denied' });
+    }
     
     // 1. Update the status in DB
     const inquiry = await p.inquiry.update({
@@ -586,6 +709,14 @@ export const deleteInquiry = async (req: Request, res: Response) => {
     const p = prisma as any;
     const { id } = req.params;
 
+    const existing = await p.inquiry.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Inquiry not found' });
+    }
+    if (!canAccessTenantRecord(req as any, existing.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant inquiry deletion denied' });
+    }
+
     // Delete any linked hotel reservations, then delete the inquiry
     await p.$transaction([
       p.hotelReservation.deleteMany({
@@ -596,13 +727,14 @@ export const deleteInquiry = async (req: Request, res: Response) => {
       })
     ]);
 
-    if (req.io) {
-      req.io.to('admin-room').emit('new-system-event', {
-        type: 'DELETE',
-        message: `Inquiry ${id} permanently deleted from database`,
-        booking: { id, entityType: 'inquiry' }
-      });
-    }
+    const tenantId = existing.organizationId || (req as any).tenantId || null;
+    realtimeBus.publish('LEAD_DELETED', { id, organizationId: tenantId }, { io: (req as any).io, tenantId });
+    realtimeBus.publish('new-system-event', {
+      type: 'DELETE',
+      message: `Inquiry ${existing.customerName || id} permanently deleted from database`,
+      booking: { id, entityType: 'inquiry' },
+      timestamp: new Date().toISOString()
+    }, { io: (req as any).io, tenantId });
 
     res.json({ success: true, message: 'Inquiry permanently deleted' });
   } catch (error: any) {

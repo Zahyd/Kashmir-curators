@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { authorizeRoles } from '../middleware/roleMiddleware';
 import { io } from '../index';
+import { realtimeBus } from '../lib/realtimeBus';
 
 const router = Router();
 const driverOrOps = authorizeRoles('admin', 'operations', 'driver');
@@ -29,22 +30,25 @@ export function broadcastDriverEvent(eventType: string, payload: any) {
     }
   }
 
-  // Dual-Channel Real-Time Socket.IO Synchronization
+  // Dual-Channel Real-Time Socket.IO Synchronization (Scoped away from unauthenticated public sockets)
+  const tenantId = payload?.tenantId || null;
   if (io) {
-    io.emit(eventType, payload);
-    io.to('admin-room').emit('new-system-event', {
-      type: eventType.toUpperCase(),
-      message: `Fleet operational event: ${eventType}`,
-      payload
-    });
-
+    io.to('driver-room').emit(eventType, payload);
     if (payload?.driverId) {
       io.to(`driver-${payload.driverId}`).emit(eventType, payload);
     }
-    if (payload?.tenantId) {
-      io.to(`tenant-${payload.tenantId}`).emit(eventType, payload);
-    }
   }
+
+  realtimeBus.publish(eventType, payload, { io, tenantId });
+  realtimeBus.publish(
+    'new-system-event',
+    {
+      type: eventType.toUpperCase(),
+      message: `Fleet operational event: ${eventType}`,
+      payload
+    },
+    { io, tenantId }
+  );
 }
 
 // Default standard Kashmir Taxi Union rate card

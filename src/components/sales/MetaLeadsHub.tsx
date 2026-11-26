@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Download, 
   Search, 
@@ -23,7 +23,8 @@ import {
   ShieldCheck,
   ExternalLink,
   ChevronRight,
-  Database
+  Database,
+  AlertCircle
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,40 +33,14 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
-import { getSalesAuthHeaders } from '@/lib/salesApi';
+import { salesApi, MetaLeadItem, getErrorMessage } from '@/lib/salesApi';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
-interface MetaLead {
-  id: string;
-  customerName: string;
-  phone: string;
-  email?: string;
-  destination?: string;
-  duration?: string;
-  budget?: string | number;
-  netPrice?: number;
-  leadStage?: string;
-  status: string;
-  assignedTo?: string;
-  createdAt: string;
-  sourceCta?: string;
-  geo: {
-    origin: 'DOMESTIC' | 'INTERNATIONAL';
-    countryCode: string;
-    countryName: string;
-    flag: string;
-    currency: string;
-    currencySymbol: string;
-    localTimeFormatted: string;
-    isCallSafe: boolean;
-  };
-  valINR: number;
-  convertedVal: number;
-  convertedDisplay: string;
-}
+type MetaLead = MetaLeadItem;
 
 interface MetaLeadsHubProps {
-  onOpenItineraryBuilder: (lead: any) => void;
-  onInspectLead?: (lead: any) => void;
+  onOpenItineraryBuilder: (lead: MetaLead) => void;
+  onInspectLead?: (lead: MetaLead) => void;
   currentEmployee: {
     code: string;
     name: string;
@@ -74,36 +49,73 @@ interface MetaLeadsHubProps {
 }
 
 export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, currentEmployee }: MetaLeadsHubProps) {
+  const { subscribeSalesEvent } = useTeamAuth();
   const [leads, setLeads] = useState<MetaLead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [originFilter, setOriginFilter] = useState<'ALL' | 'DOMESTIC' | 'INTERNATIONAL'>('ALL');
-  const [stageFilter, setStageFilter] = useState<'ALL' | 'QUOTE_SENT' | 'CLAIMED' | 'CONFIRMED'>('ALL');
+  const [stageFilter] = useState<'ALL' | 'QUOTE_SENT' | 'CLAIMED' | 'CONFIRMED'>('ALL');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [serverSummary, setServerSummary] = useState({
+    total: 0,
+    domesticCount: 0,
+    internationalCount: 0,
+    totalPipelineINR: 0
+  });
   const [isExporting, setIsExporting] = useState(false);
 
   // 1. Fetch Raw Leads Feed
-  const fetchMetaLeads = async () => {
+  const fetchMetaLeads = useCallback(async () => {
+    setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/sales/meta-leads/leads`, {
-        headers: getSalesAuthHeaders()
+      const data = await salesApi.listMetaLeads({
+        page,
+        limit: 18,
+        origin: originFilter !== 'ALL' ? originFilter : undefined,
+        stage: stageFilter !== 'ALL' ? stageFilter : undefined,
+        search: searchQuery.trim() || undefined
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        setLeads(data.leads || []);
-      }
-    } catch (err) {
-      console.warn('Failed to fetch Meta raw leads feed:', err);
+      setLeads(data.leads || []);
+      setTotalPages(data.totalPages || 1);
+      setServerSummary({
+        total: data.total ?? (data.leads?.length || 0),
+        domesticCount: data.domesticCount ?? 0,
+        internationalCount: data.internationalCount ?? 0,
+        totalPipelineINR: data.totalPipelineINR ?? 0
+      });
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to load Meta leads feed'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, originFilter, stageFilter, searchQuery]);
 
   useEffect(() => {
-    fetchMetaLeads();
-    const interval = setInterval(fetchMetaLeads, 25000);
-    return () => clearInterval(interval);
-  }, []);
+    const t = window.setTimeout(() => {
+      fetchMetaLeads();
+    }, 180);
+    return () => window.clearTimeout(t);
+  }, [fetchMetaLeads]);
+
+  useEffect(() => {
+    const unsub = subscribeSalesEvent((eventName) => {
+      if (
+        eventName === 'NEW_INQUIRY' ||
+        eventName === 'LEAD_CREATED' ||
+        eventName === 'LEAD_UPDATED' ||
+        eventName === 'STAGE_UPDATED'
+      ) {
+        fetchMetaLeads();
+      }
+    });
+    const interval = window.setInterval(fetchMetaLeads, 45000);
+    return () => {
+      unsub();
+      window.clearInterval(interval);
+    };
+  }, [subscribeSalesEvent, fetchMetaLeads]);
 
   // 2. 1-Click CSV Export (Option B)
   const handleExportCSV = async () => {
@@ -134,7 +146,7 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, cu
       document.body.removeChild(a);
 
       toast.success('Raw Meta Leads CSV downloaded successfully!', { id: toastId });
-    } catch (err: any) {
+    } catch (_err: unknown) {
       // Fallback: Client-side CSV generation from current state
       if (leads.length > 0) {
         const headers = ['Lead ID', 'Name', 'Phone', 'Email', 'Origin', 'Country', 'Destination', 'Duration', 'Budget INR', 'Stage', 'Date'];
@@ -210,9 +222,10 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, cu
     return true;
   });
 
-  const domesticCount = leads.filter(l => l.geo.origin === 'DOMESTIC').length;
-  const internationalCount = leads.filter(l => l.geo.origin === 'INTERNATIONAL').length;
-  const totalValueINR = leads.reduce((sum, l) => sum + (l.valINR || 0), 0);
+  const totalInboundCount = serverSummary.total || leads.length;
+  const domesticCount = serverSummary.domesticCount;
+  const internationalCount = serverSummary.internationalCount;
+  const totalValueINR = serverSummary.totalPipelineINR;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -265,7 +278,7 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, cu
               <Database className="w-3.5 h-3.5 text-amber-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-white">
-              {leads.length}
+              {totalInboundCount}
             </div>
             <p className="text-[10px] text-slate-500 mt-0.5">Direct from Meta Graph API</p>
           </div>
@@ -315,7 +328,7 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, cu
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <Input 
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
             placeholder="Search traveler, country, phone, city..."
             className="pl-9 bg-[#07090E] border-white/10 text-xs text-white placeholder:text-slate-500 h-9 rounded-xl focus:border-amber-400 w-full"
           />
@@ -325,16 +338,16 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, cu
         <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
           <div className="bg-[#07090E] p-1 rounded-xl border border-white/10 flex items-center text-xs shrink-0">
             <button
-              onClick={() => setOriginFilter('ALL')}
+              onClick={() => { setOriginFilter('ALL'); setPage(1); }}
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
                 originFilter === 'ALL' ? "bg-amber-400 text-black font-bold shadow" : "text-slate-400 hover:text-white"
               )}
             >
-              All Regions ({leads.length})
+              All Regions ({totalInboundCount})
             </button>
             <button
-              onClick={() => setOriginFilter('DOMESTIC')}
+              onClick={() => { setOriginFilter('DOMESTIC'); setPage(1); }}
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1",
                 originFilter === 'DOMESTIC' ? "bg-amber-400 text-black font-bold shadow" : "text-slate-400 hover:text-white"
@@ -344,7 +357,7 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, cu
               <span className="font-mono text-[10px]">({domesticCount})</span>
             </button>
             <button
-              onClick={() => setOriginFilter('INTERNATIONAL')}
+              onClick={() => { setOriginFilter('INTERNATIONAL'); setPage(1); }}
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1",
                 originFilter === 'INTERNATIONAL' ? "bg-purple-500 text-white font-bold shadow" : "text-slate-400 hover:text-white"
@@ -356,6 +369,18 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, cu
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-xs text-rose-300">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </span>
+          <Button size="sm" variant="outline" onClick={fetchMetaLeads} className="border-rose-500/30 text-rose-200 text-xs">
+            Retry
+          </Button>
+        </div>
+      )}
 
       {/* 3. Raw Leads Data Stream */}
       {loading && leads.length === 0 ? (
@@ -497,6 +522,34 @@ export default function MetaLeadsHub({ onOpenItineraryBuilder, onInspectLead, cu
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-[#0F141C]/80 border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-slate-300">
+          <span>
+            Page <strong className="text-white">{page}</strong> of <strong className="text-white">{totalPages}</strong>
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="h-8 px-3 border-white/10 text-slate-200"
+            >
+              Prev
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="h-8 px-3 border-white/10 text-slate-200"
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
     </div>

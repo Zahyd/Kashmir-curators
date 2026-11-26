@@ -20,7 +20,20 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useTeamAuth, ROLE_LABELS } from '@/contexts/TeamAuthContext';
 
-export default function SalesPerformance({ stats: liveStats }: { stats?: any }) {
+export interface SalesPerformanceStats {
+  leadsConverted?: number;
+  targetProgress?: string | number;
+  monthlyLeadTarget?: number;
+  totalRevenue?: string;
+  revenueDelta?: string;
+  conversionRate?: string;
+  conversionDelta?: string;
+  activeQuotes?: number | string;
+  salesTarget?: string;
+  avgResponseMinutes?: number | null;
+}
+
+export default function SalesPerformance({ stats: liveStats }: { stats?: SalesPerformanceStats }) {
   const leadsConverted = Number(liveStats?.leadsConverted || 0);
   const monthlyTargetProgress = Math.min(100, Math.max(0, parseInt(String(liveStats?.targetProgress || '0'), 10) || 0));
   const monthlyLeadTarget = Number(liveStats?.monthlyLeadTarget || 15);

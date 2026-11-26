@@ -2,7 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import prisma from '../lib/prisma';
 import { io } from '../index';
-import { withStrictTenantScope, canAccessTenantRecord } from '../lib/tenant';
+import { realtimeBus } from '../lib/realtimeBus';
+import { withStrictTenantScope, canAccessTenantRecord, buildTenantNotificationUserId } from '../lib/tenant';
 
 // Helper: Normalize phone to 10 digits for duplicate matching
 function normalizePhone(phone: string): string {
@@ -12,13 +13,13 @@ function normalizePhone(phone: string): string {
 
 /**
  * GET /api/crm/leads
- * Comprehensive lead retrieval with multi-dimensional filtering and search
+ * Comprehensive lead retrieval with multi-dimensional filtering, search, and optional pagination
  */
 export const getCRMLeads = async (req: AuthRequest, res: Response) => {
   try {
     const role = req.user?.role;
     const userEmail = req.user?.email;
-    const employeeCode = req.user?.employeeCode;
+    const employeeCode = req.user?.employeeCode || (req.user as any)?.code;
 
     const { 
       stage, 
@@ -28,30 +29,39 @@ export const getCRMLeads = async (req: AuthRequest, res: Response) => {
       search, 
       assignedTo,
       startDate,
-      endDate
+      endDate,
+      paginated,
+      page,
+      limit
     } = req.query;
 
     const where: any = {};
 
     // Role-based visibility
-    if (role === 'admin' || role === 'operations' || role === 'finance') {
+    if (role === 'admin' || role === 'operations' || role === 'finance' || role === 'marketing') {
       if (assignedTo && assignedTo !== 'ALL') {
         where.assignedTo = assignedTo as string;
       }
     } else if (role === 'agent') {
       // B2B agent sees their own agency inquiries + assigned leads
-      where.OR = [
-        { agentId: req.user.id },
-        { assignedTo: userEmail },
-        { assignedTo: employeeCode || undefined }
-      ];
+      const orClauses: any[] = [{ agentId: req.user?.id }];
+      if (userEmail) orClauses.push({ assignedTo: userEmail });
+      if (employeeCode) orClauses.push({ assignedTo: employeeCode });
+      where.OR = orClauses;
     } else {
-      // Standard sales agent
-      where.OR = [
-        { assignedTo: userEmail },
-        { assignedTo: employeeCode || undefined },
-        { email: userEmail }
-      ];
+      // Standard sales executive sees assigned leads + unassigned queue filter when requested
+      const orClauses: any[] = [];
+      if (userEmail) {
+        orClauses.push({ assignedTo: userEmail }, { email: userEmail });
+      }
+      if (employeeCode) {
+        orClauses.push({ assignedTo: employeeCode });
+      }
+      if (orClauses.length > 0) {
+        where.OR = orClauses;
+      } else {
+        where.id = '__no_matching_assignee__';
+      }
     }
 
     if (stage && stage !== 'ALL') {
@@ -92,20 +102,46 @@ export const getCRMLeads = async (req: AuthRequest, res: Response) => {
       ];
     }
 
-    const inquiries = await prisma.inquiry.findMany({
-      where: withStrictTenantScope(where, req.tenantId),
-      include: {
-        _count: {
-          select: {
-            internalNotes: true,
-            reminders: {
-              where: { status: 'PENDING' }
-            },
-            whatsappMessages: true,
-            activities: true
-          }
+    const scopedWhere = withStrictTenantScope(where, req.tenantId);
+
+    const includeSpec = {
+      _count: {
+        select: {
+          internalNotes: true,
+          reminders: {
+            where: { status: 'PENDING' }
+          },
+          whatsappMessages: true,
+          activities: true
         }
-      },
+      }
+    };
+
+    if (String(paginated || '').toLowerCase() === 'true') {
+      const parsedPage = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+      const parsedLimit = Math.min(100, Math.max(1, parseInt(String(limit || '25'), 10) || 25));
+      const [total, inquiries] = await Promise.all([
+        prisma.inquiry.count({ where: scopedWhere }),
+        prisma.inquiry.findMany({
+          where: scopedWhere,
+          include: includeSpec,
+          orderBy: { updatedAt: 'desc' },
+          skip: (parsedPage - 1) * parsedLimit,
+          take: parsedLimit
+        })
+      ]);
+      return res.json({
+        items: inquiries,
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages: Math.max(1, Math.ceil(total / parsedLimit))
+      });
+    }
+
+    const inquiries = await prisma.inquiry.findMany({
+      where: scopedWhere,
+      include: includeSpec,
       orderBy: { updatedAt: 'desc' }
     });
 
@@ -250,32 +286,26 @@ export const updateLeadStage = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    // Real-time synchronization across Admin Room, Tenant Desks & Global Network
-    if (io) {
-      const leadPayload = {
-        inquiryId: id,
-        customerName: updated.customerName,
-        newStage: leadStage,
-        updatedLead: updated
-      };
+    // Real-time synchronization via tenant-scoped RealtimeBus (no global PII leaks)
+    const ioRef = (req as any).io || io;
+    const tenantId = (updated as any).organizationId || (req.user as any)?.organizationId || null;
+    const leadPayload = {
+      inquiryId: id,
+      customerName: updated.customerName,
+      newStage: leadStage,
+      updatedLead: updated,
+      organizationId: tenantId
+    };
 
-      io.emit('lead-updated', leadPayload);
-      io.to('admin-room').emit('new-system-event', {
-        type: 'LEAD_STAGE_UPDATED',
-        inquiry: updated,
-        message: `${updated.customerName} transitioned to ${leadStage?.replace(/_/g, ' ')}`
-      });
-
-      const tenantId = (updated as any).organizationId || (req.user as any)?.organizationId;
-      if (tenantId) {
-        io.to(`tenant-${tenantId}`).emit('lead-updated', leadPayload);
-        io.to(`tenant-${tenantId}`).emit('new-system-event', {
-          type: 'LEAD_STAGE_UPDATED',
-          inquiry: updated,
-          message: `${updated.customerName} transitioned to ${leadStage?.replace(/_/g, ' ')}`
-        });
-      }
-    }
+    realtimeBus.publish('lead-updated', leadPayload, { io: ioRef, tenantId });
+    realtimeBus.publish('STAGE_UPDATED', { leadId: id, stage: leadStage, lead: updated }, { io: ioRef, tenantId });
+    realtimeBus.publish('new-system-event', {
+      type: 'LEAD_STAGE_UPDATED',
+      inquiry: updated,
+      booking: { ...updated, entityType: 'inquiry' },
+      message: `${updated.customerName} transitioned to ${leadStage?.replace(/_/g, ' ')}`,
+      timestamp: new Date().toISOString()
+    }, { io: ioRef, tenantId });
 
     res.json(updated);
   } catch (error) {
@@ -297,10 +327,19 @@ export const addLeadNote = async (req: AuthRequest, res: Response) => {
   }
 
   try {
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: id as string },
+      select: { id: true, organizationId: true, customerName: true }
+    });
+    if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
+    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant lead note access denied' });
+    }
+
     const authorName = req.user?.name || req.user?.email || 'Team Member';
     const authorId = req.user?.id || null;
 
-    const [note] = await prisma.$transaction([
+    const [note, activity] = await prisma.$transaction([
       prisma.leadNote.create({
         data: {
           inquiryId: id as string,
@@ -321,9 +360,15 @@ export const addLeadNote = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    if (io) {
-      io.emit('lead-note-added', { inquiryId: id, note });
-    }
+    const ioRef = (req as any).io || io;
+    realtimeBus.publish('lead-note-added', { inquiryId: id, note, organizationId: inquiry.organizationId }, {
+      io: ioRef,
+      tenantId: inquiry.organizationId
+    });
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry }, {
+      io: ioRef,
+      tenantId: inquiry.organizationId
+    });
 
     res.status(201).json(note);
   } catch (error) {
@@ -339,6 +384,15 @@ export const getLeadNotes = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
 
   try {
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: id as string },
+      select: { id: true, organizationId: true }
+    });
+    if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
+    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant lead notes access denied' });
+    }
+
     const notes = await prisma.leadNote.findMany({
       where: { inquiryId: id as string },
       orderBy: { createdAt: 'desc' }
@@ -360,8 +414,16 @@ export const deleteLeadNote = async (req: AuthRequest, res: Response) => {
     const note = await prisma.leadNote.findUnique({ where: { id: noteId as string } });
     if (!note) return res.status(404).json({ error: 'Note not found' });
 
-    // Allow author or admin
-    if (note.authorId && note.authorId !== req.user?.id && req.user?.role !== 'admin') {
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: note.inquiryId },
+      select: { organizationId: true }
+    });
+    if (inquiry && !canAccessTenantRecord(req, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant note deletion denied' });
+    }
+
+    // Allow author, admin, or operations
+    if (note.authorId && note.authorId !== req.user?.id && req.user?.role !== 'admin' && req.user?.role !== 'operations') {
       return res.status(403).json({ error: 'Not authorized to delete this note' });
     }
 
@@ -370,6 +432,33 @@ export const deleteLeadNote = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('deleteLeadNote error:', error);
     res.status(500).json({ error: 'Failed to delete note' });
+  }
+};
+
+/**
+ * GET /api/crm/leads/:id/reminders
+ */
+export const getLeadReminders = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: id as string },
+      select: { id: true, organizationId: true }
+    });
+    if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
+    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant lead reminders access denied' });
+    }
+
+    const reminders = await prisma.followUpReminder.findMany({
+      where: { inquiryId: id as string },
+      orderBy: { dueDate: 'asc' }
+    });
+    res.json(reminders);
+  } catch (error) {
+    console.error('getLeadReminders error:', error);
+    res.status(500).json({ error: 'Failed to fetch reminders' });
   }
 };
 
@@ -386,10 +475,22 @@ export const createReminder = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const parsedDueDate = new Date(dueDate);
-    const assignedTo = req.user?.email || req.user?.employeeCode || null;
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: id as string },
+      select: { id: true, organizationId: true, customerName: true }
+    });
+    if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
+    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant lead reminder access denied' });
+    }
 
-    const [reminder] = await prisma.$transaction([
+    const parsedDueDate = new Date(dueDate);
+    if (isNaN(parsedDueDate.getTime())) {
+      return res.status(400).json({ error: 'Valid dueDate is required' });
+    }
+    const assignedTo = req.user?.email || req.user?.employeeCode || (req.user as any)?.code || null;
+
+    const [reminder, , activity] = await prisma.$transaction([
       prisma.followUpReminder.create({
         data: {
           inquiryId: id as string,
@@ -416,9 +517,15 @@ export const createReminder = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    if (io) {
-      io.emit('reminder-scheduled', { inquiryId: id, reminder });
-    }
+    const ioRef = (req as any).io || io;
+    realtimeBus.publish('reminder-scheduled', { inquiryId: id, reminder, organizationId: inquiry.organizationId }, {
+      io: ioRef,
+      tenantId: inquiry.organizationId
+    });
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry }, {
+      io: ioRef,
+      tenantId: inquiry.organizationId
+    });
 
     res.status(201).json(reminder);
   } catch (error) {
@@ -441,6 +548,14 @@ export const updateReminder = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existing) return res.status(404).json({ error: 'Reminder not found' });
+
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: existing.inquiryId },
+      select: { organizationId: true }
+    });
+    if (inquiry && !canAccessTenantRecord(req, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant reminder update denied' });
+    }
 
     const updated = await prisma.followUpReminder.update({
       where: { id: reminderId as string },
@@ -473,12 +588,12 @@ export const updateReminder = async (req: AuthRequest, res: Response) => {
 
 /**
  * GET /api/crm/reminders/pending
- * Retrieve agent's pending & overdue follow-ups
+ * Retrieve agent's pending & overdue follow-ups scoped by tenant
  */
 export const getPendingReminders = async (req: AuthRequest, res: Response) => {
   try {
     const userEmail = req.user?.email;
-    const employeeCode = req.user?.employeeCode;
+    const employeeCode = req.user?.employeeCode || (req.user as any)?.code;
     const role = req.user?.role;
 
     const where: any = {
@@ -486,10 +601,14 @@ export const getPendingReminders = async (req: AuthRequest, res: Response) => {
     };
 
     if (role !== 'admin' && role !== 'operations') {
-      where.OR = [
-        { assignedTo: userEmail },
-        { assignedTo: employeeCode || undefined }
-      ];
+      const orClauses: any[] = [];
+      if (userEmail) orClauses.push({ assignedTo: userEmail });
+      if (employeeCode) orClauses.push({ assignedTo: employeeCode });
+      if (orClauses.length > 0) {
+        where.OR = orClauses;
+      } else {
+        where.id = '__no_matching_assignee__';
+      }
     }
 
     const reminders = await prisma.followUpReminder.findMany({
@@ -503,7 +622,8 @@ export const getPendingReminders = async (req: AuthRequest, res: Response) => {
             destination: true,
             leadStage: true,
             priority: true,
-            leadScore: true
+            leadScore: true,
+            organizationId: true
           }
         }
       },
@@ -511,7 +631,8 @@ export const getPendingReminders = async (req: AuthRequest, res: Response) => {
     });
 
     const now = new Date();
-    const categorized = reminders.map(r => ({
+    const scoped = reminders.filter((r: any) => !r.inquiry || canAccessTenantRecord(req, r.inquiry.organizationId));
+    const categorized = scoped.map(r => ({
       ...r,
       isOverdue: new Date(r.dueDate) < now
     }));
@@ -525,7 +646,7 @@ export const getPendingReminders = async (req: AuthRequest, res: Response) => {
 
 /**
  * GET /api/crm/leads/:id/duplicates
- * Intelligent duplicate lead detection
+ * Intelligent duplicate lead detection (tenant-scoped)
  */
 export const checkDuplicateLeads = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
@@ -533,18 +654,30 @@ export const checkDuplicateLeads = async (req: AuthRequest, res: Response) => {
   try {
     const current = await prisma.inquiry.findUnique({ where: { id: id as string } });
     if (!current) return res.status(404).json({ error: 'Lead not found' });
+    if (!canAccessTenantRecord(req, current.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant duplicate check denied' });
+    }
 
     const normalizedPhone = normalizePhone(current.phone);
+    const matchConditions: any[] = [];
+    if (normalizedPhone.length >= 10) matchConditions.push({ phone: { contains: normalizedPhone } });
+    if (current.email && current.email.includes('@')) {
+      matchConditions.push({ email: { equals: current.email, mode: 'insensitive' as const } });
+    }
 
-    // Look for matching phone (last 10 digits) or matching email, excluding self
+    if (matchConditions.length === 0) {
+      return res.json({ count: 0, hasDuplicates: false, duplicates: [] });
+    }
+
+    // Look for matching phone (last 10 digits) or matching email within tenant, excluding self
     const potentialDuplicates = await prisma.inquiry.findMany({
-      where: {
-        id: { not: current.id },
-        OR: [
-          ...(normalizedPhone.length >= 10 ? [{ phone: { contains: normalizedPhone } }] : []),
-          ...(current.email && current.email.includes('@') ? [{ email: { equals: current.email, mode: 'insensitive' as const } }] : [])
-        ]
-      },
+      where: withStrictTenantScope(
+        {
+          id: { not: current.id },
+          OR: matchConditions
+        },
+        req.tenantId
+      ),
       select: {
         id: true,
         leadId: true,
@@ -562,7 +695,7 @@ export const checkDuplicateLeads = async (req: AuthRequest, res: Response) => {
       count: potentialDuplicates.length,
       hasDuplicates: potentialDuplicates.length > 0,
       duplicates: potentialDuplicates
-    })
+    });
   } catch (error) {
     console.error('checkDuplicateLeads error:', error);
     res.status(500).json({ error: 'Failed to check duplicates' });
@@ -587,6 +720,9 @@ export const mergeDuplicateLead = async (req: AuthRequest, res: Response) => {
 
     if (!master || !duplicate) {
       return res.status(404).json({ error: 'One or both leads not found' });
+    }
+    if (!canAccessTenantRecord(req, master.organizationId) || !canAccessTenantRecord(req, duplicate.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant lead merge denied' });
     }
 
     // Re-link notes, reminders, activities, and messages to master lead
@@ -645,10 +781,13 @@ export const assignLead = async (req: AuthRequest, res: Response) => {
   try {
     const inquiry = await prisma.inquiry.findUnique({ where: { id: id as string } });
     if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
+    if (!canAccessTenantRecord(req, inquiry.organizationId)) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant lead assignment denied' });
+    }
 
     const previousAgent = inquiry.assignedTo || 'Unassigned';
 
-    const [updated] = await prisma.$transaction([
+    const [updated, activity] = await prisma.$transaction([
       prisma.inquiry.update({
         where: { id: id as string },
         data: { assignedTo: agentEmail }
@@ -664,14 +803,40 @@ export const assignLead = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    if (io) {
-      io.emit('lead-assigned', {
-        inquiryId: id,
-        assignedTo: agentEmail,
-        customerName: inquiry.customerName,
-        destination: inquiry.destination
-      });
-    }
+    const notification = await prisma.notification
+      .create({
+        data: {
+          userId: buildTenantNotificationUserId((inquiry as any).organizationId || (req as any).tenantId || null),
+          title: 'Lead Reassigned',
+          message: `${inquiry.customerName} assigned to ${agentName || agentEmail}`,
+          type: 'inquiry',
+          priority: 'medium',
+          link: `/sales/portal?tab=active-pipeline&inquiryId=${id}`,
+          read: false
+        }
+      })
+      .catch(() => null);
+
+    const ioRef = (req as any).io || io;
+    const tenantId = (inquiry as any).organizationId || (req.user as any)?.organizationId || null;
+    realtimeBus.publish('lead-assigned', {
+      inquiryId: id,
+      assignedTo: agentEmail,
+      assignedName: agentName || agentEmail,
+      customerName: inquiry.customerName,
+      destination: inquiry.destination,
+      lead: updated,
+      organizationId: tenantId
+    }, { io: ioRef, tenantId });
+
+    realtimeBus.publish('ACTIVITY_LOGGED', { ...activity, inquiry: updated }, { io: ioRef, tenantId });
+    realtimeBus.publish('new-system-event', {
+      type: 'LEAD_ASSIGNED',
+      message: `${inquiry.customerName} assigned to ${agentName || agentEmail}`,
+      booking: { ...updated, entityType: 'inquiry' },
+      notification,
+      timestamp: new Date().toISOString()
+    }, { io: ioRef, tenantId });
 
     res.json(updated);
   } catch (error) {

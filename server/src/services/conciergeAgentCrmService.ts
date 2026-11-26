@@ -1,5 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import prisma from '../lib/prisma';
+import { realtimeBus } from '../lib/realtimeBus';
+import { buildTenantNotificationUserId } from '../lib/tenant';
 
 export interface ExtractedTravelerPreferences {
   destinations?: string[];
@@ -501,10 +503,11 @@ export const conciergeAgentCrmService = {
       if (hasAction && action.title) {
         const notifTitle = `⚡ AI Concierge: ${action.title}`;
         const notifMessage = `Guest ${user.name} (${user.email}): ${action.details || userMessage}`;
+        const tenantId = (user as any)?.organizationId || null;
 
         const createdNotif = await prisma.notification.create({
           data: {
-            userId: null, // Broadcast to all Admins & Operations Coordinators
+            userId: buildTenantNotificationUserId(tenantId),
             title: notifTitle,
             message: notifMessage,
             type: 'inquiry',
@@ -513,22 +516,28 @@ export const conciergeAgentCrmService = {
           },
         }).catch(() => null);
 
-        if (io) {
-          try {
-            io.emit('notification', createdNotif || {
+        try {
+          realtimeBus.publish(
+            'notification',
+            createdNotif || {
               title: notifTitle,
               message: notifMessage,
               type: 'inquiry',
               createdAt: new Date(),
-            });
-            io.emit('crm:lead-updated', {
+            },
+            { io, tenantId }
+          );
+          realtimeBus.publish(
+            'crm:lead-updated',
+            {
               source: 'AI_CONCIERGE',
               userId: user.id,
               reqId: actionReqId,
-            });
-          } catch (sockErr: any) {
-            console.warn('[ConciergeAgentCRM] Socket broadcast error:', sockErr.message);
-          }
+            },
+            { io, tenantId }
+          );
+        } catch (sockErr: any) {
+          console.warn('[ConciergeAgentCRM] Socket broadcast error:', sockErr.message);
         }
       }
 

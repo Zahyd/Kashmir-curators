@@ -3,8 +3,10 @@ import { MetaLeadAutomationService } from '../services/metaLeadService';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { authorizeRoles } from '../middleware/roleMiddleware';
 import prisma from '../lib/prisma';
+import { withStrictTenantScope } from '../lib/tenant';
 
 const router = Router();
+const META_PORTAL_ROLES = ['admin', 'operations', 'sales', 'marketing'];
 
 const META_VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'kashmir_curators_meta_2026';
 const META_PAGE_ACCESS_TOKEN = process.env.META_PAGE_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
@@ -218,21 +220,22 @@ router.post('/', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 3. Raw Meta Leads Feed (GET /api/webhooks/meta-leads/leads)
 // ---------------------------------------------------------------------------
-router.get('/leads', authenticateToken, async (req: Request, res: Response) => {
+router.get('/leads', authenticateToken, authorizeRoles(...META_PORTAL_ROLES), async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
-    const { origin, search, stage } = req.query;
+    const { origin, search, stage, page, limit } = req.query;
+    const tenantId = (req as any).tenantId;
 
     const leads = await p.inquiry.findMany({
-      where: {
+      where: withStrictTenantScope({
         OR: [
           { sourceCta: { contains: 'META' } },
           { leadCategory: 'META_AD_CONVERT' },
           { notes: { contains: 'Meta' } }
         ]
-      },
+      }, tenantId),
       orderBy: { createdAt: 'desc' },
-      take: 200
+      take: 250
     });
 
     const enrichedLeads = leads.map((lead: any) => {
@@ -250,9 +253,9 @@ router.get('/leads', authenticateToken, async (req: Request, res: Response) => {
     }).filter((lead: any) => {
       if (origin === 'DOMESTIC' && lead.geo.origin !== 'DOMESTIC') return false;
       if (origin === 'INTERNATIONAL' && lead.geo.origin !== 'INTERNATIONAL') return false;
-      if (stage && lead.leadStage !== stage) return false;
-      if (search && typeof search === 'string') {
-        const q = search.toLowerCase();
+      if (stage && stage !== 'ALL' && lead.leadStage !== stage) return false;
+      if (search && typeof search === 'string' && search.trim()) {
+        const q = search.trim().toLowerCase();
         const matches = 
           (lead.customerName || '').toLowerCase().includes(q) ||
           (lead.phone || '').includes(q) ||
@@ -267,13 +270,23 @@ router.get('/leads', authenticateToken, async (req: Request, res: Response) => {
     const internationalCount = enrichedLeads.filter((l: any) => l.geo.origin === 'INTERNATIONAL').length;
     const totalPipelineINR = enrichedLeads.reduce((sum: number, l: any) => sum + (l.valINR || 0), 0);
 
+    const hasPagination = page !== undefined || limit !== undefined;
+    const parsedPage = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(String(limit || '25'), 10) || 25));
+    const pagedLeads = hasPagination
+      ? enrichedLeads.slice((parsedPage - 1) * parsedLimit, parsedPage * parsedLimit)
+      : enrichedLeads;
+
     res.json({
       success: true,
       total: enrichedLeads.length,
       domesticCount,
       internationalCount,
       totalPipelineINR,
-      leads: enrichedLeads
+      page: parsedPage,
+      limit: parsedLimit,
+      totalPages: Math.max(1, Math.ceil(enrichedLeads.length / parsedLimit)),
+      leads: pagedLeads
     });
   } catch (error: any) {
     console.error('[MetaLeadWebhook] Fetch leads error:', error);
@@ -284,17 +297,17 @@ router.get('/leads', authenticateToken, async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // 4. 1-Click Raw CSV Export (GET /api/webhooks/meta-leads/export.csv)
 // ---------------------------------------------------------------------------
-router.get('/export.csv', authenticateToken, async (req: Request, res: Response) => {
+router.get('/export.csv', authenticateToken, authorizeRoles(...META_PORTAL_ROLES), async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
     const leads = await p.inquiry.findMany({
-      where: {
+      where: withStrictTenantScope({
         OR: [
           { sourceCta: { contains: 'META' } },
           { leadCategory: 'META_AD_CONVERT' },
           { notes: { contains: 'Meta' } }
         ]
-      },
+      }, (req as any).tenantId),
       orderBy: { createdAt: 'desc' }
     });
 
@@ -402,17 +415,17 @@ router.post('/simulate', authenticateToken, authorizeRoles('admin', 'DIRECTOR'),
 // ---------------------------------------------------------------------------
 // 6. Live Telemetry (GET /api/webhooks/meta-leads/telemetry)
 // ---------------------------------------------------------------------------
-router.get('/telemetry', authenticateToken, async (req: Request, res: Response) => {
+router.get('/telemetry', authenticateToken, authorizeRoles(...META_PORTAL_ROLES), async (req: Request, res: Response) => {
   try {
     const p = prisma as any;
     const allMetaLeads = await p.inquiry.findMany({
-      where: {
+      where: withStrictTenantScope({
         OR: [
           { sourceCta: { contains: 'META' } },
           { leadCategory: 'META_AD_CONVERT' },
           { notes: { contains: 'Meta' } }
         ]
-      },
+      }, (req as any).tenantId),
       select: {
         id: true,
         phone: true,

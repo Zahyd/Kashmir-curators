@@ -37,7 +37,9 @@ import {
   TeamMemberItem,
   PIPELINE_STAGES,
   normalizeStageKey,
-  getInquiryValueINR
+  getInquiryValueINR,
+  SalesLeadDetail,
+  getErrorMessage
 } from '@/lib/salesApi';
 
 interface LeadCommandDrawerProps {
@@ -62,7 +64,7 @@ export default function LeadCommandDrawer({
   onNavigateTab
 }: LeadCommandDrawerProps) {
   const [drawerTab, setDrawerTab] = useState<'overview' | 'notes' | 'reminders' | 'activity'>('overview');
-  const [detail, setDetail] = useState<any>(null);
+  const [detail, setDetail] = useState<(SalesLeadDetail & { internalNotes?: LeadNoteItem[] }) | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [noteInput, setNoteInput] = useState('');
@@ -86,8 +88,8 @@ export default function LeadCommandDrawer({
       const data = await salesApi.getLeadDetail(id);
       setDetail(data);
       setAssignTarget(data?.assignedTo || '');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to load lead CRM details');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to load lead CRM details'));
     } finally {
       setLoading(false);
     }
@@ -117,8 +119,8 @@ export default function LeadCommandDrawer({
       toast.success(`Stage updated to ${nextStage.replace(/_/g, ' ')}`);
       await loadDetail(current.id);
       onUpdated();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to change stage');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to change stage'));
     } finally {
       setBusyAction(false);
     }
@@ -136,8 +138,8 @@ export default function LeadCommandDrawer({
       toast.success(`Lead assigned to ${member?.name || assignTarget}`);
       await loadDetail(current.id);
       onUpdated();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to assign lead');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to assign lead'));
     } finally {
       setBusyAction(false);
     }
@@ -157,8 +159,8 @@ export default function LeadCommandDrawer({
       }
       onUpdated();
       onClose();
-    } catch (err: any) {
-      toast.error(err?.message || 'Action failed');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Action failed'));
     } finally {
       setBusyAction(false);
     }
@@ -174,8 +176,8 @@ export default function LeadCommandDrawer({
       toast.success('Internal note logged');
       await loadDetail(current.id);
       onUpdated();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to add note');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to add note'));
     } finally {
       setAddingNote(false);
     }
@@ -186,8 +188,8 @@ export default function LeadCommandDrawer({
       await salesApi.deleteNote(noteId);
       toast.success('Note deleted');
       await loadDetail(current.id);
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not delete note');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Could not delete note'));
     }
   };
 
@@ -209,8 +211,8 @@ export default function LeadCommandDrawer({
       toast.success('Follow-up reminder scheduled');
       await loadDetail(current.id);
       onUpdated();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to schedule reminder');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to schedule reminder'));
     } finally {
       setAddingRem(false);
     }
@@ -222,8 +224,8 @@ export default function LeadCommandDrawer({
       toast.success(`Reminder marked ${nextStatus.toLowerCase()}`);
       await loadDetail(current.id);
       onUpdated();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update reminder');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to update reminder'));
     }
   };
 
@@ -233,8 +235,8 @@ export default function LeadCommandDrawer({
       const res = await salesApi.checkDuplicates(current.id);
       setDuplicates(res.duplicates || []);
       if (!res.hasDuplicates) toast.info('No duplicate inquiries found for this phone/email');
-    } catch (err: any) {
-      toast.error(err?.message || 'Duplicate scan failed');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Duplicate scan failed'));
     } finally {
       setCheckingDupes(false);
     }
@@ -248,8 +250,8 @@ export default function LeadCommandDrawer({
       setDuplicates((prev) => prev.filter((d) => d.id !== dupId));
       await loadDetail(current.id);
       onUpdated();
-    } catch (err: any) {
-      toast.error(err?.message || 'Merge failed');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Merge failed'));
     } finally {
       setMergingId(null);
     }
@@ -349,14 +351,14 @@ export default function LeadCommandDrawer({
         {/* Sub-Tabs */}
         <div className="px-4 sm:px-5 pt-2.5 border-b border-white/10 bg-[#0B0F17] flex items-center gap-1 overflow-x-auto">
           {[
-            { id: 'overview', label: 'Overview & Owner', icon: UserCheck },
-            { id: 'notes', label: `Notes (${notes.length})`, icon: StickyNote },
-            { id: 'reminders', label: `Reminders (${reminders.filter((r) => r.status === 'PENDING').length})`, icon: Bell },
-            { id: 'activity', label: `Timeline (${activities.length})`, icon: Activity }
+            { id: 'overview' as const, label: 'Overview & Owner', icon: UserCheck },
+            { id: 'notes' as const, label: `Notes (${notes.length})`, icon: StickyNote },
+            { id: 'reminders' as const, label: `Reminders (${reminders.filter((r) => r.status === 'PENDING').length})`, icon: Bell },
+            { id: 'activity' as const, label: `Timeline (${activities.length})`, icon: Activity }
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setDrawerTab(tab.id as any)}
+              onClick={() => setDrawerTab(tab.id)}
               className={cn(
                 'px-3 py-2 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 shrink-0',
                 drawerTab === tab.id

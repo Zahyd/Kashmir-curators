@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from 'sonner';
 import { salesApi, TeamMemberItem } from '@/lib/salesApi';
 import { ROLE_DISPLAY_NAMES, ROLE_BADGE_STYLES, normalizeSalesRole, isDirector } from '@/lib/rbac';
+import { useTeamAuth } from '@/contexts/TeamAuthContext';
 
 interface TeamManagementProps {
   currentEmployee: {
@@ -28,8 +29,10 @@ interface TeamManagementProps {
 }
 
 export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee, onTeamChanged }) => {
+  const { subscribeSalesEvent, staffPresenceMap } = useTeamAuth();
   const [members, setMembers] = useState<TeamMemberItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMemberItem | null>(null);
   const [saving, setSaving] = useState(false);
@@ -44,11 +47,12 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee,
   const canModifyTeam = isDirector(currentEmployee.role);
 
   const fetchTeam = async () => {
+    setError(null);
     try {
       const data = await salesApi.getTeamRoster();
       setMembers(data);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to load team roster');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load team roster');
     } finally {
       setLoading(false);
     }
@@ -56,9 +60,22 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee,
 
   useEffect(() => {
     fetchTeam();
-    const interval = setInterval(fetchTeam, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    const unsub = subscribeSalesEvent((eventName) => {
+      if (
+        eventName === 'EMPLOYEE_STATUS_CHANGED' ||
+        eventName === 'employee-attendance-updated' ||
+        eventName === 'LEAD_CLAIMED' ||
+        eventName === 'STAGE_UPDATED'
+      ) {
+        fetchTeam();
+      }
+    });
+    const interval = window.setInterval(fetchTeam, 45000);
+    return () => {
+      unsub();
+      window.clearInterval(interval);
+    };
+  }, [subscribeSalesEvent]);
 
   const openCreateModal = () => {
     setEditingMember(null);
@@ -117,8 +134,8 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee,
       setModalOpen(false);
       await fetchTeam();
       onTeamChanged?.();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to save team member');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save team member');
     } finally {
       setSaving(false);
     }
@@ -135,8 +152,8 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee,
       toast.success('Team member removed');
       await fetchTeam();
       onTeamChanged?.();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to remove team member');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove team member');
     }
   };
 
@@ -212,6 +229,15 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee,
         </Card>
       </div>
 
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-xs text-rose-300">
+          <span>{error}</span>
+          <Button size="sm" variant="outline" onClick={fetchTeam} className="border-rose-500/30 text-rose-200 text-xs">
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Team Members Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {members.map((member) => {
@@ -220,6 +246,9 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee,
           const roleLabel = ROLE_DISPLAY_NAMES[normRole] || member.role;
           const cap = member.leadCapacity || 5;
           const activeCount = member.activeLeadCount || 0;
+          const livePres = member.employeeCode ? staffPresenceMap[member.employeeCode] : undefined;
+          const effectiveStatus = livePres?.status || (member.isOnline ? 'ONLINE' : 'OFFLINE');
+          const effectiveOnline = effectiveStatus === 'ONLINE' || effectiveStatus === 'ON_BREAK';
 
           return (
             <Card
@@ -230,14 +259,20 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ currentEmployee,
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-bold text-amber-400 text-xs shrink-0">
-                      {member.name.charAt(0)}
+                      {(member.name || 'S').charAt(0)}
                     </div>
                     <div className="min-w-0">
                       <h3 className="text-sm font-bold text-white flex items-center gap-1.5 truncate">
                         <span className="truncate">{member.name}</span>
                         <span
-                          className={`w-2 h-2 rounded-full shrink-0 ${member.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}
-                          title={member.isOnline ? 'Online' : 'Away'}
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            effectiveStatus === 'ON_BREAK'
+                              ? 'bg-amber-400 animate-pulse'
+                              : effectiveOnline
+                                ? 'bg-emerald-400 animate-pulse'
+                                : 'bg-slate-500'
+                          }`}
+                          title={effectiveStatus}
                         />
                       </h3>
                       <span className="text-[11px] font-mono text-slate-400">

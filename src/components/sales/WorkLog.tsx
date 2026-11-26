@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Clock,
   Timer,
@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { salesApi, AttendanceStatusResponse } from '@/lib/salesApi';
+import { salesApi, AttendanceStatusResponse, LivePresenceMember, getErrorMessage } from '@/lib/salesApi';
 import { useTeamAuth } from '@/contexts/TeamAuthContext';
 import { canManageTeam } from '@/lib/rbac';
 
@@ -33,11 +33,11 @@ export default function WorkLog() {
   const isManager = canManageTeam(teamUser?.role);
 
   const [data, setData] = useState<AttendanceStatusResponse | null>(null);
-  const [liveTeam, setLiveTeam] = useState<any[]>([]);
+  const [liveTeam, setLiveTeam] = useState<LivePresenceMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionBusy, setActionBusy] = useState(false);
 
-  const loadAttendance = async () => {
+  const loadAttendance = useCallback(async () => {
     try {
       const [myData, presence] = await Promise.all([
         salesApi.getMyAttendance(),
@@ -47,16 +47,16 @@ export default function WorkLog() {
       if (presence?.presenceList) {
         setLiveTeam(presence.presenceList);
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to load work log telemetry');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to load work log telemetry'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [isManager]);
 
   useEffect(() => {
     loadAttendance();
-  }, [isManager]);
+  }, [loadAttendance]);
 
   // Real 60-second heartbeat pulse while clocked in and not on break
   useEffect(() => {
@@ -73,8 +73,8 @@ export default function WorkLog() {
       await salesApi.clockIn('Sales Command Desk');
       toast.success('Shift started & attendance recorded');
       await loadAttendance();
-    } catch (err: any) {
-      toast.error(err?.message || 'Clock-in failed');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Clock-in failed'));
     } finally {
       setActionBusy(false);
     }
@@ -86,8 +86,8 @@ export default function WorkLog() {
       const res = await salesApi.toggleBreak();
       toast.success(res.message || (res.isOnBreak ? 'Break started' : 'Shift resumed'));
       await loadAttendance();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update break status');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Failed to update break status'));
     } finally {
       setActionBusy(false);
     }
@@ -99,8 +99,8 @@ export default function WorkLog() {
       const res = await salesApi.clockOut();
       toast.success(res.message || 'Clocked out cleanly');
       await loadAttendance();
-    } catch (err: any) {
-      toast.error(err?.message || 'Clock-out failed');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Clock-out failed'));
     } finally {
       setActionBusy(false);
     }
