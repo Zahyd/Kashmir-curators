@@ -6,6 +6,7 @@ import prisma from '../lib/prisma';
 import { io } from '../index';
 import { realtimeBus } from '../lib/realtimeBus';
 import { DEFAULT_TENANT_ID, withTenantScope } from '../lib/tenant';
+import { resolvePreservedPartnerRole } from '../lib/roleUtils';
 
 const CNAME_TARGET = 'cname.kashmircurators.vercel.app';
 
@@ -430,10 +431,15 @@ export const reviewApplication = async (req: AuthRequest, res: Response): Promis
         agencyOrgId = existingOrg?.id || null;
       }
 
+      const existingApplicant = await prisma.user.findUnique({
+        where: { id: application.userId },
+        select: { role: true }
+      });
+
       await prisma.user.update({
         where: { id: application.userId },
         data: {
-          role: 'agent',
+          role: resolvePreservedPartnerRole(existingApplicant?.role, 'agent'),
           organizationId: agencyOrgId || undefined
         }
       });
@@ -497,9 +503,14 @@ export const registerAgent = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    });
+
     await prisma.user.update({
       where: { id: userId },
-      data: { role: 'agent' }
+      data: { role: resolvePreservedPartnerRole(existingUser?.role, 'agent') }
     });
 
     res.status(201).json({ message: 'B2B Agent profile submitted and pending verification.', profile });

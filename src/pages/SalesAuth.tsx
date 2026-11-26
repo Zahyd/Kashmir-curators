@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ROLE_LABELS, ROLE_COLORS, TeamRole } from '@/contexts/TeamAuthContext';
+import { canAccessAdminDashboard, canAccessSalesPortal, getPortalDestinationForRole, isB2BAgentRole } from '@/lib/rbac';
 import { SOCKET_URL } from '@/lib/api';
 import { Logo } from '@/components/ui/Logo';
 
@@ -80,7 +81,7 @@ const ROLE_PRESETS: RolePreset[] = [
 
 export default function SalesAuth() {
   const navigate = useNavigate();
-  const { teamUser, isTeamAuthenticated, teamSendOtp, teamVerifyOtp } = useTeamAuth();
+  const { teamUser, isTeamAuthenticated, teamSendOtp, teamVerifyOtp, teamLogout } = useTeamAuth();
   const [employeeCode, setEmployeeCode] = useState('ADMIN001');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
@@ -109,13 +110,18 @@ export default function SalesAuth() {
 
   useEffect(() => {
     if (isTeamAuthenticated && teamUser) {
-      if (teamUser.role === 'sales') {
-        navigate('/sales/portal');
+      if (canAccessAdminDashboard(teamUser.role) || canAccessSalesPortal(teamUser.role)) {
+        navigate(getPortalDestinationForRole(teamUser.role), { replace: true });
       } else {
-        navigate('/admin');
+        const msg = isB2BAgentRole(teamUser.role)
+          ? "B2B Partner ('agent') accounts cannot access the Admin or Sales Terminal. Please sign in via /agent."
+          : `Access Denied: Account role '${teamUser.role}' is not authorized for the Staff Command Terminal.`;
+        setError(msg);
+        toast.error(msg);
+        teamLogout();
       }
     }
-  }, [isTeamAuthenticated, teamUser, navigate]);
+  }, [isTeamAuthenticated, teamUser, navigate, teamLogout]);
 
   const handleSelectRolePreset = (preset: RolePreset) => {
     setSelectedRolePreset(preset);

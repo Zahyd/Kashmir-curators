@@ -107,7 +107,7 @@ export default function Auth() {
         description: 'Sign in with elevated supervisory credentials for CMS & financial oversight.',
         icon: ShieldCheck,
         accentColor: 'from-purple-500/20 via-purple-500/10 to-transparent border-purple-500/30 text-purple-400',
-        defaultRole: 'agent'
+        defaultRole: 'traveler'
       };
     }
     return {

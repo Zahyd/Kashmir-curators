@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import prisma from '../lib/prisma';
 import { notificationService } from '../services/notificationService';
+import { isStaffRole } from '../lib/roleUtils';
 
 // SECURITY: JWT_SECRET is mandatory — server crashes at startup if missing (enforced by env.ts)
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -146,6 +147,12 @@ export const teamSendOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Access Denied: Invalid employee code' });
     }
 
+    if (!isStaffRole(user.role)) {
+      return res.status(403).json({
+        error: `Access Denied: Account role '${user.role}' is not authorized for the Staff Command Terminal.`
+      });
+    }
+
     const targetEmail = user.email;
 
     if (!targetEmail) {
@@ -279,6 +286,12 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Verified system user record not found' });
     }
 
+    if (!isStaffRole(user.role)) {
+      return res.status(403).json({
+        error: `Access Denied: Account role '${user.role}' is not authorized for the Staff Command Terminal.`
+      });
+    }
+
     // 6. Generate the authenticated JWT session with full identity
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, code: user.employeeCode, organizationId: (user as any).organizationId || undefined },
@@ -294,7 +307,8 @@ export const teamVerifyOtp = async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         phone: user.phone,
-        image: user.image
+        image: user.image,
+        organizationId: (user as any).organizationId || undefined
       },
       token
     });

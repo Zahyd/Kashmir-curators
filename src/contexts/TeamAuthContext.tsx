@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 
 import { SOCKET_URL, DEFAULT_SOCKET_OPTIONS, isSearchBot } from '@/lib/api';
+import { canAccessAdminDashboard, canAccessSalesPortal } from '@/lib/rbac';
 import { SalesInquiry, SalesNotificationItem } from '@/lib/salesApi';
 
 export type TeamRole = 'admin' | 'operations' | 'sales' | 'marketing' | 'finance';
@@ -377,14 +378,21 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [userKey, userOrgId]);
 
-  // Restore session on mount
+  // Restore session on mount, clearing any stale non-staff sessions (e.g. 'agent')
   useEffect(() => {
     const stored = localStorage.getItem('team_user');
     if (stored) {
       try {
-        setTeamUser(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        if (parsed && (canAccessAdminDashboard(parsed.role) || canAccessSalesPortal(parsed.role))) {
+          setTeamUser(parsed);
+        } else {
+          localStorage.removeItem('team_user');
+          localStorage.removeItem('teamToken');
+        }
       } catch {
         localStorage.removeItem('team_user');
+        localStorage.removeItem('teamToken');
       }
     }
     setIsTeamLoading(false);
@@ -549,13 +557,9 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
     return (ROLE_PERMISSIONS[roleKey] || []).includes(permission);
   };
 
-  const canAccessAdmin = teamUser
-    ? ['admin', 'operations', 'marketing'].includes(teamUser.role)
-    : false;
+  const canAccessAdmin = teamUser ? canAccessAdminDashboard(teamUser.role) : false;
 
-  const canAccessSales = teamUser
-    ? teamUser.role === 'sales' || teamUser.role === 'admin'
-    : false;
+  const canAccessSales = teamUser ? canAccessSalesPortal(teamUser.role) : false;
 
   const onlineStaffCodes = Object.values(staffPresenceMap)
     .filter((s) => s.status === 'ONLINE' || s.status === 'ON_BREAK')

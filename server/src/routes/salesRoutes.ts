@@ -7,10 +7,9 @@ import { LeadScoringService } from '../services/leadScoringService';
 import { resolveWriteTenantId, withStrictTenantScope, canAccessTenantRecord, buildTenantNotificationUserId, buildNotificationTenantWhere } from '../lib/tenant';
 import { broadcastDriverEvent } from './driverRoutes';
 import { realtimeBus } from '../lib/realtimeBus';
+import { SALES_PORTAL_ROLES } from '../lib/roleUtils';
 
 const router = Router();
-
-const SALES_PORTAL_ROLES = ['admin', 'operations', 'sales', 'marketing', 'finance'];
 const SALES_MUTATION_ROLES = ['admin', 'operations', 'sales'];
 
 const VALID_STAGES = new Set([
