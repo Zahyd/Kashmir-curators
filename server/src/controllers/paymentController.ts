@@ -5,6 +5,7 @@ import { bookingAutomationService } from '../services/bookingAutomationService';
 import { notificationService } from '../services/notificationService';
 import { canAccessTenantRecord, withStrictTenantScope, buildTenantNotificationUserId } from '../lib/tenant';
 import { realtimeBus } from '../lib/realtimeBus';
+import { resolvePreservedPartnerRole } from '../lib/roleUtils';
 const Stripe = require('stripe');
 
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -935,10 +936,14 @@ export const verifySubscriptionPayment = async (req: any, res: Response) => {
       }
     });
 
-    // 2. Ensure User role is agent
+    // 2. Grant B2B agent role unless the user already holds a staff/admin role
+    const existingSubscriber = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    });
     await prisma.user.update({
       where: { id: userId },
-      data: { role: 'agent' }
+      data: { role: resolvePreservedPartnerRole(existingSubscriber?.role, 'agent') }
     });
 
     // 3. Record transaction in TransactionLedger

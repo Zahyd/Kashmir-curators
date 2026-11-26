@@ -38,6 +38,7 @@ import {
   normalizeSalesRole,
   canAccessSalesPortal,
   isDriver,
+  isB2BAgentRole,
   canManageTeam,
   canViewAllLeads,
   ROLE_DISPLAY_NAMES,
@@ -199,14 +200,21 @@ export default function SalesPortal() {
     }
     if (isDriver(teamUser.role)) {
       toast.error('Access Denied: Drivers cannot access Sales Concierge OS.');
-      navigate('/driver');
+      navigate('/driver', { replace: true });
+      return;
+    }
+    if (isB2BAgentRole(teamUser.role)) {
+      toast.error('B2B Partner accounts must use the B2B Agent Portal.');
+      teamLogout();
+      navigate('/agent', { replace: true });
       return;
     }
     if (!canAccessSalesPortal(teamUser.role)) {
-      toast.error('Unauthorized access level for Sales Portal.');
-      navigate('/');
+      toast.error(`Unauthorized access level ('${teamUser.role}') for Sales Portal.`);
+      teamLogout();
+      navigate('/sales/auth', { replace: true });
     }
-  }, [isTeamLoading, isTeamAuthenticated, teamUser, navigate]);
+  }, [isTeamLoading, isTeamAuthenticated, teamUser, navigate, teamLogout]);
 
   const refreshWorkspace = useCallback(async () => {
     if (!isTeamAuthenticated) return;

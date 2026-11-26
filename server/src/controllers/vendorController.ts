@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
+import { resolvePreservedPartnerRole } from '../lib/roleUtils';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 if (!JWT_SECRET) {
@@ -144,9 +145,13 @@ export const registerVendor = async (req: any, res: Response) => {
     }
 
     if (userId) {
+      const existingUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true }
+      });
       await prisma.user.update({
         where: { id: userId },
-        data: { role: 'supplier' }
+        data: { role: resolvePreservedPartnerRole(existingUser?.role, 'supplier') }
       });
     }
 

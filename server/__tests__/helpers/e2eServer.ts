@@ -23,6 +23,7 @@ const userRoutes = require('../../src/routes/userRoutes').default;
 const hotelRoutes = require('../../src/routes/hotelRoutes').default;
 const siteContentRoutes = require('../../src/routes/siteContentRoutes').default;
 const advisoryRoutes = require('../../src/routes/advisoryRoutes').default;
+const dashboardRoutes = require('../../src/routes/dashboardRoutes').default;
 
 async function seedBaselineData() {
   resetTestState();
@@ -288,6 +289,7 @@ async function start() {
   app.use('/api/hotels', hotelRoutes);
   app.use('/api/site-content', siteContentRoutes);
   app.use('/api/advisories', advisoryRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
 
   app.get('/health-check', (_req, res) => {
     res.json({ status: 'ok', mode: 'e2e-in-memory' });

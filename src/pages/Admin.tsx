@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAuth, ROLE_LABELS } from '@/contexts/TeamAuthContext';
+import { canAccessSalesPortal, getPortalDestinationForRole, isB2BAgentRole } from '@/lib/rbac';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -153,12 +154,20 @@ export default function Admin() {
       if (!isTeamAuthenticated) {
         navigate('/sales/auth');
       } else if (!canAccessAdmin) {
-        navigate('/sales/portal');
+        if (canAccessSalesPortal(teamUser?.role)) {
+          navigate(getPortalDestinationForRole(teamUser?.role), { replace: true });
+        } else if (isB2BAgentRole(teamUser?.role)) {
+          teamLogout();
+          navigate('/agent', { replace: true });
+        } else {
+          teamLogout();
+          navigate('/sales/auth', { replace: true });
+        }
       } else {
         fetchStats();
       }
     }
-  }, [isTeamAuthenticated, canAccessAdmin, isTeamLoading, navigate, fetchStats]);
+  }, [isTeamAuthenticated, canAccessAdmin, isTeamLoading, teamUser?.role, navigate, fetchStats, teamLogout]);
 
   useEffect(() => {
     if (isTeamAuthenticated && canAccessAdmin && systemEvents.length > 0) {
