@@ -103,6 +103,23 @@ export const DriverMapCockpit: React.FC<DriverMapCockpitProps> = ({
 
   const handleMouseUp = () => setIsDragging(false);
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    setIsDragging(true);
+    setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    setPan({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y,
+    });
+  };
+
   const resetView = () => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
@@ -122,7 +139,11 @@ export const DriverMapCockpit: React.FC<DriverMapCockpitProps> = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      className="absolute inset-0 w-full h-full bg-[#07090E] select-none cursor-grab active:cursor-grabbing overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleMouseUp}
+      onTouchCancel={handleMouseUp}
+      className="absolute inset-0 w-full h-full bg-[#07090E] select-none touch-none cursor-grab active:cursor-grabbing overflow-hidden"
     >
       {/* Tactical Canvas Map SVG */}
       <svg

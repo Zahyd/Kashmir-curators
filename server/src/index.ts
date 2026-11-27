@@ -69,15 +69,27 @@ const allowedOrigins = [
   'https://kashmir-curators.vercel.app',
   'https://www.kashmircurators.com',
   'https://thekashmircurators.com',
+  'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:5000',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'http://127.0.0.1:8080',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
 ];
+
+const isLocalDevOrigin = (origin: string): boolean => {
+  if (process.env.NODE_ENV === 'production') return false;
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i.test(
+    origin
+  );
+};
 
 const isAllowedOrigin = (origin?: string): boolean => {
   if (!origin) return true;
   return (
     allowedOrigins.includes(origin) ||
+    isLocalDevOrigin(origin) ||
     /^https:\/\/(kashmir-curators|kashmir-connect)(-[a-z0-9-]+)?\.vercel\.app$/i.test(origin) ||
     /^https:\/\/(www\.)?(the)?kashmircurators\.com$/i.test(origin)
   );
@@ -167,7 +179,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) =>
-    ['/health', '/health-check', '/db-check', '/api/health', '/api/health-check', '/api/db-check'].includes(req.path)
+    ['/', '/health', '/health-check', '/db-check', '/api/health', '/api/health-check', '/api/db-check'].includes(req.path)
 });
 app.use(limiter);
 
@@ -303,7 +315,7 @@ app.use('/api/organizations', organizationRoutes);
 app.use('/', seoRoutes);
 
 const healthCheckHandler = (_req: express.Request, res: express.Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'kashmir-curators-api', timestamp: new Date().toISOString() });
 };
 
 const dbCheckHandler = async (_req: express.Request, res: express.Response) => {
@@ -324,9 +336,19 @@ const dbCheckHandler = async (_req: express.Request, res: express.Response) => {
   });
 };
 
-// Mount health and database diagnostics BEFORE Express error handlers
+// Mount root, health and database diagnostics BEFORE Express error handlers
+app.head('/', (_req, res) => {
+  res.status(200).end();
+});
+app.get('/', healthCheckHandler);
 app.get('/health', healthCheckHandler);
+app.head('/health', (_req, res) => {
+  res.status(200).end();
+});
 app.get('/health-check', healthCheckHandler);
+app.head('/health-check', (_req, res) => {
+  res.status(200).end();
+});
 app.get('/api/health', healthCheckHandler);
 app.get('/api/health-check', healthCheckHandler);
 app.get('/db-check', dbCheckHandler);

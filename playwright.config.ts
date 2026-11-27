@@ -34,30 +34,35 @@ export default defineConfig({
       ],
     },
   },
-  webServer: [
-    {
-      command: 'node -r ts-node/register/transpile-only __tests__/helpers/e2eServer.ts',
-      cwd: './server',
-      url: `http://127.0.0.1:${E2E_API_PORT}/health-check`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-      env: {
-        NODE_ENV: 'test',
-        E2E_API_PORT,
-        TS_NODE_PROJECT: './tsconfig.json',
-      },
-    },
-    {
-      command: `node ./node_modules/vite/bin/vite.js build --outDir node_modules/.cache/e2e-dist && node ./node_modules/vite/bin/vite.js preview --outDir node_modules/.cache/e2e-dist --host 127.0.0.1 --port ${E2E_UI_PORT} --strictPort`,
-      url: `http://127.0.0.1:${E2E_UI_PORT}/`,
-      reuseExistingServer: false,
-      timeout: 120_000,
-      env: {
-        VITE_API_BASE_URL: `http://127.0.0.1:${E2E_API_PORT}/api`,
-        VITE_SOCKET_URL: `http://127.0.0.1:${E2E_API_PORT}`,
-      },
-    },
-  ],
+  ...(process.env.PLAYWRIGHT_SKIP_WEBSERVER === '1'
+    ? {}
+    : {
+        webServer: [
+          {
+            command: 'node -r ts-node/register/transpile-only __tests__/helpers/e2eServer.ts',
+            cwd: './server',
+            url: `http://127.0.0.1:${E2E_API_PORT}/health-check`,
+            reuseExistingServer: false,
+            timeout: 60_000,
+            env: {
+              NODE_ENV: 'test',
+              E2E_API_PORT,
+              TS_NODE_PROJECT: './tsconfig.json',
+            },
+          },
+          {
+            command: 'node ./scripts/e2e-ui-server.mjs',
+            url: `http://127.0.0.1:${E2E_UI_PORT}/`,
+            reuseExistingServer: false,
+            timeout: 120_000,
+            env: {
+              E2E_UI_PORT,
+              VITE_API_BASE_URL: `http://127.0.0.1:${E2E_API_PORT}/api`,
+              VITE_SOCKET_URL: `http://127.0.0.1:${E2E_API_PORT}`,
+            },
+          },
+        ],
+      }),
   projects: [
     {
       name: 'Desktop Chrome',

@@ -9,7 +9,11 @@ import {
 } from './helpers/testHarness';
 import {
   buildResilientDatabaseUrl,
+  buildPgBossConnectionOptions,
   isTransientDbError,
+  normalizeRawPostgresUrl,
+  parseValidPostgresUrl,
+  resolvePostgresConnectionCandidates,
   withDbRetry,
   checkDatabaseHealthWithClient,
 } from '../src/lib/dbResilience';
@@ -45,6 +49,13 @@ describe('DB Connection Resilience & API Endpoint Robustness', () => {
     assert.equal(parsed.searchParams.get('connect_timeout'), '30');
     assert.equal(parsed.searchParams.get('pool_timeout'), '30');
     assert.equal(parsed.searchParams.get('sslmode'), 'require');
+    assert.equal(parsed.searchParams.get('pgbouncer'), 'true');
+    assert.equal(parsed.searchParams.get('connection_limit'), '5');
+
+    assert.equal(
+      normalizeRawPostgresUrl(`psql 'postgresql://user:pass@localhost:5432/localdb'`),
+      'postgresql://user:pass@localhost:5432/localdb'
+    );
 
     const explicitUrl = buildResilientDatabaseUrl(
       'postgresql://user:pass@localhost:5432/localdb?connect_timeout=10&pool_timeout=15'
@@ -137,5 +148,43 @@ describe('DB Connection Resilience & API Endpoint Robustness', () => {
     const myRes = await srv.request('GET', '/api/bookings/my', { token: userToken });
     assert.equal(myRes.status, 200);
     assert.deepEqual(myRes.body[0].details, {});
+  });
+
+  it('rejects malformed or placeholder database hosts like "base" and falls back cleanly for pg-boss', () => {
+    assert.equal(parseValidPostgresUrl('base'), null);
+    assert.equal(parseValidPostgresUrl('postgresql://user:secret@base/neondb'), null);
+    assert.ok(
+      parseValidPostgresUrl('postgresql://neondb_owner:pw@ep-demo.aws.neon.tech/neondb?sslmode=require')
+    );
+
+    const resolved = resolvePostgresConnectionCandidates([
+      { label: 'DATABASE_URL_UNPOOLED', value: 'postgresql://user:supersecret@base/neondb' },
+      { label: 'DATABASE_URL', value: 'postgresql://user:pw@ep-demo-pooler.aws.neon.tech/neondb' },
+    ]);
+
+    assert.equal(resolved.skipped.length, 1);
+    assert.equal(resolved.skipped[0].label, 'DATABASE_URL_UNPOOLED');
+    assert.equal(resolved.skipped[0].reason.includes('supersecret'), false);
+    assert.equal(resolved.candidates.length, 1);
+    assert.equal(resolved.candidates[0].label, 'DATABASE_URL');
+
+    const bossOpts = buildPgBossConnectionOptions(
+      'postgresql://user%40mail:p%40ss%231@ep-demo-pooler.aws.neon.tech:5432/neondb?sslmode=require'
+    );
+    assert.equal(bossOpts.host, 'ep-demo-pooler.aws.neon.tech');
+    assert.equal(bossOpts.port, 5432);
+    assert.equal(bossOpts.database, 'neondb');
+    assert.equal(bossOpts.user, 'user@mail');
+    assert.equal(bossOpts.password, 'p@ss#1');
+    assert.deepEqual(bossOpts.ssl, { rejectUnauthorized: false });
+
+    const localOpts = buildPgBossConnectionOptions('postgresql://postgres:pw@localhost:5432/kashmir_local');
+    assert.equal(localOpts.ssl, false);
+
+    assert.equal(
+      isTransientDbError(new Error('Error in PostgreSQL connection: Error { kind: Closed, cause: None }')),
+      true
+    );
+    assert.equal(isTransientDbError(new Error('Booking status is closed')), false);
   });
 });

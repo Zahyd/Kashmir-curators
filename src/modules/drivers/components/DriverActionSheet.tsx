@@ -129,7 +129,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isSliding) return;
+    if (!isSliding || !e.touches?.[0]) return;
     handleSliderMove(e.touches[0].clientX);
   };
 
@@ -286,19 +286,21 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
               </div>
             )}
 
-            <div className="p-5 rounded-3xl bg-[#0F141C]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_80px_rgba(0,0,0,0.85)] flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
+            <div className="p-4 sm:p-5 rounded-3xl bg-[#0F141C]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_80px_rgba(0,0,0,0.85)] flex items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
                 {/* Radar Circle */}
-                <div className="relative w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 overflow-hidden">
-                  <Radio className="w-6 h-6 animate-pulse" />
+                <div className="relative w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 overflow-hidden">
+                  <Radio className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
                   <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/30 to-transparent animate-[spin_3s_linear_infinite]" />
                 </div>
-                <div className="text-left">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-white">Finding Trips in Kashmir...</h4>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <div className="text-left min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-white truncate">
+                      Finding Trips in Kashmir...
+                    </h4>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
                   </div>
-                  <p className="text-[11px] text-white/50 truncate max-w-[210px] sm:max-w-xs">
+                  <p className="text-[11px] text-white/50 truncate w-full">
                     Live GPS synced with SXR Airport, Railway & Gulmarg tourists
                   </p>
                 </div>
@@ -308,7 +310,7 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
                 size="sm"
                 variant="outline"
                 onClick={onGoOffline}
-                className="h-10 rounded-xl bg-white/5 hover:bg-rose-500/20 border-white/10 hover:border-rose-500/30 text-rose-300 text-xs font-bold shrink-0"
+                className="h-10 px-3 rounded-xl bg-white/5 hover:bg-rose-500/20 border-white/10 hover:border-rose-500/30 text-rose-300 text-xs font-bold shrink-0"
               >
                 Go Offline
               </Button>
@@ -526,7 +528,8 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
               onTouchStart={() => setIsSliding(true)}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleSliderEnd}
-              className="relative w-full h-14 rounded-2xl bg-black/70 border border-white/10 overflow-hidden flex items-center px-1.5 select-none cursor-pointer"
+              onTouchCancel={handleSliderEnd}
+              className="relative w-full h-14 rounded-2xl bg-black/70 border border-white/10 overflow-hidden flex items-center px-1.5 select-none touch-none cursor-pointer"
             >
               {/* Filled Track Behind Handle */}
               <div

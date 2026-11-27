@@ -1,19 +1,28 @@
-const viteEnv = (import.meta as { env?: Record<string, string | undefined> }).env;
+const viteEnv = (import.meta as { env?: Record<string, string | undefined>; DEV?: boolean }).env;
+const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 const isLoopbackHost =
-  typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+const isPrivateLanHost =
+  /^(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})$/.test(
+    hostname
+  ) || hostname.endsWith('.local');
+const isViteDev = Boolean((import.meta as { env?: { DEV?: boolean } }).env?.DEV);
 
 export const API_BASE_URL =
   viteEnv?.VITE_API_BASE_URL ||
   (isLoopbackHost
-    ? `http://${window.location.hostname}:5000/api`
-    : 'https://kashmir-curators-api.onrender.com/api');
+    ? `http://${hostname}:5000/api`
+    : isPrivateLanHost && isViteDev && typeof window !== 'undefined'
+      ? `${window.location.origin}/api`
+      : 'https://kashmir-curators-api.onrender.com/api');
 
 export const SOCKET_URL =
   viteEnv?.VITE_SOCKET_URL ||
   (isLoopbackHost
-    ? `http://${window.location.hostname}:5000`
-    : 'https://kashmir-curators-api.onrender.com');
+    ? `http://${hostname}:5000`
+    : isPrivateLanHost && isViteDev && typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://kashmir-curators-api.onrender.com');
 
 export const NEON_AUTH_URL = viteEnv?.VITE_NEON_AUTH_URL || 'https://ep-purple-shadow-ao7lc51d.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth';
 
@@ -24,7 +33,7 @@ export const isSearchBot = typeof navigator !== 'undefined' &&
 // can be rejected or dropped by reverse proxies, polling ensures seamless 100% reliable delivery
 // without triggering native browser WebSocket error logs in the console.
 export const DEFAULT_SOCKET_OPTIONS = {
-  transports: isLoopbackHost ? ['websocket', 'polling'] : ['polling'],
+  transports: isLoopbackHost || (isPrivateLanHost && isViteDev) ? ['websocket', 'polling'] : ['polling'],
   reconnection: !isSearchBot,
   reconnectionAttempts: isSearchBot ? 0 : 5,
   reconnectionDelay: 2000,

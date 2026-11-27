@@ -46,10 +46,18 @@ export default function DriverDashboard() {
   const { user: authUser, token: authToken, logout: authLogout } = useAuth();
 
   const [portalToken, setPortalToken] = useState<string | null>(() => {
-    return localStorage.getItem('driver_portal_token') || null;
+    try {
+      return localStorage.getItem('driver_portal_token') || null;
+    } catch {
+      return null;
+    }
   });
   const [portalKey, setPortalKey] = useState<string | null>(() => {
-    return localStorage.getItem('driver_portal_key') || null;
+    try {
+      return localStorage.getItem('driver_portal_key') || null;
+    } catch {
+      return null;
+    }
   });
 
   const activeToken = portalToken || authToken || null;
@@ -295,6 +303,8 @@ export default function DriverDashboard() {
     sock.on('driver-trip-dispatched', (payload: Record<string, unknown>) => {
       const incoming = toDriverTripFromDispatch(payload);
       toast.info('New Ride Request Received!', {
+        id: `trip-dispatch-${incoming.id || incoming.pickupLocation}`,
+        duration: 3500,
         description: `${incoming.pickupLocation} → ${incoming.dropLocation} (₹${incoming.fareAmount.toLocaleString('en-IN')})`,
       });
       if (dutyStateRef.current === 'ONLINE_SEARCHING') {
@@ -723,7 +733,7 @@ export default function DriverDashboard() {
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#07090E] select-none font-sans">
+    <div className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden bg-[#07090E] select-none font-sans">
       {/* 1. Interactive Full-Bleed Dark Tactical Valley Cockpit */}
       <DriverMapCockpit
         dutyState={dutyState}

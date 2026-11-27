@@ -2,9 +2,19 @@ import { notificationService } from './notificationService';
 import { aiAgentService, InboundParsedResult } from './aiAgentService';
 import { WhatsAppWorkflowEngine } from './whatsappService';
 import prisma from '../lib/prisma';
+import {
+  buildPgBossConnectionOptions,
+  resolvePostgresConnectionCandidates,
+} from '../lib/dbResilience';
 
 let bossInstance: any = null;
 let isStarted = false;
+
+export { buildPgBossConnectionOptions };
+
+const QUEUE_EMAIL_SEND = 'email-send';
+const QUEUE_EMAIL_INBOUND = 'email-process-inbound';
+const QUEUE_SEARCH_NUDGE = 'customer-search-nudge';
 
 export const emailQueueService = {
   /**
@@ -13,36 +23,54 @@ export const emailQueueService = {
   async initQueue(connectionString?: string) {
     if (isStarted && bossInstance) return bossInstance;
 
-    const dbUrl = connectionString || process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
-    if (!dbUrl) {
-      console.warn('[EmailQueueService] No database URL found, running in immediate mode.');
+    const { candidates, skipped } = resolvePostgresConnectionCandidates([
+      { label: 'explicit', value: connectionString },
+      { label: 'DATABASE_URL_UNPOOLED', value: process.env.DATABASE_URL_UNPOOLED },
+      { label: 'DATABASE_URL', value: process.env.DATABASE_URL },
+    ]);
+
+    for (const item of skipped) {
+      console.warn(`[EmailQueueService] Skipping ${item.label}: ${item.reason}.`);
+    }
+
+    if (candidates.length === 0) {
+      console.warn('[EmailQueueService] No valid PostgreSQL URL found, running in immediate mode.');
       return null;
     }
 
-    try {
-      const { PgBoss } = await import('pg-boss');
-      bossInstance = new PgBoss({
-        connectionString: dbUrl,
-        ssl: { rejectUnauthorized: false },
-        schema: 'pgboss',
-        max: 5
-      });
+    const { PgBoss } = await import('pg-boss');
 
-      bossInstance.on('error', (err: any) => {
-        console.warn('[PgBoss] Worker event warning:', err.message);
-      });
+    for (const candidate of candidates) {
+      let attemptBoss: any = null;
+      try {
+        attemptBoss = new PgBoss(buildPgBossConnectionOptions(candidate.url));
+        attemptBoss.on('error', (err: any) => {
+          console.warn('[PgBoss] Worker event warning:', err.message);
+        });
 
-      await bossInstance.start();
-      isStarted = true;
-      console.log('[EmailQueueService] pg-boss background worker started successfully on Neon PostgreSQL.');
+        await attemptBoss.start();
+        bossInstance = attemptBoss;
+        isStarted = true;
+        console.log(
+          `[EmailQueueService] pg-boss background worker started successfully (${candidate.label}).`
+        );
 
-      // Register Workers
-      await this.registerWorkers();
-      return bossInstance;
-    } catch (err: any) {
-      console.warn('[EmailQueueService] Failed to start pg-boss, fallback to direct dispatch:', err.message);
-      return null;
+        await this.registerWorkers();
+        return bossInstance;
+      } catch (err: any) {
+        console.warn(
+          `[EmailQueueService] pg-boss failed on ${candidate.label}: ${err?.message || err}`
+        );
+        if (attemptBoss && typeof attemptBoss.stop === 'function') {
+          await attemptBoss.stop({ graceful: false }).catch(() => {});
+        }
+        bossInstance = null;
+        isStarted = false;
+      }
     }
+
+    console.warn('[EmailQueueService] All pg-boss connection candidates failed, using direct dispatch fallback.');
+    return null;
   },
 
   /**
@@ -51,8 +79,16 @@ export const emailQueueService = {
   async registerWorkers() {
     if (!bossInstance) return;
 
+    if (typeof bossInstance.createQueue === 'function') {
+      await Promise.all(
+        [QUEUE_EMAIL_SEND, QUEUE_EMAIL_INBOUND, QUEUE_SEARCH_NUDGE].map((queueName) =>
+          bossInstance.createQueue(queueName).catch(() => {})
+        )
+      );
+    }
+
     // Worker 1: Outbound Transactional Email
-    await bossInstance.work('email:send', async (jobs: any) => {
+    await bossInstance.work(QUEUE_EMAIL_SEND, async (jobs: any) => {
       const jobList = Array.isArray(jobs) ? jobs : [jobs];
       for (const job of jobList) {
         const payload = job.data;
@@ -70,7 +106,7 @@ export const emailQueueService = {
     });
 
     // Worker 2: Inbound AI Hotel Reply Processing
-    await bossInstance.work('email:process-inbound', async (jobs: any) => {
+    await bossInstance.work(QUEUE_EMAIL_INBOUND, async (jobs: any) => {
       const jobList = Array.isArray(jobs) ? jobs : [jobs];
       for (const job of jobList) {
         const { rawText, fromEmail, subject, reservationId, io } = job.data;
@@ -84,7 +120,7 @@ export const emailQueueService = {
     });
 
     // Worker 3: Customer Search & Abandoned-Browse Nudge
-    await bossInstance.work('customer:search-nudge', async (jobs: any) => {
+    await bossInstance.work(QUEUE_SEARCH_NUDGE, async (jobs: any) => {
       const jobList = Array.isArray(jobs) ? jobs : [jobs];
       for (const job of jobList) {
         try {
@@ -111,7 +147,7 @@ export const emailQueueService = {
   }) {
     if (bossInstance && isStarted) {
       try {
-        const jobId = await bossInstance.send('email:send', params, {
+        const jobId = await bossInstance.send(QUEUE_EMAIL_SEND, params, {
           retryLimit: 3,
           retryDelay: 60, // 1 min initial delay
           retryBackoff: true,
@@ -251,7 +287,7 @@ export const emailQueueService = {
   }) {
     if (bossInstance && isStarted) {
       try {
-        const jobId = await bossInstance.send('customer:search-nudge', params, {
+        const jobId = await bossInstance.send(QUEUE_SEARCH_NUDGE, params, {
           retryLimit: 2,
           retryDelay: 120,
           startAfter: params.delaySeconds ?? 1800 // default 30 mins

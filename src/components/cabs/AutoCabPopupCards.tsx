@@ -159,7 +159,7 @@ export const AutoCabPopupCards: React.FC<AutoCabPopupCardsProps> = ({
         type="button"
         onClick={onReopen}
         data-testid="reopen-cab-popup-btn"
-        className="fixed bottom-24 right-4 sm:right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#0B1017]/95 hover:bg-[#131B26] border border-amber-500/50 text-white shadow-[0_12px_40px_rgba(245,158,11,0.3)] backdrop-blur-xl transition-all active:scale-95"
+        className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] right-3 sm:bottom-24 sm:right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#0B1017]/95 hover:bg-[#131B26] border border-amber-500/50 text-white shadow-[0_12px_40px_rgba(245,158,11,0.3)] backdrop-blur-xl transition-all active:scale-95"
       >
         <span className="relative flex h-2.5 w-2.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -176,7 +176,7 @@ export const AutoCabPopupCards: React.FC<AutoCabPopupCardsProps> = ({
   return (
     <div
       data-testid="auto-cab-popup-cards"
-      className="fixed inset-x-3 bottom-20 sm:inset-x-auto sm:right-6 sm:bottom-24 z-40 sm:w-[460px] max-h-[75vh] flex flex-col rounded-3xl bg-[#0A0F16]/96 backdrop-blur-2xl border border-amber-500/40 shadow-[0_24px_90px_rgba(0,0,0,0.85)] text-white overflow-hidden animate-in slide-in-from-bottom-6 duration-300"
+      className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] sm:inset-x-auto sm:right-6 sm:bottom-24 z-40 sm:w-[460px] max-h-[72dvh] flex flex-col rounded-3xl bg-[#0A0F16]/96 backdrop-blur-2xl border border-amber-500/40 shadow-[0_24px_90px_rgba(0,0,0,0.85)] text-white overflow-hidden animate-in slide-in-from-bottom-6 duration-300"
     >
       {/* Header */}
       <div className="p-4 sm:p-5 bg-gradient-to-r from-[#111926] via-[#0D131D] to-[#0A0F16] border-b border-white/10 flex items-start justify-between gap-3">
@@ -422,7 +422,7 @@ export const AutoCabPopupCards: React.FC<AutoCabPopupCardsProps> = ({
                       onChange={(e) =>
                         setCustomFareMap((prev) => ({ ...prev, [cab.cabId]: e.target.value }))
                       }
-                      className="h-9 w-28 bg-black/50 border-white/10 text-white text-xs font-mono shrink-0"
+                      className="h-9 w-24 sm:w-28 bg-black/50 border-white/10 text-white text-xs font-mono shrink-0"
                     />
                     <Button
                       type="button"
@@ -439,7 +439,7 @@ export const AutoCabPopupCards: React.FC<AutoCabPopupCardsProps> = ({
                           setBusyId(null);
                         }
                       }}
-                      className="flex-1 h-9 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 font-black text-[11px] uppercase tracking-wider gap-1.5"
+                      className="flex-1 h-9 px-2.5 sm:px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 font-black text-[10px] sm:text-[11px] uppercase tracking-wider gap-1.5 whitespace-nowrap"
                     >
                       {busyId === cab.cabId ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />

@@ -118,9 +118,14 @@ export const AgentDashboard: React.FC = () => {
   });
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const socketRef = useRef<ReturnType<typeof io> | null>(null);
   const orgIdRef = useRef<string | undefined>(user?.organizationId);
   useEffect(() => {
-    orgIdRef.current = user?.organizationId || agentStats?.organization?.id || undefined;
+    const resolvedOrgId = user?.organizationId || agentStats?.organization?.id || undefined;
+    orgIdRef.current = resolvedOrgId;
+    if (resolvedOrgId && resolvedOrgId !== 'kc-primary-dmc' && socketRef.current?.connected) {
+      socketRef.current.emit('join-tenant', resolvedOrgId);
+    }
   }, [user?.organizationId, agentStats?.organization?.id]);
 
   const fetchData = useCallback(async () => {
@@ -188,6 +193,7 @@ export const AgentDashboard: React.FC = () => {
         });
       }
     });
+    socketRef.current = socket;
 
     const userId = user?.id;
 
@@ -304,6 +310,7 @@ export const AgentDashboard: React.FC = () => {
     return () => {
       clearInterval(heartbeatTimer);
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      socketRef.current = null;
       socket.disconnect();
       if (eventSource) eventSource.close();
       setRealtimeStatus('offline');

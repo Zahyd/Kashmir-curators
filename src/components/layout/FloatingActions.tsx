@@ -3,8 +3,15 @@ import { MessageCircle, Phone, X, Sparkles, Headphones, CalendarDays } from 'luc
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { io } from 'socket.io-client';
-import { API_BASE_URL, SOCKET_URL } from '@/lib/api';
+import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
 import { useLeadCapture } from '@/contexts/LeadCaptureContext';
+
+interface RecentCurationBooking {
+  id: string;
+  message?: string;
+  details?: string;
+  createdAt: string;
+}
 
 const formatRelativeTime = (dateString: string) => {
   try {
@@ -27,7 +34,7 @@ const formatRelativeTime = (dateString: string) => {
 export default function FloatingActions() {
   const { openLeadModal, openCallbackModal, openWhatsAppLead } = useLeadCapture();
   const [isOpen, setIsOpen] = useState(false);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<RecentCurationBooking[]>([]);
   const [socialIdx, setSocialIdx] = useState(0);
   const [showSocial, setShowSocial] = useState(false);
 
@@ -53,11 +60,9 @@ export default function FloatingActions() {
     fetchRecent();
 
     // 2. Setup socket for real-time booking/inquiry curation alerts
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling']
-    });
+    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
 
-    socket.on('new-live-curation', (newBooking) => {
+    socket.on('new-live-curation', (newBooking: RecentCurationBooking) => {
       setBookings(prev => {
         // Remove duplicate if same ID
         const filtered = prev.filter(b => b.id !== newBooking.id);

@@ -435,6 +435,24 @@ async function start() {
 
   await seedBaselineData();
 
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
+
+  let shuttingDown = false;
+  const shutdown = () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    const forceExit = setTimeout(() => process.exit(0), 1500);
+    forceExit.unref();
+    ioServer.close(() => {
+      server.close(() => process.exit(0));
+    });
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+  process.on('SIGBREAK', shutdown);
+
   server.listen(port, '127.0.0.1', () => {
     console.log(`[E2E Server] Listening on http://127.0.0.1:${port}`);
   });

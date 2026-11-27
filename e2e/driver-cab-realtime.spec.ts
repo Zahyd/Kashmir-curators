@@ -164,4 +164,144 @@ test.describe('Real-Time Driver Cockpit, KYC RBAC & Tourist Auto Pop-Up Cab Card
     await touristCtx.close();
     await driverCtx.close();
   });
+
+  test('renders and operates /driver and /cabs cleanly on Mobile Chrome (360x740 touch viewport)', async ({
+    browser,
+    request,
+  }) => {
+    const mobileDriverCtx = await browser.newContext({
+      viewport: { width: 360, height: 740 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    await stubExternalAssets(mobileDriverCtx);
+    const mobileDriverPage = await mobileDriverCtx.newPage();
+
+    const driverPageErrors: string[] = [];
+    mobileDriverPage.on('pageerror', (err) => driverPageErrors.push(err.message));
+
+    await mobileDriverPage.goto('/driver');
+    await mobileDriverPage.getByTestId('driver-portal-key-input').fill('KC-DRV-E2E001');
+    await mobileDriverPage.getByTestId('driver-portal-key-submit').click();
+
+    await expect(mobileDriverPage.getByText("Today's Take")).toBeVisible({ timeout: 15_000 });
+
+    const goBtn = mobileDriverPage.getByRole('button', { name: /^GO$/i });
+    const goOfflineBtn = mobileDriverPage.getByRole('button', { name: /Go Offline/i });
+    await expect(goBtn.or(goOfflineBtn)).toBeVisible({ timeout: 15_000 });
+
+    if (await goOfflineBtn.isVisible().catch(() => false)) {
+      await goOfflineBtn.click();
+    }
+
+    await expect(goBtn).toBeVisible({ timeout: 15_000 });
+
+    const goBox = await goBtn.boundingBox();
+    expect(goBox).toBeTruthy();
+    expect(goBox!.y + goBox!.height).toBeLessThanOrEqual(740);
+
+    const overflowOffline = await mobileDriverPage.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    );
+    expect(overflowOffline).toBe(false);
+
+    await goBtn.click();
+    await expect(mobileDriverPage.getByText(/Finding Trips in Kashmir/i)).toBeVisible({ timeout: 15_000 });
+
+    await expect(goOfflineBtn).toBeVisible();
+    const goOfflineBox = await goOfflineBtn.boundingBox();
+    expect(goOfflineBox).toBeTruthy();
+    expect(goOfflineBox!.x + goOfflineBox!.width).toBeLessThanOrEqual(360);
+    expect(goOfflineBox!.y + goOfflineBox!.height).toBeLessThanOrEqual(740);
+
+    const overflowOnline = await mobileDriverPage.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    );
+    expect(overflowOnline).toBe(false);
+
+    // Tourist Mobile Chrome (360x740 touch) views /cabs Auto Pop-Up Cards & books live cab
+    const touristLoginRes = await request.post(`${API_ORIGIN}/api/auth/login`, {
+      data: { email: 'tourist001@kashmircabs.test', password: 'TouristPass123!' },
+    });
+    expect(touristLoginRes.ok()).toBe(true);
+    const { token: touristToken } = (await touristLoginRes.json()) as { token: string };
+
+    const mobileTouristCtx = await browser.newContext({
+      viewport: { width: 360, height: 740 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    await stubExternalAssets(mobileTouristCtx);
+    await mobileTouristCtx.addInitScript(
+      ({ jwt }) => {
+        localStorage.setItem('auth_token', jwt);
+      },
+      { jwt: touristToken }
+    );
+    const mobileTouristPage = await mobileTouristCtx.newPage();
+
+    const touristPageErrors: string[] = [];
+    mobileTouristPage.on('pageerror', (err) => touristPageErrors.push(err.message));
+
+    await mobileTouristPage.goto('/cabs');
+    const popup = mobileTouristPage.getByTestId('auto-cab-popup-cards');
+    await expect(popup).toBeVisible({ timeout: 15_000 });
+
+    const popupBox = await popup.boundingBox();
+    expect(popupBox).toBeTruthy();
+    expect(popupBox!.x).toBeGreaterThanOrEqual(0);
+    expect(popupBox!.x + popupBox!.width).toBeLessThanOrEqual(360);
+    expect(popupBox!.y + popupBox!.height).toBeLessThanOrEqual(740);
+
+    const overflowTourist = await mobileTouristPage.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    );
+    expect(overflowTourist).toBe(false);
+
+    // Minimize and reopen on mobile Chrome
+    await popup.getByRole('button', { name: /Minimize cab cards/i }).click();
+    const reopenBtn = mobileTouristPage.getByTestId('reopen-cab-popup-btn');
+    await expect(reopenBtn).toBeVisible();
+    await reopenBtn.click();
+    await expect(popup).toBeVisible();
+
+    await popup.getByRole('button', { name: /Request Live Ride/i }).first().click({ timeout: 10_000 });
+    await expect(popup.getByText(/Live Dispatch Offers/i)).toBeVisible({ timeout: 15_000 });
+
+    // Driver accepts live request & slide-to-confirm bar fits cleanly inside 360x740 mobile viewport
+    const acceptTripBtn = mobileDriverPage.getByRole('button', { name: /Accept Trip/i });
+    const openBtn = mobileDriverPage.getByText(/Open →/i).first();
+    await expect(acceptTripBtn.or(openBtn)).toBeVisible({ timeout: 15_000 });
+    if (!(await acceptTripBtn.isVisible().catch(() => false))) {
+      await openBtn.click({ timeout: 5_000 }).catch(() => {});
+    }
+    await expect(acceptTripBtn).toBeVisible({ timeout: 15_000 });
+    await acceptTripBtn.click({ timeout: 10_000 });
+
+    // Tourist confirms live driver offer on 360x740 mobile Chrome -> receives real Boarding PIN!
+    const confirmOfferBtn = popup.getByRole('button', { name: /Confirm Chauffeur at ₹/i }).first();
+    await expect(confirmOfferBtn).toBeVisible({ timeout: 15_000 });
+    await confirmOfferBtn.click({ timeout: 10_000 });
+
+    const finalConfirmBtn = mobileTouristPage.getByRole('button', { name: /Confirm & Book Chauffeur/i });
+    await expect(finalConfirmBtn).toBeVisible({ timeout: 10_000 });
+    await finalConfirmBtn.click({ timeout: 10_000 });
+
+    await expect(mobileTouristPage.getByText(/Ride Booked Successfully!/i)).toBeVisible({ timeout: 15_000 });
+    await mobileTouristPage.getByRole('button', { name: /Track Live Status/i }).click({ timeout: 10_000 });
+    await expect(mobileTouristPage.getByTestId('tourist-boarding-pin')).toBeVisible({ timeout: 10_000 });
+
+    // Driver transitions to active trip -> Slide-to-Confirm bar fits cleanly inside 360x740 mobile viewport
+    const slideText = mobileDriverPage.getByText(/Slide to Arrive at Pickup/i);
+    await expect(slideText).toBeVisible({ timeout: 15_000 });
+    const slideBox = await slideText.boundingBox();
+    expect(slideBox).toBeTruthy();
+    expect(slideBox!.y + slideBox!.height).toBeLessThanOrEqual(740);
+
+    expect(driverPageErrors).toEqual([]);
+    expect(touristPageErrors).toEqual([]);
+
+    await mobileTouristCtx.close();
+    await mobileDriverCtx.close();
+  });
 });
