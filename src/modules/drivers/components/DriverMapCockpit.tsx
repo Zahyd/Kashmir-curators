@@ -22,12 +22,25 @@ interface DriverMapCockpitProps {
   dutyState: DriverDutyState;
   activeTrip: DriverTrip | null;
   snowChainsActive?: boolean;
+  sector?: string;
+  onSelectSector?: (sector: string) => void;
 }
+
+const KASHMIR_HUBS = [
+  'Srinagar SXR Airport',
+  'Dal Lake / Boulevard',
+  'Tangmarg Checkpost',
+  'Gulmarg Gondola Bowl',
+  'Pahalgam Lidder Stand',
+  'Nowgam Railway Terminal',
+];
 
 export const DriverMapCockpit: React.FC<DriverMapCockpitProps> = ({
   dutyState,
   activeTrip,
   snowChainsActive = true,
+  sector = 'Srinagar SXR Airport',
+  onSelectSector,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -355,11 +368,34 @@ export const DriverMapCockpit: React.FC<DriverMapCockpitProps> = ({
 
           {/* Driver Telemetry Tag */}
           <g transform="translate(16, -14)">
-            <rect width="84" height="22" rx="6" fill="#07090E" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-            <text x="8" y="14" fill="#F8FAFC" fontSize="9" fontWeight="bold">YOU • {dutyState === 'ACTIVE_TRIP' ? `${Math.round(speed)} km/h` : 'ONLINE'}</text>
+            <rect width="92" height="22" rx="6" fill="#07090E" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+            <text x="8" y="14" fill="#F8FAFC" fontSize="9" fontWeight="bold">
+              YOU • {dutyState === 'ACTIVE_TRIP' ? `${Math.round(speed)} km/h` : dutyState === 'OFFLINE' ? 'STANDBY' : 'ONLINE'}
+            </text>
           </g>
         </g>
       </svg>
+
+      {/* Active Sector Staging Selector (Top-Left below HUD) */}
+      {onSelectSector && (
+        <div className="absolute left-3 sm:left-4 top-20 z-20 pointer-events-auto">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0F141C]/90 border border-white/10 backdrop-blur-xl shadow-lg text-xs">
+            <Compass className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <select
+              aria-label="Staging Sector"
+              value={sector}
+              onChange={(e) => onSelectSector(e.target.value)}
+              className="bg-transparent text-white/90 text-[11px] font-bold focus:outline-none cursor-pointer pr-1"
+            >
+              {KASHMIR_HUBS.map((hub) => (
+                <option key={hub} value={hub} className="bg-[#0F141C] text-white">
+                  {hub}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* Floating Tactical Map Controls (Right Side) */}
       <div className="absolute right-4 top-24 z-20 flex flex-col gap-2">

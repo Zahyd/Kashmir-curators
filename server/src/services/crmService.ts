@@ -1,5 +1,4 @@
 import prisma from '../lib/prisma';
-import { io } from '../index';
 import { realtimeBus } from '../lib/realtimeBus';
 
 export class CRMService {
@@ -74,6 +73,7 @@ export class CRMService {
       });
 
       // 5. Trigger real-time notifications via tenant-scoped RealtimeBus
+      const activeIo = realtimeBus.getIo();
       const tenantId = (updatedInquiry as any).organizationId || null;
       realtimeBus.publish(
         'lead-assigned',
@@ -81,7 +81,7 @@ export class CRMService {
           inquiry: updatedInquiry,
           message: `🏔️ New Lead: You have been assigned to ${updatedInquiry.customerName} for ${updatedInquiry.destination}!`
         },
-        { io, tenantId, userIds: [assignedAgent.id] }
+        { io: activeIo, tenantId, userIds: [assignedAgent.id] }
       );
       realtimeBus.publish(
         'new-system-event',
@@ -90,7 +90,7 @@ export class CRMService {
           inquiry: updatedInquiry,
           message: `Lead auto-routed: ${updatedInquiry.customerName} assigned to Agent ${assignedAgent.name}`
         },
-        { io, tenantId }
+        { io: activeIo, tenantId }
       );
 
       return assignedAgent;

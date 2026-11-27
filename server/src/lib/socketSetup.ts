@@ -81,11 +81,25 @@ export function configureSocketServer(io: any) {
           .catch(() => null);
 
         if (keyRec && keyRec.status === 'ACTIVE') {
+          let resolvedUserId = keyRec.userId || keyRec.id;
+          let resolvedRole = String(keyRec.portalType || 'hospitality').toLowerCase();
+          if (String(keyRec.portalType || '').toUpperCase() === 'DRIVER') {
+            const { resolveOrProvisionDriverForPortalKey } = await import('./driverIdentity');
+            const driverIdentity = await resolveOrProvisionDriverForPortalKey(keyRec).catch(() => null);
+            if (driverIdentity?.user) {
+              resolvedUserId = driverIdentity.user.id;
+              resolvedRole = driverIdentity.user.role || 'driver';
+            } else {
+              resolvedRole = 'driver';
+            }
+          }
           socket.data.user = {
-            id: keyRec.id,
+            id: resolvedUserId,
             name: keyRec.assignedName,
-            role: String(keyRec.portalType || 'hospitality').toLowerCase(),
+            role: resolvedRole,
             portalType: keyRec.portalType,
+            accessKey: keyRec.accessKey,
+            employeeCode: keyRec.accessKey,
           };
           return next();
         }
@@ -287,6 +301,7 @@ export function configureSocketServer(io: any) {
         return;
       }
       socket.join(`driver-${driverId}`);
+      socket.join('driver-room');
       cb?.({ ok: true, room: `driver-${driverId}` });
     });
 
@@ -297,9 +312,16 @@ export function configureSocketServer(io: any) {
     // Generic room join/leave with strict authorization boundaries
     socket.on('join-room', (room: string, cb?: (res: any) => void) => {
       if (!room || typeof room !== 'string') return;
-      if (room.startsWith('payment-')) {
+      if (room.startsWith('payment-') || room === 'cabs-public') {
         socket.join(room);
         cb?.({ ok: true, room });
+      } else if (room === 'driver-room') {
+        if (!socketUser || !['admin', 'operations', 'driver'].includes(userRole)) {
+          cb?.({ ok: false, error: 'Forbidden' });
+        } else {
+          socket.join('driver-room');
+          cb?.({ ok: true, room });
+        }
       } else if (room === 'admin-room' || room === 'sales-room') {
         if (!isStaff) {
           cb?.({ ok: false, error: 'Forbidden' });

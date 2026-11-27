@@ -2,7 +2,6 @@ import cron from 'node-cron';
 import prisma from '../lib/prisma';
 import { notificationService } from './notificationService';
 import { WhatsAppWorkflowEngine } from './whatsappService';
-import { io } from '../index';
 import { realtimeBus } from '../lib/realtimeBus';
 
 class CronService {
@@ -125,8 +124,9 @@ class CronService {
           }
         });
 
-        if (io) {
-          io.to('admin-room').emit('new-system-event', {
+        const activeIo = realtimeBus.getIo();
+        if (activeIo) {
+          activeIo.to('admin-room').emit('new-system-event', {
             type: 'RESPONSE_REMINDER',
             message: `AI Agent dispatched ${urgencyLevel.toLowerCase()} reminder #${reminderCount} to ${res.hotel?.name || 'Hotel'} for ${res.guestName}`,
             booking: { id: res.id, entityType: 'reservation' }
@@ -181,7 +181,7 @@ class CronService {
           customerName: rem.inquiry?.customerName,
           assignedTo: rem.assignedTo
         },
-        { io, tenantId: (rem.inquiry as any)?.organizationId || null }
+        { io: realtimeBus.getIo(), tenantId: (rem.inquiry as any)?.organizationId || null }
       );
     }
   }

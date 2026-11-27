@@ -3,7 +3,7 @@ import { CRMService } from './crmService';
 import { WhatsAppWorkflowEngine } from './whatsappService';
 import { broadcastSalesEvent } from '../routes/salesRoutes';
 import { notificationService } from './notificationService';
-import { io } from '../index';
+import { realtimeBus } from '../lib/realtimeBus';
 
 export interface MetaLeadFieldData {
   name: string;
@@ -185,9 +185,10 @@ export class MetaLeadAutomationService {
     }
 
     // 8. Push System Event to Admin WebSockets
-    if (io) {
+    const activeIo = realtimeBus.getIo();
+    if (activeIo) {
       notificationService.emitSystemEvent(
-        io,
+        activeIo,
         'CREATE',
         `🚀 Live Meta Ad Lead: ${customerName} auto-quoted ₹${quote.calculatedPrice.toLocaleString('en-IN')} on WhatsApp!`,
         { ...inquiry, entityType: 'inquiry' }

@@ -46,6 +46,17 @@ export interface CMSCab {
   image: string;
   features: string[];
   isActive?: boolean;
+  plateNumber?: string | null;
+  luggageCapacity?: number;
+  snowChains?: boolean;
+  fourWheelDrive?: boolean;
+  skiRack?: boolean;
+  multiDayAvailable?: boolean;
+  verificationStatus?: string;
+  unionVerified?: boolean;
+  unionName?: string | null;
+  rateCard?: Record<string, unknown> | null;
+  driverProfileId?: string | null;
 }
 
 export interface CMSTestimonial {

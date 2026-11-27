@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import prisma from '../lib/prisma';
-import { io } from '../index';
 import { realtimeBus } from '../lib/realtimeBus';
 import { LeadScoringService } from '../services/leadScoringService';
 import {
@@ -379,7 +378,7 @@ export const createCRMLead = async (req: AuthRequest, res: Response) => {
       })
       .catch(() => null);
 
-    const ioRef = (req as any).io || io;
+    const ioRef = realtimeBus.getIo((req as any).io);
     const targetUserIds = collectLeadTargetUserIds(created);
 
     realtimeBus.publish('NEW_INQUIRY', created, { io: ioRef, tenantId: organizationId, userIds: targetUserIds });
@@ -503,7 +502,7 @@ export const updateLeadStage = async (req: AuthRequest, res: Response) => {
     ]);
 
     // Real-time synchronization via tenant/agent-scoped RealtimeBus (no global PII leaks)
-    const ioRef = (req as any).io || io;
+    const ioRef = realtimeBus.getIo((req as any).io);
     const tenantId = (updated as any).organizationId || (req.user as any)?.organizationId || null;
     const targetUserIds = collectLeadTargetUserIds(updated);
     const leadPayload = {
@@ -578,7 +577,7 @@ export const addLeadNote = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    const ioRef = (req as any).io || io;
+    const ioRef = realtimeBus.getIo((req as any).io);
     const targetUserIds = collectLeadTargetUserIds(inquiry);
     realtimeBus.publish('lead-note-added', { inquiryId: id, note, organizationId: inquiry.organizationId }, {
       io: ioRef,
@@ -738,7 +737,7 @@ export const createReminder = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    const ioRef = (req as any).io || io;
+    const ioRef = realtimeBus.getIo((req as any).io);
     const targetUserIds = collectLeadTargetUserIds(inquiry);
     realtimeBus.publish('reminder-scheduled', { inquiryId: id, reminder, organizationId: inquiry.organizationId }, {
       io: ioRef,
@@ -803,7 +802,7 @@ export const updateReminder = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const ioRef = (req as any).io || io;
+    const ioRef = realtimeBus.getIo((req as any).io);
     const targetUserIds = collectLeadTargetUserIds(inquiry);
     realtimeBus.publish('reminder-updated', { inquiryId: existing.inquiryId, reminder: updated }, {
       io: ioRef,
@@ -1052,7 +1051,7 @@ export const assignLead = async (req: AuthRequest, res: Response) => {
       })
       .catch(() => null);
 
-    const ioRef = (req as any).io || io;
+    const ioRef = realtimeBus.getIo((req as any).io);
     const tenantId = (inquiry as any).organizationId || (req.user as any)?.organizationId || null;
     const targetUserIds = collectLeadTargetUserIds(updated);
     realtimeBus.publish('lead-assigned', {

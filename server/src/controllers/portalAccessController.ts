@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { resolveOrProvisionDriverForPortalKey } from '../lib/driverIdentity';
 
 // SECURITY: JWT_SECRET is mandatory — fail fast if unconfigured
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -106,15 +107,30 @@ export const verifyPortalAccess = async (req: Request, res: Response) => {
       }
     });
 
+    let resolvedId = updated.id;
+    let resolvedRole = mapPortalRole(updated.portalType);
+    let driverProfile: Record<string, any> | null = null;
+
+    if (String(updated.portalType).toUpperCase() === 'DRIVER') {
+      const driverIdentity = await resolveOrProvisionDriverForPortalKey(updated).catch(() => null);
+      if (driverIdentity?.user) {
+        resolvedId = driverIdentity.user.id;
+        resolvedRole = driverIdentity.user.role || 'driver';
+        driverProfile = driverIdentity.driverProfile;
+      }
+    }
+
     // Generate authenticated JWT session for the portal
     const sessionToken = jwt.sign(
       {
-        id: updated.id,
+        id: resolvedId,
         accessKey: updated.accessKey,
+        employeeCode: updated.accessKey,
         name: updated.assignedName,
-        role: mapPortalRole(updated.portalType),
+        role: resolvedRole,
         portalType: updated.portalType,
-        propertyScope: updated.propertyScope || 'ALL'
+        propertyScope: updated.propertyScope || 'ALL',
+        driverProfileId: driverProfile?.id,
       },
       JWT_SECRET,
       { expiresIn: '30d', algorithm: 'HS256' }
@@ -125,13 +141,17 @@ export const verifyPortalAccess = async (req: Request, res: Response) => {
       message: `Access granted to ${keyRecord.portalType} portal.`,
       token: sessionToken,
       session: {
-        id: updated.id,
+        id: resolvedId,
+        portalKeyId: updated.id,
         accessKey: updated.accessKey,
         assignedName: updated.assignedName,
         assignedContact: updated.assignedContact,
         designation: updated.designation,
         portalType: updated.portalType,
+        role: resolvedRole,
         propertyScope: updated.propertyScope || 'ALL',
+        driverProfileId: driverProfile?.id || null,
+        approvalStatus: driverProfile?.approvalStatus || null,
         loginTime: new Date().toISOString()
       }
     });

@@ -61,6 +61,7 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'operations', 'sales'
  *         description: List of bookings retrieved
  */
 router.get('/my', authenticateToken, getMyBookings);
+router.get('/my-trips', authenticateToken, getMyBookings);
 
 /**
  * @swagger

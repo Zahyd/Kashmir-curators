@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { extractTenantId, DEFAULT_TENANT_ID } from '../lib/tenant';
+import { resolveOrProvisionDriverForPortalKey } from '../lib/driverIdentity';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -87,13 +88,28 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       }
 
       if (keyRecord && keyRecord.status === 'ACTIVE') {
+        let resolvedId = keyRecord.id;
+        let resolvedRole = mapPortalRole(keyRecord.portalType);
+        let driverProfileId: string | undefined;
+
+        if (String(keyRecord.portalType).toUpperCase() === 'DRIVER') {
+          const driverIdentity = await resolveOrProvisionDriverForPortalKey(keyRecord).catch(() => null);
+          if (driverIdentity?.user) {
+            resolvedId = driverIdentity.user.id;
+            resolvedRole = driverIdentity.user.role || 'driver';
+            driverProfileId = driverIdentity.driverProfile?.id;
+          }
+        }
+
         req.user = {
-          id: keyRecord.id,
+          id: resolvedId,
           accessKey: keyRecord.accessKey,
+          employeeCode: keyRecord.accessKey,
           name: keyRecord.assignedName,
-          role: mapPortalRole(keyRecord.portalType),
+          role: resolvedRole,
           portalType: keyRecord.portalType,
-          propertyScope: keyRecord.propertyScope || 'ALL'
+          propertyScope: keyRecord.propertyScope || 'ALL',
+          driverProfileId,
         };
         syncTenantContext(req);
         return next();

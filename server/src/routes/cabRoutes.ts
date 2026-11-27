@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { 
-  getCabs, 
-  createCab, 
-  updateCab, 
+import {
+  getCabs,
+  createCab,
+  updateCab,
   deleteCab,
   getOperationsData,
   updateCabSettings,
@@ -13,14 +13,31 @@ import {
   createDriver,
   updateDriver,
   deleteDriver,
-  updateMaintenanceRecords
+  reviewDriverApplication,
+  updateMaintenanceRecords,
+  getLiveCabMatches,
+  getMyRideRequests,
+  createRideRequest,
+  getRideRequestById,
+  touristCounterOffer,
+  confirmRideOffer,
+  cancelRideRequest,
 } from '../controllers/cabController';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken, optionalAuthenticate } from '../middleware/authMiddleware';
 import { authorizeRoles } from '../middleware/roleMiddleware';
 
 const router = Router();
 const adminOps = authorizeRoles('admin', 'operations');
 const fleetOps = authorizeRoles('admin', 'operations', 'driver');
+
+// Public live matching & real-time tourist dispatch endpoints (MUST stay above /:id)
+router.get('/live-matches', optionalAuthenticate, getLiveCabMatches);
+router.get('/ride-requests', authenticateToken, getMyRideRequests);
+router.post('/ride-requests', authenticateToken, createRideRequest);
+router.get('/ride-requests/:id', authenticateToken, getRideRequestById);
+router.post('/ride-requests/:id/offers/:offerId/counter', authenticateToken, touristCounterOffer);
+router.post('/ride-requests/:id/offers/:offerId/confirm', authenticateToken, confirmRideOffer);
+router.post('/ride-requests/:id/cancel', authenticateToken, cancelRideRequest);
 
 // Fleet Operations & Command Center
 router.get('/operations/data', authenticateToken, fleetOps, getOperationsData);
@@ -33,8 +50,9 @@ router.post('/operations/logs', authenticateToken, fleetOps, addOperationsLog);
 // Maintenance management endpoint
 router.patch('/operations/maintenance', authenticateToken, adminOps, updateMaintenanceRecords);
 
-// Driver Management CRUD endpoints
+// Driver Management & KYC Review CRUD endpoints
 router.post('/operations/drivers', authenticateToken, adminOps, createDriver);
+router.post('/operations/drivers/:id/review', authenticateToken, adminOps, reviewDriverApplication);
 router.patch('/operations/drivers/:id', authenticateToken, adminOps, updateDriver);
 router.delete('/operations/drivers/:id', authenticateToken, adminOps, deleteDriver);
 

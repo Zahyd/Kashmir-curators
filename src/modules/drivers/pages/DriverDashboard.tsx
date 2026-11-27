@@ -1,658 +1,759 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
-import { io } from 'socket.io-client';
-import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
-
-import { 
-  DriverDutyState, 
-  DriverTrip, 
-  TripStage, 
-  DriverVehicle, 
-  DriverEarnings, 
-  HighwayAdvisory,
-  DriverRateCard
-} from '../types/driver';
-
+import { useAuth } from '@/contexts/AuthContext';
 import { DriverMapCockpit } from '../components/DriverMapCockpit';
 import { DriverTopHud } from '../components/DriverTopHud';
 import { DriverActionSheet } from '../components/DriverActionSheet';
 import { DriverDrawer } from '../components/DriverDrawer';
-import ErrorBoundary from '@/components/common/ErrorBoundary';
+import { DriverAuthGate } from '../components/DriverAuthGate';
+import {
+  DriverDutyState,
+  DriverTrip,
+  DriverVehicle,
+  DriverEarnings,
+  HighwayAdvisory,
+  TripStage,
+  DriverRateCard,
+  DriverProfileData,
+  DriverPayoutRecord,
+  OpenRideRequest,
+} from '../types/driver';
 
-// Default initial fleet vehicles
-const INITIAL_VEHICLES: DriverVehicle[] = [
-  {
-    id: 'veh-innova-01',
-    model: 'Toyota Innova Crysta (Automatic 4x4)',
-    plateNumber: 'JK-01-AX-9942',
-    capacity: 6,
-    luggageCapacity: 4,
-    snowChains: true,
-    fourWheelDrive: true,
-    skiRack: true,
-    multiDayAvailable: true,
-    rcVerified: true,
-    permitVerified: true,
-    insuranceValid: true,
-  },
-  {
-    id: 'veh-scorpio-02',
-    model: 'Mahindra Scorpio-N 4x4',
-    plateNumber: 'JK-01-BZ-4412',
-    capacity: 6,
-    luggageCapacity: 3,
-    snowChains: true,
-    fourWheelDrive: true,
-    skiRack: false,
-    multiDayAvailable: true,
-    rcVerified: true,
-    permitVerified: true,
-    insuranceValid: true,
-  },
-  {
-    id: 'veh-urbania-03',
-    model: 'Force Urbania Luxury Van (10 Pax)',
-    plateNumber: 'JK-01-DX-1188',
-    capacity: 10,
-    luggageCapacity: 8,
-    snowChains: true,
-    fourWheelDrive: false,
-    skiRack: true,
-    multiDayAvailable: true,
-    rcVerified: true,
-    permitVerified: true,
-    insuranceValid: true,
-  }
-];
-
-// Sample Flight Arrival trip
-const SAMPLE_FLIGHT_TRIP: DriverTrip = {
-  id: 'trip-sxr-gulmarg-908',
-  passengerName: 'Anand & Sunita Verma',
-  passengerPhone: '+91 98111 22334',
-  travelerCount: 2,
-  luggageCount: 3,
-  pickupLocation: 'Srinagar Airport SXR (Arrival Terminal Gate 2)',
-  dropLocation: 'The Highland Chalet, Gulmarg Gondola Road',
-  distanceKm: 52,
-  estimatedDuration: '1 hr 25 min',
-  fareAmount: 2850,
-  securityPin: 'KC-77',
-  arrivalTelemetry: {
-    type: 'FLIGHT',
-    flightNumber: '6E-502',
-    airline: 'IndiGo Airlines',
-    status: 'Landed at 10:25 AM',
-    terminal: 'SXR Arrival Gate 2'
-  },
-  stage: 'ACCEPTED',
-  nextTurnInstruction: 'Proceed to SXR Airport Terminal Gate 2 Pickup Bay'
+const DEFAULT_ADVISORY: HighwayAdvisory = {
+  location: 'Tangmarg — Gulmarg Road',
+  status: 'Snow Chains Recommended',
+  message: 'Sub-zero morning frost expected above 6,000 ft. Anti-skid chains required for Gulmarg sector.',
+  snowChainsMandatory: true,
+  tempC: -1,
 };
 
-// Sample Train Arrival trip (Tourist arriving by train to Srinagar Nowgam Station)
-const SAMPLE_TRAIN_TRIP: DriverTrip = {
-  id: 'trip-train-pahalgam-412',
-  passengerName: 'Dr. Rohan & Meera Kulkarni',
-  passengerPhone: '+91 98200 44556',
-  travelerCount: 3,
-  luggageCount: 4,
-  pickupLocation: 'Srinagar Railway Station (Nowgam Rail Link, Platform 1)',
-  dropLocation: 'Pine Palace Resort, Aru Road, Pahalgam',
-  distanceKm: 88,
-  estimatedDuration: '2 hr 10 min',
-  fareAmount: 3400,
-  securityPin: 'VB-19',
-  arrivalTelemetry: {
-    type: 'TRAIN',
-    trainNumber: '22439',
-    trainName: 'Vande Bharat Express',
-    status: 'Arrived at 11:15 AM (Platform 1)',
-    station: 'Srinagar (Nowgam) Rail Terminal'
-  },
-  stage: 'ACCEPTED',
-  nextTurnInstruction: 'Proceed to Srinagar Nowgam Station Main Portico 1'
+const EMPTY_EARNINGS: DriverEarnings = {
+  todayTotal: 0,
+  tripsCount: 0,
+  onlineHours: '0.0 hrs',
+  acceptanceRate: 96,
+  upiId: 'kashmir.driver@okaxis',
+  availableBalance: 0,
+  lifetimeTotal: 0,
+  lifetimeTrips: 0,
 };
 
-// Sample City / Houseboat Pickup
-const SAMPLE_HOTEL_TRIP: DriverTrip = {
-  id: 'trip-dal-sxr-301',
-  passengerName: 'Vikramaditya Singhania',
-  passengerPhone: '+91 97111 88990',
-  travelerCount: 2,
-  luggageCount: 2,
-  pickupLocation: 'Wangnoo Heritage Houseboat, Nigeen Lake Gate 3',
-  dropLocation: 'Srinagar International Airport (Departure Hall)',
-  distanceKm: 24,
-  estimatedDuration: '45 min',
-  fareAmount: 1200,
-  securityPin: 'KC-44',
-  arrivalTelemetry: {
-    type: 'HOTEL',
-    propertyName: 'Wangnoo Heritage Luxury Houseboat',
-    area: 'Nigeen Lake Pier',
-    notes: 'Meet guest at Shikara Ghat'
-  },
-  stage: 'ACCEPTED',
-  nextTurnInstruction: 'Navigate via Boulevard Road towards Nigeen Lake'
-};
-
-export const DriverDashboard: React.FC = () => {
-  const { user, token, logout } = useAuth();
+export default function DriverDashboard() {
   const navigate = useNavigate();
+  const { user: authUser, token: authToken, logout: authLogout } = useAuth();
 
-  const getDriverAuthHeaders = (includeJson = false): Record<string, string> => {
-    const authToken = token || localStorage.getItem('auth_token') || localStorage.getItem('teamToken') || '';
-    return {
-      ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-    };
-  };
+  const [portalToken, setPortalToken] = useState<string | null>(() => {
+    return localStorage.getItem('driver_portal_token') || null;
+  });
+  const [portalKey, setPortalKey] = useState<string | null>(() => {
+    return localStorage.getItem('driver_portal_key') || null;
+  });
 
-  // Core Driver Cockpit State Machine
+  const activeToken = portalToken || authToken || null;
+
+  const [isLoadingCockpit, setIsLoadingCockpit] = useState<boolean>(true);
+  const [authRequiredMode, setAuthRequiredMode] = useState<
+    null | 'LOGIN' | 'PENDING_KYC' | 'REJECTED_KYC' | 'APPLY_CURRENT_USER'
+  >(null);
+
+  const [driverProfile, setDriverProfile] = useState<DriverProfileData | null>(null);
   const [dutyState, setDutyState] = useState<DriverDutyState>('OFFLINE');
+  const [vehicles, setVehicles] = useState<DriverVehicle[]>([]);
+  const [activeVehicleId, setActiveVehicleId] = useState<string>('');
+  const [earnings, setEarnings] = useState<DriverEarnings>(EMPTY_EARNINGS);
+  const [advisory, setAdvisory] = useState<HighwayAdvisory>(DEFAULT_ADVISORY);
+  const [openRequests, setOpenRequests] = useState<OpenRideRequest[]>([]);
+  const [tripHistory, setTripHistory] = useState<DriverTrip[]>([]);
+  const [payoutHistory, setPayoutHistory] = useState<DriverPayoutRecord[]>([]);
+
   const [activeTrip, setActiveTrip] = useState<DriverTrip | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [offerCountdown, setOfferCountdown] = useState<number>(30);
+  const [sector, setSector] = useState<string>('Srinagar SXR Airport');
 
-  // Fleet & Earnings State
-  const [vehicles, setVehicles] = useState<DriverVehicle[]>(INITIAL_VEHICLES);
-  const [activeVehicleId, setActiveVehicleId] = useState<string>(INITIAL_VEHICLES[0].id);
-  const [earnings, setEarnings] = useState<DriverEarnings>({
-    todayTotal: 4500,
-    tripsCount: 3,
-    onlineHours: '4h 15m',
-    acceptanceRate: 96,
-    upiId: 'kashmir.driver@okaxis'
-  });
-
-  // Highway Snow Advisory
-  const [advisory, setAdvisory] = useState<HighwayAdvisory>({
-    location: 'Tangmarg–Gulmarg Sector',
-    status: 'CHAINS_MANDATORY',
-    message: 'Snow chains mandatory above Tangmarg Checkpost. 4x4 vehicles given priority lane clearance.',
-    snowChainsMandatory: true,
-    tempC: -4
-  });
-
-  // 15-second countdown timer for incoming ride offer
-  const [offerCountdown, setOfferCountdown] = useState(15);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPayoutProcessing, setIsPayoutProcessing] = useState(false);
-  const countdownIntervalRef = useRef<any>(null);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
-  const activeVehicle = vehicles.find(v => v.id === activeVehicleId) || vehicles[0];
-
-  // 1. Initial State Fetch from Backend (Neon DB Live Sync)
-  useEffect(() => {
-    const fetchCockpitState = async () => {
-      try {
-        const authHeaders = getDriverAuthHeaders();
-        const [stateRes, tripRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/driver/cockpit-state`, { headers: authHeaders }),
-          fetch(`${API_BASE_URL}/driver/active-trip`, { headers: authHeaders }).catch(() => null)
-        ]);
-
-        if (stateRes && stateRes.ok) {
-          const data = await stateRes.json();
-          if (data.vehicles && data.vehicles.length > 0) {
-            setVehicles(data.vehicles);
-            setActiveVehicleId(data.vehicles[0].id);
-          }
-          if (data.earnings) {
-            setEarnings(data.earnings);
-          }
-          if (data.activeAdvisory) {
-            setAdvisory({
-              location: data.activeAdvisory.location || 'Tangmarg Sector',
-              status: data.activeAdvisory.status || 'CHAINS_MANDATORY',
-              message: data.activeAdvisory.message || 'Snow chains mandatory above Tangmarg Checkpost.',
-              snowChainsMandatory: true,
-              tempC: -4
-            });
-          }
-        }
-
-        // If there is an active assigned trip in the database, restore cockpit state
-        if (tripRes && tripRes.ok) {
-          const tripData = await tripRes.json();
-          if (tripData.activeTrip) {
-            setActiveTrip(tripData.activeTrip);
-            setDutyState('ACTIVE_TRIP');
-          }
-        }
-      } catch (err) {
-        console.warn('[DriverDashboard] State fetch offline fallback:', err);
-      }
-    };
-
-    fetchCockpitState();
+  const socketRef = useRef<Socket | null>(null);
+  const dutyStateRef = useRef<DriverDutyState>(dutyState);
+  const updateDutyState = useCallback((next: DriverDutyState) => {
+    dutyStateRef.current = next;
+    setDutyState(next);
   }, []);
-
-  // 2. Real-Time SSE Stream & Socket.io Channel
   useEffect(() => {
-    // SSE Stream setup
-    let eventSource: EventSource | null = null;
-    try {
-      const streamToken = token || localStorage.getItem('auth_token') || localStorage.getItem('teamToken') || '';
-      const streamUrl = streamToken
-        ? `${API_BASE_URL}/driver/stream?token=${encodeURIComponent(streamToken)}`
-        : `${API_BASE_URL}/driver/stream`;
-      eventSource = new EventSource(streamUrl);
-      eventSource.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload.type === 'NEW_DISPATCH_OFFER') {
-            triggerIncomingOffer(payload.trip);
-          } else if (payload.type === 'VEHICLE_VERIFIED') {
-            if (payload.status === 'APPROVED') {
-              toast.success('Tourist Union Vehicle Approved!', {
-                description: `${payload.model} (${payload.plateNumber}) is verified and now live on radar.`
-              });
-              setVehicles(prev => prev.map(v => v.id === payload.vehicleId ? {
-                ...v,
-                verificationStatus: 'APPROVED',
-                unionVerified: true,
-                rcVerified: true,
-                permitVerified: true
-              } : v));
-            }
-          }
-        } catch {}
-      };
-    } catch {}
-
-    // Socket.io channel setup
-    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
-    socket.on('connect', () => {
-      if (user?.id) {
-        socket.emit('join-user', user.id);
-        socket.emit('join-driver', user.id);
-      }
-      const orgId = (user as any)?.organizationId || (user as any)?.organization?.id;
-      if (orgId) socket.emit('join-tenant', orgId);
-    });
-
-    socket.on('driver-trip-dispatched', (data: any) => {
-      triggerIncomingOffer(data);
-    });
-
-    socket.on('vehicle-verified', (data: any) => {
-      if (data.status === 'APPROVED') {
-        toast.success('Tourist Union Vehicle Approved!', {
-          description: `${data.model} (${data.plateNumber}) is verified and now live on radar.`
-        });
-        setVehicles(prev => prev.map(v => v.id === data.vehicleId ? {
-          ...v,
-          verificationStatus: 'APPROVED',
-          unionVerified: true,
-          rcVerified: true,
-          permitVerified: true
-        } : v));
-      } else {
-        toast.error('Vehicle Verification Rejected', {
-          description: data.reason || 'Tourist Taxi Union verification was rejected.'
-        });
-        setVehicles(prev => prev.map(v => v.id === data.vehicleId ? {
-          ...v,
-          verificationStatus: 'REJECTED',
-          rejectionReason: data.reason
-        } : v));
-      }
-    });
-
-    socket.on('disruption-alert', (data: any) => {
-      toast.warning('Highway Weather Advisory Update', {
-        description: data.message || 'Snow chains required beyond Tangmarg.'
-      });
-      setAdvisory(prev => ({
-        ...prev,
-        message: data.message || prev.message
-      }));
-    });
-
-    return () => {
-      eventSource?.close();
-      socket.disconnect();
-    };
-  }, [user?.id]);
-
-  // Handle Offer Countdown Timer
-  useEffect(() => {
-    if (dutyState === 'INCOMING_RIDE_OFFER') {
-      setOfferCountdown(15);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-
-      countdownIntervalRef.current = setInterval(() => {
-        setOfferCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(countdownIntervalRef.current);
-            // Auto-decline if expired
-            setDutyState('ONLINE_SEARCHING');
-            setActiveTrip(null);
-            toast('Offer Expired', { description: 'Missed ride request was rerouted to next available cab.' });
-            return 15;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    }
-
-    return () => {
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    };
+    dutyStateRef.current = dutyState;
   }, [dutyState]);
 
-  // Trigger Incoming Offer State
-  const triggerIncomingOffer = (tripData: DriverTrip) => {
-    setActiveTrip(tripData);
-    setDutyState('INCOMING_RIDE_OFFER');
-    // Audio / Haptic alert
+  const buildHeaders = useCallback(
+    (includeJson = true): Record<string, string> => {
+      const headers: Record<string, string> = {};
+      if (includeJson) headers['Content-Type'] = 'application/json';
+      if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+      if (portalKey) headers['x-portal-key'] = portalKey;
+      return headers;
+    },
+    [activeToken, portalKey]
+  );
+
+  const loadCockpitData = useCallback(async () => {
+    if (!activeToken && !portalKey) {
+      setIsLoadingCockpit(false);
+      setAuthRequiredMode('LOGIN');
+      return;
+    }
+
     try {
-      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
-    } catch {}
-  };
+      const [cockpitRes, tripRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/driver/cockpit-state`, { headers: buildHeaders(false) }),
+        fetch(`${API_BASE_URL}/driver/active-trip`, { headers: buildHeaders(false) }),
+      ]);
 
-  // Accept Incoming Ride Offer
-  const handleAcceptOffer = async () => {
-    if (!activeTrip) return;
+      if (cockpitRes.status === 401) {
+        localStorage.removeItem('driver_portal_token');
+        localStorage.removeItem('driver_portal_key');
+        setPortalToken(null);
+        setPortalKey(null);
+        setAuthRequiredMode('LOGIN');
+        setIsLoadingCockpit(false);
+        return;
+      }
 
-    try {
-      await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/accept`, {
-        method: 'POST',
-        headers: getDriverAuthHeaders(true),
-        body: JSON.stringify({
-          driverName: user?.name || 'Zahid Chauffeur',
-          vehiclePlate: activeVehicle.plateNumber
-        })
-      });
-    } catch {}
+      if (cockpitRes.status === 403) {
+        setAuthRequiredMode(authUser ? 'APPLY_CURRENT_USER' : 'LOGIN');
+        setIsLoadingCockpit(false);
+        return;
+      }
 
-    toast.success('Trip Accepted & Locked!', {
-      description: `Pickup: ${activeTrip.pickupLocation}`
+      if (cockpitRes.ok) {
+        const data = await cockpitRes.json();
+        const profile: DriverProfileData | null = data.driverProfile || null;
+        setDriverProfile(profile);
+
+        if (profile && profile.approvalStatus === 'PENDING_APPROVAL') {
+          setAuthRequiredMode('PENDING_KYC');
+        } else if (profile && (profile.approvalStatus === 'REJECTED' || profile.approvalStatus === 'SUSPENDED')) {
+          setAuthRequiredMode('REJECTED_KYC');
+        } else {
+          setAuthRequiredMode(null);
+        }
+
+        if (Array.isArray(data.vehicles)) {
+          setVehicles(data.vehicles);
+          const preferredId =
+            data.activeVehicle?.id || profile?.activeVehicleId || data.vehicles[0]?.id || '';
+          setActiveVehicleId(preferredId);
+        }
+
+        if (data.earnings) {
+          setEarnings({
+            todayTotal: Number(data.earnings.todayTotal || 0),
+            tripsCount: Number(data.earnings.tripsCount || 0),
+            onlineHours: `${data.earnings.onlineHours ?? '0.0'} hrs`,
+            acceptanceRate: Number(data.earnings.acceptanceRate ?? 96),
+            upiId: data.earnings.upiId || profile?.upiId || 'kashmir.driver@okaxis',
+            availableBalance: Number(data.earnings.availableBalance ?? 0),
+            lifetimeTotal: Number(data.earnings.lifetimeTotal ?? 0),
+            lifetimeTrips: Number(data.earnings.lifetimeTrips ?? 0),
+          });
+        }
+
+        if (data.advisory) {
+          setAdvisory({
+            id: data.advisory.id,
+            location: data.advisory.location || 'Tangmarg — Gulmarg Road',
+            status: data.advisory.status || data.advisory.severity || 'Advisory Active',
+            message: data.advisory.message || DEFAULT_ADVISORY.message,
+            snowChainsMandatory: true,
+          });
+        }
+
+        if (profile?.currentSector) setSector(profile.currentSector);
+        if (Array.isArray(data.openRequests)) setOpenRequests(data.openRequests);
+        if (Array.isArray(data.recentTrips)) setTripHistory(data.recentTrips);
+        if (Array.isArray(data.payoutHistory)) setPayoutHistory(data.payoutHistory);
+
+        let hasLiveTrip = false;
+        if (tripRes.ok) {
+          const tripData = await tripRes.json();
+          if (tripData.activeTrip) {
+            const t = tripData.activeTrip as DriverTrip & { status?: string };
+            if (['DISPATCHED', 'AT_PICKUP', 'ON_TRIP', 'ALLOCATED'].includes(String(t.status || '').toUpperCase())) {
+              hasLiveTrip = true;
+              setActiveTrip(t);
+              updateDutyState('ACTIVE_TRIP');
+            }
+          }
+        }
+
+        if (!hasLiveTrip) {
+          if (dutyStateRef.current === 'INCOMING_RIDE_OFFER') {
+            // Preserve incoming offer card while driver inspects or counters
+          } else if (profile?.status === 'AVAILABLE') {
+            updateDutyState('ONLINE_SEARCHING');
+          } else {
+            updateDutyState('OFFLINE');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[DriverDashboard] Failed to load cockpit:', err);
+    } finally {
+      setIsLoadingCockpit(false);
+    }
+  }, [activeToken, portalKey, authUser, buildHeaders, updateDutyState]);
+
+  useEffect(() => {
+    void loadCockpitData();
+  }, [loadCockpitData]);
+
+  // Countdown timer when inspecting an incoming offer
+  useEffect(() => {
+    if (dutyState !== 'INCOMING_RIDE_OFFER') return;
+    if (offerCountdown <= 0) {
+      updateDutyState('ONLINE_SEARCHING');
+      setActiveTrip(null);
+      return;
+    }
+    const timer = setTimeout(() => setOfferCountdown((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [dutyState, offerCountdown, updateDutyState]);
+
+  const toDriverTripFromDispatch = useCallback(
+    (payload: Record<string, unknown>): DriverTrip => ({
+      id: String(payload.reservationId || payload.tripId || payload.bookingId || ''),
+      passengerName: String(payload.passengerName || 'Kashmir Guest'),
+      passengerPhone: String(payload.passengerPhone || '+91 98111 22334'),
+      travelerCount: Number(payload.travelerCount || payload.travelers || payload.travelersCount || 2),
+      luggageCount: Number(payload.luggageCount || 2),
+      pickupLocation: String(payload.pickupLocation || payload.pickup || 'Srinagar Airport (SXR)'),
+      dropLocation: String(payload.dropLocation || payload.drop || 'Dal Lake / Gulmarg'),
+      distanceKm: Number(payload.distanceKm || payload.estimatedDistanceKm || 28),
+      estimatedDuration: String(
+        payload.estimatedDuration || `${payload.estimatedDurationMin || 45} mins`
+      ),
+      fareAmount: Number(payload.offeredFare || payload.fare || payload.fareAmount || 1800),
+      securityPin: String(payload.securityPin || '4821'),
+      arrivalTelemetry: (payload.arrivalTelemetry as DriverTrip['arrivalTelemetry']) || {
+        type: 'HOTEL',
+        propertyName: String(payload.pickupLocation || payload.pickup || 'Srinagar Hub'),
+        area: 'Kashmir Valley',
+      },
+      stage: 'ACCEPTED',
+    }),
+    []
+  );
+
+  // Dual Real-Time Listeners: Socket.IO + Scoped SSE Stream
+  useEffect(() => {
+    if (
+      (!activeToken && !portalKey) ||
+      isLoadingCockpit ||
+      authRequiredMode === 'LOGIN' ||
+      authRequiredMode === 'APPLY_CURRENT_USER' ||
+      authRequiredMode === 'REJECTED_KYC'
+    ) {
+      return;
+    }
+
+    const sock = io(SOCKET_URL, {
+      ...DEFAULT_SOCKET_OPTIONS,
+      auth: {
+        token: activeToken || undefined,
+        portalKey: portalKey || undefined,
+      },
+    });
+    socketRef.current = sock;
+
+    sock.on('connect', () => {
+      setIsRealtimeConnected(true);
+      const drvRoomId = driverProfile?.userId || authUser?.id;
+      if (drvRoomId) {
+        sock.emit('join-driver', drvRoomId);
+      }
+      sock.emit('join-room', 'driver-room');
     });
 
-    setActiveTrip(prev => prev ? { ...prev, stage: 'ACCEPTED' } : null);
-    setDutyState('ACTIVE_TRIP');
+    sock.on('disconnect', () => setIsRealtimeConnected(false));
+
+    sock.on('driver-kyc-reviewed', (data: { approvalStatus?: string }) => {
+      if (data?.approvalStatus === 'APPROVED') {
+        toast.success('KYC Approved! Welcome to the Fleet', {
+          description: 'Your Chauffeur Cockpit is now unlocked.',
+        });
+      }
+      void loadCockpitData();
+    });
+
+    sock.on('VEHICLE_VERIFIED', (data: { plateNumber?: string; status?: string }) => {
+      toast.info(`Vehicle ${data.plateNumber || ''} ${data.status || 'Updated'}`);
+      void loadCockpitData();
+    });
+
+    sock.on('driver-trip-dispatched', (payload: Record<string, unknown>) => {
+      const incoming = toDriverTripFromDispatch(payload);
+      toast.info('New Ride Request Received!', {
+        description: `${incoming.pickupLocation} → ${incoming.dropLocation} (₹${incoming.fareAmount.toLocaleString('en-IN')})`,
+      });
+      if (dutyStateRef.current === 'ONLINE_SEARCHING') {
+        setActiveTrip(incoming);
+        setOfferCountdown(30);
+        updateDutyState('INCOMING_RIDE_OFFER');
+      }
+      void loadCockpitData();
+    });
+
+    sock.on('tourist-counter-offer', (payload: { touristCounter?: number; reservationId?: string }) => {
+      toast.info('Tourist Sent Counter-Offer', {
+        description: `Guest proposed ₹${Number(payload.touristCounter || 0).toLocaleString('en-IN')}`,
+      });
+      void loadCockpitData();
+    });
+
+    sock.on('trip-confirmed', () => {
+      toast.success('Tourist Confirmed Your Ride!', {
+        description: 'Proceed to pickup point with passenger Boarding PIN.',
+      });
+      void loadCockpitData();
+    });
+
+    sock.on('cab-reservation-cancelled', () => {
+      toast.warning('Ride request cancelled by guest');
+      void loadCockpitData();
+    });
+
+    const sseParams = new URLSearchParams();
+    if (activeToken) sseParams.set('token', activeToken);
+    if (portalKey) sseParams.set('portalKey', portalKey);
+    const es = new EventSource(`${API_BASE_URL}/driver/stream?${sseParams.toString()}`);
+
+    es.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data) as { type?: string } & Record<string, unknown>;
+        if (msg.type === 'DRIVER_KYC_REVIEWED' || msg.type === 'VEHICLE_VERIFIED') {
+          void loadCockpitData();
+        } else if (msg.type === 'TRIP_DISPATCHED' || msg.type === 'driver-trip-dispatched') {
+          const incoming = toDriverTripFromDispatch(msg);
+          if (dutyStateRef.current === 'ONLINE_SEARCHING') {
+            setActiveTrip(incoming);
+            setOfferCountdown(30);
+            updateDutyState('INCOMING_RIDE_OFFER');
+          }
+          void loadCockpitData();
+        } else if (msg.type === 'TOURIST_COUNTER_OFFER' || msg.type === 'TRIP_CONFIRMED') {
+          void loadCockpitData();
+        }
+      } catch {
+        // Ignore keepalive or malformed frame
+      }
+    };
+
+    return () => {
+      sock.disconnect();
+      socketRef.current = null;
+      es.close();
+    };
+  }, [
+    activeToken,
+    portalKey,
+    isLoadingCockpit,
+    authRequiredMode,
+    driverProfile?.userId,
+    authUser?.id,
+    loadCockpitData,
+    toDriverTripFromDispatch,
+    updateDutyState,
+  ]);
+
+  const handleAuthenticated = async (payload: {
+    token: string;
+    portalKey?: string;
+    user?: Record<string, unknown>;
+  }) => {
+    localStorage.setItem('driver_portal_token', payload.token);
+    setPortalToken(payload.token);
+    if (payload.portalKey) {
+      localStorage.setItem('driver_portal_key', payload.portalKey);
+      setPortalKey(payload.portalKey);
+    }
+    setAuthRequiredMode(null);
+    setIsLoadingCockpit(true);
   };
 
-  // Decline Ride Offer
-  const handleDeclineOffer = () => {
-    setDutyState('ONLINE_SEARCHING');
-    setActiveTrip(null);
-    toast('Trip Declined', { description: 'Looking for other transfers in your vicinity.' });
+  const handleLogout = () => {
+    localStorage.removeItem('driver_portal_token');
+    localStorage.removeItem('driver_portal_key');
+    setPortalToken(null);
+    setPortalKey(null);
+    setDriverProfile(null);
+    authLogout();
+    setAuthRequiredMode('LOGIN');
+    toast.success('Shift ended cleanly');
   };
 
-  // Uber Slide-To-Confirm Lifecycle Transitions
-  const handleSlideStageTransition = async (nextStage: TripStage) => {
-    if (!activeTrip) return;
-
+  const handleGoOnline = async () => {
     try {
-      const stageMap: Record<TripStage, string> = {
-        ACCEPTED: 'ACCEPTED',
-        ARRIVED_AT_PICKUP: 'ARRIVED',
-        STARTED_IN_TRANSIT: 'STARTED',
-        COMPLETED: 'COMPLETED'
-      };
-
-      await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/transition`, {
+      const res = await fetch(`${API_BASE_URL}/driver/duty`, {
         method: 'POST',
-        headers: getDriverAuthHeaders(true),
-        body: JSON.stringify({ stage: stageMap[nextStage] })
+        headers: buildHeaders(),
+        body: JSON.stringify({
+          status: 'AVAILABLE',
+          sector,
+          activeVehicleId: activeVehicleId || undefined,
+        }),
       });
-    } catch {}
-
-    if (nextStage === 'ARRIVED_AT_PICKUP') {
-      setActiveTrip(prev => prev ? {
-        ...prev,
-        stage: 'ARRIVED_AT_PICKUP',
-        nextTurnInstruction: `Waiting for guest at ${prev.pickupLocation}`
-      } : null);
-      toast.info('Arrived at Pickup Bay', { description: 'Tourist has been notified via SMS & WhatsApp.' });
-    } else if (nextStage === 'STARTED_IN_TRANSIT') {
-      setActiveTrip(prev => prev ? {
-        ...prev,
-        stage: 'STARTED_IN_TRANSIT',
-        nextTurnInstruction: 'Climbing towards Tangmarg Alpine Highway NH1A (18 km)'
-      } : null);
-      toast.success('Trip Started!', { description: 'GPS route tracking live.' });
-    } else if (nextStage === 'COMPLETED') {
-      const tripFare = activeTrip.fareAmount;
-      setEarnings(prev => ({
-        ...prev,
-        todayTotal: prev.todayTotal + tripFare,
-        tripsCount: prev.tripsCount + 1
-      }));
-
-      toast.success('Trip Completed!', {
-        description: `₹${tripFare.toLocaleString('en-IN')} added to your today's earnings.`
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error('Cannot Go Online', { description: data.error || 'Verify KYC & vehicle approval first.' });
+        if (res.status === 403) void loadCockpitData();
+        return;
+      }
+      updateDutyState('ONLINE_SEARCHING');
+      if (Array.isArray(data.openRequests)) setOpenRequests(data.openRequests);
+      toast.success('You are LIVE & Online!', {
+        description: `Broadcasting from ${sector}`,
       });
-
-      setActiveTrip(null);
-      setDutyState('ONLINE_SEARCHING');
+    } catch {
+      toast.error('Network error toggling online status');
     }
   };
 
-  // Security PIN Verification Handshake
+  const handleGoOffline = async () => {
+    try {
+      await fetch(`${API_BASE_URL}/driver/duty`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({ status: 'OFFLINE', sector }),
+      });
+      updateDutyState('OFFLINE');
+      setActiveTrip(null);
+      toast.info('Duty paused — Offline');
+    } catch {
+      toast.error('Failed to go offline');
+    }
+  };
+
+  const handleSelectSector = async (newSector: string) => {
+    setSector(newSector);
+    try {
+      await fetch(`${API_BASE_URL}/driver/location`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({ sector: newSector }),
+      });
+      toast.success(`Staging hub updated to ${newSector}`);
+    } catch {
+      // Silent fallback
+    }
+  };
+
+  const handleSelectOpenRequest = (reqItem: OpenRideRequest) => {
+    setActiveTrip({
+      id: reqItem.reservationId,
+      passengerName: reqItem.passengerName,
+      passengerPhone: reqItem.passengerPhone || '+91 98111 22334',
+      travelerCount: reqItem.travelerCount,
+      luggageCount: reqItem.luggageCount,
+      pickupLocation: reqItem.pickupLocation,
+      dropLocation: reqItem.dropLocation,
+      distanceKm: reqItem.distanceKm,
+      estimatedDuration: reqItem.estimatedDuration,
+      fareAmount: reqItem.touristCounter || reqItem.fareAmount,
+      securityPin: reqItem.securityPin,
+      arrivalTelemetry: reqItem.arrivalTelemetry,
+      stage: 'ACCEPTED',
+    });
+    setOfferCountdown(30);
+    updateDutyState('INCOMING_RIDE_OFFER');
+  };
+
+  const handleAcceptOffer = async () => {
+    if (!activeTrip) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/accept`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to accept offer');
+        return;
+      }
+      if (data.awaitingTouristConfirm) {
+        toast.success('Offer Accepted!', {
+          description: 'Waiting for tourist confirmation on Kashmir Curators app.',
+        });
+        updateDutyState('ONLINE_SEARCHING');
+        setActiveTrip(null);
+        void loadCockpitData();
+      } else {
+        updateDutyState('ACTIVE_TRIP');
+        toast.success('Trip Locked!', { description: 'Proceed to tourist pickup location.' });
+        void loadCockpitData();
+      }
+    } catch {
+      toast.error('Network error accepting offer');
+    }
+  };
+
+  const handleDeclineOffer = async () => {
+    if (activeTrip) {
+      await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/decline`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({ reason: 'Chauffeur declined offer' }),
+      }).catch(() => null);
+    }
+    setActiveTrip(null);
+    updateDutyState('ONLINE_SEARCHING');
+    void loadCockpitData();
+  };
+
+  const handleCounterOffer = async (tripId: string, proposedFare: number, reason: string) => {
+    const res = await fetch(`${API_BASE_URL}/driver/bookings/${tripId}/counter-offer`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ proposedFare, reason }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || 'Failed to send counter-offer');
+      return;
+    }
+    toast.success(`Counter-Offer ₹${proposedFare.toLocaleString('en-IN')} Sent!`);
+    void loadCockpitData();
+  };
+
   const handleVerifySecurityPin = async (enteredPin: string): Promise<boolean> => {
     if (!activeTrip) return false;
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/verify-pin`, {
-        method: 'POST',
-        headers: getDriverAuthHeaders(true),
-        body: JSON.stringify({
-          pin: enteredPin,
-          expectedPin: activeTrip.securityPin
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        return Boolean(data.verified);
-      }
-    } catch {}
-
-    // Fallback comparison
-    return enteredPin.toUpperCase() === activeTrip.securityPin.toUpperCase();
-  };
-
-  // Vehicle Registration Handler (Tourist Union Pipeline)
-  const handleRegisterVehicle = async (vehData: Partial<DriverVehicle>) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/driver/vehicles`, {
-        method: 'POST',
-        headers: getDriverAuthHeaders(true),
-        body: JSON.stringify(vehData)
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.vehicle) {
-          setVehicles(prev => [data.vehicle, ...prev]);
-          setActiveVehicleId(data.vehicle.id);
-          toast.success('Submitted for Verification!', { 
-            description: `${data.vehicle.model} (${data.vehicle.plateNumber}) sent for Admin and Taxi Union review.`
-          });
-          return;
-        }
-      }
-    } catch {}
-
-    // Local state fallback
-    const fallbackNewVeh: DriverVehicle = {
-      id: `veh-${Date.now()}`,
-      model: vehData.model || 'Toyota Innova Crysta',
-      plateNumber: vehData.plateNumber || 'JK-01-XX-0000',
-      capacity: vehData.capacity || 6,
-      luggageCapacity: vehData.luggageCapacity || 4,
-      snowChains: vehData.snowChains ?? true,
-      fourWheelDrive: vehData.fourWheelDrive ?? true,
-      skiRack: vehData.skiRack ?? false,
-      multiDayAvailable: vehData.multiDayAvailable ?? true,
-      rcVerified: false,
-      permitVerified: false,
-      insuranceValid: true,
-      unionVerified: false,
-      verificationStatus: 'PENDING_APPROVAL',
-      unionName: vehData.unionName || 'Srinagar Airport Tourist Taxi Union',
-      unionBadgeNumber: vehData.unionBadgeNumber || 'KT-UNION-NEW',
-      touristPermitNo: vehData.touristPermitNo || 'JK-TP-PENDING',
-    };
-    setVehicles(prev => [fallbackNewVeh, ...prev]);
-    setActiveVehicleId(fallbackNewVeh.id);
-    toast.info('Vehicle Under Verification (Offline)', {
-      description: 'Will be activated once verified by Admin and Tourist Taxi Union.'
+    const res = await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/verify-pin`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ pin: enteredPin }),
     });
+    const data = await res.json();
+    return Boolean(res.ok && data.verified);
   };
 
-  // Instant UPI Payout Request Handler
+  const handleSlideStageTransition = async (stage: TripStage) => {
+    if (!activeTrip) return;
+    const apiStageMap: Record<TripStage, string> = {
+      ACCEPTED: 'ARRIVED',
+      ARRIVED_AT_PICKUP: 'ARRIVED',
+      STARTED_IN_TRANSIT: 'STARTED',
+      COMPLETED: 'COMPLETED',
+    };
+    const res = await fetch(`${API_BASE_URL}/driver/bookings/${activeTrip.id}/transition`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ stage: apiStageMap[stage] }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || 'Failed to transition trip stage');
+      return;
+    }
+
+    if (stage === 'COMPLETED') {
+      toast.success('Trip Completed! Earnings Credited.', {
+        description: `₹${activeTrip.fareAmount.toLocaleString('en-IN')} added to your withdrawable balance.`,
+      });
+      setActiveTrip(null);
+      updateDutyState('ONLINE_SEARCHING');
+      void loadCockpitData();
+    } else {
+      setActiveTrip((prev) => (prev ? { ...prev, stage } : null));
+      toast.success(`Trip stage updated: ${data.status}`);
+    }
+  };
+
   const handleRequestPayout = async () => {
     setIsPayoutProcessing(true);
     try {
+      const amount = earnings.availableBalance ?? earnings.todayTotal;
       const res = await fetch(`${API_BASE_URL}/driver/payout`, {
         method: 'POST',
-        headers: getDriverAuthHeaders(true),
-        body: JSON.stringify({
-          amount: earnings.todayTotal,
-          upiId: earnings.upiId
-        })
+        headers: buildHeaders(),
+        body: JSON.stringify({ amount, upiId: earnings.upiId }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success('UPI Payout Initiated!', {
-          description: `₹${earnings.todayTotal.toLocaleString('en-IN')} transferred to ${earnings.upiId} (Ref: ${data.payoutRef}).`
-        });
-        setEarnings(prev => ({ ...prev, todayTotal: 0 }));
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Payout failed');
+        return;
       }
-    } catch {
-      toast.success('UPI Settlement Dispatched!', {
-        description: `₹${earnings.todayTotal.toLocaleString('en-IN')} credited to ${earnings.upiId}.`
+      toast.success('Instant UPI Payout Settled!', {
+        description: `₹${Number(data.amount).toLocaleString('en-IN')} sent to ${data.upiId} (${data.payoutRef})`,
       });
-      setEarnings(prev => ({ ...prev, todayTotal: 0 }));
+      void loadCockpitData();
     } finally {
       setIsPayoutProcessing(false);
     }
   };
 
-  // Save Driver's Custom Rate Card & Mountain Surcharges to Neon DB
-  const handleSaveRateCard = async (vehicleId: string, rateCard: DriverRateCard) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/driver/rate-card`, {
-        method: 'POST',
-        headers: getDriverAuthHeaders(true),
-        body: JSON.stringify({ vehicleId, rateCard })
-      });
-
-      if (res.ok) {
-        toast.success('Rate Card Saved!', {
-          description: 'Your custom fares have been applied to tourist booking inquiries.'
-        });
-        setVehicles(prev => prev.map(v => v.id === vehicleId ? { ...v, rateCard } : v));
-      } else {
-        toast.error('Could not save rate card to server');
-      }
-    } catch {
-      toast.success('Rate Card Updated Locally');
-      setVehicles(prev => prev.map(v => v.id === vehicleId ? { ...v, rateCard } : v));
-    }
-  };
-
-  // Counter-Offer / InDrive Style Bidding on Incoming Offers
-  const handleCounterOffer = async (tripId: string, proposedFare: number, reason: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/driver/bookings/${tripId}/counter-offer`, {
-        method: 'POST',
-        headers: getDriverAuthHeaders(true),
-        body: JSON.stringify({ proposedFare, reason })
-      });
-
-      if (res.ok) {
-        toast.success('Counter-Offer Dispatched!', {
-          description: `Proposed fare of ₹${proposedFare.toLocaleString('en-IN')} sent to guest.`
-        });
-        setActiveTrip(prev => prev ? {
-          ...prev,
-          counterOfferAmount: proposedFare,
-          counterOfferReason: reason
-        } : null);
-      } else {
-        toast.error('Failed to dispatch counter offer');
-      }
-    } catch {
-      toast.success('Counter Offer Proposed (Offline Mode)');
-      setActiveTrip(prev => prev ? {
-        ...prev,
-        counterOfferAmount: proposedFare,
-        counterOfferReason: reason
-      } : null);
-    }
-  };
-
-  // End Duty Shift & Logout (Safe session clear & redirect to landing page)
-  const handleLogout = () => {
-    setDutyState('OFFLINE');
-    setActiveTrip(null);
-    logout();
-    toast.success('Shift Ended', {
-      description: 'You have been safely signed out. Returning to home portal...'
+  const handleTriggerSos = async (incidentType: string, notes?: string) => {
+    const res = await fetch(`${API_BASE_URL}/driver/sos`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({
+        incidentType,
+        notes,
+        location: sector,
+        reservationId: activeTrip?.id,
+      }),
     });
-    navigate('/');
+    if (res.ok) {
+      toast.error('SOS Emergency Transmitted to Command Desk!', {
+        description: `Rescue desk alerted at ${sector}. Keep phone line clear.`,
+      });
+    } else {
+      toast.error('Failed to send SOS alert — Call 112 immediately!');
+    }
   };
 
-  const handleExitToHome = () => {
-    navigate('/');
+  const handleRegisterVehicle = async (vehicle: Partial<DriverVehicle>) => {
+    const res = await fetch(`${API_BASE_URL}/driver/vehicles`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify(vehicle),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || 'Failed to register vehicle');
+      throw new Error(data.error || 'Registration failed');
+    }
+    void loadCockpitData();
   };
+
+  const handleEditVehicle = async (id: string, patch: Partial<DriverVehicle>) => {
+    const res = await fetch(`${API_BASE_URL}/driver/vehicles/${id}`, {
+      method: 'PATCH',
+      headers: buildHeaders(),
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.error || 'Failed to update vehicle');
+      return;
+    }
+    toast.success('Vehicle specs updated');
+    void loadCockpitData();
+  };
+
+  const handleDeleteVehicle = async (id: string) => {
+    const res = await fetch(`${API_BASE_URL}/driver/vehicles/${id}`, {
+      method: 'DELETE',
+      headers: buildHeaders(false),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.error || 'Failed to remove vehicle');
+      return;
+    }
+    toast.success('Vehicle removed from your fleet');
+    void loadCockpitData();
+  };
+
+  const handleSaveRateCard = async (vehicleId: string, rateCard: DriverRateCard) => {
+    const res = await fetch(`${API_BASE_URL}/driver/rate-card`, {
+      method: 'PATCH',
+      headers: buildHeaders(),
+      body: JSON.stringify({ vehicleId, rateCard }),
+    });
+    if (!res.ok) {
+      toast.error('Failed to save rate card');
+      throw new Error('Failed to save rate card');
+    }
+    void loadCockpitData();
+  };
+
+  const handleUpdateProfile = async (patch: Record<string, unknown>) => {
+    const res = await fetch(`${API_BASE_URL}/driver/profile`, {
+      method: 'PATCH',
+      headers: buildHeaders(),
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.error || 'Failed to update profile');
+      return;
+    }
+    toast.success('KYC & Payout Profile Saved');
+    void loadCockpitData();
+  };
+
+  const handleSelectVehicle = async (id: string) => {
+    setActiveVehicleId(id);
+    if (driverProfile) {
+      await fetch(`${API_BASE_URL}/driver/profile`, {
+        method: 'PATCH',
+        headers: buildHeaders(),
+        body: JSON.stringify({ activeVehicleId: id }),
+      }).catch(() => null);
+    }
+  };
+
+  const activeVehicle = vehicles.find((v) => v.id === activeVehicleId) || vehicles[0] || null;
+
+  if (isLoadingCockpit) {
+    return (
+      <div className="fixed inset-0 bg-[#07090E] text-white flex flex-col items-center justify-center gap-3">
+        <div className="w-12 h-12 rounded-2xl border-2 border-amber-500/50 border-t-amber-400 animate-spin" />
+        <p className="text-xs font-bold uppercase tracking-widest text-amber-400">
+          Syncing Kashmir Curators Chauffeur OS...
+        </p>
+      </div>
+    );
+  }
+
+  if (authRequiredMode) {
+    return (
+      <DriverAuthGate
+        mode={authRequiredMode}
+        driverProfile={driverProfile}
+        currentUserEmail={authUser?.email || null}
+        currentUserName={authUser?.name || null}
+        onAuthenticated={handleAuthenticated}
+        onRefreshStatus={loadCockpitData}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   return (
-    <ErrorBoundary variant="panel" title="Driver Cockpit Interrupted">
-      <div className="fixed inset-0 w-full h-[100dvh] overflow-hidden bg-[#07090E] select-none text-white font-sans">
-      {/* 1. Underlying Tactical Canvas Map (Full Bleed 100vh x 100vw) */}
+    <div className="relative w-full h-screen overflow-hidden bg-[#07090E] select-none font-sans">
+      {/* 1. Interactive Full-Bleed Dark Tactical Valley Cockpit */}
       <DriverMapCockpit
         dutyState={dutyState}
         activeTrip={activeTrip}
-        snowChainsActive={activeVehicle.snowChains}
+        snowChainsActive={activeVehicle?.snowChains ?? true}
+        sector={sector}
+        onSelectSector={handleSelectSector}
       />
 
-      {/* 2. Floating Top HUD Bar */}
+      {/* 2. Top Floating Glassmorphic HUD */}
       <DriverTopHud
-        onOpenDrawer={() => setDrawerOpen(true)}
+        onOpenDrawer={() => setIsDrawerOpen(true)}
         activeVehicle={activeVehicle}
         earnings={earnings}
         advisory={advisory}
         onRequestPayout={handleRequestPayout}
         isPayoutProcessing={isPayoutProcessing}
+        onTriggerSos={handleTriggerSos}
+        isRealtimeConnected={isRealtimeConnected}
       />
 
-      {/* 3. Floating Bottom Uber Action Sheet */}
+      {/* 3. Uber-Style Floating Bottom Action Sheet */}
       <DriverActionSheet
         dutyState={dutyState}
-        onGoOnline={() => {
-          if (activeVehicle.verificationStatus === 'PENDING_APPROVAL') {
-            toast.warning('Vehicle Verification Pending', {
-              description: 'This vehicle is currently under review by the Tourist Taxi Union & Admin. It cannot go online until approved.'
-            });
-            return;
-          }
-          if (activeVehicle.verificationStatus === 'REJECTED') {
-            toast.error('Vehicle Verification Rejected', {
-              description: activeVehicle.rejectionReason || 'Vehicle verification was rejected. Please submit updated documents.'
-            });
-            return;
-          }
-          setDutyState('ONLINE_SEARCHING');
-          toast.success('You Are Online (Live Radar)', { 
-            description: 'Your cab is now discoverable at Srinagar Airport, Nowgam Station, and Dal Lake.'
-          });
-        }}
-        onGoOffline={() => {
-          setDutyState('OFFLINE');
-          setActiveTrip(null);
-          toast.info('You Are Offline', { description: 'Incoming ride offers paused.' });
-        }}
+        onGoOnline={handleGoOnline}
+        onGoOffline={handleGoOffline}
         activeTrip={activeTrip}
+        activeVehicle={activeVehicle}
+        openRequests={openRequests}
+        onSelectRequest={handleSelectOpenRequest}
         onAcceptOffer={handleAcceptOffer}
         onDeclineOffer={handleDeclineOffer}
         onCounterOffer={handleCounterOffer}
@@ -661,28 +762,28 @@ export const DriverDashboard: React.FC = () => {
         onVerifySecurityPin={handleVerifySecurityPin}
       />
 
-      {/* 4. Slide-out Uber Driver Drawer (Fleet, Rate Card, Payouts) */}
+      {/* 4. Slide-out Fleet, Rate Card, Wallet & Profile Drawer */}
       <DriverDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        open={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
         vehicles={vehicles}
         activeVehicleId={activeVehicleId}
-        onSelectVehicle={(id) => {
-          setActiveVehicleId(id);
-          toast.info('Active Vehicle Switched');
-        }}
+        onSelectVehicle={handleSelectVehicle}
         onRegisterVehicle={handleRegisterVehicle}
+        onEditVehicle={handleEditVehicle}
+        onDeleteVehicle={handleDeleteVehicle}
         earnings={earnings}
         onRequestPayout={handleRequestPayout}
         isPayoutProcessing={isPayoutProcessing}
         onSaveRateCard={handleSaveRateCard}
-        driverName={user?.name || 'Zahid Ahmad'}
+        driverName={driverProfile?.name || authUser?.name || 'Kashmir Chauffeur'}
+        driverProfile={driverProfile}
+        tripHistory={tripHistory}
+        payoutHistory={payoutHistory}
+        onUpdateProfile={handleUpdateProfile}
         onLogout={handleLogout}
-        onExitToHome={handleExitToHome}
+        onExitToHome={() => navigate('/')}
       />
-      </div>
-    </ErrorBoundary>
+    </div>
   );
-};
-
-export default DriverDashboard;
+}

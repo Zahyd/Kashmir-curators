@@ -202,11 +202,18 @@ export const getMyBookings = async (req: any, res: Response) => {
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' }
     });
-    
-    const parsedBookings = bookings.map(b => ({
-      ...b,
-      details: JSON.parse(b.details)
-    }));
+
+    const parsedBookings = bookings.map(b => {
+      let details = {};
+      if (b.details) {
+        try {
+          details = JSON.parse(b.details);
+        } catch {
+          details = {};
+        }
+      }
+      return { ...b, details };
+    });
 
     res.json(parsedBookings);
   } catch (error) {
