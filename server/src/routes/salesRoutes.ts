@@ -5,7 +5,7 @@ import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
 import { authorizeRoles } from '../middleware/roleMiddleware';
 import { LeadScoringService } from '../services/leadScoringService';
 import { resolveWriteTenantId, withStrictTenantScope, canAccessTenantRecord, buildTenantNotificationUserId, buildNotificationTenantWhere } from '../lib/tenant';
-import { broadcastDriverEvent } from './driverRoutes';
+import { broadcastDriverEvent } from '../lib/driverRealtime';
 import { realtimeBus } from '../lib/realtimeBus';
 import { SALES_PORTAL_ROLES } from '../lib/roleUtils';
 
@@ -871,7 +871,7 @@ router.patch('/leads/:id/stage', authenticateToken, authorizeRoles(...SALES_MUTA
       const pinCode = `KC-${Math.floor(10 + Math.random() * 89)}`;
       const fare = updated.netPrice > 0 ? Math.round(updated.netPrice * 0.15) : 2850;
 
-      broadcastDriverEvent('NEW_DISPATCH_OFFER', {
+      const offerPayload = {
         type: 'NEW_DISPATCH_OFFER',
         tenantId: updated.organizationId || req.tenantId || undefined,
         trip: {
@@ -896,6 +896,14 @@ router.patch('/leads/:id/stage', authenticateToken, authorizeRoles(...SALES_MUTA
           stage: 'ACCEPTED',
           nextTurnInstruction: 'Proceed to Srinagar Airport Gate 2 Pickup Bay',
         },
+      };
+
+      const dispatchTenantId = updated.organizationId || req.tenantId || undefined;
+      if (req.io) {
+        req.io.to('driver-room').emit('driver-trip-dispatched', offerPayload);
+      }
+      broadcastDriverEvent('NEW_DISPATCH_OFFER', offerPayload, {
+        tenantId: dispatchTenantId,
       });
     }
 

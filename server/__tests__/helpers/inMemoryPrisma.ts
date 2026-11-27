@@ -45,6 +45,8 @@ const DEFAULT_TIMESTAMPS = new Set([
   'employeeSession',
   'customerSearchIntent',
   'inquiryDocument',
+  'cabDispatchOffer',
+  'driverSosAlert',
 ]);
 
 const CREATED_AT_ONLY = new Set([
@@ -58,6 +60,7 @@ const CREATED_AT_ONLY = new Set([
   'aiAgentActionLog',
   'auditLog',
   'walletTransaction',
+  'driverPayout',
 ]);
 
 const MODEL_NAMES = [
@@ -75,6 +78,7 @@ const MODEL_NAMES = [
   'followUpReminder',
   'whatsAppMessage',
   'cabReservation',
+  'cabDispatchOffer',
   'media',
   'transactionLedger',
   'blogPost',
@@ -93,6 +97,8 @@ const MODEL_NAMES = [
   'agentProfile',
   'agencyApplication',
   'driverProfile',
+  'driverPayout',
+  'driverSosAlert',
   'supplier',
   'auditLog',
   'notification',
@@ -158,6 +164,22 @@ export function createInMemoryPrisma() {
         return db.user.find((u) => u.id === row.userId) || null;
       case 'driverProfile.user':
         return db.user.find((u) => u.id === row.userId) || null;
+      case 'driverProfile.cabs':
+        return db.cab.filter((c) => c.driverProfileId === row.id);
+      case 'driverProfile.reservations':
+        return db.cabReservation.filter((cr) => cr.driverProfileId === row.id);
+      case 'driverProfile.dispatchOffers':
+        return db.cabDispatchOffer.filter((o) => o.driverProfileId === row.id);
+      case 'driverProfile.payouts':
+        return db.driverPayout.filter((p) => p.driverProfileId === row.id);
+      case 'driverProfile.sosAlerts':
+        return db.driverSosAlert.filter((s) => s.driverProfileId === row.id);
+      case 'cab.driverProfile':
+        return row.driverProfileId ? db.driverProfile.find((d) => d.id === row.driverProfileId) || null : null;
+      case 'cab.reservations':
+        return db.cabReservation.filter((cr) => cr.cabId === row.id);
+      case 'cab.dispatchOffers':
+        return db.cabDispatchOffer.filter((o) => o.cabId === row.id);
       case 'booking.user':
         return db.user.find((u) => u.id === row.userId) || null;
       case 'hotelRoom.category':
@@ -174,8 +196,24 @@ export function createInMemoryPrisma() {
         return db.emailDispatchRecord.filter((e) => e.reservationId === row.id);
       case 'cabReservation.inquiry':
         return row.inquiryId ? db.inquiry.find((i) => i.id === row.inquiryId) || null : null;
+      case 'cabReservation.user':
+        return row.userId ? db.user.find((u) => u.id === row.userId) || null : null;
       case 'cabReservation.cab':
+        return row.cabId ? db.cab.find((c) => c.id === row.cabId) || null : null;
+      case 'cabReservation.driverProfile':
+        return row.driverProfileId ? db.driverProfile.find((d) => d.id === row.driverProfileId) || null : null;
+      case 'cabReservation.offers':
+        return db.cabDispatchOffer.filter((o) => o.reservationId === row.id);
+      case 'cabDispatchOffer.reservation':
+        return db.cabReservation.find((r) => r.id === row.reservationId) || null;
+      case 'cabDispatchOffer.driverProfile':
+        return db.driverProfile.find((d) => d.id === row.driverProfileId) || null;
+      case 'cabDispatchOffer.cab':
         return db.cab.find((c) => c.id === row.cabId) || null;
+      case 'driverPayout.driverProfile':
+        return db.driverProfile.find((d) => d.id === row.driverProfileId) || null;
+      case 'driverSosAlert.driverProfile':
+        return row.driverProfileId ? db.driverProfile.find((d) => d.id === row.driverProfileId) || null : null;
       case 'inquiry.user':
         return row.userId ? db.user.find((u) => u.id === row.userId) || null : null;
       case 'inquiry.activities':
@@ -241,9 +279,18 @@ export function createInMemoryPrisma() {
         continue;
       }
 
-      // Compound unique keys like employeeCode_date
+      // Compound unique keys like employeeCode_date / reservationId_driverProfileId
       if (key === 'employeeCode_date' && cond && typeof cond === 'object') {
         if (row.employeeCode !== cond.employeeCode || row.date !== cond.date) return false;
+        continue;
+      }
+      if (key === 'reservationId_driverProfileId' && cond && typeof cond === 'object') {
+        if (
+          row.reservationId !== cond.reservationId ||
+          row.driverProfileId !== cond.driverProfileId
+        ) {
+          return false;
+        }
         continue;
       }
 
@@ -254,7 +301,17 @@ export function createInMemoryPrisma() {
         const rel = resolveRelation(model, row, key);
         if (rel && !Array.isArray(rel)) {
           const relModel: ModelName =
-            key === 'category' ? 'roomCategory' : key === 'hotel' ? 'hotel' : key === 'inquiry' ? 'inquiry' : (key as ModelName);
+            key === 'category'
+              ? 'roomCategory'
+              : key === 'hotel'
+                ? 'hotel'
+                : key === 'inquiry'
+                  ? 'inquiry'
+                  : key === 'driverProfile'
+                    ? 'driverProfile'
+                    : key === 'reservation'
+                      ? 'cabReservation'
+                      : (key as ModelName);
           if (!matchesWhere(relModel, rel, cond)) return false;
           continue;
         }
@@ -343,6 +400,65 @@ export function createInMemoryPrisma() {
     });
   }
 
+  function inferRelationModel(parentModel: ModelName, relName: string): ModelName {
+    switch (relName) {
+      case 'driverProfile':
+        return 'driverProfile';
+      case 'agentProfile':
+        return 'agentProfile';
+      case 'supplierProfile':
+        return 'supplier';
+      case 'organization':
+        return 'organization';
+      case 'user':
+        return 'user';
+      case 'cab':
+      case 'cabs':
+        return 'cab';
+      case 'reservation':
+      case 'reservations':
+      case 'cabReservations':
+        return 'cabReservation';
+      case 'dispatchOffers':
+      case 'offers':
+        return 'cabDispatchOffer';
+      case 'payouts':
+        return 'driverPayout';
+      case 'sosAlerts':
+        return 'driverSosAlert';
+      case 'booking':
+      case 'bookings':
+        return 'booking';
+      case 'category':
+        return 'roomCategory';
+      case 'hotel':
+      case 'hotels':
+        return 'hotel';
+      case 'hotelReservation':
+      case 'hotelReservations':
+        return 'hotelReservation';
+      case 'inquiry':
+      case 'inquiries':
+        return 'inquiry';
+      case 'activities':
+        return 'leadActivity';
+      case 'documents':
+        return 'inquiryDocument';
+      case 'internalNotes':
+        return 'leadNote';
+      case 'reminders':
+        return 'followUpReminder';
+      case 'whatsappMessages':
+        return 'whatsAppMessage';
+      case 'emailDispatches':
+        return 'emailDispatchRecord';
+      case 'users':
+        return 'user';
+      default:
+        return parentModel;
+    }
+  }
+
   function applyProjection(model: ModelName, row: Row, args?: { include?: Row; select?: Row }): Row {
     const base = clone(row);
     const include = args?.include;
@@ -358,7 +474,7 @@ export function createInMemoryPrisma() {
           out[field] = base[field];
         } else {
           const rel = resolveRelation(model, row, field);
-          out[field] = projectRelation(rel, spec);
+          out[field] = projectRelation(rel, spec, inferRelationModel(model, field));
         }
       }
       return out;
@@ -371,7 +487,7 @@ export function createInMemoryPrisma() {
           base._count = computeCount(model, row, spec.select);
         } else {
           const rel = resolveRelation(model, row, relName);
-          base[relName] = projectRelation(rel, spec);
+          base[relName] = projectRelation(rel, spec, inferRelationModel(model, relName));
         }
       }
     }
@@ -379,21 +495,21 @@ export function createInMemoryPrisma() {
     return base;
   }
 
-  function projectRelation(rel: any, spec: any): any {
+  function projectRelation(rel: any, spec: any, targetModel: ModelName): any {
     if (rel === null || rel === undefined) return rel;
     if (spec === true) return clone(rel);
     if (Array.isArray(rel)) {
       let list = [...rel];
       if (spec.where) {
         // Basic relation filter support
-        list = list.filter((item) => matchesWhere('inquiry' as ModelName, item, spec.where));
+        list = list.filter((item) => matchesWhere(targetModel, item, spec.where));
       }
       if (spec.orderBy) list = applyOrderBy(list, spec.orderBy);
       if (spec.take !== undefined) list = list.slice(0, spec.take);
-      return list.map((item) => (spec.select || spec.include ? applyProjection('inquiry', item, spec) : clone(item)));
+      return list.map((item) => (spec.select || spec.include ? applyProjection(targetModel, item, spec) : clone(item)));
     }
     if (spec.select || spec.include) {
-      return applyProjection('user', rel, spec);
+      return applyProjection(targetModel, rel, spec);
     }
     return clone(rel);
   }
@@ -458,6 +574,54 @@ export function createInMemoryPrisma() {
       record.reviewCount = record.reviewCount ?? 0;
     } else if (model === 'cab') {
       record.isActive = record.isActive ?? true;
+      record.luggageCapacity = record.luggageCapacity ?? 4;
+      record.snowChains = record.snowChains ?? true;
+      record.fourWheelDrive = record.fourWheelDrive ?? false;
+      record.skiRack = record.skiRack ?? false;
+      record.multiDayAvailable = record.multiDayAvailable ?? true;
+      record.ownership = record.ownership ?? 'COMPANY';
+      record.verificationStatus = record.verificationStatus ?? 'APPROVED';
+      record.unionVerified = record.unionVerified ?? false;
+      record.rcVerified = record.rcVerified ?? false;
+      record.permitVerified = record.permitVerified ?? false;
+      record.insuranceValid = record.insuranceValid ?? true;
+    } else if (model === 'driverProfile') {
+      record.status = record.status ?? 'AVAILABLE';
+      record.approvalStatus = record.approvalStatus ?? 'APPROVED';
+      record.rating = record.rating ?? 4.8;
+      record.tripsCompleted = record.tripsCompleted ?? 0;
+      record.earnings = record.earnings ?? 0;
+      record.availableBalance = record.availableBalance ?? 0;
+      record.acceptanceRate = record.acceptanceRate ?? 96;
+      record.offersReceived = record.offersReceived ?? 0;
+      record.offersAccepted = record.offersAccepted ?? 0;
+      record.onlineMinutesToday = record.onlineMinutesToday ?? 0;
+      record.attendance = record.attendance ?? 'Present';
+      record.licenseExpiry = record.licenseExpiry ?? '2027-12-31';
+      record.policeVerification = record.policeVerification ?? 'Verified';
+      record.aadhaar = record.aadhaar ?? '0000-0000-0000';
+      record.experience = record.experience ?? 3;
+      record.languages = record.languages ?? 'English, Kashmiri, Urdu';
+      record.emergencyContact = record.emergencyContact ?? '+919876543219';
+      record.upiId = record.upiId ?? 'kashmir.driver@okaxis';
+    } else if (model === 'cabDispatchOffer') {
+      record.driverRating = record.driverRating ?? 4.8;
+      record.driverTrips = record.driverTrips ?? 0;
+      record.capacity = record.capacity ?? 6;
+      record.luggageCapacity = record.luggageCapacity ?? 4;
+      record.snowChains = record.snowChains ?? true;
+      record.fourWheelDrive = record.fourWheelDrive ?? false;
+      record.unionVerified = record.unionVerified ?? true;
+      record.status = record.status ?? 'OFFERED';
+      record.etaMinutes = record.etaMinutes ?? 12;
+    } else if (model === 'driverPayout') {
+      record.status = record.status ?? 'PROCESSED_INSTANT_SETTLEMENT';
+      record.processedAt = record.processedAt ?? now;
+    } else if (model === 'driverSosAlert') {
+      record.location = record.location ?? 'Srinagar–Gulmarg Corridor';
+      record.incidentType = record.incidentType ?? 'SOS Alert Triggered';
+      record.severity = record.severity ?? 'CRITICAL';
+      record.status = record.status ?? 'ACTIVE';
     } else if (model === 'booking') {
       record.status = record.status ?? 'pending';
       record.stage = record.stage ?? 'DRAFT';
@@ -498,8 +662,15 @@ export function createInMemoryPrisma() {
       record.status = record.status ?? 'PENDING';
     } else if (model === 'cabReservation') {
       record.status = record.status ?? 'ALLOCATED';
+      record.travelersCount = record.travelersCount ?? 2;
+      record.luggageCount = record.luggageCount ?? 2;
+      record.tripType = record.tripType ?? 'airport';
+      record.estimatedDistanceKm = record.estimatedDistanceKm ?? 0;
+      record.estimatedDurationMin = record.estimatedDurationMin ?? 0;
       record.totalCost = record.totalCost ?? 0;
       record.contractRate = record.contractRate ?? 0;
+      record.offeredFare = record.offeredFare ?? 0;
+      record.agreedFare = record.agreedFare ?? 0;
       record.profitMargin = record.profitMargin ?? 0;
     }
 

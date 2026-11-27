@@ -43,6 +43,10 @@ interface Cab {
   features: string[];
   isActive: boolean;
   registrationNo?: string;
+  plateNumber?: string | null;
+  verificationStatus?: string;
+  snowChains?: boolean;
+  fourWheelDrive?: boolean;
 }
 
 interface CabMetadata {
@@ -170,18 +174,24 @@ export default function CMSCabs() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [driversList, setDriversList] = useState<any[]>([]);
 
-  // Tourist Taxi Union Verification Pipeline State
+  // Tourist Taxi Union Verification Pipeline & Live Dispatch State
   const [pendingUnionCabs, setPendingUnionCabs] = useState<any[]>([]);
   const [isLoadingPendingUnion, setIsLoadingPendingUnion] = useState(false);
   const [authenticatingCabId, setAuthenticatingCabId] = useState<string | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectingVehicle, setRejectingVehicle] = useState<{ id: string; plateNumber: string; model: string; unionName: string } | null>(null);
   const [rejectionReason, setRejectionReason] = useState('Tourist union badge not matching RTO record');
+  const [sosAlerts, setSosAlerts] = useState<any[]>([]);
+  const [liveReservations, setLiveReservations] = useState<any[]>([]);
+  const [reviewingDriverId, setReviewingDriverId] = useState<string | null>(null);
+
+  const getAdminAuthToken = () =>
+    localStorage.getItem('teamToken') || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
 
   const fetchPendingUnionCabs = async () => {
     setIsLoadingPendingUnion(true);
     try {
-      const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+      const token = getAdminAuthToken();
       const res = await fetch(`${API_BASE_URL}/driver/vehicles/pending-verification`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -205,14 +215,14 @@ export default function CMSCabs() {
   const handleAuthenticateVehicle = async (cabId: string, action: 'APPROVE' | 'REJECT', remarks?: string) => {
     setAuthenticatingCabId(cabId);
     try {
-      const token = localStorage.getItem('teamToken') || localStorage.getItem('token');
+      const token = getAdminAuthToken();
       const res = await fetch(`${API_BASE_URL}/driver/vehicles/${cabId}/authenticate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ action, remarks })
+        body: JSON.stringify({ action, rejectionReason: remarks, remarks })
       });
       if (res.ok) {
         const data = await res.json();
@@ -432,7 +442,7 @@ export default function CMSCabs() {
     }
 
     setSavingDriver(true);
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     const method = editingDriver ? 'PATCH' : 'POST';
     const url = editingDriver 
       ? `${API_BASE_URL}/cabs/operations/drivers/${editingDriver.id}` 
@@ -465,7 +475,7 @@ export default function CMSCabs() {
 
   const handleDeleteDriver = async (id: string) => {
     if (!confirm('Are you sure you want to suspend and remove this driver?')) return;
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     try {
       const response = await fetch(`${API_BASE_URL}/cabs/operations/drivers/${id}`, {
         method: 'DELETE',
@@ -531,7 +541,7 @@ export default function CMSCabs() {
     }
 
     setSavingMaintenance(true);
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     
     // Create new record
     const newRecord = {
@@ -566,7 +576,7 @@ export default function CMSCabs() {
   };
 
   const handleToggleMaintenanceStatus = async (id: string, newStatus: string) => {
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     const updatedRecords = maintenanceRecords.map(r => r.id === id ? { ...r, status: newStatus } : r);
 
     try {
@@ -592,7 +602,7 @@ export default function CMSCabs() {
 
   const handleDeleteMaintenanceRecord = async (id: string) => {
     if (!confirm('Are you sure you want to remove this maintenance entry?')) return;
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     const updatedRecords = maintenanceRecords.filter(r => r.id !== id);
 
     try {
@@ -623,10 +633,7 @@ export default function CMSCabs() {
   ]);
   const [typingChat, setTypingChat] = useState('');
 
-  // Emergency breakdown simulation database
-  const [breakdownIncidents, setBreakdownIncidents] = useState([
-    { id: 'inc-1', vehicle: 'Sedan Dzire', driver: 'Tariq Mir', location: 'Sonamarg Bypass', type: 'Tyre burst', severity: 'Medium', status: 'Backup Assigned' }
-  ]);
+  // Real-time SOS alerts now fetched from PostgreSQL (/api/cabs/operations/data)
 
   // Google Maps simulation vehicle nodes
   const [mapVehicles, setMapVehicles] = useState([
@@ -690,7 +697,7 @@ export default function CMSCabs() {
 
   const fetchOperationsData = async () => {
     setOpsLoading(true);
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     try {
       const response = await fetch(`${API_BASE_URL}/cabs/operations/data`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -699,12 +706,15 @@ export default function CMSCabs() {
       const data = await response.json();
       setOperationsData(data.operationsData);
       setBookings(data.bookings || []);
-      
+      setSosAlerts(Array.isArray(data.sosAlerts) ? data.sosAlerts : []);
+      setLiveReservations(Array.isArray(data.reservations) ? data.reservations : []);
+
       const rawDrivers = data.drivers || [];
       const formattedDrivers = rawDrivers.map((d: any) => {
         const profile = d.driverProfile || {};
         return {
           id: d.id,
+          driverProfileId: profile.id || d.id,
           name: d.name,
           email: d.email,
           phone: d.phone || '',
@@ -712,6 +722,14 @@ export default function CMSCabs() {
           license: profile.licenseNumber || 'N/A',
           vehicleRegNo: profile.vehicleRegNo || '',
           status: profile.status || 'AVAILABLE',
+          approvalStatus: profile.approvalStatus || 'APPROVED',
+          rejectionReason: profile.rejectionReason || null,
+          unionName: profile.unionName || null,
+          unionBadgeNumber: profile.unionBadgeNumber || null,
+          psvBadgeNumber: profile.psvBadgeNumber || null,
+          upiId: profile.upiId || null,
+          availableBalance: profile.availableBalance || 0,
+          currentSector: profile.currentSector || null,
           attendance: profile.attendance || 'Present',
           earnings: profile.earnings || 0,
           trips: profile.tripsCompleted || 0,
@@ -735,6 +753,71 @@ export default function CMSCabs() {
     }
   };
 
+  const handleReviewDriverApplication = async (
+    driverProfileId: string,
+    action: 'APPROVE' | 'REJECT' | 'SUSPEND',
+    issuePortalKey = true,
+    reason?: string
+  ) => {
+    setReviewingDriverId(driverProfileId);
+    try {
+      const token = getAdminAuthToken();
+      const res = await fetch(`${API_BASE_URL}/cabs/operations/drivers/${driverProfileId}/review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action,
+          reason,
+          approvePendingVehicles: true,
+          issuePortalKey
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to review driver KYC application');
+        return;
+      }
+      toast.success(
+        action === 'APPROVE'
+          ? `Driver Approved! ${data.portalKey ? `Portal Key: ${data.portalKey}` : ''}`
+          : `Driver KYC marked ${action}`,
+        { duration: 6000 }
+      );
+      fetchOperationsData();
+      fetchPendingUnionCabs();
+      fetchCabs();
+    } catch {
+      toast.error('Network error reviewing driver application');
+    } finally {
+      setReviewingDriverId(null);
+    }
+  };
+
+  const handleResolveSosAlert = async (alertId: string, status: 'BACKUP_DISPATCHED' | 'RESOLVED') => {
+    try {
+      const token = getAdminAuthToken();
+      const res = await fetch(`${API_BASE_URL}/driver/sos/${alertId}/resolve`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        toast.success(status === 'BACKUP_DISPATCHED' ? 'Backup transport assigned & logged' : 'SOS alert resolved');
+        fetchOperationsData();
+      } else {
+        toast.error('Failed to update SOS status');
+      }
+    } catch {
+      toast.error('Network error resolving SOS alert');
+    }
+  };
+
   useEffect(() => {
     fetchCabs();
     fetchOperationsData();
@@ -749,9 +832,13 @@ export default function CMSCabs() {
       if (latestEvent.message && (
         latestEvent.message.includes('block') || 
         latestEvent.message.includes('booking') || 
-        latestEvent.message.includes('Cab Settings')
+        latestEvent.message.includes('Cab') ||
+        latestEvent.message.includes('KYC') ||
+        latestEvent.message.includes('SOS') ||
+        latestEvent.message.includes('Driver')
       )) {
         fetchOperationsData();
+        fetchPendingUnionCabs();
       }
     }
   }, [systemEvents]);
@@ -866,7 +953,7 @@ export default function CMSCabs() {
     }
 
     setSaving(true);
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     const method = editingCab ? 'PATCH' : 'POST';
     const url = editingCab ? `${API_BASE_URL}/cabs/${editingCab.id}` : `${API_BASE_URL}/cabs`;
 
@@ -915,7 +1002,7 @@ export default function CMSCabs() {
   };
 
   const handleDelete = async (id: string) => {
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     try {
       const response = await fetch(`${API_BASE_URL}/cabs/${id}`, {
         method: 'DELETE',
@@ -937,7 +1024,7 @@ export default function CMSCabs() {
   };
 
   const toggleActive = async (cab: Cab) => {
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     try {
       const response = await fetch(`${API_BASE_URL}/cabs/${cab.id}`, {
         method: 'PATCH',
@@ -967,7 +1054,7 @@ export default function CMSCabs() {
     }
 
     setBlockingDates(true);
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     try {
       const response = await fetch(`${API_BASE_URL}/cabs/operations/block`, {
         method: 'POST',
@@ -1000,7 +1087,7 @@ export default function CMSCabs() {
   };
 
   const handleUnblockDates = async (blockId: string) => {
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     try {
       const response = await fetch(`${API_BASE_URL}/cabs/operations/block/${blockId}`, {
         method: 'DELETE',
@@ -1121,7 +1208,7 @@ export default function CMSCabs() {
     };
 
     setSaving(true);
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     try {
       const response = await fetch(`${API_BASE_URL}/bookings/${selectedBookingForAlloc.id}`, {
         method: 'PATCH',
@@ -1150,7 +1237,7 @@ export default function CMSCabs() {
     const updatedDetails = { ...booking.details };
     delete updatedDetails.cabAllocation;
 
-    const token = localStorage.getItem('teamToken');
+    const token = getAdminAuthToken();
     try {
       const response = await fetch(`${API_BASE_URL}/bookings/${booking.id}`, {
         method: 'PATCH',
@@ -1187,7 +1274,7 @@ export default function CMSCabs() {
     
     // Simulate API call to WhatsApp Business API
     setTimeout(async () => {
-      const token = localStorage.getItem('teamToken');
+      const token = getAdminAuthToken();
       const updatedDetails = {
         ...whatsappBooking.details,
         cabAllocation: {
@@ -1216,28 +1303,36 @@ export default function CMSCabs() {
     }, 1500);
   };
 
-  // AI Dispatch Engine auto assignment simulation
+  // AI Dispatch Engine live PostgreSQL fleet & driver matcher
   const runAIDispatchEngine = () => {
     setRunningAI(true);
     setAiMatchOutput([]);
     setShowAIMatchResult(true);
 
-    const logMessage = (msg: string, delay: number) => {
-      setTimeout(() => {
-        setAiMatchOutput(prev => [...prev, `[AI Engine] ${msg}`]);
-      }, delay);
-    };
+    const approvedDrivers = driversList.filter((d) => d.approvalStatus === 'APPROVED');
+    const onlineDrivers = approvedDrivers.filter((d) => d.status === 'AVAILABLE');
+    const topDriver = onlineDrivers[0] || approvedDrivers[0];
+    const activeCab = cabs.find((c) => c.isActive) || cabs[0];
+    const openSearchCount = liveReservations.filter((r) => ['SEARCHING', 'OFFERED'].includes(r.status)).length;
 
-    logMessage("Initializing Auto-Dispatch protocols...", 300);
-    logMessage("Scanning available vehicles near pickup regions...", 800);
-    logMessage("Analyzing driver ratings, compliance, and experience matrix...", 1400);
-    logMessage("Optimizing proximity based on live traffic corridors...", 2000);
-    logMessage("Match Found: Toyota Innova Crysta (JK-01-A-5678) score 98.4%", 2600);
-    logMessage("Chauffeur Shabir Ahmad selected. Proximity: 1.8 km.", 3200);
-    
-    setTimeout(() => {
-      setRunningAI(false);
-    }, 3500);
+    const lines = [
+      'Initializing Kashmir Curators Live Dispatch Matrix...',
+      `Verified Fleet Assets: ${cabs.filter((c) => c.isActive).length} active cabs | ${approvedDrivers.length} approved chauffeurs (${onlineDrivers.length} online now).`,
+      `Pending Tourist Ride Requests: ${openSearchCount} active searching dispatches.`,
+      activeCab
+        ? `Optimal Vehicle Candidate: ${activeCab.name} (${activeCab.plateNumber || 'Commercial Plate'}) — ₹${activeCab.basePrice} base.`
+        : 'No active approved cab detected in registry.',
+      topDriver
+        ? `Recommended Chauffeur: ${topDriver.name} (${topDriver.rating}★, ${topDriver.trips} trips) • Sector: ${topDriver.currentSector || 'Srinagar Hub'}.`
+        : 'Awaiting approved chauffeur to go online.',
+    ];
+
+    lines.forEach((msg, idx) => {
+      setTimeout(() => {
+        setAiMatchOutput((prev) => [...prev, `[Dispatch AI] ${msg}`]);
+        if (idx === lines.length - 1) setRunningAI(false);
+      }, (idx + 1) * 300);
+    });
   };
 
   // Comms Type Message
@@ -1306,13 +1401,40 @@ export default function CMSCabs() {
     }
   };
 
-  // Simulating SOS Trigger
-  const triggerSOSEmergency = () => {
-    toast.error('CRITICAL: SOS signal registered from vehicle JK-01-A-5678. Support team dispatched.');
-    setBreakdownIncidents(prev => [
-      ...prev,
-      { id: `inc-${Date.now()}`, vehicle: 'Innova Crysta Luxury', driver: 'Shabir Ahmad', location: 'Gagangeer Corridor', type: 'SOS Alert Triggered', severity: 'Critical', status: 'Pending Rescue' }
-    ]);
+  const triggerSOSEmergency = async () => {
+    const activeDriver = driversList.find((d) => d.status === 'AVAILABLE') || driversList[0];
+    const activeCab = cabs.find((c) => c.isActive) || cabs[0];
+    const regNo = activeDriver?.vehicleRegNo || activeCab?.plateNumber || activeCab?.registrationNo || 'JK01-SOS-DISPATCH';
+    const token = getAdminAuthToken();
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/sos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          vehicleRegNo: regNo,
+          location: activeDriver?.currentSector || 'Gagangeer Corridor',
+          incidentType: 'Command Center Emergency Dispatch',
+          severity: 'CRITICAL',
+          notes: `Triggered from Operations Command Center for ${activeCab?.name || 'Fleet Vehicle'}`
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.error(`CRITICAL: SOS signal registered from vehicle ${regNo}. Support team dispatched.`);
+        if (data.alert) {
+          setSosAlerts((prev) => [data.alert, ...prev]);
+        }
+        fetchOperationsData();
+      } else {
+        toast.error('Failed to broadcast SOS signal');
+      }
+    } catch {
+      toast.error('Network error broadcasting SOS signal');
+    }
     setCurrentTab('emergency');
   };
 
@@ -1386,11 +1508,27 @@ export default function CMSCabs() {
           { id: 'operations', label: 'Operations Desk', icon: Sliders },
           { id: 'union-pipeline', label: `Union Pipeline (${pendingUnionCabs.length})`, icon: ShieldCheck },
           { id: 'registry', label: `Fleet Registry (${cabs.length})`, icon: Car },
-          { id: 'drivers', label: `Chauffeur Hub (${driversList.length})`, icon: Users },
+          {
+            id: 'drivers',
+            label: (() => {
+              const kycPending = driversList.filter((d) => d.approvalStatus === 'PENDING_APPROVAL').length;
+              return kycPending > 0
+                ? `Chauffeur Hub (${driversList.length} • ${kycPending} KYC)`
+                : `Chauffeur Hub (${driversList.length})`;
+            })(),
+            icon: Users,
+          },
           { id: 'ai-dispatch', label: 'AI Dispatch & Rates', icon: Sparkles },
           { id: 'maintenance', label: 'Workshop Center', icon: Wrench },
           { id: 'finance', label: 'P&L Analytics', icon: DollarSign },
-          { id: 'emergency', label: 'Emergency SOS', icon: AlertOctagon },
+          {
+            id: 'emergency',
+            label: (() => {
+              const activeSos = sosAlerts.filter((a) => a.status !== 'RESOLVED').length;
+              return activeSos > 0 ? `Emergency SOS (${activeSos})` : 'Emergency SOS';
+            })(),
+            icon: AlertOctagon,
+          },
         ].map(tab => (
           <button
             key={tab.id}
@@ -1910,7 +2048,7 @@ export default function CMSCabs() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#090e13]/90 border border-white/5 rounded-3xl p-6 shadow-xl">
             <div>
               <h3 className="text-xl font-display font-bold text-white tracking-tight">Chauffeur Command Hub</h3>
-              <p className="text-xs text-white/40 mt-0.5">Track certified mountain chauffeurs, license verification, ratings & trip rosters</p>
+              <p className="text-xs text-white/40 mt-0.5">Review self-onboarding KYC applications, issue KC-DRV keys, & manage certified mountain pilots</p>
             </div>
             <div className="flex items-center gap-2">
               <Button 
@@ -1921,6 +2059,83 @@ export default function CMSCabs() {
               </Button>
             </div>
           </div>
+
+          {/* Pending Driver Self-Onboarding KYC Approval Queue */}
+          {driversList.some((d) => d.approvalStatus === 'PENDING_APPROVAL') && (
+            <div className="p-6 rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-amber-400" />
+                  <h4 className="text-sm font-black uppercase tracking-wider text-white">
+                    Pending Driver KYC Applications (
+                    {driversList.filter((d) => d.approvalStatus === 'PENDING_APPROVAL').length})
+                  </h4>
+                </div>
+                <span className="text-[11px] text-amber-300 font-bold">
+                  Self-onboarded pilots awaiting Admin verification
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {driversList
+                  .filter((d) => d.approvalStatus === 'PENDING_APPROVAL')
+                  .map((pendingDrv) => (
+                    <div
+                      key={pendingDrv.id}
+                      data-testid={`pending-driver-kyc-${pendingDrv.driverProfileId}`}
+                      className="p-4 rounded-2xl bg-[#090e13]/95 border border-amber-500/30 space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h5 className="font-bold text-sm text-white">{pendingDrv.name}</h5>
+                          <p className="text-[11px] text-white/60">
+                            {pendingDrv.email} • {pendingDrv.phone || 'No phone'}
+                          </p>
+                          <p className="text-[11px] font-mono text-amber-300 mt-1">
+                            DL: {pendingDrv.license} • Plate: {pendingDrv.vehicleRegNo || 'N/A'}
+                          </p>
+                          {pendingDrv.unionName && (
+                            <p className="text-[10px] text-white/50">
+                              Union: {pendingDrv.unionName} ({pendingDrv.unionBadgeNumber || 'Pending'})
+                            </p>
+                          )}
+                        </div>
+                        <Badge className="bg-amber-500/20 text-amber-300 border-none text-[9px] uppercase">
+                          PENDING KYC
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                        <Button
+                          size="sm"
+                          disabled={reviewingDriverId === pendingDrv.driverProfileId}
+                          onClick={() =>
+                            void handleReviewDriverApplication(pendingDrv.driverProfileId, 'APPROVE', true)
+                          }
+                          className="h-9 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[10px] uppercase tracking-wider px-3 rounded-xl"
+                        >
+                          Approve & Issue KC-DRV Key
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={reviewingDriverId === pendingDrv.driverProfileId}
+                          onClick={() =>
+                            void handleReviewDriverApplication(
+                              pendingDrv.driverProfileId,
+                              'REJECT',
+                              false,
+                              'KYC document verification failed'
+                            )
+                          }
+                          className="h-9 bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-300 font-bold text-[10px] uppercase px-3 rounded-xl"
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {driversList.map(drv => {
@@ -1937,12 +2152,20 @@ export default function CMSCabs() {
                         <span className="text-[10px] text-white/40 block font-mono">{drv.phone}</span>
                       </div>
                     </div>
-                    <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
-                      drv.status === 'ONLINE' || drv.status === 'Online' ? 'bg-emerald-500/15 text-emerald-400' : 
-                      drv.status === 'ON TRIP' || drv.status === 'On Trip' ? 'bg-rose-500/15 text-rose-400' : 'bg-neutral-500/15 text-neutral-400'
-                    )}>
-                      {drv.status}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
+                        drv.status === 'AVAILABLE' || drv.status === 'ONLINE' || drv.status === 'Online' ? 'bg-emerald-500/15 text-emerald-400' : 
+                        drv.status === 'ON_TRIP' || drv.status === 'ON TRIP' || drv.status === 'On Trip' ? 'bg-rose-500/15 text-rose-400' : 'bg-neutral-500/15 text-neutral-400'
+                      )}>
+                        {drv.status}
+                      </Badge>
+                      <Badge className={cn("border-none text-[8px] uppercase tracking-wider font-bold",
+                        drv.approvalStatus === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-300' :
+                        drv.approvalStatus === 'PENDING_APPROVAL' ? 'bg-amber-500/20 text-amber-300' : 'bg-rose-500/20 text-rose-300'
+                      )}>
+                        {drv.approvalStatus || 'APPROVED'}
+                      </Badge>
+                    </div>
                   </div>
 
                   {/* Quick Action Contact Channels */}
@@ -2315,46 +2538,67 @@ export default function CMSCabs() {
                 <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1 mb-6">Initiate backup vehicle deployments, contact emergency support police lines</p>
 
                 <div className="space-y-4">
-                  {breakdownIncidents.map(inc => (
-                    <div key={inc.id} className="p-5 bg-red-500/5 border border-red-500/10 rounded-2xl space-y-3 text-xs text-left">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="block text-[8px] text-red-400 font-black uppercase tracking-widest">{inc.severity} Severity</span>
-                          <h4 className="text-sm font-bold text-white uppercase mt-0.5">{inc.vehicle} • {inc.driver}</h4>
-                        </div>
-                        <Badge className="bg-red-500 text-black border-none text-[8px] uppercase tracking-wider font-bold">
-                          {inc.status}
-                        </Badge>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
-                        <div>
-                          <span className="block text-[8px] text-white/30 uppercase">Incident Location</span>
-                          <span className="font-bold text-white">{inc.location}</span>
-                        </div>
-                        <div>
-                          <span className="block text-[8px] text-white/30 uppercase">Diagnosis Report</span>
-                          <span className="font-bold text-white">{inc.type}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3 pt-4 border-t border-white/5">
-                        <Button 
-                          onClick={() => toast.success('Backup transport allocated and dispatched.')}
-                          className="bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[9px] uppercase tracking-widest h-10 px-4 rounded-xl"
-                        >
-                          Dispatch Backup Cab
-                        </Button>
-                        <Button 
-                          variant="ghost"
-                          onClick={() => toast.info('SOS resolved.')}
-                          className="bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 hover:text-white font-black text-[9px] uppercase tracking-widest h-10 px-4 rounded-xl"
-                        >
-                          Resolve SOS
-                        </Button>
-                      </div>
+                  {sosAlerts.length === 0 ? (
+                    <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/5 text-xs text-white/50">
+                      No active or historical SOS emergencies triggered by fleet chauffeurs.
                     </div>
-                  ))}
+                  ) : (
+                    sosAlerts.map((inc) => (
+                      <div key={inc.id} className="p-5 bg-red-500/5 border border-red-500/15 rounded-2xl space-y-3 text-xs text-left">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="block text-[8px] text-red-400 font-black uppercase tracking-widest">
+                              {inc.severity || 'CRITICAL'} Severity
+                            </span>
+                            <h4 className="text-sm font-bold text-white uppercase mt-0.5">
+                              {inc.vehicleRegNo || 'Fleet Cab'} • {inc.driverName}
+                            </h4>
+                          </div>
+                          <Badge
+                            className={cn(
+                              'border-none text-[8px] uppercase tracking-wider font-bold',
+                              inc.status === 'RESOLVED'
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : inc.status === 'BACKUP_DISPATCHED'
+                                  ? 'bg-amber-500/20 text-amber-300'
+                                  : 'bg-red-500 text-black'
+                            )}
+                          >
+                            {inc.status}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                          <div>
+                            <span className="block text-[8px] text-white/30 uppercase">Incident Location</span>
+                            <span className="font-bold text-white">{inc.location}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[8px] text-white/30 uppercase">Alert Details</span>
+                            <span className="font-bold text-white">{inc.incidentType}</span>
+                          </div>
+                        </div>
+
+                        {inc.status !== 'RESOLVED' && (
+                          <div className="flex gap-3 pt-4 border-t border-white/5">
+                            <Button
+                              onClick={() => void handleResolveSosAlert(inc.id, 'BACKUP_DISPATCHED')}
+                              className="bg-white text-black hover:bg-kashmir-gold hover:text-black font-black text-[9px] uppercase tracking-widest h-10 px-4 rounded-xl"
+                            >
+                              Dispatch Backup Cab
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => void handleResolveSosAlert(inc.id, 'RESOLVED')}
+                              className="bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 hover:text-white font-black text-[9px] uppercase tracking-widest h-10 px-4 rounded-xl"
+                            >
+                              Resolve SOS
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </Card>
             </div>
@@ -3549,8 +3793,8 @@ export default function CMSCabs() {
               >
                 <option value="" className="bg-[#0a0f14]">Choose a vehicle...</option>
                 {cabs.map(c => (
-                  <option key={c.id} value={JSON.stringify({ vehicle: c.name, reg: c.registrationNo || 'JK-01-A-0000' })} className="bg-[#0a0f14]">
-                    {c.name} ({c.registrationNo})
+                  <option key={c.id} value={JSON.stringify({ vehicle: c.name, reg: c.plateNumber || c.registrationNo || 'JK-01-A-0000' })} className="bg-[#0a0f14]">
+                    {c.name} ({c.plateNumber || c.registrationNo || 'Unplated'})
                   </option>
                 ))}
               </select>

@@ -31,13 +31,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { DriverDutyState, DriverTrip, TripStage } from '../types/driver';
+import { DriverDutyState, DriverTrip, DriverVehicle, OpenRideRequest, TripStage } from '../types/driver';
 
 interface DriverActionSheetProps {
   dutyState: DriverDutyState;
   onGoOnline: () => void;
   onGoOffline: () => void;
   activeTrip: DriverTrip | null;
+  activeVehicle?: DriverVehicle | null;
+  openRequests?: OpenRideRequest[];
+  onSelectRequest?: (req: OpenRideRequest) => void;
   onAcceptOffer: () => void;
   onDeclineOffer: () => void;
   onCounterOffer?: (tripId: string, proposedFare: number, reason: string) => Promise<void>;
@@ -51,6 +54,9 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
   onGoOnline,
   onGoOffline,
   activeTrip,
+  activeVehicle,
+  openRequests = [],
+  onSelectRequest,
   onAcceptOffer,
   onDeclineOffer,
   onCounterOffer,
@@ -203,48 +209,110 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
             </div>
 
             {/* Vehicle Readiness Indicator */}
-            <div className="flex items-center justify-center gap-3 text-[11px] text-white/60">
-              <span className="flex items-center gap-1 text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5" /> 4x4 Engaged
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1 text-sky-400">
-                <Snowflake className="w-3.5 h-3.5" /> Snow Chains Ready
-              </span>
+            <div className="flex items-center justify-center flex-wrap gap-3 text-[11px] text-white/60">
+              {activeVehicle ? (
+                <>
+                  <span
+                    className={`flex items-center gap-1 ${
+                      activeVehicle.fourWheelDrive ? 'text-emerald-400' : 'text-amber-300'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />{' '}
+                    {activeVehicle.fourWheelDrive ? '4x4 AWD Ready' : activeVehicle.model}
+                  </span>
+                  <span>•</span>
+                  <span
+                    className={`flex items-center gap-1 ${
+                      activeVehicle.snowChains ? 'text-sky-400' : 'text-white/50'
+                    }`}
+                  >
+                    <Snowflake className="w-3.5 h-3.5" />{' '}
+                    {activeVehicle.snowChains ? 'Snow Chains Fitted' : 'No Snow Chains'}
+                  </span>
+                  <span>•</span>
+                  <span className="font-mono text-amber-300">{activeVehicle.plateNumber}</span>
+                </>
+              ) : (
+                <span className="text-amber-300/80">Register & select a Union-verified cab in My Fleet</span>
+              )}
             </div>
           </div>
         )}
 
         {/* ================================================================== */}
-        {/* STATE 2: ONLINE SEARCHING (360° Radar Sweep Animation)              */}
+        {/* STATE 2: ONLINE SEARCHING (360° Radar + Live Request Queue)        */}
         {/* ================================================================== */}
         {dutyState === 'ONLINE_SEARCHING' && (
-          <div className="p-5 rounded-3xl bg-[#0F141C]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_80px_rgba(0,0,0,0.85)] flex items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-4 duration-200">
-            <div className="flex items-center gap-3.5">
-              {/* Radar Circle */}
-              <div className="relative w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 overflow-hidden">
-                <Radio className="w-6 h-6 animate-pulse" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/30 to-transparent animate-[spin_3s_linear_infinite]" />
-              </div>
-              <div className="text-left">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-white">Finding Trips in Srinagar...</h4>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          <div className="space-y-2.5 animate-in fade-in slide-in-from-bottom-4 duration-200">
+            {openRequests.length > 0 && (
+              <div className="rounded-2xl bg-[#0F141C]/96 backdrop-blur-2xl border border-amber-500/40 p-3 space-y-2 max-h-52 overflow-y-auto shadow-2xl">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" /> {openRequests.length} Live Tourist Ride Request
+                    {openRequests.length > 1 ? 's' : ''}
+                  </span>
+                  <span className="text-[10px] text-white/40">Tap to inspect or bid</span>
                 </div>
-                <p className="text-[11px] text-white/50 truncate max-w-[210px] sm:max-w-xs">
-                  Broadcasting live to SXR Airport, Railway & Dal Lake
-                </p>
+                {openRequests.map((req) => (
+                  <button
+                    key={req.reservationId}
+                    type="button"
+                    onClick={() => onSelectRequest?.(req)}
+                    className="w-full text-left p-2.5 rounded-xl bg-white/[0.04] hover:bg-amber-500/15 border border-white/10 hover:border-amber-500/40 flex items-center justify-between gap-3 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-extrabold text-white truncate">
+                        {req.pickupLocation} → {req.dropLocation}
+                      </div>
+                      <div className="text-[10px] text-white/50 flex items-center gap-2 mt-0.5">
+                        <span>{req.passengerName}</span>
+                        <span>•</span>
+                        <span>{req.distanceKm} km</span>
+                        {req.touristCounter && (
+                          <span className="text-amber-300 font-bold">
+                            Guest Counter: ₹{req.touristCounter.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="font-mono font-black text-emerald-400 text-sm block">
+                        ₹{req.fareAmount.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[9px] font-bold uppercase text-amber-300">Open →</span>
+                    </div>
+                  </button>
+                ))}
               </div>
-            </div>
+            )}
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onGoOffline}
-              className="h-10 rounded-xl bg-white/5 hover:bg-rose-500/20 border-white/10 hover:border-rose-500/30 text-rose-300 text-xs font-bold shrink-0"
-            >
-              Go Offline
-            </Button>
+            <div className="p-5 rounded-3xl bg-[#0F141C]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_80px_rgba(0,0,0,0.85)] flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                {/* Radar Circle */}
+                <div className="relative w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 overflow-hidden">
+                  <Radio className="w-6 h-6 animate-pulse" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/30 to-transparent animate-[spin_3s_linear_infinite]" />
+                </div>
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white">Finding Trips in Kashmir...</h4>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  </div>
+                  <p className="text-[11px] text-white/50 truncate max-w-[210px] sm:max-w-xs">
+                    Live GPS synced with SXR Airport, Railway & Gulmarg tourists
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onGoOffline}
+                className="h-10 rounded-xl bg-white/5 hover:bg-rose-500/20 border-white/10 hover:border-rose-500/30 text-rose-300 text-xs font-bold shrink-0"
+              >
+                Go Offline
+              </Button>
+            </div>
           </div>
         )}
 
@@ -253,11 +321,11 @@ export const DriverActionSheet: React.FC<DriverActionSheetProps> = ({
         {/* ================================================================== */}
         {dutyState === 'INCOMING_RIDE_OFFER' && activeTrip && (
           <div className="rounded-3xl bg-[#0F141C]/98 backdrop-blur-2xl border-2 border-amber-500/80 shadow-[0_24px_100px_rgba(245,158,11,0.4)] overflow-hidden animate-in zoom-in-95 duration-200 text-white">
-            {/* 15-Second Shrinking Progress Bar */}
+            {/* 30-Second Shrinking Progress Bar */}
             <div className="h-2 w-full bg-black/60 relative">
               <div
                 className="h-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 transition-all duration-1000 ease-linear"
-                style={{ width: `${(offerCountdownSeconds / 15) * 100}%` }}
+                style={{ width: `${Math.min(100, Math.max(0, (offerCountdownSeconds / 30) * 100))}%` }}
               />
             </div>
 

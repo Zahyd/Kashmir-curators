@@ -25,6 +25,11 @@ import { io } from 'socket.io-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL, SOCKET_URL, DEFAULT_SOCKET_OPTIONS } from '@/lib/api';
+import {
+  AutoCabPopupCards,
+  LiveCabMatch,
+  LiveDispatchOffer,
+} from '@/components/cabs/AutoCabPopupCards';
 
 interface Cab {
   id: string;
@@ -167,17 +172,34 @@ const standardVehicles = [
 
 export default function Cabs() {
   const navigate = useNavigate();
-  const { isAuthenticated, addBooking } = useAuth();
+  const { isAuthenticated, user, token, refreshBookings } = useAuth();
   const queryClient = useQueryClient();
   const { data: dbCabs = [], isLoading: isLoadingCabs } = useCabs();
-  
+
   const [selectedCab, setSelectedCab] = useState<any>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutMethod, setCheckoutMethod] = useState<'upi' | 'cash'>('upi');
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'processing' | 'success'>('idle');
   const [bookingRefNo, setBookingRefNo] = useState('');
+  const [boardingPin, setBoardingPin] = useState('');
 
-  // Uber Bidding States
+  // Real-Time PostgreSQL Dispatch & Auto Pop-Up States
+  const [liveMatches, setLiveMatches] = useState<LiveCabMatch[]>([]);
+  const [onlineDriversCount, setOnlineDriversCount] = useState(0);
+  const [liveEstimatedKm, setLiveEstimatedKm] = useState(28);
+  const [corridorAdvisory, setCorridorAdvisory] = useState<{
+    title?: string;
+    message?: string;
+    location?: string;
+  } | null>(null);
+  const [showAutoPopup, setShowAutoPopup] = useState(false);
+  const [popupDismissedManually, setPopupDismissedManually] = useState(false);
+
+  const [activeReservationId, setActiveReservationId] = useState<string | null>(null);
+  const [activeReservationStatus, setActiveReservationStatus] = useState<string | null>(null);
+  const [liveDispatchOffers, setLiveDispatchOffers] = useState<LiveDispatchOffer[]>([]);
+
+  // Broadcast & Negotiation States (mapped cleanly from real CabDispatchOffer[])
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [driverOffers, setDriverOffers] = useState<any[]>([]);
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
@@ -186,8 +208,8 @@ export default function Cabs() {
   const [isDriverResponding, setIsDriverResponding] = useState<Record<string, boolean>>({});
   const [finalAgreedFare, setFinalAgreedFare] = useState<number>(0);
   const [allocatedDriver, setAllocatedDriver] = useState<any>(null);
-  
-  // Tracking timeline console state
+
+  // Tracking timeline console state (synced from real DB status)
   const [isTracking, setIsTracking] = useState(false);
   const [trackingStep, setTrackingStep] = useState(0);
 
@@ -223,16 +245,213 @@ export default function Cabs() {
     }
   }, []);
 
-  // Real-time synchronization with Fleet & Cabs CMS
+  const mapOfferToUiCard = (
+    offer: LiveDispatchOffer,
+    matchedCab?: {
+      id: string;
+      name: string;
+      type: string;
+      capacity: number;
+      pricePerKm: number;
+      basePrice: number;
+      image: string | null;
+      features: string[];
+    }
+  ) => {
+    const statusMap: Record<string, string> = {
+      OFFERED: 'received',
+      DRIVER_ACCEPTED: 'accepted',
+      COUNTERED_BY_DRIVER: 'countered',
+      COUNTERED_BY_TOURIST: 'countered',
+      ACCEPTED: 'accepted',
+      DECLINED: 'rejected',
+      CLOSED: 'rejected',
+      EXPIRED: 'rejected',
+    };
+    return {
+      id: offer.id,
+      driverName: offer.driverName,
+      driverPhone: offer.driverPhone || null,
+      driverRating: offer.driverRating,
+      driverTours: offer.driverTrips,
+      vehicleName: offer.vehicleName,
+      vehicleType: offer.vehicleType,
+      vehicleImage: offer.vehicleImage || matchedCab?.image || '/images/tourist_innova.png',
+      capacity: offer.capacity,
+      luggage: offer.luggageCapacity,
+      features: matchedCab?.features || [
+        ...(offer.snowChains ? ['Snow Chains Equipped'] : []),
+        ...(offer.fourWheelDrive ? ['4x4 Winter Drivetrain'] : []),
+        ...(offer.unionVerified ? ['Taxi Union Verified'] : []),
+      ],
+      initialBid: offer.initialFare,
+      currentBid: offer.driverFare,
+      touristCounter: offer.touristCounter,
+      status: statusMap[offer.status] || 'received',
+      rawStatus: offer.status,
+      driverMessage: offer.driverMessage,
+      registrationNo: offer.vehicleRegNo,
+      etaMinutes: offer.etaMinutes,
+      cabObject: matchedCab || {
+        id: offer.cabId,
+        name: offer.vehicleName,
+        type: offer.vehicleType,
+        capacity: offer.capacity,
+        pricePerKm: 22,
+        basePrice: offer.initialFare,
+        image: offer.vehicleImage || '/images/tourist_innova.png',
+        features: ['Snow Chains Equipped'],
+      },
+    };
+  };
+
+  const fetchLiveMatches = async () => {
+    try {
+      const effectivePickup =
+        tripType === 'airport' && airportDirection === 'arrival'
+          ? 'Srinagar Airport (SXR)'
+          : pickupInput || 'Srinagar Airport (SXR)';
+      const effectiveDrop =
+        tripType === 'airport' && airportDirection === 'departure'
+          ? 'Srinagar Airport (SXR)'
+          : dropInput || 'Dal Lake Ghats, Srinagar';
+
+      const qs = new URLSearchParams({
+        pickup: effectivePickup,
+        drop: effectiveDrop,
+        tripType,
+      });
+      const res = await fetch(`${API_BASE_URL}/cabs/live-matches?${qs.toString()}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setLiveMatches(Array.isArray(data.matches) ? data.matches : []);
+      setOnlineDriversCount(Number(data.onlineDriversCount || 0));
+      setLiveEstimatedKm(Number(data.estimatedKm || 28));
+      setCorridorAdvisory(data.corridorAdvisory || null);
+    } catch {
+      // Non-fatal; fallback to fleet cards
+    }
+  };
+
+  const syncActiveReservation = async (resId: string) => {
+    const authJwt = token || localStorage.getItem('auth_token');
+    if (!authJwt || !resId) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/cabs/ride-requests/${resId}`, {
+        headers: { Authorization: `Bearer ${authJwt}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setActiveReservationStatus(data.status || null);
+      if (data.securityPin) setBoardingPin(data.securityPin);
+      if (data.voucherReference) setBookingRefNo(data.voucherReference);
+
+      const offers: LiveDispatchOffer[] = Array.isArray(data.offers) ? data.offers : [];
+      setLiveDispatchOffers(offers);
+      setDriverOffers(offers.map((o) => mapOfferToUiCard(o)));
+
+      const upperStatus = String(data.status || '').toUpperCase();
+      if (upperStatus === 'DISPATCHED') setTrackingStep(1);
+      else if (upperStatus === 'AT_PICKUP') setTrackingStep(2);
+      else if (upperStatus === 'ON_TRIP') setTrackingStep(3);
+      else if (upperStatus === 'COMPLETED') setTrackingStep(4);
+
+      if (['DISPATCHED', 'AT_PICKUP', 'ON_TRIP', 'COMPLETED'].includes(upperStatus) && data.driverName) {
+        setAllocatedDriver({
+          driverName: data.driverName,
+          driverPhone: data.driverPhone || null,
+          registrationNo: data.vehicleRegNo || 'JK01-CAB',
+          driverRating: 4.9,
+          driverTours: 120,
+          currentBid: data.agreedFare || data.totalCost || finalAgreedFare,
+        });
+      }
+    } catch {
+      // Ignore transient poll errors
+    }
+  };
+
+  const fetchLiveMatchesRef = useRef(fetchLiveMatches);
+  fetchLiveMatchesRef.current = fetchLiveMatches;
+  const syncActiveReservationRef = useRef(syncActiveReservation);
+  syncActiveReservationRef.current = syncActiveReservation;
+  const activeReservationIdRef = useRef(activeReservationId);
+  activeReservationIdRef.current = activeReservationId;
+  const popupDismissedRef = useRef(popupDismissedManually);
+  popupDismissedRef.current = popupDismissedManually;
+
   useEffect(() => {
-    const socket = io(SOCKET_URL, DEFAULT_SOCKET_OPTIONS);
+    void fetchLiveMatchesRef.current();
+  }, [tripType, airportDirection, pickupInput, dropInput]);
+
+  // Automatically surface Auto Pop-Up Cab UI Cards when tourist lands and matches exist
+  useEffect(() => {
+    if (popupDismissedManually || isTracking) return;
+    if (liveMatches.length > 0 && !showAutoPopup) {
+      const timer = setTimeout(() => setShowAutoPopup(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [liveMatches.length, popupDismissedManually, showAutoPopup, isTracking]);
+
+  // Poll active reservation while searching / tracking for resilience
+  useEffect(() => {
+    if (!activeReservationId) return;
+    const interval = setInterval(() => {
+      void syncActiveReservationRef.current(activeReservationId);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeReservationId, token]);
+
+  // Real-time synchronization with Fleet, Live Drivers & Ride Dispatch
+  useEffect(() => {
+    const authJwt = token || localStorage.getItem('auth_token');
+    const socket = io(SOCKET_URL, {
+      ...DEFAULT_SOCKET_OPTIONS,
+      ...(authJwt ? { auth: { token: authJwt } } : {}),
+    });
 
     const refreshCabs = () => {
       queryClient.invalidateQueries({ queryKey: ['cms-cabs'] });
+      void fetchLiveMatchesRef.current();
     };
+
+    socket.on('connect', () => {
+      socket.emit('join-room', 'cabs-public');
+      if (user?.id) socket.emit('join-user', user.id);
+    });
 
     socket.on('cabs-updated', refreshCabs);
     socket.on('fleet-updated', refreshCabs);
+    socket.on('live-drivers-updated', refreshCabs);
+
+    socket.on('driver-offer-accepted', (payload: { reservationId?: string; driverFare?: number }) => {
+      toast.success('Chauffeur Accepted Your Ride Request!', {
+        description: `Confirmed rate ₹${Number(payload?.driverFare || 0).toLocaleString('en-IN')}. Tap Confirm to lock & view Boarding PIN.`,
+      });
+      if (!popupDismissedRef.current) setShowAutoPopup(true);
+      const nextId = payload?.reservationId || activeReservationIdRef.current;
+      if (nextId) void syncActiveReservationRef.current(nextId);
+    });
+
+    socket.on('driver-counter-offer', (payload: { reservationId?: string; driverFare?: number; proposedFare?: number; driverName?: string }) => {
+      toast.info('Driver Sent Live Counter-Offer', {
+        description: `${payload?.driverName || 'Pilot'} proposed ₹${Number(payload?.driverFare || payload?.proposedFare || 0).toLocaleString('en-IN')}`,
+      });
+      if (!popupDismissedRef.current) setShowAutoPopup(true);
+      const nextId = payload?.reservationId || activeReservationIdRef.current;
+      if (nextId) void syncActiveReservationRef.current(nextId);
+    });
+
+    socket.on('cab-reservation-updated', (payload: { status?: string; reservation?: { id?: string; status?: string } }) => {
+      const nextId = payload?.reservation?.id || activeReservationIdRef.current;
+      if (nextId) void syncActiveReservationRef.current(nextId);
+    });
+
+    socket.on('trip-transitioned', (payload: { reservationId?: string; status?: string }) => {
+      const nextId = payload?.reservationId || activeReservationIdRef.current;
+      if (nextId) void syncActiveReservationRef.current(nextId);
+    });
+
     socket.on('site-content-updated', (data: any) => {
       if (!data || !data.sectionKey || data.sectionKey === 'cabs') {
         refreshCabs();
@@ -252,7 +471,7 @@ export default function Cabs() {
     return () => {
       socket.disconnect();
     };
-  }, [queryClient]);
+  }, [queryClient, token, user?.id]);
 
   const parseDateString = (dateStr: string) => {
     if (!dateStr) return undefined;
@@ -309,7 +528,10 @@ export default function Cabs() {
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.async = true;
     script.onload = () => {
-      setLeafletLoaded(true);
+      const leafletApi = (window as unknown as { L?: { map?: unknown } }).L;
+      if (leafletApi && typeof leafletApi.map === 'function') {
+        setLeafletLoaded(true);
+      }
     };
     document.head.appendChild(script);
   }, []);
@@ -489,6 +711,7 @@ export default function Cabs() {
     if (!leafletLoaded || !mapRef.current || mapInstanceRef.current) return;
 
     const L = (window as any).L;
+    if (!L || typeof L.map !== 'function') return;
     const map = L.map(mapRef.current, {
       zoomControl: false,
       attributionControl: false
@@ -516,6 +739,7 @@ export default function Cabs() {
     if (!leafletLoaded || !mapInstanceRef.current) return;
 
     const L = (window as any).L;
+    if (!L || typeof L.divIcon !== 'function') return;
     const map = mapInstanceRef.current;
 
     // Remove existing layers
@@ -667,9 +891,9 @@ export default function Cabs() {
   // Dynamic Fare calculation
   const calculateFare = (cab: any) => {
     if (!cab) return 0;
-    const distance = routeStats.distance;
-    let baseFare = cab.basePrice;
-    let distanceCost = distance * cab.pricePerKm;
+    const distance = Number(routeStats.distance) || 0;
+    const baseFare = Number(cab.basePrice) || 0;
+    const distanceCost = distance * (Number(cab.pricePerKm) || 0);
     let total = baseFare + distanceCost;
     
     if (tripType === 'outstation' && returnDate) {
@@ -759,7 +983,119 @@ export default function Cabs() {
     }
   }, [resolvedVehicles, selectedCab]);
 
-  // Start Uber-style Broadcast and matching simulation
+  // Submit real PostgreSQL ride request -> notifies live online drivers via Socket.IO & SSE
+  const createLiveRideRequest = async (opts?: {
+    preferredCab?: {
+      id?: string;
+      cabId?: string;
+      type?: string;
+      driverProfileId?: string | null;
+      pricePerKm?: number;
+      basePrice?: number;
+      estimatedFare?: number;
+    };
+    preferredDriverProfileId?: string | null;
+    customFare?: number;
+    overridePickup?: string;
+    overrideDrop?: string;
+    overrideTripType?: string;
+  }) => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to dispatch your live cab request');
+      navigate('/auth?redirect=/cabs');
+      return;
+    }
+
+    const effectivePickup =
+      opts?.overridePickup ||
+      (tripType === 'airport' && airportDirection === 'arrival'
+        ? 'Srinagar Airport (SXR)'
+        : pickupInput || 'Srinagar Airport (SXR)');
+    const effectiveDrop =
+      opts?.overrideDrop ||
+      (tripType === 'airport' && airportDirection === 'departure'
+        ? 'Srinagar Airport (SXR)'
+        : dropInput || 'Dal Lake Ghats, Srinagar');
+
+    const chosenCab = opts?.preferredCab || selectedCab || resolvedVehicles[0];
+    const startIso = bookingDate ? `${bookingDate}T${bookingTime || '09:00'}` : new Date().toISOString();
+
+    setIsBroadcasting(true);
+    setDriverOffers([]);
+    setLiveDispatchOffers([]);
+    setSelectedOffer(null);
+    setTrackingStep(0);
+
+    try {
+      const authJwt = token || localStorage.getItem('auth_token') || '';
+      const computedFare =
+        chosenCab && 'basePrice' in chosenCab && typeof chosenCab.basePrice === 'number'
+          ? calculateFare(chosenCab)
+          : undefined;
+      const fareEstimate =
+        opts?.customFare ||
+        opts?.preferredCab?.estimatedFare ||
+        (computedFare && Number.isFinite(computedFare) ? computedFare : undefined) ||
+        liveMatches[0]?.estimatedFare ||
+        1800;
+
+      const res = await fetch(`${API_BASE_URL}/cabs/ride-requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authJwt}`,
+        },
+        body: JSON.stringify({
+          pickupLocation: effectivePickup,
+          dropLocation: effectiveDrop,
+          pickupLat: pickupCoords?.lat || undefined,
+          pickupLng: pickupCoords?.lon || undefined,
+          dropLat: dropCoords?.lat || undefined,
+          dropLng: dropCoords?.lon || undefined,
+          startDate: startIso,
+          endDate: returnDate ? `${returnDate}T18:00` : undefined,
+          tripType: opts?.overrideTripType || tripType,
+          requestedCabType: chosenCab?.type,
+          preferredCabId: chosenCab?.cabId || chosenCab?.id,
+          preferredDriverProfileId: opts?.preferredDriverProfileId || chosenCab?.driverProfileId || undefined,
+          offeredFare: fareEstimate,
+          estimatedDistanceKm: routeStats.distance || liveEstimatedKm,
+          specialNotes,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to dispatch cab request');
+        return;
+      }
+
+      const reservation = data.rideRequest;
+      const offers: LiveDispatchOffer[] = Array.isArray(data.offers) ? data.offers : [];
+
+      setActiveReservationId(reservation.id);
+      setActiveReservationStatus(reservation.status);
+      setBookingRefNo(reservation.voucherReference || '');
+      setLiveDispatchOffers(offers);
+      setDriverOffers(
+        offers.map((o) => mapOfferToUiCard(o, resolvedVehicles.find((v) => v.id === o.cabId)))
+      );
+
+      if (offers.length > 0) {
+        toast.success(
+          `Request Sent to ${offers.length} Live Chauffeur${offers.length > 1 ? 's' : ''}!`,
+          { description: 'Live driver responses & counter-offers appear automatically below.' }
+        );
+      } else {
+        toast.info('Ride Request Queued in Kashmir Dispatch Radar', {
+          description: 'Searching nearest Union-verified chauffeur coming online.',
+        });
+      }
+    } catch {
+      toast.error('Network error dispatching live ride request');
+    }
+  };
+
   const handleStartBroadcast = () => {
     if (!isAuthenticated) {
       toast.error('Please login to request a ride');
@@ -787,250 +1123,124 @@ export default function Cabs() {
       return;
     }
 
-    setIsBroadcasting(true);
-    setDriverOffers([]);
-    setSelectedOffer(null);
-    setTrackingStep(0);
-
-    // Simulate bids arriving in real-time for the selected cab type
-    const timers = [
-      setTimeout(() => {
-        const fare = calculateFare(selectedCab);
-        setDriverOffers(prev => [...prev, {
-          id: 'driver-offer-1',
-          driverName: 'Verified Chauffeur #104',
-          driverPhone: '+919906771122',
-          driverRating: 4.85,
-          driverTours: 124,
-          vehicleName: selectedCab.name,
-          vehicleType: selectedCab.type,
-          vehicleImage: selectedCab.image,
-          capacity: selectedCab.capacity,
-          luggage: selectedCab.luggage,
-          features: selectedCab.features,
-          initialBid: Math.round(fare * 0.95),
-          currentBid: Math.round(fare * 0.95),
-          status: 'received',
-          registrationNo: 'JK-01-AB-7700',
-          cabObject: selectedCab
-        }]);
-      }, 1200),
-
-      setTimeout(() => {
-        const fare = calculateFare(selectedCab);
-        setDriverOffers(prev => [...prev, {
-          id: 'driver-offer-2',
-          driverName: 'Verified Chauffeur #208',
-          driverPhone: '+919906334455',
-          driverRating: 4.92,
-          driverTours: 215,
-          vehicleName: selectedCab.name,
-          vehicleType: selectedCab.type,
-          vehicleImage: selectedCab.image,
-          capacity: selectedCab.capacity,
-          luggage: selectedCab.luggage,
-          features: selectedCab.features,
-          initialBid: Math.round(fare * 1.05),
-          currentBid: Math.round(fare * 1.05),
-          status: 'received',
-          registrationNo: 'JK-01-AB-1122',
-          cabObject: selectedCab
-        }]);
-      }, 2800),
-
-      setTimeout(() => {
-        const fare = calculateFare(selectedCab);
-        setDriverOffers(prev => [...prev, {
-          id: 'driver-offer-3',
-          driverName: 'Verified Chauffeur #312',
-          driverPhone: '+919906112233',
-          driverRating: 4.78,
-          driverTours: 98,
-          vehicleName: selectedCab.name,
-          vehicleType: selectedCab.type,
-          vehicleImage: selectedCab.image,
-          capacity: selectedCab.capacity,
-          luggage: selectedCab.luggage,
-          features: selectedCab.features,
-          initialBid: Math.round(fare * 1.0),
-          currentBid: Math.round(fare * 1.0),
-          status: 'received',
-          registrationNo: 'JK-01-AB-8899',
-          cabObject: selectedCab
-        }]);
-      }, 4400)
-    ];
-
-    return () => timers.forEach(t => clearTimeout(t));
+    void createLiveRideRequest({ preferredCab: selectedCab });
   };
 
   const handleNegotiatePrice = (offerId: string) => {
-    setIsNegotiatingMap(prev => ({ ...prev, [offerId]: true }));
-    const offer = driverOffers.find(o => o.id === offerId);
+    setIsNegotiatingMap((prev) => ({ ...prev, [offerId]: true }));
+    const offer = driverOffers.find((o) => o.id === offerId);
     if (offer) {
-      setCounterValues(prev => ({ ...prev, [offerId]: Math.round(offer.currentBid * 0.9).toString() }));
+      setCounterValues((prev) => ({ ...prev, [offerId]: Math.round(offer.currentBid * 0.9).toString() }));
+    }
+  };
+
+  const sendTouristCounterToApi = async (offerId: string, counterVal: number) => {
+    if (!activeReservationId || isNaN(counterVal) || counterVal < 400) return;
+    setIsDriverResponding((prev) => ({ ...prev, [offerId]: true }));
+    try {
+      const authJwt = token || localStorage.getItem('auth_token') || '';
+      const res = await fetch(
+        `${API_BASE_URL}/cabs/ride-requests/${activeReservationId}/offers/${offerId}/counter`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authJwt}`,
+          },
+          body: JSON.stringify({ counterFare: counterVal }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to transmit counter-offer');
+        return;
+      }
+      toast.success(`Counter-offer ₹${counterVal.toLocaleString('en-IN')} sent to chauffeur`, {
+        description: 'Driver can accept or reply with a live revised fare.',
+      });
+      setIsNegotiatingMap((prev) => ({ ...prev, [offerId]: false }));
+      await syncActiveReservation(activeReservationId);
+    } finally {
+      setIsDriverResponding((prev) => ({ ...prev, [offerId]: false }));
     }
   };
 
   const handleSendCounter = (offerId: string) => {
-    const counterVal = parseInt(counterValues[offerId]);
-    const offer = driverOffers.find(o => o.id === offerId);
-    if (!offer || isNaN(counterVal)) return;
-
-    setIsDriverResponding(prev => ({ ...prev, [offerId]: true }));
-
-    setTimeout(() => {
-      setIsDriverResponding(prev => ({ ...prev, [offerId]: false }));
-
-      const initialBid = offer.initialBid;
-      const currentBid = offer.currentBid;
-      const ratio = counterVal / currentBid;
-
-      setDriverOffers(prev => prev.map(o => {
-        if (o.id !== offerId) return o;
-
-        let status: any = o.status;
-        let bid = o.currentBid;
-        let msg = '';
-
-        if (ratio >= 0.85) {
-          status = 'accepted';
-          bid = counterVal;
-          msg = `Deal! I accept ₹${counterVal.toLocaleString()}. Let's proceed!`;
-          toast.success(`${o.driverName} accepted your offer of ₹${counterVal.toLocaleString()}!`);
-        } else if (ratio >= 0.7) {
-          status = 'countered';
-          const midpoint = Math.round((currentBid + counterVal) / 2);
-          bid = midpoint;
-          msg = `I can compromise at ₹${midpoint.toLocaleString()}. Fuel costs are high, but this is the best I can do.`;
-        } else {
-          status = 'rejected';
-          msg = `Sorry, ₹${counterVal.toLocaleString()} is too low for this route. Chauffeur won't be able to cover toll and fuel expenses. Best offer is ₹${Math.round(initialBid * 0.95).toLocaleString()}.`;
-        }
-
-        return {
-          ...o,
-          status,
-          currentBid: bid,
-          driverMessage: msg
-        };
-      }));
-    }, 2000);
+    const counterVal = parseInt(counterValues[offerId], 10);
+    void sendTouristCounterToApi(offerId, counterVal);
   };
 
   const handleAcceptOffer = (offer: any) => {
+    if (offer.rawStatus === 'COUNTERED_BY_TOURIST') {
+      toast.info('Waiting for chauffeur to accept your counter-offer first.');
+      return;
+    }
     setSelectedOffer(offer);
-    setSelectedCab(offer.cabObject);
-    setFinalAgreedFare(offer.currentBid);
+    setSelectedCab(offer.cabObject || selectedCab);
+    setFinalAgreedFare(offer.currentBid ?? offer.driverFare);
     setAllocatedDriver({
       driverName: offer.driverName,
-      driverPhone: offer.driverPhone,
-      registrationNo: offer.registrationNo,
+      driverPhone: offer.driverPhone || null,
+      registrationNo: offer.registrationNo || offer.vehicleRegNo,
       driverRating: offer.driverRating,
-      driverTours: offer.driverTours,
-      currentBid: offer.currentBid,
+      driverTours: offer.driverTours ?? offer.driverTrips ?? 80,
+      currentBid: offer.currentBid ?? offer.driverFare,
     });
     setCheckoutStatus('idle');
     setShowCheckout(true);
   };
 
-  // Simulate Timeline Dispatch Stepper
-  useEffect(() => {
-    if (!isTracking) return;
-    
-    const timers = [
-      setTimeout(() => setTrackingStep(1), 5000),  // Driver assigned
-      setTimeout(() => setTrackingStep(2), 12000), // Dispatched
-      setTimeout(() => setTrackingStep(3), 20000), // Arrived
-    ];
-
-    return () => timers.forEach(t => clearTimeout(t));
-  }, [isTracking]);
-
-  // Confirm booking & payment (Negotiated Fare Flow)
-  const handleConfirmPayment = async () => {
-    if (!selectedCab || !allocatedDriver) return;
-    setCheckoutStatus('processing');
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const ref = `KC-CAB-${Math.floor(100000 + Math.random() * 900000)}`;
-    setBookingRefNo(ref);
-
-    const tripLabel = tripType === 'airport' 
-      ? `Airport transfer: ${pickupInput || 'Srinagar Airport'} ➔ ${dropInput || 'Srinagar Airport'}`
-      : `Sightseeing Route: ${pickupInput} ➔ ${dropInput}${returnDate ? ' (Roundtrip)' : ''}`;
-
-    const totalFare = finalAgreedFare;
-
-    const bookingDetails = {
-      pickupLocation: tripType === 'airport' && airportDirection === 'arrival' ? 'Srinagar Airport (SXR)' : pickupInput,
-      dropLocation: tripType === 'airport' && airportDirection === 'departure' ? 'Srinagar Airport (SXR)' : dropInput,
-      pickupDateTime: `${bookingDate}T${bookingTime}`,
-      dropDateTime: returnDate ? `${returnDate}T18:00` : `${bookingDate}T18:00`,
-      tripType,
-      estimatedDistance: routeStats.distance,
-      paymentMethod: 'negotiated-bidding',
-      bookingRef: ref,
-      specialNotes,
-      cabAllocation: {
-        cabId: selectedCab.id,
-        cabName: selectedCab.name,
-        cabType: selectedCab.type,
-        ownership: 'company',
-        registrationNo: allocatedDriver.registrationNo,
-        driverName: allocatedDriver.driverName,
-        driverPhone: allocatedDriver.driverPhone,
-        pickupDateTime: `${bookingDate}T${bookingTime}`,
-        dropDateTime: returnDate ? `${returnDate}T18:00` : `${bookingDate}T18:00`,
-        pickupLocation: pickupInput,
-        dropLocation: dropInput,
-        allocatedDates: [bookingDate],
-        pricing: {
-          pricePerKm: selectedCab.pricePerKm,
-          estimatedKm: routeStats.distance,
-          baseCost: selectedCab.basePrice,
-          driverAllowance: 1500,
-          fuelExpenses: 3000,
-          tollsExpenses: 350,
-          vendorPayout: 0,
-          otherExpenses: 0,
-          totalCost: totalFare,
-          margin: 0,
-          marginPercent: 0
-        },
-        voucherGenerated: false,
-        whatsappSent: false
-      }
-    };
-
-    try {
-      await addBooking({
-        booking_type: 'cab',
-        item_name: tripLabel,
-        booking_date: new Date(`${bookingDate}T${bookingTime}`),
-        status: 'confirmed', // immediately active since negotiated!
-        total_amount: totalFare,
-        details: bookingDetails,
-      });
-
-      // Quiet log
-      const token = localStorage.getItem('auth_token');
-      await fetch(`${API_BASE_URL}/cabs/operations/logs`, {
+  // Atomic Confirm Ride & Create Booking on PostgreSQL
+  const confirmOfferOnBackend = async (offerId: string) => {
+    if (!activeReservationId) return null;
+    const authJwt = token || localStorage.getItem('auth_token') || '';
+    const res = await fetch(
+      `${API_BASE_URL}/cabs/ride-requests/${activeReservationId}/offers/${offerId}/confirm`,
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          Authorization: `Bearer ${authJwt}`,
         },
-        body: JSON.stringify({
-          message: `Customer ride negotiation finalized at ₹${totalFare.toLocaleString()} with ${allocatedDriver.driverName} (${selectedCab.name}).`
-        })
-      });
+        body: JSON.stringify({ specialNotes }),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to confirm chauffeur dispatch');
+    }
+    return data;
+  };
 
+  // Confirm booking & lock chauffeur atomically
+  const handleConfirmPayment = async () => {
+    if (!selectedOffer || !activeReservationId) return;
+    setCheckoutStatus('processing');
+
+    try {
+      const result = await confirmOfferOnBackend(selectedOffer.id);
+      if (!result) throw new Error('Confirmation response empty');
+
+      setBookingRefNo(result.reservation?.voucherReference || `KC-CAB-${result.booking?.id?.slice(0, 6).toUpperCase()}`);
+      if (result.reservation?.securityPin) setBoardingPin(result.reservation.securityPin);
+      if (result.confirmedOffer) {
+        setAllocatedDriver({
+          driverName: result.confirmedOffer.driverName,
+          driverPhone: result.confirmedOffer.driverPhone,
+          registrationNo: result.confirmedOffer.vehicleRegNo,
+          driverRating: result.confirmedOffer.driverRating,
+          driverTours: result.confirmedOffer.driverTrips,
+          currentBid: result.booking?.totalAmount || finalAgreedFare,
+        });
+      }
+
+      setTrackingStep(1);
       setCheckoutStatus('success');
-      toast.success('Ride Booked Successfully!');
-    } catch (err) {
-      toast.error('Booking failed. Please try again.');
+      toast.success('Chauffeur Locked & Booking Confirmed!');
+      await refreshBookings();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Booking confirmation failed. Please try again.';
+      toast.error(msg);
       setCheckoutStatus('idle');
     }
   };
@@ -1889,7 +2099,7 @@ export default function Cabs() {
                     strokeWidth="4.5" 
                     strokeLinecap="round"
                     strokeDasharray="400"
-                    strokeDashoffset={400 - (trackingStep * 133)} 
+                    strokeDashoffset={Math.max(0, 400 - Math.min(trackingStep, 4) * 100)}
                     className="transition-all duration-[4000ms] ease-in-out"
                   />
 
@@ -1907,7 +2117,7 @@ export default function Cabs() {
                   </text>
 
                   {/* Active Vehicle Dot/Car */}
-                  <g transform={`translate(${50 + (trackingStep * 100)}, ${75 - (trackingStep > 0 ? (trackingStep === 1 ? 40 : 25) : 0)})`} className="transition-all duration-[4000ms] ease-in-out">
+                  <g transform={`translate(${50 + Math.min(trackingStep, 4) * 75}, ${75 - (trackingStep > 0 && trackingStep < 4 ? (trackingStep === 2 ? 40 : 25) : 0)})`} className="transition-all duration-[4000ms] ease-in-out">
                     <circle cx="0" cy="0" r="10" fill="#f59e0b" className="shadow-lg" />
                     <Car className="w-3.5 h-3.5 text-black absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 shrink-0 transform -translate-y-[7px] -translate-x-[7px]" />
                   </g>
@@ -1924,9 +2134,10 @@ export default function Cabs() {
                   <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-white/20">Ride status</p>
                   <p className="font-bold text-amber-600 dark:text-amber-400 mt-0.5">
                     {trackingStep === 0 && 'Awaiting allocation...'}
-                    {trackingStep === 1 && 'Chauffeur allocated!'}
-                    {trackingStep === 2 && 'Chauffeur dispatched (En route)'}
-                    {trackingStep === 3 && 'Driver arrived at pickup!'}
+                    {trackingStep === 1 && 'Chauffeur allocated & en route!'}
+                    {trackingStep === 2 && 'Chauffeur arrived at pickup!'}
+                    {trackingStep === 3 && 'On trip — heading to destination'}
+                    {trackingStep >= 4 && 'Trip completed safely!'}
                   </p>
                 </div>
               </div>
@@ -1961,8 +2172,8 @@ export default function Cabs() {
                       {trackingStep >= 1 ? <Check className="w-3 h-3 text-white stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-white/20" />}
                     </div>
                     <div>
-                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 1 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>Chauffeur Assigned</p>
-                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">{trackingStep >= 1 ? `${allocatedDriver?.driverName || 'Shabir Ahmad'} assigned` : 'Locating nearest driver...'}</p>
+                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 1 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>Chauffeur Assigned & En Route</p>
+                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">{trackingStep >= 1 ? `${allocatedDriver?.driverName || 'Assigned Chauffeur'} dispatched` : 'Locating nearest driver...'}</p>
                     </div>
                   </div>
 
@@ -1975,8 +2186,8 @@ export default function Cabs() {
                       {trackingStep >= 2 ? <Check className="w-3 h-3 text-white stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-white/20" />}
                     </div>
                     <div>
-                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 2 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>Driver Dispatched</p>
-                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">{trackingStep >= 2 ? 'En route to your location' : 'Awaiting dispatch schedule'}</p>
+                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 2 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>Arrived at Pickup Point</p>
+                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">{trackingStep >= 2 ? 'Chauffeur waiting at pickup' : 'En route to your pickup hub'}</p>
                     </div>
                   </div>
 
@@ -1989,8 +2200,12 @@ export default function Cabs() {
                       {trackingStep >= 3 ? <Check className="w-3 h-3 text-white stroke-[3px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-white/20" />}
                     </div>
                     <div>
-                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 3 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>Arrived at Pickup</p>
-                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">{trackingStep >= 3 ? 'Chauffeur waiting outside' : 'Waiting for chauffeur arrival'}</p>
+                      <p className={cn("text-xs font-bold transition-colors duration-500", trackingStep >= 3 ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/30")}>
+                        {trackingStep >= 4 ? 'Trip Completed' : 'Journey In Progress'}
+                      </p>
+                      <p className="text-[9px] text-slate-500 dark:text-white/40 mt-0.5">
+                        {trackingStep >= 4 ? 'Reached destination safely' : trackingStep >= 3 ? 'Passenger onboard — heading to drop-off' : 'Pending Boarding PIN check'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -2015,35 +2230,52 @@ export default function Cabs() {
                   </div>
 
                   <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-white/5 text-xs">
+                    {boardingPin && (
+                      <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-300">
+                          Boarding Security PIN
+                        </span>
+                        <span
+                          data-testid="tourist-boarding-pin"
+                          className="font-mono font-black text-lg text-amber-600 dark:text-amber-300 tracking-widest"
+                        >
+                          {boardingPin}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-slate-500 dark:text-white/40">Vehicle Model</span>
                       <span className="font-bold text-slate-900 dark:text-white">{selectedCab?.name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500 dark:text-white/40">License Plate</span>
-                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400 uppercase">{allocatedDriver?.registrationNo || 'JK-01-AB-7700'}</span>
+                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400 uppercase">{allocatedDriver?.registrationNo || 'JK01-CAB'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500 dark:text-white/40">Driver Phone</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{allocatedDriver?.driverPhone || '+91 9906 771122'}</span>
-                    </div>
+                    {allocatedDriver?.driverPhone && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 dark:text-white/40">Driver Phone</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{allocatedDriver.driverPhone}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between border-t border-slate-200 dark:border-white/5 pt-3">
-                      <span className="text-slate-500 dark:text-white/40 font-bold">Negotiated Fare</span>
+                      <span className="text-slate-500 dark:text-white/40 font-bold">Confirmed Fare</span>
                       <span className="font-bold text-emerald-600 dark:text-emerald-400">₹{(finalAgreedFare || 0).toLocaleString()}</span>
                     </div>
                   </div>
 
-                  <div className="pt-2">
-                    <a 
-                      href={`https://wa.me/${(allocatedDriver?.driverPhone || '+919906771122').replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(allocatedDriver?.driverName || 'Shabir')},%20I%20am%20the%20guest%20for%20the%20booking%20${bookingRefNo}.`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full h-12 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>WhatsApp Chauffeur</span>
-                    </a>
-                  </div>
+                  {allocatedDriver?.driverPhone && (
+                    <div className="pt-2">
+                      <a 
+                        href={`https://wa.me/${allocatedDriver.driverPhone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(allocatedDriver.driverName || 'Pilot')},%20I%20am%20your%20guest%20for%20booking%20${bookingRefNo}.`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-12 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>WhatsApp Chauffeur</span>
+                      </a>
+                    </div>
+                  )}
                 </Card>
               ) : (
                 <Card className="bg-white dark:bg-[#0a0f12]/60 border border-slate-200 dark:border-white/5 p-6 rounded-[2.5rem] text-center py-12 opacity-50">
@@ -2085,9 +2317,19 @@ export default function Cabs() {
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Ride Booked Successfully!</h3>
                 <p className="text-xs text-slate-500 dark:text-white/50 font-medium">Your chauffeur is confirmed at the negotiated price.</p>
-                <div className="mt-4 p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40">Confirmation code</span>
-                  <p className="font-mono text-sm font-black text-amber-600 dark:text-amber-400 mt-1">{bookingRefNo}</p>
+                <div className="mt-4 p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl space-y-2">
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40">Confirmation code</span>
+                    <p className="font-mono text-sm font-black text-amber-600 dark:text-amber-400 mt-0.5">{bookingRefNo}</p>
+                  </div>
+                  {boardingPin && (
+                    <div className="pt-2 border-t border-slate-200 dark:border-white/10">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40">
+                        4-Digit Boarding Security PIN
+                      </span>
+                      <p className="font-mono text-xl font-black text-emerald-500 mt-0.5 tracking-widest">{boardingPin}</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <Button 
@@ -2147,6 +2389,63 @@ export default function Cabs() {
 
         </DialogContent>
       </Dialog>
+
+      <AutoCabPopupCards
+        open={showAutoPopup && !isTracking}
+        onDismiss={() => {
+          setShowAutoPopup(false);
+          setPopupDismissedManually(true);
+        }}
+        onReopen={() => {
+          setPopupDismissedManually(false);
+          setShowAutoPopup(true);
+          void fetchLiveMatches();
+        }}
+        matches={liveMatches}
+        onlineDriversCount={onlineDriversCount}
+        estimatedKm={liveEstimatedKm}
+        pickupLabel={
+          tripType === 'airport' && airportDirection === 'arrival'
+            ? 'Srinagar Airport (SXR)'
+            : pickupInput || 'Srinagar Airport (SXR)'
+        }
+        dropLabel={
+          tripType === 'airport' && airportDirection === 'departure'
+            ? 'Srinagar Airport (SXR)'
+            : dropInput || 'Dal Lake / Gulmarg'
+        }
+        corridorAdvisory={corridorAdvisory}
+        activeReservationId={activeReservationId}
+        activeReservationStatus={activeReservationStatus}
+        liveOffers={liveDispatchOffers}
+        onSelectCorridor={(corridor) => {
+          setTripType(corridor.tripType);
+          setPickupInput(corridor.pickup);
+          setDropInput(corridor.drop);
+          if (!bookingDate) {
+            setBookingDate(new Date().toISOString().slice(0, 10));
+          }
+        }}
+        onRequestCab={async (match, customFare) => {
+          if (!bookingDate) {
+            setBookingDate(new Date().toISOString().slice(0, 10));
+          }
+          const matchedUiCab = resolvedVehicles.find((v) => v.id === match.cabId);
+          if (matchedUiCab) setSelectedCab(matchedUiCab);
+          await createLiveRideRequest({
+            preferredCab: match,
+            preferredDriverProfileId: match.driverProfileId,
+            customFare,
+          });
+        }}
+        onCounterOffer={async (offerId, counterFare) => {
+          await sendTouristCounterToApi(offerId, counterFare);
+        }}
+        onConfirmOffer={async (offer) => {
+          const uiOffer = mapOfferToUiCard(offer, resolvedVehicles.find((v) => v.id === offer.cabId));
+          handleAcceptOffer(uiOffer);
+        }}
+      />
 
       <Footer />
       <FloatingActions />

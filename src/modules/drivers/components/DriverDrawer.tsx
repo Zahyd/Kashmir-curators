@@ -35,12 +35,23 @@ import {
   Trees,
   Waves,
   LogOut,
-  Home
+  Home,
+  Pencil,
+  Trash2,
+  History,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { DriverVehicle, DriverEarnings, DriverRateCard } from '../types/driver';
+import {
+  DriverVehicle,
+  DriverEarnings,
+  DriverRateCard,
+  DriverProfileData,
+  DriverTrip,
+  DriverPayoutRecord,
+} from '../types/driver';
 
 // Vehicle Model Options for Luxury Dropdown
 interface VehicleModelOption {
@@ -285,11 +296,17 @@ interface DriverDrawerProps {
   activeVehicleId: string;
   onSelectVehicle: (id: string) => void;
   onRegisterVehicle: (vehicle: Partial<DriverVehicle>) => Promise<void>;
+  onEditVehicle?: (id: string, patch: Partial<DriverVehicle>) => Promise<void>;
+  onDeleteVehicle?: (id: string) => Promise<void>;
   earnings: DriverEarnings;
   onRequestPayout: () => void;
   isPayoutProcessing?: boolean;
   onSaveRateCard: (vehicleId: string, rateCard: DriverRateCard) => Promise<void>;
   driverName?: string;
+  driverProfile?: DriverProfileData | null;
+  tripHistory?: DriverTrip[];
+  payoutHistory?: DriverPayoutRecord[];
+  onUpdateProfile?: (patch: Record<string, unknown>) => Promise<void>;
   onLogout?: () => void;
   onExitToHome?: () => void;
 }
@@ -316,18 +333,51 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
   activeVehicleId,
   onSelectVehicle,
   onRegisterVehicle,
+  onEditVehicle,
+  onDeleteVehicle,
   earnings,
   onRequestPayout,
   isPayoutProcessing = false,
   onSaveRateCard,
-  driverName = 'Zahid Ahmad',
+  driverName = 'Chauffeur',
+  driverProfile,
+  tripHistory = [],
+  payoutHistory = [],
+  onUpdateProfile,
   onLogout,
   onExitToHome,
 }) => {
-  const [activeTab, setActiveTab] = useState<'fleet' | 'rateCard' | 'earnings'>('fleet');
+  const [activeTab, setActiveTab] = useState<'fleet' | 'rateCard' | 'earnings' | 'profile'>('fleet');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<DriverVehicle | null>(null);
+  const [isSavingVehicleEdit, setIsSavingVehicleEdit] = useState(false);
   const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
   const [isSavingRates, setIsSavingRates] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const [profilePhone, setProfilePhone] = useState(driverProfile?.phone || '');
+  const [profileUpi, setProfileUpi] = useState(driverProfile?.upiId || earnings.upiId || 'kashmir.driver@okaxis');
+  const [profileEmergency, setProfileEmergency] = useState(driverProfile?.emergencyContact || '');
+  const [profileLanguages, setProfileLanguages] = useState(driverProfile?.languages || 'English, Kashmiri, Urdu');
+  const [profileUnion, setProfileUnion] = useState(driverProfile?.unionName || '');
+  const [profileBadge, setProfileBadge] = useState(driverProfile?.unionBadgeNumber || '');
+  const [bankAccountName, setBankAccountName] = useState(driverProfile?.bankAccountName || '');
+  const [bankAccountNumber, setBankAccountNumber] = useState(driverProfile?.bankAccountNumber || '');
+  const [bankIfsc, setBankIfsc] = useState(driverProfile?.bankIfsc || '');
+
+  useEffect(() => {
+    if (driverProfile) {
+      setProfilePhone(driverProfile.phone || '');
+      setProfileUpi(driverProfile.upiId || earnings.upiId || 'kashmir.driver@okaxis');
+      setProfileEmergency(driverProfile.emergencyContact || '');
+      setProfileLanguages(driverProfile.languages || 'English, Kashmiri, Urdu');
+      setProfileUnion(driverProfile.unionName || '');
+      setProfileBadge(driverProfile.unionBadgeNumber || '');
+      setBankAccountName(driverProfile.bankAccountName || '');
+      setBankAccountNumber(driverProfile.bankAccountNumber || '');
+      setBankIfsc(driverProfile.bankIfsc || '');
+    }
+  }, [driverProfile, earnings.upiId]);
 
   const activeVehicle = vehicles.find(v => v.id === activeVehicleId) || vehicles[0];
 
@@ -335,6 +385,12 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
   const [rateCard, setRateCard] = useState<DriverRateCard>(
     activeVehicle?.rateCard || DEFAULT_RATES
   );
+
+  useEffect(() => {
+    if (activeVehicle?.rateCard) {
+      setRateCard({ ...DEFAULT_RATES, ...activeVehicle.rateCard });
+    }
+  }, [activeVehicle?.id, activeVehicle?.rateCard]);
 
   // Pipeline Step State (1: Specs, 2: Union Details, 3: Documents & Submit)
   const [pipelineStep, setPipelineStep] = useState<1 | 2 | 3>(1);
@@ -530,15 +586,15 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-extrabold text-sm text-white">{driverName} (Chauffeur)</h3>
+                <h3 className="font-extrabold text-sm text-white">{driverProfile?.name || driverName}</h3>
                 <BadgeCheck className="w-4 h-4 text-emerald-400 shrink-0" />
               </div>
-              <div className="flex items-center gap-2 text-[11px] text-white/50">
+              <div className="flex items-center gap-2 text-[11px] text-white/50 flex-wrap">
                 <span className="flex items-center text-amber-400 font-bold">
-                  <Star className="w-3 h-3 fill-amber-400 mr-0.5" /> 4.93
+                  <Star className="w-3 h-3 fill-amber-400 mr-0.5" /> {(driverProfile?.rating ?? 4.9).toFixed(2)}
                 </span>
-                <span>• 148 Trips</span>
-                <span>• JK Taxi Union #104</span>
+                <span>• {driverProfile?.tripsCompleted ?? earnings.lifetimeTrips ?? earnings.tripsCount} Trips</span>
+                <span>• {driverProfile?.unionBadgeNumber || driverProfile?.licenseNumber || 'Kashmir Union'}</span>
               </div>
             </div>
           </div>
@@ -566,43 +622,55 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
           </div>
         </div>
 
-        {/* 3 Simple Tabs (Fleet | Rate Card | Earnings) */}
-        <div className="flex p-2 bg-[#0F141C] border-b border-white/10 gap-1.5 shrink-0">
+        {/* 4 Tabs (Fleet | Rate Card | Wallet & Trips | KYC Profile) */}
+        <div className="flex p-2 bg-[#0F141C] border-b border-white/10 gap-1 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('fleet')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 px-1.5 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 ${
               activeTab === 'fleet'
                 ? 'bg-amber-500 text-slate-950 shadow-md'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Car className="w-4 h-4 stroke-[2.2]" />
-            <span>My Fleet</span>
+            <Car className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>Fleet</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('rateCard')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 px-1.5 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 ${
               activeTab === 'rateCard'
                 ? 'bg-amber-500 text-slate-950 shadow-md'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Tag className="w-4 h-4 stroke-[2.2]" />
-            <span>Rate Card</span>
+            <Tag className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>Rates</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('earnings')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 px-1.5 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 ${
               activeTab === 'earnings'
                 ? 'bg-amber-500 text-slate-950 shadow-md'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            <CreditCard className="w-4 h-4 stroke-[2.2]" />
-            <span>Earnings & Payout</span>
+            <CreditCard className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>Wallet</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('profile')}
+            className={`flex-1 py-2.5 px-1.5 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 ${
+              activeTab === 'profile'
+                ? 'bg-amber-500 text-slate-950 shadow-md'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <UserCheck className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>Profile</span>
           </button>
         </div>
 
@@ -701,6 +769,32 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
                             <span className="text-[8px] font-black uppercase bg-sky-500/15 text-sky-300 border border-sky-500/20 px-1 py-0 rounded">
                               Chains
                             </span>
+                          )}
+                          {onEditVehicle && (
+                            <button
+                              type="button"
+                              title="Edit Vehicle Specs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingVehicle(v);
+                              }}
+                              className="p-1 rounded-lg bg-white/5 hover:bg-amber-500/20 text-white/60 hover:text-amber-300 ml-1"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
+                          {onDeleteVehicle && vehicles.length > 1 && (
+                            <button
+                              type="button"
+                              title="Remove Vehicle"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void onDeleteVehicle(v.id);
+                              }}
+                              className="p-1 rounded-lg bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           )}
                         </div>
                       </div>
@@ -980,38 +1074,251 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
           )}
 
           {/* ================================================================ */}
-          {/* TAB 3: EARNINGS & BANK PAYOUT                                   */}
+          {/* TAB 3: EARNINGS, TRIP LEDGER & BANK PAYOUT                       */}
           {/* ================================================================ */}
           {activeTab === 'earnings' && (
             <div className="space-y-4">
               <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-[#0F141C] to-black/90 border border-amber-500/30 text-center space-y-1.5">
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">Today's Gross Earnings</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">
+                  Withdrawable Wallet Balance
+                </span>
                 <div className="text-3xl font-black font-mono text-white">
-                  ₹{earnings.todayTotal.toLocaleString('en-IN')}.00
+                  ₹{(earnings.availableBalance ?? earnings.todayTotal).toLocaleString('en-IN')}.00
                 </div>
-                <span className="text-[11px] text-white/60 block">Registered Payout UPI: {earnings.upiId}</span>
+                <span className="text-[11px] text-white/60 block">
+                  Today's Take: ₹{earnings.todayTotal.toLocaleString('en-IN')} • UPI: {earnings.upiId}
+                </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-center text-xs">
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <span className="text-[10px] text-white/40 uppercase block mb-1">Total Trips</span>
-                  <span className="font-extrabold text-white text-lg">{earnings.tripsCount} Completed</span>
+                  <span className="text-[9px] text-white/40 uppercase block mb-1">Today Trips</span>
+                  <span className="font-extrabold text-white text-base">{earnings.tripsCount}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <span className="text-[10px] text-white/40 uppercase block mb-1">Duty Time</span>
-                  <span className="font-extrabold text-white text-lg">{earnings.onlineHours}</span>
+                  <span className="text-[9px] text-white/40 uppercase block mb-1">Duty Time</span>
+                  <span className="font-extrabold text-white text-base">{earnings.onlineHours}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[9px] text-white/40 uppercase block mb-1">Lifetime</span>
+                  <span className="font-extrabold text-emerald-400 text-base">
+                    ₹{Number(earnings.lifetimeTotal ?? earnings.todayTotal).toLocaleString('en-IN')}
+                  </span>
                 </div>
               </div>
 
               <Button
-                disabled={isPayoutProcessing || earnings.todayTotal <= 0}
+                disabled={isPayoutProcessing || (earnings.availableBalance ?? earnings.todayTotal) <= 0}
                 onClick={onRequestPayout}
                 className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-emerald-500/20"
               >
                 <ArrowUpRight className="w-4 h-4 stroke-[3]" />
-                {isPayoutProcessing ? 'Processing Transfer...' : 'Withdraw to Bank / UPI'}
+                {isPayoutProcessing ? 'Processing Transfer...' : 'Withdraw Balance to Bank / UPI'}
               </Button>
+
+              {/* Recent Payout Ledger */}
+              <div className="space-y-2 pt-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5" /> Recent UPI Settlements ({payoutHistory.length})
+                </span>
+                {payoutHistory.length === 0 ? (
+                  <p className="text-[11px] text-white/40 p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                    No withdrawals triggered yet. Complete trips to settle instantly to your UPI.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {payoutHistory.slice(0, 5).map((p) => (
+                      <div
+                        key={p.id}
+                        className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
+                      >
+                        <div>
+                          <span className="font-mono font-bold text-white block">{p.payoutRef}</span>
+                          <span className="text-[10px] text-white/40">
+                            {p.upiId} • {new Date(p.processedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <span className="font-mono font-black text-emerald-400">
+                          ₹{Number(p.amount).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Completed Trips */}
+              <div className="space-y-2 pt-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-white/70 flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5 text-amber-400" /> Recent Trips ({tripHistory.length})
+                </span>
+                {tripHistory.length === 0 ? (
+                  <p className="text-[11px] text-white/40 p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                    No dispatched trips recorded for your profile yet.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {tripHistory.slice(0, 6).map((trip) => (
+                      <div
+                        key={trip.id}
+                        className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-bold text-white truncate block">
+                            {trip.pickupLocation} → {trip.dropLocation}
+                          </span>
+                          <span className="text-[10px] text-white/40 block">
+                            {trip.passengerName} • {trip.distanceKm} km
+                          </span>
+                        </div>
+                        <span className="font-mono font-bold text-amber-300 shrink-0">
+                          ₹{trip.fareAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+          )}
+
+          {/* ================================================================ */}
+          {/* TAB 4: CHAUFFEUR KYC & PAYOUT BANK PROFILE                       */}
+          {/* ================================================================ */}
+          {activeTab === 'profile' && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!onUpdateProfile) return;
+                setIsSavingProfile(true);
+                try {
+                  await onUpdateProfile({
+                    phone: profilePhone.trim(),
+                    upiId: profileUpi.trim(),
+                    emergencyContact: profileEmergency.trim(),
+                    languages: profileLanguages.trim(),
+                    unionName: profileUnion.trim(),
+                    unionBadgeNumber: profileBadge.trim(),
+                    bankAccountName: bankAccountName.trim(),
+                    bankAccountNumber: bankAccountNumber.trim(),
+                    bankIfsc: bankIfsc.trim().toUpperCase(),
+                  });
+                } finally {
+                  setIsSavingProfile(false);
+                }
+              }}
+              className="space-y-3.5"
+            >
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-black text-emerald-400 block">KYC Approval</span>
+                  <span className="font-bold text-white">
+                    {driverProfile?.approvalStatus || 'APPROVED'} • {driverProfile?.licenseNumber || 'JK Verified'}
+                  </span>
+                </div>
+                <BadgeCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+              </div>
+
+              <div className="space-y-2.5 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">
+                    Chauffeur Mobile Phone
+                  </label>
+                  <Input
+                    value={profilePhone}
+                    onChange={(e) => setProfilePhone(e.target.value)}
+                    className="bg-black/60 border-white/15 text-white h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">
+                    Instant Settlement UPI ID
+                  </label>
+                  <Input
+                    value={profileUpi}
+                    onChange={(e) => setProfileUpi(e.target.value)}
+                    className="bg-black/60 border-white/15 text-white h-9 text-xs font-mono"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Union Name</label>
+                    <Input
+                      value={profileUnion}
+                      onChange={(e) => setProfileUnion(e.target.value)}
+                      className="bg-black/60 border-white/15 text-white h-9 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Union Badge</label>
+                    <Input
+                      value={profileBadge}
+                      onChange={(e) => setProfileBadge(e.target.value)}
+                      className="bg-black/60 border-white/15 text-white h-9 text-xs font-mono"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">
+                    Emergency Contact
+                  </label>
+                  <Input
+                    value={profileEmergency}
+                    onChange={(e) => setProfileEmergency(e.target.value)}
+                    className="bg-black/60 border-white/15 text-white h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">
+                    Spoken Languages
+                  </label>
+                  <Input
+                    value={profileLanguages}
+                    onChange={(e) => setProfileLanguages(e.target.value)}
+                    className="bg-black/60 border-white/15 text-white h-9 text-xs"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Bank Account No.</label>
+                    <Input
+                      value={bankAccountNumber}
+                      onChange={(e) => setBankAccountNumber(e.target.value)}
+                      placeholder="XXXXXXXXXXXX"
+                      className="bg-black/60 border-white/15 text-white h-9 text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Bank IFSC</label>
+                    <Input
+                      value={bankIfsc}
+                      onChange={(e) => setBankIfsc(e.target.value)}
+                      placeholder="JAKA0SRINAG"
+                      className="bg-black/60 border-white/15 text-white h-9 text-xs font-mono uppercase"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">
+                    Bank Account Holder Name
+                  </label>
+                  <Input
+                    value={bankAccountName}
+                    onChange={(e) => setBankAccountName(e.target.value)}
+                    className="bg-black/60 border-white/15 text-white h-9 text-xs"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSavingProfile}
+                className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider gap-1.5"
+              >
+                <Save className="w-4 h-4" />
+                {isSavingProfile ? 'Saving Profile...' : 'Save KYC & Payout Profile'}
+              </Button>
+            </form>
           )}
         </div>
 
@@ -1756,6 +2063,160 @@ export const DriverDrawer: React.FC<DriverDrawerProps> = ({
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Vehicle Edit Modal */}
+      {editingVehicle && (
+        <div
+          onClick={() => setEditingVehicle(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+        >
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!onEditVehicle) return;
+              setIsSavingVehicleEdit(true);
+              try {
+                await onEditVehicle(editingVehicle.id, {
+                  model: editingVehicle.model,
+                  plateNumber: editingVehicle.plateNumber,
+                  capacity: editingVehicle.capacity,
+                  luggageCapacity: editingVehicle.luggageCapacity,
+                  snowChains: editingVehicle.snowChains,
+                  fourWheelDrive: editingVehicle.fourWheelDrive,
+                  skiRack: editingVehicle.skiRack,
+                  unionBadgeNumber: editingVehicle.unionBadgeNumber,
+                });
+                setEditingVehicle(null);
+              } finally {
+                setIsSavingVehicleEdit(false);
+              }
+            }}
+            className="w-full max-w-md rounded-3xl bg-[#0F141C] border border-amber-500/40 p-5 space-y-4 text-white shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="font-extrabold text-sm">Edit Vehicle Specifications</h3>
+              <button
+                type="button"
+                onClick={() => setEditingVehicle(null)}
+                className="p-1 text-white/40 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="col-span-2">
+                <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Model Name</label>
+                <Input
+                  value={editingVehicle.model}
+                  onChange={(e) => setEditingVehicle({ ...editingVehicle, model: e.target.value })}
+                  className="bg-black/60 border-white/15 text-white h-9 text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Plate Number</label>
+                <Input
+                  value={editingVehicle.plateNumber}
+                  onChange={(e) =>
+                    setEditingVehicle({ ...editingVehicle, plateNumber: e.target.value.toUpperCase() })
+                  }
+                  className="bg-black/60 border-white/15 text-white h-9 text-xs font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Union Badge</label>
+                <Input
+                  value={editingVehicle.unionBadgeNumber || ''}
+                  onChange={(e) =>
+                    setEditingVehicle({ ...editingVehicle, unionBadgeNumber: e.target.value.toUpperCase() })
+                  }
+                  className="bg-black/60 border-white/15 text-white h-9 text-xs font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Passenger Seats</label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={18}
+                  value={editingVehicle.capacity}
+                  onChange={(e) =>
+                    setEditingVehicle({ ...editingVehicle, capacity: Number(e.target.value) || 4 })
+                  }
+                  className="bg-black/60 border-white/15 text-white h-9 text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-white/50 block mb-1">Luggage Bags</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={editingVehicle.luggageCapacity}
+                  onChange={(e) =>
+                    setEditingVehicle({ ...editingVehicle, luggageCapacity: Number(e.target.value) || 3 })
+                  }
+                  className="bg-black/60 border-white/15 text-white h-9 text-xs"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setEditingVehicle({ ...editingVehicle, snowChains: !editingVehicle.snowChains })}
+                className={`px-3 py-1.5 rounded-xl border font-bold ${
+                  editingVehicle.snowChains
+                    ? 'bg-sky-500/20 border-sky-400 text-sky-200'
+                    : 'bg-black/40 border-white/10 text-white/50'
+                }`}
+              >
+                Snow Chains
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setEditingVehicle({ ...editingVehicle, fourWheelDrive: !editingVehicle.fourWheelDrive })
+                }
+                className={`px-3 py-1.5 rounded-xl border font-bold ${
+                  editingVehicle.fourWheelDrive
+                    ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
+                    : 'bg-black/40 border-white/10 text-white/50'
+                }`}
+              >
+                4x4 AWD
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingVehicle({ ...editingVehicle, skiRack: !editingVehicle.skiRack })}
+                className={`px-3 py-1.5 rounded-xl border font-bold ${
+                  editingVehicle.skiRack
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-200'
+                    : 'bg-black/40 border-white/10 text-white/50'
+                }`}
+              >
+                Ski Rack
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingVehicle(null)}
+                className="flex-1 h-10 rounded-xl bg-white/5 border-white/10 text-white text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSavingVehicleEdit}
+                className="flex-1 h-10 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase"
+              >
+                {isSavingVehicleEdit ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
         </div>
       )}
     </div>

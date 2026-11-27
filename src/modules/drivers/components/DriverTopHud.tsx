@@ -28,6 +28,8 @@ interface DriverTopHudProps {
   advisory: HighwayAdvisory;
   onRequestPayout: () => void;
   isPayoutProcessing?: boolean;
+  onTriggerSos?: (incidentType: string, notes?: string) => Promise<void>;
+  isRealtimeConnected?: boolean;
 }
 
 export const DriverTopHud: React.FC<DriverTopHudProps> = ({
@@ -37,10 +39,13 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
   advisory,
   onRequestPayout,
   isPayoutProcessing = false,
+  onTriggerSos,
+  isRealtimeConnected = true,
 }) => {
   const [showEarningsModal, setShowEarningsModal] = useState(false);
   const [showSosModal, setShowSosModal] = useState(false);
   const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
+  const [isSendingSos, setIsSendingSos] = useState(false);
 
   return (
     <>
@@ -90,8 +95,16 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
             className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#0F141C]/95 via-[#161F2E]/95 to-[#0F141C]/95 border border-amber-500/30 hover:border-amber-400 text-white shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl transition-all active:scale-95"
           >
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  isRealtimeConnected ? 'bg-emerald-400' : 'bg-amber-400'
+                }`}
+              />
+              <span
+                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                  isRealtimeConnected ? 'bg-emerald-400' : 'bg-amber-400'
+                }`}
+              />
             </span>
             <div className="text-left">
               <span className="text-[9px] font-black uppercase tracking-wider text-amber-400/90 block leading-none">
@@ -114,7 +127,9 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
             className="hidden md:flex items-center gap-2 px-3 py-2 rounded-2xl bg-sky-950/70 hover:bg-sky-900/80 border border-sky-500/40 text-sky-200 text-xs font-bold shadow-xl backdrop-blur-xl transition-all"
           >
             <Snowflake className="w-4 h-4 text-sky-400 animate-spin duration-[10000ms]" />
-            <span className="truncate max-w-[160px] text-[11px]">Tangmarg: Chains Mandatory</span>
+            <span className="truncate max-w-[160px] text-[11px]">
+              {advisory.location ? `${advisory.location.split('—')[0].trim()}: Chains Advisory` : 'Tangmarg: Chains Mandatory'}
+            </span>
           </button>
 
           {/* Uber SOS Safety Shield */}
@@ -163,7 +178,7 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
             <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-slate-900 to-black/80 border border-amber-500/30 text-center space-y-1">
               <span className="text-[10px] uppercase font-black tracking-widest text-amber-400">Available For Instant Settlement</span>
               <div className="text-3xl font-black font-mono text-white">
-                ₹{earnings.todayTotal.toLocaleString('en-IN')}.00
+                ₹{(earnings.availableBalance ?? earnings.todayTotal).toLocaleString('en-IN')}.00
               </div>
               <span className="text-[10px] text-white/50 block">Registered UPI: {earnings.upiId}</span>
             </div>
@@ -186,7 +201,7 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
 
             {/* Instant Payout Action */}
             <Button
-              disabled={isPayoutProcessing || earnings.todayTotal <= 0}
+              disabled={isPayoutProcessing || (earnings.availableBalance ?? earnings.todayTotal) <= 0}
               onClick={() => {
                 onRequestPayout();
                 setShowEarningsModal(false);
@@ -235,11 +250,31 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
             </div>
 
             <div className="space-y-2">
+              {onTriggerSos && (
+                <Button
+                  type="button"
+                  disabled={isSendingSos}
+                  onClick={async () => {
+                    setIsSendingSos(true);
+                    try {
+                      await onTriggerSos('Highway Emergency SOS', 'Triggered from Chauffeur HUD Safety Shield');
+                      setShowSosModal(false);
+                    } finally {
+                      setIsSendingSos(false);
+                    }
+                  }}
+                  className="w-full h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30"
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  {isSendingSos ? 'Broadcasting Live SOS...' : 'Broadcast Live SOS to Command Desk'}
+                </Button>
+              )}
+
               <a
                 href="tel:112"
-                className="w-full h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30"
+                className="w-full h-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2"
               >
-                <PhoneCall className="w-4 h-4" /> Call J&K Police Emergency (112)
+                <PhoneCall className="w-4 h-4 text-rose-400" /> Call J&K Police Emergency (112)
               </a>
 
               <a
@@ -252,7 +287,9 @@ export const DriverTopHud: React.FC<DriverTopHudProps> = ({
               <Button
                 variant="outline"
                 onClick={() => {
-                  navigator.clipboard?.writeText('https://kashmir-curators.vercel.app/driver?track=LIVE-GPS-JK01AX9942');
+                  const plate = encodeURIComponent(activeVehicle?.plateNumber || 'LIVE-CAB');
+                  const url = `${window.location.origin}/driver?track=${plate}`;
+                  navigator.clipboard?.writeText(url);
                   toast.success('Live GPS Link Copied!', { 
                     description: 'Live GPS tracking link copied to clipboard.'
                   });

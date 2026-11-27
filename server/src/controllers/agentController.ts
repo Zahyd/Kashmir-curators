@@ -3,7 +3,6 @@ import dns from 'dns';
 import { NextFunction, Request, Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import prisma from '../lib/prisma';
-import { io } from '../index';
 import { realtimeBus } from '../lib/realtimeBus';
 import { DEFAULT_TENANT_ID, withTenantScope } from '../lib/tenant';
 import { resolvePreservedPartnerRole } from '../lib/roleUtils';
@@ -165,7 +164,7 @@ function buildAgentInquiryFilter(user: { id: string; email?: string | null; empl
 }
 
 function publishWorkspaceUpdate(req: AuthRequest, userId: string, tenantId: string | null | undefined, section: string, data: Record<string, any>) {
-  const ioRef = (req as any).io || io;
+  const ioRef = realtimeBus.getIo((req as any).io);
   realtimeBus.publish(
     'agent-workspace-updated',
     {
@@ -298,7 +297,7 @@ export const submitAgencyApplication = async (req: Request, res: Response): Prom
       }
     });
 
-    const ioRef = (req as any).io || io;
+    const ioRef = realtimeBus.getIo((req as any).io);
     realtimeBus.publish(
       'new-system-event',
       {

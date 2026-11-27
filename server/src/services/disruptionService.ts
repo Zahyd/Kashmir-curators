@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { io } from '../index';
+import { realtimeBus } from '../lib/realtimeBus';
 
 export interface AlternativeRecommendation {
   alternativeDestination: string;
@@ -195,15 +195,16 @@ export class DisruptionService {
             matchedImpacts.push(impact);
 
             // Emit real-time notification to user & admin room
-            if (io) {
-              io.to(`user-${booking.userId}`).emit('disruption-alert', {
+            const activeIo = realtimeBus.getIo();
+            if (activeIo) {
+              activeIo.to(`user-${booking.userId}`).emit('disruption-alert', {
                 title: `Travel Advisory Notice: ${advisory.location}`,
                 message: `Your booking "${booking.itemName}" is in an area experiencing: ${advisory.message}`,
                 severity: advisory.severity,
                 impactId: impact.id
               });
 
-              io.to('admin-room').emit('new-system-event', {
+              activeIo.to('admin-room').emit('new-system-event', {
                 type: 'UPDATE',
                 message: `Disruption Impact detected for Booking #${booking.id.slice(-6)} (${booking.itemName}) due to ${advisory.location} ${advisory.status}.`,
                 booking: { entityType: 'disruption', impactId: impact.id }

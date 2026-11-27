@@ -103,13 +103,85 @@ export interface DriverEarnings {
   onlineHours: string;
   acceptanceRate: number;
   upiId: string;
+  availableBalance?: number;
+  lifetimeTotal?: number;
+  lifetimeTrips?: number;
 }
 
 export interface HighwayAdvisory {
+  id?: string;
   location: string;
   status: string;
   message: string;
   snowChainsMandatory: boolean;
   tempC?: number;
   lastUpdated?: string;
+}
+
+export type DriverApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
+export interface DriverProfileData {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  employeeCode?: string | null;
+  licenseNumber: string;
+  vehicleRegNo: string;
+  status: 'AVAILABLE' | 'ON_TRIP' | 'BUSY' | 'OFFLINE';
+  approvalStatus: DriverApprovalStatus;
+  rejectionReason?: string | null;
+  rating: number;
+  tripsCompleted: number;
+  earnings: number;
+  availableBalance: number;
+  acceptanceRate: number;
+  attendance: string;
+  licenseExpiry: string;
+  policeVerification: string;
+  experience: number;
+  languages: string;
+  emergencyContact: string;
+  psvBadgeNumber?: string | null;
+  unionName?: string | null;
+  unionBadgeNumber?: string | null;
+  upiId: string;
+  bankAccountName?: string | null;
+  bankAccountNumber?: string | null;
+  bankIfsc?: string | null;
+  activeVehicleId?: string | null;
+  currentLat?: number | null;
+  currentLng?: number | null;
+  currentSector?: string | null;
+  kycDocuments?: Record<string, string>;
+}
+
+export interface DriverPayoutRecord {
+  id: string;
+  payoutRef: string;
+  amount: number;
+  upiId: string;
+  status: string;
+  notes?: string | null;
+  processedAt: string;
+}
+
+export interface OpenRideRequest {
+  reservationId: string;
+  offerId?: string | null;
+  offerStatus?: string;
+  voucherReference?: string | null;
+  pickupLocation: string;
+  dropLocation: string;
+  distanceKm: number;
+  estimatedDuration: string;
+  fareAmount: number;
+  touristCounter?: number | null;
+  passengerName: string;
+  passengerPhone?: string | null;
+  travelerCount: number;
+  luggageCount: number;
+  securityPin: string;
+  arrivalTelemetry: ArrivalTelemetry;
 }

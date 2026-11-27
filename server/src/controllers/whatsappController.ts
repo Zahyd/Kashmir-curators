@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { whatsappService, WhatsAppWorkflowEngine } from '../services/whatsappService';
 import env from '../config/env';
 import prisma from '../lib/prisma';
-import { io } from '../index';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { realtimeBus } from '../lib/realtimeBus';
 
@@ -42,7 +41,7 @@ export const receiveMessage = async (req: Request, res: Response): Promise<any> 
 
   // Run the pipeline asynchronously in the background
   try {
-    const socketIo = (req as any).io || io;
+    const socketIo = realtimeBus.getIo((req as any).io);
     await whatsappService.runPipeline(socketIo, req.body);
   } catch (error: any) {
     console.error('[WhatsApp Controller: Inbound Lead] FAILED to process pipeline asynchronously:', error.message);
@@ -174,7 +173,10 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<any>
         .catch(() => null);
       tenantId = (inqOrg as any)?.organizationId || null;
     }
-    realtimeBus.publish('whatsapp-message-sent', savedMessage, { io, tenantId });
+    realtimeBus.publish('whatsapp-message-sent', savedMessage, {
+      io: realtimeBus.getIo((req as any).io),
+      tenantId,
+    });
 
     res.status(201).json({ success: true, message: savedMessage });
   } catch (error: any) {

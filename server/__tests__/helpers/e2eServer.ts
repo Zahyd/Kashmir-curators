@@ -24,6 +24,9 @@ const hotelRoutes = require('../../src/routes/hotelRoutes').default;
 const siteContentRoutes = require('../../src/routes/siteContentRoutes').default;
 const advisoryRoutes = require('../../src/routes/advisoryRoutes').default;
 const dashboardRoutes = require('../../src/routes/dashboardRoutes').default;
+const cabRoutes = require('../../src/routes/cabRoutes').default;
+const driverRoutes = require('../../src/routes/driverRoutes').default;
+const portalAccessRoutes = require('../../src/routes/portalAccessRoutes').default;
 
 async function seedBaselineData() {
   resetTestState();
@@ -93,17 +96,143 @@ async function seedBaselineData() {
     }
   });
 
+  const driverPasswordHash = await bcrypt.hash('DriverPass123!', 10);
+  await inMemoryPrisma.user.create({
+    data: {
+      id: 'u-driver-001',
+      name: 'Imran Bashir Mir',
+      email: 'driver001@kashmircabs.test',
+      password: driverPasswordHash,
+      role: 'driver',
+      employeeCode: 'DRV-E2E-001',
+      phone: '+919906778801',
+      isOnline: true
+    }
+  });
+
+  await inMemoryPrisma.driverProfile.create({
+    data: {
+      id: 'dp-driver-001',
+      userId: 'u-driver-001',
+      licenseNumber: 'JK01-2021-889911',
+      vehicleRegNo: 'JK01C-4099',
+      status: 'AVAILABLE',
+      approvalStatus: 'APPROVED',
+      rating: 4.92,
+      tripsCompleted: 148,
+      earnings: 24500,
+      availableBalance: 8400,
+      acceptanceRate: 97,
+      offersReceived: 32,
+      offersAccepted: 31,
+      onlineMinutesToday: 185,
+      psvBadgeNumber: 'PSV-SXR-882',
+      unionName: 'All Kashmir Taxi Federation (AKTF)',
+      unionBadgeNumber: 'AKTF-SXR-9012',
+      upiId: 'imran.mir@okaxis',
+      activeVehicleId: 'cab-e2e-innova',
+      currentLat: 34.0837,
+      currentLng: 74.7973,
+      currentSector: 'Srinagar Dal Lake / SXR Hub',
+      lastPingAt: new Date()
+    }
+  });
+
   await inMemoryPrisma.cab.create({
     data: {
       id: 'cab-e2e-innova',
       name: 'Toyota Innova Crysta',
       type: 'SUV_SNOW_CHAINS',
       capacity: 6,
+      luggageCapacity: 5,
       pricePerKm: 22,
-      basePrice: 4500,
+      basePrice: 2800,
       image: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&q=80&w=600',
-      features: JSON.stringify(['Snow Chains Equipped', 'Police Verified Chauffeur']),
-      isActive: true
+      features: JSON.stringify(['Snow Chains Equipped', '4x4 Winter Drivetrain', 'Police Verified Chauffeur']),
+      isActive: true,
+      plateNumber: 'JK01C-4099',
+      snowChains: true,
+      fourWheelDrive: true,
+      skiRack: true,
+      multiDayAvailable: true,
+      ownership: 'DRIVER_PARTNER',
+      verificationStatus: 'APPROVED',
+      unionName: 'All Kashmir Taxi Federation (AKTF)',
+      unionBadgeNumber: 'AKTF-SXR-9012',
+      unionVerified: true,
+      touristPermitNo: 'JK-TD-9941',
+      commercialRcNumber: 'JK01C-RC-4099',
+      rcVerified: true,
+      permitVerified: true,
+      insuranceValid: true,
+      driverProfileId: 'dp-driver-001',
+      rateCard: JSON.stringify({
+        airportTransfer: 1850,
+        railwayTransfer: 1650,
+        gulmargTransfer: 3950,
+        pahalgamTransfer: 4200,
+        sonamargTransfer: 4100,
+        doodhpathriTransfer: 2800,
+        localSightseeing: 2500,
+        snowChainSurcharge: 650,
+        snowChainActive: true,
+        heaterSurcharge: 300,
+        heaterActive: false,
+        nightSurcharge: 500
+      })
+    }
+  });
+
+  await inMemoryPrisma.portalAccessKey.create({
+    data: {
+      id: 'pak-e2e-drv-001',
+      portalType: 'DRIVER',
+      accessKey: 'KC-DRV-E2E001',
+      assignedName: 'Imran Bashir Mir',
+      assignedContact: '+919906778801',
+      designation: 'Senior Snow-Chain Pilot',
+      propertyScope: 'ALL',
+      userId: 'u-driver-001',
+      status: 'ACTIVE'
+    }
+  });
+
+  await inMemoryPrisma.user.create({
+    data: {
+      id: 'u-driver-pending',
+      name: 'Tariq Ahmad Shah',
+      email: 'pendingdriver@kashmircabs.test',
+      password: driverPasswordHash,
+      role: 'driver',
+      employeeCode: 'DRV-E2E-PENDING',
+      phone: '+919906778899',
+      isOnline: false
+    }
+  });
+
+  await inMemoryPrisma.driverProfile.create({
+    data: {
+      id: 'dp-driver-pending',
+      userId: 'u-driver-pending',
+      licenseNumber: 'JK01-2024-112233',
+      vehicleRegNo: 'JK04B-7711',
+      status: 'OFFLINE',
+      approvalStatus: 'PENDING_APPROVAL',
+      unionName: 'Tangmarg Alpine Taxi Union',
+      unionBadgeNumber: 'TATU-445',
+      psvBadgeNumber: 'PSV-TGM-118'
+    }
+  });
+
+  const touristPasswordHash = await bcrypt.hash('TouristPass123!', 10);
+  await inMemoryPrisma.user.create({
+    data: {
+      id: 'u-tourist-001',
+      name: 'Aarav Mehta',
+      email: 'tourist001@kashmircabs.test',
+      password: touristPasswordHash,
+      role: 'user',
+      phone: '+919811002233'
     }
   });
 
@@ -267,6 +396,7 @@ async function start() {
   });
   configureSocketServer(ioServer);
   realtimeBus.setIo(ioServer);
+  app.set('io', ioServer);
 
   app.use((req: any, _res, next) => {
     req.io = ioServer;
@@ -287,6 +417,9 @@ async function start() {
   app.use('/api/finance', financeRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/hotels', hotelRoutes);
+  app.use('/api/cabs', cabRoutes);
+  app.use('/api/driver', driverRoutes);
+  app.use('/api/portal-keys', portalAccessRoutes);
   app.use('/api/site-content', siteContentRoutes);
   app.use('/api/advisories', advisoryRoutes);
   app.use('/api/dashboard', dashboardRoutes);

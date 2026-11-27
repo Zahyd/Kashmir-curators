@@ -63,7 +63,7 @@ import { requestCorrelationMiddleware } from './middleware/requestCorrelation';
 import { centralizedErrorHandler } from './middleware/errorHandler';
 import { ensureDefaultOrganization } from './lib/tenant';
 import { handleStripeWebhook } from './controllers/paymentController';
-import prisma from './lib/prisma';
+import prisma, { checkDatabaseHealth, warmUpDatabase } from './lib/prisma';
 
 const allowedOrigins = [
   'https://kashmir-curators.vercel.app',
@@ -166,7 +166,8 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/health-check'
+  skip: (req) =>
+    ['/health', '/health-check', '/db-check', '/api/health', '/api/health-check', '/api/db-check'].includes(req.path)
 });
 app.use(limiter);
 
@@ -301,36 +302,63 @@ app.use('/api/audit-logs', auditRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/', seoRoutes);
 
+const healthCheckHandler = (_req: express.Request, res: express.Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+};
+
+const dbCheckHandler = async (_req: express.Request, res: express.Response) => {
+  const report = await checkDatabaseHealth();
+  if (!report.ok) {
+    return res.status(503).json({
+      status: 'error',
+      message: report.error || 'Database connection failed',
+      latencyMs: report.latencyMs,
+      schemaReady: report.schemaReady,
+    });
+  }
+  return res.json({
+    status: 'ok',
+    message: 'Database connected',
+    latencyMs: report.latencyMs,
+    schemaReady: report.schemaReady,
+  });
+};
+
+// Mount health and database diagnostics BEFORE Express error handlers
+app.get('/health', healthCheckHandler);
+app.get('/health-check', healthCheckHandler);
+app.get('/api/health', healthCheckHandler);
+app.get('/api/health-check', healthCheckHandler);
+app.get('/db-check', dbCheckHandler);
+app.get('/api/db-check', dbCheckHandler);
+
+// Clean JSON 404 handler for unknown /api routes
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    error: 'API endpoint not found',
+    method: req.method,
+    path: req.originalUrl || req.url,
+  });
+});
+
 // The error handler must be before any other error middleware and after all controllers
 Sentry.setupExpressErrorHandler(app);
 app.use(centralizedErrorHandler);
 
-app.get('/health-check', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
-});
-
-app.get('/db-check', async (req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', message: 'Database connected' });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: 'Database connection failed' });
-  }
-});
-
 import { cronService } from './services/cronService';
 import { emailQueueService } from './services/emailQueueService';
 
-// Initialize background cron workers & asynchronous email queue
+// Warm up PostgreSQL connection & initialize background workers
+warmUpDatabase()
+  .then(() => ensureDefaultOrganization())
+  .catch((err: any) => {
+    console.warn('[ServerBoot] Database warm-up / default tenant notice:', err.message);
+  });
 cronService.initialize();
 emailQueueService.initQueue().catch((err: any) => {
   console.warn('[ServerBoot] Email queue background worker notice:', err.message);
 });
 
-// Ensure default multi-tenant organization foundation & optional Redis Pub/Sub are initialized
-ensureDefaultOrganization().catch((err: any) => {
-  console.warn('[ServerBoot] Default tenant initialization notice:', err.message);
-});
 realtimeBus.initRedisPubSub().catch((err: any) => {
   console.warn('[ServerBoot] RealtimeBus init notice:', err.message);
 });

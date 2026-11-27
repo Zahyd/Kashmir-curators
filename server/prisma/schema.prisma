@@ -34,6 +34,7 @@ model Organization {
   hotelReservations HotelReservation[]
   agentProfiles     AgentProfile[]
   driverProfiles    DriverProfile[]
+  cabReservations   CabReservation[]
 
   @@index([slug])
   @@index([type])
@@ -58,6 +59,7 @@ model User {
   inquiries         Inquiry[]
   agentInquiries    Inquiry[]          @relation("AgentInquiries")
   hotelReservations HotelReservation[] @relation("UserReservations")
+  cabReservations   CabReservation[]   @relation("TouristCabReservations")
   uploadedDocuments String?            // JSON string of uploaded documents
   agentProfile      AgentProfile?
   driverProfile     DriverProfile?
@@ -142,22 +144,54 @@ model Hotel {
 }
 
 model Cab {
-  id             String           @id @default(uuid())
-  type           String
-  name           String
-  capacity       Int
-  pricePerKm     Float
-  basePrice      Float
-  image          String
-  features       String           // JSON string
-  isActive       Boolean          @default(true)
-  organizationId String?
-  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  reservations   CabReservation[]
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                 String             @id @default(uuid())
+  type               String
+  name               String
+  capacity           Int
+  pricePerKm         Float
+  basePrice          Float
+  image              String
+  features           String             // JSON string array of customer-facing amenities
+  isActive           Boolean            @default(true)
+  plateNumber        String?
+  luggageCapacity    Int                @default(4)
+  snowChains         Boolean            @default(true)
+  fourWheelDrive     Boolean            @default(false)
+  skiRack            Boolean            @default(false)
+  multiDayAvailable  Boolean            @default(true)
+  ownership          String             @default("COMPANY") // COMPANY, VENDOR, DRIVER_PARTNER
+  vendorName         String?
+  vendorPhone        String?
+  verificationStatus String             @default("APPROVED") // PENDING_APPROVAL, APPROVED, REJECTED
+  rejectionReason    String?
+  unionName          String?
+  unionBadgeNumber   String?
+  unionVerified      Boolean            @default(false)
+  touristPermitNo    String?
+  permitExpiry       String?
+  commercialRcNumber String?
+  psvBadgeNo         String?
+  fitnessExpiry      String?
+  rcVerified         Boolean            @default(false)
+  permitVerified     Boolean            @default(false)
+  insuranceValid     Boolean            @default(true)
+  complianceDocs     String?            // JSON: { rcDocUrl, unionCardUrl, permitDocUrl }
+  submittedAt        DateTime?
+  approvedAt         DateTime?
+  rateCard           String?            // JSON: DriverRateCard
+  driverProfileId    String?
+  driverProfile      DriverProfile?     @relation(fields: [driverProfileId], references: [id], onDelete: SetNull)
+  organizationId     String?
+  organization       Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  reservations       CabReservation[]
+  dispatchOffers     CabDispatchOffer[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   @@index([organizationId])
+  @@index([driverProfileId])
+  @@index([verificationStatus, isActive])
+  @@index([plateNumber])
 }
 
 model Testimonial {
@@ -366,31 +400,98 @@ model InquiryDocument {
 }
 
 model CabReservation {
-  id                 String   @id @default(uuid())
-  inquiryId          String?
-  inquiry            Inquiry? @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
-  bookingId          String?
-  cabId              String
-  cab                Cab      @relation(fields: [cabId], references: [id])
-  driverName         String?
-  driverPhone        String?
-  vehicleRegNo       String?
-  pickupLocation     String
-  dropLocation       String
-  startDate          DateTime
-  endDate            DateTime
-  status             String   @default("ALLOCATED") // ALLOCATED, DISPATCHED, ON_TRIP, COMPLETED, CANCELLED
-  totalCost          Float    @default(0.0)
-  contractRate       Float    @default(0.0)
-  profitMargin       Float    @default(0.0)
-  voucherReference   String?  @unique
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                   String             @id @default(uuid())
+  inquiryId            String?
+  inquiry              Inquiry?           @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  bookingId            String?
+  userId               String?
+  user                 User?              @relation("TouristCabReservations", fields: [userId], references: [id], onDelete: SetNull)
+  cabId                String?
+  cab                  Cab?               @relation(fields: [cabId], references: [id], onDelete: SetNull)
+  driverProfileId      String?
+  driverProfile        DriverProfile?     @relation(fields: [driverProfileId], references: [id], onDelete: SetNull)
+  driverName           String?
+  driverPhone          String?
+  vehicleRegNo         String?
+  passengerName        String?
+  passengerPhone       String?
+  passengerEmail       String?
+  travelersCount       Int                @default(2)
+  luggageCount         Int                @default(2)
+  tripType             String             @default("airport") // airport, local, outstation, package
+  requestedCabType     String?
+  pickupLocation       String
+  dropLocation         String
+  pickupLat            Float?
+  pickupLng            Float?
+  dropLat              Float?
+  dropLng              Float?
+  estimatedDistanceKm  Float              @default(0)
+  estimatedDurationMin Int                @default(0)
+  startDate            DateTime
+  endDate              DateTime
+  status               String             @default("ALLOCATED") // SEARCHING, OFFERED, ALLOCATED, DISPATCHED, AT_PICKUP, ON_TRIP, COMPLETED, CANCELLED, EXPIRED
+  totalCost            Float              @default(0.0)
+  contractRate         Float              @default(0.0)
+  offeredFare          Float              @default(0.0)
+  counterOfferFare     Float?
+  counterOfferReason   String?
+  agreedFare           Float              @default(0.0)
+  profitMargin         Float              @default(0.0)
+  securityPin          String?
+  specialNotes         String?
+  arrivalTelemetry     String?            // JSON: Flight / Train / Hotel metadata
+  voucherReference     String?            @unique
+  organizationId       String?
+  organization         Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  offers               CabDispatchOffer[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   @@index([inquiryId])
+  @@index([userId])
   @@index([cabId])
+  @@index([driverProfileId])
   @@index([status])
   @@index([startDate, endDate])
+  @@index([organizationId])
+}
+
+model CabDispatchOffer {
+  id              String         @id @default(uuid())
+  reservationId   String
+  reservation     CabReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  driverProfileId String
+  driverProfile   DriverProfile  @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+  cabId           String
+  cab             Cab            @relation(fields: [cabId], references: [id], onDelete: Cascade)
+  driverName      String
+  driverPhone     String?
+  driverRating    Float          @default(4.8)
+  driverTrips     Int            @default(0)
+  vehicleName     String
+  vehicleType     String
+  vehicleImage    String?
+  vehicleRegNo    String
+  capacity        Int            @default(6)
+  luggageCapacity Int            @default(4)
+  snowChains      Boolean        @default(true)
+  fourWheelDrive  Boolean        @default(false)
+  unionVerified   Boolean        @default(true)
+  unionName       String?
+  initialFare     Float
+  driverFare      Float
+  touristCounter  Float?
+  status          String         @default("OFFERED") // OFFERED, DRIVER_ACCEPTED, COUNTERED_BY_DRIVER, COUNTERED_BY_TOURIST, ACCEPTED, DECLINED, CLOSED, EXPIRED
+  driverMessage   String?
+  etaMinutes      Int            @default(12)
+  expiresAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
+
+  @@unique([reservationId, driverProfileId])
+  @@index([reservationId, status])
+  @@index([driverProfileId, status])
 }
 
 model Media {
@@ -761,28 +862,99 @@ model AgencyApplication {
 }
 
 model DriverProfile {
-  id                 String        @id @default(uuid())
+  id                 String             @id @default(uuid())
   licenseNumber      String
   vehicleRegNo       String
-  status             String        @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
-  rating             Float         @default(4.8)
-  tripsCompleted     Int           @default(0)
-  earnings           Float         @default(0)
-  attendance         String        @default("Present") // Present, Absent, Off Duty
-  licenseExpiry      String        @default("2027-12-31")
-  policeVerification String        @default("Verified") // Verified, Pending, Expired
-  aadhaar            String        @default("0000-0000-0000")
-  experience         Int           @default(3)
-  languages          String        @default("English, Kashmiri, Urdu")
-  emergencyContact   String        @default("+919876543219")
+  status             String             @default("AVAILABLE") // AVAILABLE, ON_TRIP, BUSY, OFFLINE
+  approvalStatus     String             @default("APPROVED") // PENDING_APPROVAL, APPROVED, REJECTED, SUSPENDED
+  rejectionReason    String?
+  reviewedAt         DateTime?
+  reviewedBy         String?
+  rating             Float              @default(4.8)
+  tripsCompleted     Int                @default(0)
+  earnings           Float              @default(0)
+  availableBalance   Float              @default(0)
+  acceptanceRate     Float              @default(96)
+  offersReceived     Int                @default(0)
+  offersAccepted     Int                @default(0)
+  onlineMinutesToday Int                @default(0)
+  dutyStartedAt      DateTime?
+  attendance         String             @default("Present") // Present, Absent, Off Duty
+  licenseExpiry      String             @default("2027-12-31")
+  policeVerification String             @default("Verified") // Verified, Pending, Expired
+  aadhaar            String             @default("0000-0000-0000")
+  experience         Int                @default(3)
+  languages          String             @default("English, Kashmiri, Urdu")
+  emergencyContact   String             @default("+919876543219")
+  psvBadgeNumber     String?
+  unionName          String?
+  unionBadgeNumber   String?
+  kycDocuments       String?            // JSON: { licenseDocUrl, aadhaarDocUrl, policeDocUrl, psvDocUrl }
+  upiId              String             @default("kashmir.driver@okaxis")
+  bankAccountName    String?
+  bankAccountNumber  String?
+  bankIfsc           String?
+  activeVehicleId    String?
+  currentLat         Float?
+  currentLng         Float?
+  currentSector      String?
+  lastPingAt         DateTime?
   organizationId     String?
-  organization       Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  userId             String        @unique
-  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @default(now()) @updatedAt
+  organization       Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cabs               Cab[]
+  reservations       CabReservation[]
+  dispatchOffers     CabDispatchOffer[]
+  payouts            DriverPayout[]
+  sosAlerts          DriverSosAlert[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @default(now()) @updatedAt
 
   @@index([organizationId])
+  @@index([status])
+  @@index([approvalStatus])
+}
+
+model DriverPayout {
+  id              String        @id @default(uuid())
+  driverProfileId String
+  driverProfile   DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+  payoutRef       String        @unique
+  amount          Float
+  upiId           String
+  status          String        @default("PROCESSED_INSTANT_SETTLEMENT") // PENDING, PROCESSED_INSTANT_SETTLEMENT, FAILED
+  notes           String?
+  processedAt     DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+
+  @@index([driverProfileId])
+  @@index([createdAt])
+}
+
+model DriverSosAlert {
+  id              String         @id @default(uuid())
+  driverProfileId String?
+  driverProfile   DriverProfile? @relation(fields: [driverProfileId], references: [id], onDelete: SetNull)
+  reservationId   String?
+  driverName      String
+  driverPhone     String?
+  vehicleRegNo    String?
+  location        String         @default("Srinagar–Gulmarg Corridor")
+  lat             Float?
+  lng             Float?
+  incidentType    String         @default("SOS Alert Triggered")
+  severity        String         @default("CRITICAL") // LOW, MEDIUM, HIGH, CRITICAL
+  status          String         @default("ACTIVE") // ACTIVE, BACKUP_DISPATCHED, RESOLVED
+  notes           String?
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
+
+  @@index([driverProfileId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Supplier {
@@ -1064,6 +1236,7 @@ model PortalAccessKey {
   assignedContact String?   // Email or Phone number
   designation     String?   // e.g. "Senior Reservation Officer"
   propertyScope   String?   // "ALL" or specific hotel ID / names
+  userId          String?   // Optional linked User account (e.g. for DRIVER portal keys)
   status          String    @default("ACTIVE") // ACTIVE, REVOKED, EXPIRED
   expiresAt       DateTime?
   lastUsedAt      DateTime?
@@ -1076,6 +1249,7 @@ model PortalAccessKey {
   @@index([accessKey])
   @@index([portalType])
   @@index([status])
+  @@index([userId])
 }
 
 model EmployeeAttendance {
